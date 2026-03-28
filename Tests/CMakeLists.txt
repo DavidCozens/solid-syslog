@@ -1,7 +1,6 @@
 set(TEST_SOURCES
+    SolidSyslogTest.cpp
     main.cpp
-    ExampleCTests.cpp
-    ExampleCppTests.cpp
 )
 
 add_executable(${PROJECT_NAME}Tests ${TEST_SOURCES})

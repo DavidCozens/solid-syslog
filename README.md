@@ -1,6 +1,6 @@
-# CppUTestTemplate
+# SolidSyslog
 
-[component description]
+[TODO: describe SolidSyslog here]
 
 ## Documentation
 

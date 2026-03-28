@@ -2,7 +2,7 @@ services:
   gcc:
     image: ghcr.io/davidcozens/cpputest:sha-e7aa8a1
     volumes:
-      - ..:/workspaces/CppUTestTemplate:cached
+      - ..:/workspaces/SolidSyslog:cached
       - ${SSH_AUTH_SOCK}:/ssh-agent
       - ${HOME}/.claude:/home/developer/.claude
       - ${HOME}/.config/gh:/home/developer/.config/gh
@@ -14,13 +14,13 @@ services:
       - SSH_AUTH_SOCK=/ssh-agent
       - BUILD_PRESET=debug
     user: developer
-    working_dir: /workspaces/CppUTestTemplate
+    working_dir: /workspaces/SolidSyslog
     command: sleep infinity
 
   clang:
     image: ghcr.io/davidcozens/cpputest-clang:sha-6ea3f95
     volumes:
-      - ..:/workspaces/CppUTestTemplate:cached
+      - ..:/workspaces/SolidSyslog:cached
       - ${SSH_AUTH_SOCK}:/ssh-agent
       - ${HOME}/.claude:/home/developer/.claude
       - ${HOME}/.config/gh:/home/developer/.config/gh
@@ -32,5 +32,5 @@ services:
       - SSH_AUTH_SOCK=/ssh-agent
       - BUILD_PRESET=clang-debug
     user: developer
-    working_dir: /workspaces/CppUTestTemplate
+    working_dir: /workspaces/SolidSyslog
     command: sleep infinity

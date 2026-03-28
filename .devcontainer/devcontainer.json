@@ -1,8 +1,8 @@
 {
-    "name": "CppUTestTemplate",
+    "name": "SolidSyslog",
     "dockerComposeFile": "docker-compose.yml",
     "service": "gcc",
-    "workspaceFolder": "/workspaces/CppUTestTemplate",
+    "workspaceFolder": "/workspaces/SolidSyslog",
     "features": {
         "ghcr.io/devcontainers/features/github-cli:1": {}
     },

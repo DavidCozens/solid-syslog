@@ -1,6 +1,5 @@
 set(SOURCES
-    ExampleC.c
-    ExampleCpp.cpp
+    SolidSyslog.c
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})

@@ -5,7 +5,7 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/debug/Tests/ExampleTests",
+            "program": "${workspaceFolder}/build/debug/Tests/SolidSyslogTests",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
