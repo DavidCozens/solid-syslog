@@ -1,0 +1,3 @@
+# MISRA C:2012 cppcheck suppressions
+# Each suppression must include a rationale comment explaining why it is acceptable.
+# Format: <rule> <file>:<line> // Rationale: <explanation>

@@ -1,0 +1,86 @@
+# SKILL.md — Claude Code Brief for SolidSyslog
+
+## What this project is
+
+SolidSyslog is a C syslog client library implementing RFC 5424/5426/5425 for embedded
+and industrial systems. It is developed under the "Crafted with AI" blog series by
+Cozens Software Solutions Limited.
+
+## Collaboration architecture
+
+- **Claude.ai** — planning, backlog decomposition, blog drafting, architecture decisions.
+  Produces briefings for Claude Code to execute.
+- **Claude Code** — implementation, commits, GitHub operations, DEVLOG.md maintenance.
+  Receives briefings from the developer and executes them.
+
+When in doubt about intent or architecture, ask the developer rather than assuming.
+
+## DEVLOG.md convention
+
+Append an entry to DEVLOG.md after every meaningful session. Format:
+```
+## YYYY-MM-DD — <short session title>
+
+### Decisions
+- <decision and rationale>
+
+### Deferred
+- <item deferred and why>
+
+### Open questions
+- <question> — <context>
+```
+
+Never rewrite history. Always append. Commit DEVLOG.md changes with:
+`docs: update DEVLOG for <session topic>`
+
+## TDD pairing contract
+
+- Discuss behaviour first — no code without agreement on what it should do
+- Write one test at a time
+- Confirm the failure reason before writing production code
+- Write the minimal implementation to make it pass
+- Commit on green with a behaviour-describing Conventional Commit message
+- Refactor only under green
+
+Test progression follows ZOMBIES order.
+
+## Branch and PR rules
+
+- Feature branches named after GitHub issues: `feature/issue-<N>-<short-description>`
+- PRs to main when a BDD scenario passes (or for infrastructure work, when CI is green)
+- Squash merge only — PR title becomes the commit message
+- PR title must follow Conventional Commits
+
+## Code style
+
+- Formatting is enforced by clang-format — see `.clang-format`. This is the authoritative
+  style rule; it overrides any conflicting guidance in this file or from Claude.ai briefings.
+- Public C functions: `PascalCase_PascalCase` (e.g. `SolidSyslog_Create`)
+- Variables/parameters: `camelCase`
+- Types and files: `PascalCase`
+- Follows James Grenning's style (*TDD for Embedded C*) where consistent with clang-format
+- No dynamic memory, no unions, no anonymous structs, no `#ifdef` feature flags
+- C99 baseline
+
+## Architecture principles
+
+- OO-in-C: structs with function pointers (vtable pattern)
+- Dependency injection for transport and buffering
+- Null object pattern throughout
+- All fields use uniform field object pattern with format function pointer
+- Optional features composed at link time — no conditional compilation
+- C11 static assertions via compatibility shim
+
+## Static analysis
+
+- cppcheck with MISRA C:2012 addon runs in CI
+- Suppressions in `misra_suppressions.txt` — each entry must have documented rationale
+- Library is MISRA-informed, not claiming certified compliance
+
+## Key references
+
+- Epics tracked as GitHub Issues #2–#12, Project board "SolidSyslog" (project #1)
+- RFC 5424 — structured syslog message format
+- RFC 5426 — syslog over UDP
+- RFC 5425 — syslog over TLS

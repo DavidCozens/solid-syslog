@@ -17,3 +17,19 @@
   - E10 (#12): Epic: Static Analysis and MISRA
 - Created GitHub Project board "SolidSyslog" (project #1); all epics added
 - No open questions
+
+## 2026-03-28 — E0 walking skeleton completion
+
+### Decisions
+- E0 scope revised: BDD harness moved to E2, where there is something real to drive end-to-end
+- E0 contains one story only: S0.1 repository setup
+- README.md written with architecture summary and status notice
+- SKILL.md added as standing brief for Claude Code sessions
+- misra_suppressions.txt added — empty, version-controlled, ready for first suppression
+
+### Deferred
+- BDD harness (Behave/Python) — deferred to E2
+- GitHub Issue story template — deferred, revisit before E1 decomposition
+
+### Open questions
+- None
