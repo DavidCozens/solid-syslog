@@ -56,3 +56,26 @@
   Raised in E1.2, E1.4, E1.5 — decision needed before implementation of those stories
 - Out-of-range PRIVAL handling: invalid facility or severity values — clamp or reject?
   Raised in E1.2 — decision needed before implementation
+
+## 2026-03-29 — E2 story decomposition
+
+### Decisions
+- E2 renamed from "UDP Transport" to "UDP Sender" — scope is the POSIX sender implementation only
+- E2 decomposed into 4 stories: E2.1–E2.4 (GitHub Issues #22–#25), created as sub-issues of Epic #4
+- E2.1: Walking Skeleton — PosixUdpSender transmits a buffer
+- E2.2: UdpSender configuration — host and port injection
+- E2.3: CMake platform detection — PosixUdpSender included conditionally
+- E2.4: BDD walking skeleton — end-to-end UDP message
+- PosixUdpSender.c included in build via CMake platform detection only — no #ifdef in source
+- POSIX socket calls tested with fff (fake function framework) — no real network in unit tests
+- BDD harness deferred from E0 now lands in E2.4 as planned
+- RTOS-specific sender implementations and non-POSIX build testing explicitly deferred to E8
+
+### Deferred
+- RTOS-specific sender implementations — deferred to E8
+- Non-POSIX build testing — deferred to E8
+
+### Open questions
+- Port 0 behaviour: reject or default to 514? Decide before implementing E2.2
+- Unresolvable hostname: error at Create time (fail fast) or at Send time (deferred failure)?
+  Decide before implementing E2.2
