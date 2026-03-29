@@ -78,6 +78,13 @@ Test progression follows ZOMBIES order.
 - Suppressions in `misra_suppressions.txt` — each entry must have documented rationale
 - Library is MISRA-informed, not claiming certified compliance
 
+## GitHub Project board conventions
+
+- Only the active epic and its stories live on the board — future epics stay as issues until decomposition begins
+- WIP limit on In Progress is 2 (one functional story, one BDD story)
+- When an epic is complete: archive its stories, leave the epic in Done
+- When a new epic is pulled onto the board: archive any completed epics first
+
 ## Key references
 
 - Epics tracked as GitHub Issues #2–#12, Project board "SolidSyslog" (project #1)
