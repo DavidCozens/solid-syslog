@@ -33,3 +33,26 @@
 
 ### Open questions
 - None
+
+## 2026-03-29 — E1 story decomposition
+
+### Decisions
+- E1 decomposed into 5 stories: E1.1–E1.5 (GitHub Issues #16–#20), created as sub-issues of Epic #3
+- E1.1: Walking skeleton — single Log call produces a valid RFC 5424 message
+- E1.2: PRIVAL encoding — facility and severity on the Log call
+- E1.3: Timestamp — raise-time capture via injected clock function
+- E1.4: Hostname, AppName, ProcId — injected via config function pointers
+- E1.5: MessageId and Message — driven onto the Log call
+- `story` label created (#0075ca) to distinguish stories from epics on the project board
+- All stories added to SolidSyslog project board under Epic #3; Epic #3 added to board
+- Structured data fixed as `-` throughout E1 — real structured data deferred to E7
+
+### Deferred
+- GitHub Issue story template — still deferred, not needed yet
+
+### Open questions
+- Boundary truncation policy: when field values exceed RFC 5424 max length (HOSTNAME 255,
+  APP-NAME 48, MSGID 32), should the library truncate silently or return an error?
+  Raised in E1.2, E1.4, E1.5 — decision needed before implementation of those stories
+- Out-of-range PRIVAL handling: invalid facility or severity values — clamp or reject?
+  Raised in E1.2 — decision needed before implementation
