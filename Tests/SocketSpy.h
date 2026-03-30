@@ -1,13 +1,11 @@
 #ifndef SOCKETSPY_H
 #define SOCKETSPY_H
 
+#include "ExternC.h"
 #include <stddef.h>
 #include <sys/socket.h>
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+EXTERN_C_BEGIN
 
     void SocketSpy_Reset(void);
 
@@ -33,8 +31,6 @@ extern "C"
     int SocketSpy_CloseCallCount(void);
     int SocketSpy_LastClosedFd(void);
 
-#ifdef __cplusplus
-}
-#endif
+EXTERN_C_END
 
 #endif /* SOCKETSPY_H */

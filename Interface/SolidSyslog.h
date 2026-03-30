@@ -3,10 +3,7 @@
 
 #include "SolidSyslog_Alloc.h"
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+EXTERN_C_BEGIN
 
     struct SolidSyslog_Sender;
     struct SolidSyslog;
@@ -19,11 +16,9 @@ extern "C"
     };
 
     struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslog_Config* config);
-    void                SolidSyslog_Destroy(struct SolidSyslog* logger);
-    void                SolidSyslog_Log(struct SolidSyslog* logger);
+    void                SolidSyslog_Destroy(struct SolidSyslog * logger);
+    void                SolidSyslog_Log(struct SolidSyslog * logger);
 
-#ifdef __cplusplus
-}
-#endif
+EXTERN_C_END
 
 #endif /* SOLIDSYSLOG_H */

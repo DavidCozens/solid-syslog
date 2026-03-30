@@ -3,18 +3,13 @@
 
 #include "SolidSyslog_Sender.h"
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+EXTERN_C_BEGIN
 
     void                       SenderSpy_Reset(void);
     struct SolidSyslog_Sender* SenderSpy_GetSender(void);
     int                        SenderSpy_CallCount(void);
     const char*                SenderSpy_LastBufferAsString(void);
 
-#ifdef __cplusplus
-}
-#endif
+EXTERN_C_END
 
 #endif /* SENDERSPY_H */

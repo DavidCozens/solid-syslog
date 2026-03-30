@@ -3,10 +3,7 @@
 
 #include "SolidSyslog_Sender.h"
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+EXTERN_C_BEGIN
 
     struct PosixUdpSender_Config
     {
@@ -14,10 +11,8 @@ extern "C"
     };
 
     struct SolidSyslog_Sender* PosixUdpSender_Create(const struct PosixUdpSender_Config* config);
-    void                       PosixUdpSender_Destroy(struct SolidSyslog_Sender* sender);
+    void                       PosixUdpSender_Destroy(struct SolidSyslog_Sender * sender);
 
-#ifdef __cplusplus
-}
-#endif
+EXTERN_C_END
 
 #endif /* POSIXUDPSENDER_H */

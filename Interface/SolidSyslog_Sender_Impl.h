@@ -3,18 +3,13 @@
 
 #include "SolidSyslog_Sender.h"
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+EXTERN_C_BEGIN
 
     struct SolidSyslog_Sender
     {
         void (*Send)(struct SolidSyslog_Sender* sender, const void* buffer, size_t size);
     };
 
-#ifdef __cplusplus
-}
-#endif
+EXTERN_C_END
 
 #endif /* SOLIDSYSLOG_SENDER_IMPL_H */
