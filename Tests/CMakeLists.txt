@@ -1,6 +1,7 @@
 set(TEST_SOURCES
     SolidSyslogTest.cpp
     SenderSpy.c
+    PosixUdpSenderTest.cpp
     main.cpp
 )
 
