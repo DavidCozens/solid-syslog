@@ -8,8 +8,11 @@ extern "C"
 {
 #endif
 
-    void SocketSpy_Reset(void);
-    int  SocketSpy_SendtoCallCount(void);
+    void        SocketSpy_Reset(void);
+    int         SocketSpy_SendtoCallCount(void);
+    const char* SocketSpy_LastBufAsString(void);
+    int         SocketSpy_LastPort(void);
+    size_t      SocketSpy_LastLen(void);
 
 #ifdef __cplusplus
 }

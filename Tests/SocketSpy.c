@@ -2,16 +2,37 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-static int sendtoCallCount;
+static int                sendtoCallCount;
+static const void*        lastBuf;
+static size_t             lastLen;
+static struct sockaddr_in lastAddr;
 
 void SocketSpy_Reset(void)
 {
     sendtoCallCount = 0;
+    lastBuf         = NULL;
+    lastLen         = 0;
+    lastAddr        = (struct sockaddr_in){0};
 }
 
 int SocketSpy_SendtoCallCount(void)
 {
     return sendtoCallCount;
+}
+
+const char* SocketSpy_LastBufAsString(void)
+{
+    return (const char*) lastBuf;
+}
+
+int SocketSpy_LastPort(void)
+{
+    return ntohs(lastAddr.sin_port);
+}
+
+size_t SocketSpy_LastLen(void)
+{
+    return lastLen;
 }
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- POSIX API; signature is fixed
@@ -34,6 +55,9 @@ ssize_t sendto(int sockfd, const void* buf, size_t len, int flags,
     (void) dest_addr;
     (void) addrlen;
     sendtoCallCount++;
+    lastBuf  = buf;
+    lastLen  = len;
+    lastAddr = *(const struct sockaddr_in*) dest_addr;
     return (ssize_t) len;
 }
 

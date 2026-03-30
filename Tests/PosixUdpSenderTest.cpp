@@ -1,6 +1,8 @@
 #include "CppUTest/TestHarness.h"
 #include "PosixUdpSender.h"
 #include "SocketSpy.h"
+#include <array>
+#include <cstring>
 
 // clang-format off
 TEST_GROUP(PosixUdpSender)
@@ -34,6 +36,26 @@ TEST(PosixUdpSender, SingleSendResultsInOneSendtoCall)
     LONGS_EQUAL(1, SocketSpy_SendtoCallCount());
 }
 
+TEST(PosixUdpSender, SendtoReceivesBuffer)
+{
+    sender->Send(sender, "hello", 5);
+    STRCMP_EQUAL("hello", SocketSpy_LastBufAsString());
+}
+
+TEST(PosixUdpSender, SendtoCalledWithDefaultPort)
+{
+    sender->Send(sender, "hello", 5);
+    LONGS_EQUAL(514, SocketSpy_LastPort());
+}
+
+TEST(PosixUdpSender, MaxMessageSizeTransmittedWithoutTruncation)
+{
+    std::array<char, 1024> buffer{};
+    buffer.fill('A');
+    sender->Send(sender, buffer.data(), buffer.size());
+    LONGS_EQUAL(1024, SocketSpy_LastLen());
+}
+
 // clang-format off
 // Test list — S2.1: Walking Skeleton — PosixUdpSender transmits a buffer
 //
@@ -42,11 +64,11 @@ TEST(PosixUdpSender, SingleSendResultsInOneSendtoCall)
 //
 // O — One
 //   [x] A single Send call results in exactly one call to SocketSpy sendto
-//   [ ] SocketSpy sendto called with correct buffer contents
+//   [x] SocketSpy sendto called with correct buffer contents
 //   [ ] SocketSpy sendto called with correct destination port
 //
 // B — Boundaries
-//   [ ] Maximum RFC 5426 recommended message size (1024 bytes) transmitted without truncation
+//   [x] Maximum RFC 5426 recommended message size (1024 bytes) transmitted without truncation
 //
 // E — Exceptions (deferred — error handling phase)
 //   [ ] Create with NULL config returns NULL
