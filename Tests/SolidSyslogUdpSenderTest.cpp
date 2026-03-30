@@ -199,6 +199,7 @@ TEST(SolidSyslogUdpSenderDestroy, SimpleScenario)
 // clang-format off
 TEST_GROUP(SolidSyslogUdpSenderConfig)
 {
+    // cppcheck-suppress unreadVariable -- assigned in CreateSender and used via SolidSyslogUdpSender_Create; cppcheck does not model CppUTest macros
     struct SolidSyslogUdpSenderConfig config = {};
     // cppcheck-suppress constVariablePointer -- Send requires non-const self; false positive from macro expansion
     // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
