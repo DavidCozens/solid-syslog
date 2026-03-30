@@ -7,7 +7,7 @@
         {
             "label": "build and test",
             "type": "shell",
-            "command": "cmake --build --preset ${env:BUILD_PRESET} --target junit",
+            "command": "cmake --build --preset ${env:BUILD_PRESET} && ctest --preset ${env:BUILD_PRESET}",
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -16,6 +16,17 @@
                 "reveal": "always",
                 "panel": "shared",
                 "clear": true
+            }
+        },
+        {
+            "label": "test (junit)",
+            "type": "shell",
+            "command": "cmake",
+            "args": ["--build", "--preset", "${env:BUILD_PRESET}", "--target", "junit"],
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
             }
         },
         {
