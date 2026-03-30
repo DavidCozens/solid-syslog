@@ -150,6 +150,20 @@ TEST(SolidSyslogUdpSender, SendtoCalledWithSocketFd)
     LONGS_EQUAL(SocketSpy_SocketFd(), SocketSpy_LastSendtoFd());
 }
 
+IGNORE_TEST(SolidSyslogUdpSender, HappyPathOnly)
+{
+    // Error handling not yet implemented — see Epic #31
+    //   Create with NULL config returns NULL
+    //   Create with valid config returns non-NULL sender
+    //   Destroy with NULL sender does nothing, does not crash
+    //   Send called with NULL buffer does nothing, does not crash
+    //   Send called with zero length does nothing, does not crash
+    //   socket() returning -1 handled gracefully — Create returns NULL or Send is a no-op
+    //   Unreachable host does not crash
+    //
+    // Address resolution strategy (getaddrinfo vs inet_pton, malloc policy, ADR) — see Story #34
+}
+
 // Destroy tests manage their own sender lifetime — no teardown Destroy needed.
 // clang-format off
 TEST_GROUP(SolidSyslogUdpSenderDestroy)
@@ -261,18 +275,4 @@ TEST(SolidSyslogUdpSenderConfig, SendtoCalledWithResolvedAddress)
     CreateSender(GetDefaultPort, GetDefaultHost);
     SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN);
     STRCMP_EQUAL(TEST_DEFAULT_HOST, SocketSpy_LastAddrAsString());
-}
-
-IGNORE_TEST(SolidSyslogUdpSender, HappyPathOnly)
-{
-    // Error handling not yet implemented — see Epic #31
-    //   Create with NULL config returns NULL
-    //   Create with valid config returns non-NULL sender
-    //   Destroy with NULL sender does nothing, does not crash
-    //   Send called with NULL buffer does nothing, does not crash
-    //   Send called with zero length does nothing, does not crash
-    //   socket() returning -1 handled gracefully — Create returns NULL or Send is a no-op
-    //   Unreachable host does not crash
-    //
-    // Address resolution strategy (getaddrinfo vs inet_pton, malloc policy, ADR) — see Story #34
 }
