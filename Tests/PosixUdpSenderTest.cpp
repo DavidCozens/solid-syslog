@@ -1,14 +1,19 @@
 #include "CppUTest/TestHarness.h"
 #include "PosixUdpSender.h"
+#include "SocketSpy.h"
 
 // clang-format off
 TEST_GROUP(PosixUdpSender)
 {
     struct PosixUdpSender_Config config = {0};
-    struct SolidSyslog_Sender*   sender = nullptr;
+    // cppcheck-suppress constVariablePointer -- Send requires non-const self; false positive from macro expansion
+    // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+    struct SolidSyslog_Sender* sender = nullptr;
 
     void setup() override
     {
+        SocketSpy_Reset();
+        // cppcheck-suppress unreadVariable -- read by teardown and tests; cppcheck does not model CppUTest lifecycle
         sender = PosixUdpSender_Create(&config);
     }
 
@@ -23,6 +28,12 @@ TEST(PosixUdpSender, CreateDestroyWorksWithoutCrashing)
 {
 }
 
+TEST(PosixUdpSender, SingleSendResultsInOneSendtoCall)
+{
+    sender->Send(sender, "hello", 5);
+    LONGS_EQUAL(1, SocketSpy_SendtoCallCount());
+}
+
 // clang-format off
 // Test list — S2.1: Walking Skeleton — PosixUdpSender transmits a buffer
 //
@@ -30,7 +41,7 @@ TEST(PosixUdpSender, CreateDestroyWorksWithoutCrashing)
 //   [x] CreateDestroyWorksWithoutCrashing
 //
 // O — One
-//   [ ] A single Send call results in exactly one call to SocketSpy sendto
+//   [x] A single Send call results in exactly one call to SocketSpy sendto
 //   [ ] SocketSpy sendto called with correct buffer contents
 //   [ ] SocketSpy sendto called with correct destination port
 //
