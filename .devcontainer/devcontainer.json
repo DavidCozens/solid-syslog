@@ -27,5 +27,6 @@
             ]
         }
     },
+    "initializeCommand": "docker compose --project-name \"$(basename $(pwd))_devcontainer\" -f .devcontainer/docker-compose.yml rm -f 2>/dev/null || true",
     "postStartCommand": "git config --global core.sshCommand /usr/bin/ssh && cmake --preset $BUILD_PRESET"
 }
