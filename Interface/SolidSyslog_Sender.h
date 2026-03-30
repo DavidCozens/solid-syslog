@@ -10,7 +10,7 @@ extern "C"
 
     struct SolidSyslog_Sender
     {
-        void (*Send)(struct SolidSyslog_Sender *sender, const void *buffer, size_t size);
+        void (*Send)(struct SolidSyslog_Sender* sender, const void* buffer, size_t size);
     };
 
 #ifdef __cplusplus
