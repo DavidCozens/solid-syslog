@@ -263,52 +263,16 @@ TEST(SolidSyslogUdpSenderConfig, SendtoCalledWithResolvedAddress)
     STRCMP_EQUAL(TEST_DEFAULT_HOST, SocketSpy_LastAddrAsString());
 }
 
-// clang-format off
-// Test list — S2.1/S2.2: SolidSyslogUdpSender transmits a buffer with injected config
-//
-// Z — Zero
-//   [x] CreateDestroyWorksWithoutCrashing
-//
-// O — One
-//   [x] A single Send call results in exactly one call to SocketSpy sendto
-//   [x] SocketSpy sendto called with correct buffer contents
-//   [x] SocketSpy sendto called with correct destination port (default 514)
-//
-// B — Boundaries
-//   [x] Maximum RFC 5426 recommended message size (1024 bytes) transmitted
-//       without truncation — length and content verified
-//
-// sendto argument defaults
-//   [x] sendto called with flags = 0
-//   [x] sendto called with address family AF_INET
-//   [x] sendto called with default host 127.0.0.1
-//   [x] sendto called with addrlen = sizeof(struct sockaddr_in)
-//   [x] sendto called with fd returned by socket()
-//
-// socket/close lifecycle
-//   [x] socket() called once on Create
-//   [x] socket() called with AF_INET
-//   [x] socket() called with SOCK_DGRAM
-//   [x] close() called once on Destroy
-//   [x] close() called with fd returned by socket()
-//
-// Config injection (S2.2)
-//   [x] getPort() called once on Create; not called again on Send
-//   [x] sendto called with port returned by getPort()
-//   [x] getHost() called once on Create; not called again on Send
-//   [x] getaddrinfo() called once on Create with hostname from getHost()
-//   [x] sendto called with address resolved from getHost()
-//
-// E — Exceptions (deferred — error handling phase)
-//   [ ] Create with NULL config returns NULL
-//   [ ] Create with valid config returns non-NULL sender
-//   [ ] Destroy with NULL sender does nothing, does not crash
-//   [ ] Send called with NULL buffer does nothing, does not crash
-//   [ ] Send called with zero length does nothing, does not crash
-//   [ ] socket returning -1 handled gracefully — Create returns NULL or Send is a no-op
-//   [ ] Unreachable host does not crash
-//
-// S — Simple scenario
-//   [x] socket called once with AF_INET and SOCK_DGRAM, sendto called once with correct
-//       address family and port, close called once on Destroy
-// clang-format on
+IGNORE_TEST(SolidSyslogUdpSender, HappyPathOnly)
+{
+    // Error handling not yet implemented — see Epic #31
+    //   Create with NULL config returns NULL
+    //   Create with valid config returns non-NULL sender
+    //   Destroy with NULL sender does nothing, does not crash
+    //   Send called with NULL buffer does nothing, does not crash
+    //   Send called with zero length does nothing, does not crash
+    //   socket() returning -1 handled gracefully — Create returns NULL or Send is a no-op
+    //   Unreachable host does not crash
+    //
+    // Address resolution strategy (getaddrinfo vs inet_pton, malloc policy, ADR) — see Story #34
+}
