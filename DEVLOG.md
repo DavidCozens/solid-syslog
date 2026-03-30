@@ -57,6 +57,41 @@
 - Out-of-range PRIVAL handling: invalid facility or severity values — clamp or reject?
   Raised in E1.2 — decision needed before implementation
 
+## 2026-03-30 — Devcontainer SSH agent bind mount fix
+
+### Decisions
+- Added `initializeCommand` to `.devcontainer/devcontainer.json` to remove stale stopped
+  containers before each devcontainer open
+- Command: `docker compose --project-name "$(basename $(pwd))_devcontainer" -f .devcontainer/docker-compose.yml rm -f 2>/dev/null || true`
+
+### Root cause
+Docker Desktop on Windows/WSL assigns a UUID to each WSL filesystem bind mount internally.
+When a devcontainer starts, that UUID is baked into the container's stored config. After a
+Windows restart, Docker Desktop resets its bind mount registry and issues new UUIDs — but
+the stopped container still references the old UUID, causing:
+`error mounting "/run/desktop/mnt/host/wsl/docker-desktop-bind-mounts/Ubuntu/<UUID>" ... no such file or directory`
+
+VS Code's "Reopen in Container" tries to restart the existing stopped container (`--no-recreate`),
+hitting the stale UUID. "Rebuild Container" avoids it because it creates a fresh container.
+The `initializeCommand` automates the equivalent of Rebuild by dropping stopped containers
+before each open — running containers are unaffected so normal reopens have no friction (~80ms overhead).
+
+### Cross-platform note
+The `initializeCommand` is safe for all contributors. `docker compose rm -f` is standard
+and `$(basename $(pwd))` is POSIX — on Mac and Linux it runs harmlessly as a no-op.
+The UUID issue is Windows/WSL-specific but there is no cost to running the command elsewhere.
+
+### Deferred
+- `${SSH_AUTH_SOCK}` in `docker-compose.yml` has no fallback — if a contributor has no SSH
+  agent running, `docker compose` will fail with an interpolation error. A `${SSH_AUTH_SOCK:-/dev/null}`
+  guard would make the container start cleanly for those contributors (SSH just won't work).
+  Low priority until a second contributor joins.
+- This fix should be backported to the CppUTest devcontainer template so future clones
+  don't encounter the same issue.
+
+### Open questions
+- None
+
 ## 2026-03-29 — E2 story decomposition
 
 ### Decisions
