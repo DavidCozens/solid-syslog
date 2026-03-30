@@ -197,56 +197,21 @@ TEST(SolidSyslog, CreateReturnsNullWhenAllocFails)
     POINTERS_EQUAL(nullptr, result);
 }
 
-// clang-format off
-// Test list — S1.1: Walking Skeleton
-//
-// Test defaults (hard-coded for walking skeleton, driven in by later stories):
-//   PRIVAL    : 134  (facility=LOCAL0=16, severity=INFO=6, 16*8+6=134)
-//   VERSION   : 1    (fixed by RFC 5424)
-//   TIMESTAMP : 2009-03-23T00:00:00.000Z  (RFC 5424 publication date)
-//   HOSTNAME  : TestHost
-//   APP-NAME  : TestApp
-//   PROCID    : 42
-//   MSGID     : 54
-//   SDATA     : -    (NILVALUE)
-//   MSG       : hello world
-//
-//   Full expected message:
-//   <134>1 2009-03-23T00:00:00.000Z TestHost TestApp 42 54 - hello world
-//
-// Z — Zero
-//   [x] No messages are sent when log is not called
-//
-// O — One
-//   [x] A single SolidSyslog_Log(logger) call results in exactly one Send on the spy
-//   [x] The PRIVAL value is 134 (tested as '<134>')
-//   [x] The VERSION field is '1'
-//   [x] The TIMESTAMP field is '2009-03-23T00:00:00.000Z'
-//   [x] The HOSTNAME field is 'TestHost'
-//   [x] The APP-NAME field is 'TestApp'
-//   [x] The PROCID field is '42'
-//   [x] The MSGID field is '54'
-//   [x] The STRUCTURED-DATA field is '-'
-//   [x] The MSG field is 'hello world'
-//   [ ] (S1.x) MSG is preceded by UTF-8 BOM
-//
-// B — Boundaries
-//   [ ] SolidSyslog_Log called twice results in Send called twice
-//
-// I — Interfaces
-//   [ ] SolidSyslog_Create returns a non-NULL handle
-//   [ ] Two independently created loggers have different handles
-//   [ ] Each logger sends through its own sender (independence at behaviour level)
-//   [ ] SenderSpy can be substituted for any other SyslogSender without changing SolidSyslog
-//   [ ] NullSender (internal default) does not crash when Send is called
-//
-// E — Exceptions
-//   [x] SolidSyslog_Create returns NULL when alloc fails
-//   [ ] NULL config to Create is handled without crash
-//   [ ] SolidSyslog_Create with a NULL config returns NULL
-//   [ ] SolidSyslog_Destroy with a NULL handle does not crash
-//   [ ] SolidSyslog_Log on NULL handle does nothing, does not crash
-//
-// S — Simple scenario
-//   [ ] A single Log call produces the fully validated RFC 5424 message
-// clang-format on
+IGNORE_TEST(SolidSyslog, HappyPathOnly)
+{
+    // Error handling not yet implemented — see Epic #31
+    //   SolidSyslog_Create with a NULL config returns NULL
+    //   SolidSyslog_Destroy with a NULL handle does not crash
+    //   SolidSyslog_Log on NULL handle does nothing, does not crash
+    //
+    // Optional header fields not yet driven in — see Epic #8
+    //   MSG is preceded by UTF-8 BOM
+    //
+    // Multi-logger independence not yet tested
+    //   SolidSyslog_Log called twice results in Send called twice
+    //   Two independently created loggers have different handles
+    //   Each logger sends through its own sender
+    //
+    // End-to-end validated message — see Story S2.4
+    //   A single Log call produces the fully validated RFC 5424 message
+}

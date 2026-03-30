@@ -31,6 +31,10 @@ EXTERN_C_BEGIN
     int SocketSpy_CloseCallCount(void);
     int SocketSpy_LastClosedFd(void);
 
+    /* getaddrinfo accessors */
+    int         SocketSpy_GetAddrInfoCallCount(void);
+    const char* SocketSpy_LastGetAddrInfoHostname(void);
+
 EXTERN_C_END
 
 #endif /* SOCKETSPY_H */

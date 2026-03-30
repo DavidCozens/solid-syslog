@@ -19,22 +19,22 @@
             }
         },
         {
-            "label": "configure",
+            "label": "test (junit)",
             "type": "shell",
             "command": "cmake",
-            "args": ["--preset", "${env:BUILD_PRESET}"],
-            "group": "build",
+            "args": ["--build", "--preset", "${env:BUILD_PRESET}", "--target", "junit"],
+            "group": "test",
             "presentation": {
                 "reveal": "always",
                 "panel": "shared"
             }
         },
         {
-            "label": "test (junit)",
+            "label": "configure",
             "type": "shell",
             "command": "cmake",
-            "args": ["--build", "--preset", "${env:BUILD_PRESET}", "--target", "junit"],
-            "group": "test",
+            "args": ["--preset", "${env:BUILD_PRESET}"],
+            "group": "build",
             "presentation": {
                 "reveal": "always",
                 "panel": "shared"
