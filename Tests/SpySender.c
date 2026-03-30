@@ -1,13 +1,7 @@
 #include "SpySender.h"
 
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables) -- spy state, deliberately mutable and reset
-// between tests
-static int callCount;
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables) -- spy state, deliberately mutable and reset
-// between tests
-static const void* lastBuffer;
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables) -- spy state, deliberately mutable and reset
-// between tests
+static int                       callCount;
+static const void*               lastBuffer;
 static struct SolidSyslog_Sender sender;
 
 static void Send(struct SolidSyslog_Sender* self, const void* buffer, size_t size)

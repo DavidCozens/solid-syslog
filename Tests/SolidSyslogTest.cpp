@@ -60,6 +60,8 @@ static std::string SyslogMsg(const char* buffer)
 TEST_GROUP(SolidSyslog)
 {
     SolidSyslog_Config config;
+    // cppcheck-suppress variableScope -- member of TEST_GROUP; scope and constness managed by CppUTest macro
+    // cppcheck-suppress constVariablePointer -- SolidSyslog_Log requires non-const; false positive from macro expansion
     SolidSyslog *logger;
 
     void setup() override
