@@ -6,6 +6,14 @@
 #include <netinet/in.h>
 
 // clang-format off
+static const char * const TEST_MESSAGE      = "hello";
+static const size_t       TEST_MESSAGE_LEN  = 5;
+static const char * const TEST_DEFAULT_HOST = "127.0.0.1";
+static const int          TEST_DEFAULT_PORT = 514;
+static const size_t       TEST_MAX_MESSAGE_SIZE = 1024;
+// clang-format on
+
+// clang-format off
 TEST_GROUP(PosixUdpSender)
 {
     struct PosixUdpSender_Config config = {0};
@@ -24,6 +32,11 @@ TEST_GROUP(PosixUdpSender)
     {
         PosixUdpSender_Destroy(sender);
     }
+
+    void Send() const
+    {
+        sender->Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN);
+    }
 };
 // clang-format on
 
@@ -33,52 +46,52 @@ TEST(PosixUdpSender, CreateDestroyWorksWithoutCrashing)
 
 TEST(PosixUdpSender, SingleSendResultsInOneSendtoCall)
 {
-    sender->Send(sender, "hello", 5);
+    Send();
     LONGS_EQUAL(1, SocketSpy_SendtoCallCount());
 }
 
 TEST(PosixUdpSender, SendtoReceivesBuffer)
 {
-    sender->Send(sender, "hello", 5);
-    STRCMP_EQUAL("hello", SocketSpy_LastBufAsString());
+    Send();
+    STRCMP_EQUAL(TEST_MESSAGE, SocketSpy_LastBufAsString());
 }
 
 TEST(PosixUdpSender, SendtoCalledWithDefaultPort)
 {
-    sender->Send(sender, "hello", 5);
-    LONGS_EQUAL(514, SocketSpy_LastPort());
+    Send();
+    LONGS_EQUAL(TEST_DEFAULT_PORT, SocketSpy_LastPort());
 }
 
 TEST(PosixUdpSender, MaxMessageSizeTransmittedWithoutTruncation)
 {
-    std::array<char, 1024> buffer{};
+    std::array<char, TEST_MAX_MESSAGE_SIZE> buffer{};
     buffer.fill('A');
     sender->Send(sender, buffer.data(), buffer.size());
-    LONGS_EQUAL(1024, SocketSpy_LastLen());
-    MEMCMP_EQUAL(buffer.data(), SocketSpy_LastBuf(), 1024);
+    LONGS_EQUAL(TEST_MAX_MESSAGE_SIZE, SocketSpy_LastLen());
+    MEMCMP_EQUAL(buffer.data(), SocketSpy_LastBuf(), TEST_MAX_MESSAGE_SIZE);
 }
 
 TEST(PosixUdpSender, SendtoCalledWithFlagsZero)
 {
-    sender->Send(sender, "hello", 5);
+    Send();
     LONGS_EQUAL(0, SocketSpy_LastFlags());
 }
 
 TEST(PosixUdpSender, SendtoCalledWithAddressFamilyAF_INET)
 {
-    sender->Send(sender, "hello", 5);
+    Send();
     LONGS_EQUAL(AF_INET, SocketSpy_LastAddrFamily());
 }
 
 TEST(PosixUdpSender, SendtoCalledWithDefaultHost)
 {
-    sender->Send(sender, "hello", 5);
-    STRCMP_EQUAL("127.0.0.1", SocketSpy_LastAddrAsString());
+    Send();
+    STRCMP_EQUAL(TEST_DEFAULT_HOST, SocketSpy_LastAddrAsString());
 }
 
 TEST(PosixUdpSender, SendtoCalledWithAddrlenOfSockaddrIn)
 {
-    sender->Send(sender, "hello", 5);
+    Send();
     LONGS_EQUAL(sizeof(struct sockaddr_in), SocketSpy_LastAddrLen());
 }
 
@@ -99,7 +112,7 @@ TEST(PosixUdpSender, SocketCalledWithSOCK_DGRAM)
 
 TEST(PosixUdpSender, SendtoCalledWithSocketFd)
 {
-    sender->Send(sender, "hello", 5);
+    Send();
     LONGS_EQUAL(SocketSpy_SocketFd(), SocketSpy_LastSendtoFd());
 }
 
@@ -112,27 +125,31 @@ TEST_GROUP(PosixUdpSenderDestroy)
 
     void setup() override { SocketSpy_Reset(); }
     void teardown() override {}
+
+    void CreateAndDestroy() const
+    {
+        struct SolidSyslog_Sender* s = PosixUdpSender_Create(&config);
+        PosixUdpSender_Destroy(s);
+    }
 };
 // clang-format on
 
 TEST(PosixUdpSenderDestroy, CloseCalledOnDestroy)
 {
-    struct SolidSyslog_Sender* s = PosixUdpSender_Create(&config);
-    PosixUdpSender_Destroy(s);
+    CreateAndDestroy();
     LONGS_EQUAL(1, SocketSpy_CloseCallCount());
 }
 
 TEST(PosixUdpSenderDestroy, CloseCalledWithSocketFd)
 {
-    struct SolidSyslog_Sender* s = PosixUdpSender_Create(&config);
-    PosixUdpSender_Destroy(s);
+    CreateAndDestroy();
     LONGS_EQUAL(SocketSpy_SocketFd(), SocketSpy_LastClosedFd());
 }
 
 TEST(PosixUdpSenderDestroy, SimpleScenario)
 {
     struct SolidSyslog_Sender* s = PosixUdpSender_Create(&config);
-    s->Send(s, "hello", 5);
+    s->Send(s, TEST_MESSAGE, TEST_MESSAGE_LEN);
     PosixUdpSender_Destroy(s);
 
     LONGS_EQUAL(1, SocketSpy_SocketCallCount());
@@ -140,12 +157,17 @@ TEST(PosixUdpSenderDestroy, SimpleScenario)
     LONGS_EQUAL(SOCK_DGRAM, SocketSpy_SocketType());
     LONGS_EQUAL(1, SocketSpy_SendtoCallCount());
     LONGS_EQUAL(AF_INET, SocketSpy_LastAddrFamily());
-    LONGS_EQUAL(514, SocketSpy_LastPort());
+    LONGS_EQUAL(TEST_DEFAULT_PORT, SocketSpy_LastPort());
     LONGS_EQUAL(1, SocketSpy_CloseCallCount());
 }
 
 // clang-format off
 // Test list — S2.1: Walking Skeleton — PosixUdpSender transmits a buffer
+//
+// Test defaults (hard-coded for walking skeleton, driven in by S2.2):
+//   HOST    : 127.0.0.1
+//   PORT    : 514  (RFC 5426 default syslog UDP port)
+//   MESSAGE : "hello"
 //
 // Z — Zero
 //   [x] CreateDestroyWorksWithoutCrashing
