@@ -1,5 +1,6 @@
 #include "CppUTest/TestHarness.h"
 #include "PosixUdpSender.h"
+#include "SolidSyslog_Sender.h"
 #include "SocketSpy.h"
 #include <array>
 #include <cstring>
@@ -35,9 +36,10 @@ TEST_GROUP(PosixUdpSender)
 
     void Send() const
     {
-        sender->Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN);
+        SolidSyslog_Sender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN);
     }
 };
+
 // clang-format on
 
 TEST(PosixUdpSender, CreateDestroyWorksWithoutCrashing)
@@ -66,7 +68,7 @@ TEST(PosixUdpSender, MaxMessageSizeTransmittedWithoutTruncation)
 {
     std::array<char, TEST_MAX_MESSAGE_SIZE> buffer{};
     buffer.fill('A');
-    sender->Send(sender, buffer.data(), buffer.size());
+    SolidSyslog_Sender_Send(sender, buffer.data(), buffer.size());
     LONGS_EQUAL(TEST_MAX_MESSAGE_SIZE, SocketSpy_LastLen());
     MEMCMP_EQUAL(buffer.data(), SocketSpy_LastBuf(), TEST_MAX_MESSAGE_SIZE);
 }
@@ -132,6 +134,7 @@ TEST_GROUP(PosixUdpSenderDestroy)
         PosixUdpSender_Destroy(s);
     }
 };
+
 // clang-format on
 
 TEST(PosixUdpSenderDestroy, CloseCalledOnDestroy)
@@ -149,7 +152,7 @@ TEST(PosixUdpSenderDestroy, CloseCalledWithSocketFd)
 TEST(PosixUdpSenderDestroy, SimpleScenario)
 {
     struct SolidSyslog_Sender* s = PosixUdpSender_Create(&config);
-    s->Send(s, TEST_MESSAGE, TEST_MESSAGE_LEN);
+    SolidSyslog_Sender_Send(s, TEST_MESSAGE, TEST_MESSAGE_LEN);
     PosixUdpSender_Destroy(s);
 
     LONGS_EQUAL(1, SocketSpy_SocketCallCount());

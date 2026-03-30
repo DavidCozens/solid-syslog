@@ -23,19 +23,19 @@ static char lastAddrString[INET_ADDRSTRLEN];
 
 void SocketSpy_Reset(void)
 {
-    sendtoCallCount = 0;
-    lastBuf         = NULL;
-    lastLen         = 0;
-    lastFlags       = 0;
-    lastAddr        = (struct sockaddr_in){0};
-    lastAddrLen     = 0;
-    lastSendtoFd    = -1;
-    socketCallCount = 0;
-    socketFd        = -1;
-    lastSocketDomain = 0;
-    lastSocketType   = 0;
-    closeCallCount  = 0;
-    lastClosedFd    = -1;
+    sendtoCallCount   = 0;
+    lastBuf           = NULL;
+    lastLen           = 0;
+    lastFlags         = 0;
+    lastAddr          = (struct sockaddr_in) {0};
+    lastAddrLen       = 0;
+    lastSendtoFd      = -1;
+    socketCallCount   = 0;
+    socketFd          = -1;
+    lastSocketDomain  = 0;
+    lastSocketType    = 0;
+    closeCallCount    = 0;
+    lastClosedFd      = -1;
     lastAddrString[0] = '\0';
 }
 
@@ -139,9 +139,10 @@ int socket(int domain, int type, int protocol)
     return socketFd;
 }
 
+// clang-format off
 // NOLINTNEXTLINE(readability-inconsistent-declaration-parameter-name,bugprone-easily-swappable-parameters) -- POSIX API; parameter names differ from glibc internal names
-ssize_t sendto(int sockfd, const void* buf, size_t len, int flags,
-               const struct sockaddr* dest_addr, socklen_t addrlen)
+ssize_t sendto(int sockfd, const void* buf, size_t len, int flags, const struct sockaddr* dest_addr, socklen_t addrlen)
+// clang-format on
 {
     sendtoCallCount++;
     lastSendtoFd = sockfd;

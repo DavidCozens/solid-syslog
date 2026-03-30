@@ -9,7 +9,7 @@ extern "C"
 {
 #endif
 
-    void        SocketSpy_Reset(void);
+    void SocketSpy_Reset(void);
 
     /* sendto accessors */
     int         SocketSpy_SendtoCallCount(void);
@@ -24,14 +24,14 @@ extern "C"
     int         SocketSpy_LastSendtoFd(void);
 
     /* socket accessors */
-    int         SocketSpy_SocketCallCount(void);
-    int         SocketSpy_SocketFd(void);
-    int         SocketSpy_SocketDomain(void);
-    int         SocketSpy_SocketType(void);
+    int SocketSpy_SocketCallCount(void);
+    int SocketSpy_SocketFd(void);
+    int SocketSpy_SocketDomain(void);
+    int SocketSpy_SocketType(void);
 
     /* close accessors */
-    int         SocketSpy_CloseCallCount(void);
-    int         SocketSpy_LastClosedFd(void);
+    int SocketSpy_CloseCallCount(void);
+    int SocketSpy_LastClosedFd(void);
 
 #ifdef __cplusplus
 }

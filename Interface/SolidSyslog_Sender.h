@@ -8,10 +8,9 @@ extern "C"
 {
 #endif
 
-    struct SolidSyslog_Sender
-    {
-        void (*Send)(struct SolidSyslog_Sender* sender, const void* buffer, size_t size);
-    };
+    struct SolidSyslog_Sender;
+
+    void SolidSyslog_Sender_Send(struct SolidSyslog_Sender* sender, const void* buffer, size_t size);
 
 #ifdef __cplusplus
 }

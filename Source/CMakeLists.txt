@@ -1,5 +1,6 @@
 set(SOURCES
     SolidSyslog.c
+    SolidSyslog_Sender.c
     PosixUdpSender.c
 )
 

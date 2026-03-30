@@ -1,4 +1,5 @@
 #include "SenderSpy.h"
+#include "SolidSyslog_Sender_Impl.h"
 
 static int                       callCount;
 static const void*               lastBuffer;

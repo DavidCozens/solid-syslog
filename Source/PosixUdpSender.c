@@ -1,4 +1,5 @@
 #include "PosixUdpSender.h"
+#include "SolidSyslog_Sender_Impl.h"
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <stdlib.h>

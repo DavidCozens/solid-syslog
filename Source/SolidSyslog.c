@@ -26,5 +26,5 @@ void SolidSyslog_Destroy(struct SolidSyslog* logger)
 void SolidSyslog_Log(struct SolidSyslog* logger)
 {
     static const char message[] = "<134>1 2009-03-23T00:00:00.000Z TestHost TestApp 42 54 - hello world";
-    logger->sender->Send(logger->sender, message, sizeof(message) - 1);
+    SolidSyslog_Sender_Send(logger->sender, message, sizeof(message) - 1);
 }
