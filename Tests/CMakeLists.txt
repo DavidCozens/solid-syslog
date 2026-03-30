@@ -41,7 +41,7 @@ if(COVERAGE)
                 --ignore-errors inconsistent
                 --rc branch_coverage=1
             COMMAND ${LCOV_EXECUTABLE} --remove ${CMAKE_BINARY_DIR}/coverage.info
-                "/usr/*" "${CMAKE_SOURCE_DIR}/Tests/*"
+                "/usr/*" "/home/cpputest/*" "${CMAKE_SOURCE_DIR}/Tests/*"
                 --output-file ${CMAKE_BINARY_DIR}/coverage.filtered.info
                 --ignore-errors unused,empty
                 --rc branch_coverage=1
