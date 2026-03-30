@@ -4,7 +4,7 @@ BreakBeforeBraces: Allman
 IndentWidth: 4
 UseTab: Never
 TabWidth: 4
-ColumnLimit: 120
+ColumnLimit: 160
 
 # Spacing
 SpaceBeforeParens: ControlStatements

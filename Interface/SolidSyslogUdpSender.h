@@ -7,7 +7,8 @@ EXTERN_C_BEGIN
 
     struct SolidSyslogUdpSenderConfig
     {
-        int placeholder;
+        int (*getPort)(void);         // NOLINT(modernize-redundant-void-arg) -- C idiom; void is required in C to mean "no parameters"
+        const char* (*getHost)(void); // NOLINT(modernize-redundant-void-arg) -- C idiom; void is required in C to mean "no parameters"
     };
 
     struct SolidSyslogSender* SolidSyslogUdpSender_Create(const struct SolidSyslogUdpSenderConfig* config);

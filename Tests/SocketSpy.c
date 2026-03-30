@@ -1,6 +1,8 @@
 #include "SocketSpy.h"
 #include <arpa/inet.h>
+#include <netdb.h>
 #include <netinet/in.h>
+#include <string.h>
 #include <sys/socket.h>
 
 static int                sendtoCallCount;
@@ -21,6 +23,11 @@ static int lastClosedFd;
 
 static char lastAddrString[INET_ADDRSTRLEN];
 
+static int                getAddrInfoCallCount;
+static char               lastGetAddrInfoHostname[256];
+static struct sockaddr_in fakeResolvedAddr;
+static struct addrinfo    fakeAddrInfo;
+
 void SocketSpy_Reset(void)
 {
     sendtoCallCount   = 0;
@@ -37,6 +44,15 @@ void SocketSpy_Reset(void)
     closeCallCount    = 0;
     lastClosedFd      = -1;
     lastAddrString[0] = '\0';
+
+    getAddrInfoCallCount        = 0;
+    lastGetAddrInfoHostname[0]  = '\0';
+    fakeResolvedAddr            = (struct sockaddr_in) {0};
+    fakeResolvedAddr.sin_family = AF_INET;
+    fakeAddrInfo                = (struct addrinfo) {0};
+    fakeAddrInfo.ai_family      = AF_INET;
+    fakeAddrInfo.ai_addr        = (struct sockaddr*) &fakeResolvedAddr;
+    fakeAddrInfo.ai_addrlen     = sizeof(fakeResolvedAddr);
 }
 
 /* sendto accessors */
@@ -126,6 +142,18 @@ int SocketSpy_LastClosedFd(void)
     return lastClosedFd;
 }
 
+/* getaddrinfo accessors */
+
+int SocketSpy_GetAddrInfoCallCount(void)
+{
+    return getAddrInfoCallCount;
+}
+
+const char* SocketSpy_LastGetAddrInfoHostname(void)
+{
+    return lastGetAddrInfoHostname;
+}
+
 /* POSIX strong-symbol fakes */
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- POSIX API; signature is fixed
@@ -159,4 +187,26 @@ int close(int fd)
     closeCallCount++;
     lastClosedFd = fd;
     return 0;
+}
+
+// clang-format off
+// NOLINTNEXTLINE(readability-inconsistent-declaration-parameter-name,bugprone-easily-swappable-parameters) -- POSIX API; parameter names differ from glibc internal names
+int getaddrinfo(const char* node, const char* service, const struct addrinfo* hints, struct addrinfo** res)
+// clang-format on
+{
+    (void) service;
+    (void) hints;
+    getAddrInfoCallCount++;
+    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- bounded; null-term below
+    strncpy(lastGetAddrInfoHostname, node ? node : "", sizeof(lastGetAddrInfoHostname) - 1);
+    lastGetAddrInfoHostname[sizeof(lastGetAddrInfoHostname) - 1] = '\0';
+    inet_pton(AF_INET, node, &fakeResolvedAddr.sin_addr);
+    *res = &fakeAddrInfo;
+    return 0;
+}
+
+// NOLINTNEXTLINE(readability-inconsistent-declaration-parameter-name) -- POSIX API; parameter names differ from glibc internal names
+void freeaddrinfo(struct addrinfo* res)
+{
+    (void) res;
 }

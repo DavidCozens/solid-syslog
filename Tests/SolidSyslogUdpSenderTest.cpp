@@ -14,10 +14,33 @@ static const int          TEST_DEFAULT_PORT     = 514;
 static const size_t       TEST_MAX_MESSAGE_SIZE = 1024;
 // clang-format on
 
+static int GetPort514()
+{
+    return 514;
+}
+
+static int GetPort9999()
+{
+    return 9999;
+}
+
+static const char* GetDefaultHost()
+{
+    return "127.0.0.1";
+}
+
+static int getHostCallCount;
+
+static const char* SpyGetHost()
+{
+    getHostCallCount++;
+    return "127.0.0.1";
+}
+
 // clang-format off
 TEST_GROUP(SolidSyslogUdpSender)
 {
-    struct SolidSyslogUdpSenderConfig config = {0};
+    struct SolidSyslogUdpSenderConfig config = {GetPort514, GetDefaultHost};
     // cppcheck-suppress constVariablePointer -- Send requires non-const self; false positive from macro expansion
     // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
     struct SolidSyslogSender* sender = nullptr;
@@ -123,7 +146,7 @@ TEST(SolidSyslogUdpSender, SendtoCalledWithSocketFd)
 TEST_GROUP(SolidSyslogUdpSenderDestroy)
 {
     // cppcheck-suppress unreadVariable -- used in test bodies; cppcheck does not model CppUTest macros
-    struct SolidSyslogUdpSenderConfig config = {0};
+    struct SolidSyslogUdpSenderConfig config = {GetPort514, GetDefaultHost};
 
     void setup() override { SocketSpy_Reset(); }
     void teardown() override {}
@@ -164,13 +187,66 @@ TEST(SolidSyslogUdpSenderDestroy, SimpleScenario)
     LONGS_EQUAL(1, SocketSpy_CloseCallCount());
 }
 
+static int getPortCallCount;
+
+static int SpyGetPort()
+{
+    getPortCallCount++;
+    return 514;
+}
+
+TEST(SolidSyslogUdpSender, GetPortCalledOnCreate)
+{
+    getPortCallCount                            = 0;
+    struct SolidSyslogUdpSenderConfig spyConfig = {SpyGetPort, GetDefaultHost};
+    struct SolidSyslogSender*         s         = SolidSyslogUdpSender_Create(&spyConfig);
+    LONGS_EQUAL(1, getPortCallCount);
+    SolidSyslogSender_Send(s, "hello", 5);
+    LONGS_EQUAL(1, getPortCallCount);
+    SolidSyslogUdpSender_Destroy(s);
+}
+
+TEST(SolidSyslogUdpSender, SendtoCalledWithConfiguredPort)
+{
+    struct SolidSyslogUdpSenderConfig portConfig = {GetPort9999, GetDefaultHost};
+    struct SolidSyslogSender*         s          = SolidSyslogUdpSender_Create(&portConfig);
+    SolidSyslogSender_Send(s, "hello", 5);
+    LONGS_EQUAL(9999, SocketSpy_LastPort());
+    SolidSyslogUdpSender_Destroy(s);
+}
+
+TEST(SolidSyslogUdpSender, GetHostCalledOnCreate)
+{
+    getHostCallCount                            = 0;
+    struct SolidSyslogUdpSenderConfig spyConfig = {GetPort514, SpyGetHost};
+    struct SolidSyslogSender*         s         = SolidSyslogUdpSender_Create(&spyConfig);
+    LONGS_EQUAL(1, getHostCallCount);
+    SolidSyslogSender_Send(s, "hello", 5);
+    LONGS_EQUAL(1, getHostCallCount);
+    SolidSyslogUdpSender_Destroy(s);
+}
+
+TEST(SolidSyslogUdpSender, GetAddrInfoCalledWithHostnameFromGetHost)
+{
+    SocketSpy_Reset();
+    struct SolidSyslogUdpSenderConfig c = {GetPort514, SpyGetHost};
+    struct SolidSyslogSender*         s = SolidSyslogUdpSender_Create(&c);
+    LONGS_EQUAL(1, SocketSpy_GetAddrInfoCallCount());
+    STRCMP_EQUAL("127.0.0.1", SocketSpy_LastGetAddrInfoHostname());
+    SolidSyslogUdpSender_Destroy(s);
+}
+
+TEST(SolidSyslogUdpSender, SendtoCalledWithResolvedAddress)
+{
+    struct SolidSyslogUdpSenderConfig c = {GetPort514, GetDefaultHost};
+    struct SolidSyslogSender*         s = SolidSyslogUdpSender_Create(&c);
+    SolidSyslogSender_Send(s, "hello", 5);
+    STRCMP_EQUAL("127.0.0.1", SocketSpy_LastAddrAsString());
+    SolidSyslogUdpSender_Destroy(s);
+}
+
 // clang-format off
-// Test list — S2.1: Walking Skeleton — SolidSyslogUdpSender transmits a buffer
-//
-// Test defaults (hard-coded for walking skeleton, driven in by S2.2):
-//   HOST    : 127.0.0.1
-//   PORT    : 514  (RFC 5426 default syslog UDP port)
-//   MESSAGE : "hello"
+// Test list — S2.1/S2.2: SolidSyslogUdpSender transmits a buffer with injected config
 //
 // Z — Zero
 //   [x] CreateDestroyWorksWithoutCrashing
@@ -197,6 +273,13 @@ TEST(SolidSyslogUdpSenderDestroy, SimpleScenario)
 //   [x] socket() called with SOCK_DGRAM
 //   [x] close() called once on Destroy
 //   [x] close() called with fd returned by socket()
+//
+// Config injection (S2.2)
+//   [x] getPort() called once on Create; not called again on Send
+//   [x] sendto called with port returned by getPort()
+//   [x] getHost() called once on Create; not called again on Send
+//   [x] getaddrinfo() called once on Create with hostname from getHost()
+//   [x] sendto called with address resolved from getHost()
 //
 // E — Exceptions (deferred — error handling phase)
 //   [ ] Create with NULL config returns NULL
