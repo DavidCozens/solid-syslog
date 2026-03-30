@@ -1,5 +1,7 @@
 set(SOURCES
     SolidSyslog.c
+    SolidSyslogSender.c
+    SolidSyslogUdpSender.c
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})

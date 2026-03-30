@@ -102,7 +102,7 @@ The UUID issue is Windows/WSL-specific but there is no cost to running the comma
 - E2.3: CMake platform detection — PosixUdpSender included conditionally
 - E2.4: BDD walking skeleton — end-to-end UDP message
 - PosixUdpSender.c included in build via CMake platform detection only — no #ifdef in source
-- POSIX socket calls tested with fff (fake function framework) — no real network in unit tests
+- POSIX socket calls tested with hand-rolled SocketSpy (strong-symbol fakes for socket/sendto/close) — no real network in unit tests; fff considered but rejected as an unnecessary dependency for three functions
 - BDD harness deferred from E0 now lands in E2.4 as planned
 - RTOS-specific sender implementations and non-POSIX build testing explicitly deferred to E8
 
@@ -113,4 +113,33 @@ The UUID issue is Windows/WSL-specific but there is no cost to running the comma
 ### Open questions
 - Port 0 behaviour: reject or default to 514? Decide before implementing E2.2
 - Unresolvable hostname: error at Create time (fail fast) or at Send time (deferred failure)?
-  Decide before implementing E2.2
+  Preferred: fail fast at Create time — matches alloc-failure pattern from S1.1. Confirm before E2.2.
+
+## 2026-03-30 — E2 BDD infrastructure design
+
+### Decisions
+- syslog-ng chosen as BDD test oracle — RFC 5424 parser decomposes received messages into named
+  fields; Behave asserts field by field, not on raw bytes. Catches conformance failures a string
+  comparison would miss.
+- syslog-ng runs as a third Docker Compose service in `.devcontainer/docker-compose.yml` alongside
+  the existing gcc/clang devcontainer services. No Docker-in-Docker required.
+- Hostname resolution in PosixUdpSender uses `getaddrinfo` — accepts both IP strings and DNS
+  hostnames (e.g. `syslog-ng` service name from Docker Compose network).
+- syslog-ng UDP source on port 5514 (unprivileged; no NET_BIND_SERVICE needed).
+- syslog-ng output: key=value template, one line per message, written to
+  `Bdd/output/received.log` via shared workspace mount. Behave reads directly.
+- `flush_lines(1)` in syslog-ng destination config to minimise write latency.
+- Behave test isolation via file-offset tracking: `before_scenario` records byte offset,
+  steps read only new lines from that offset. No container restart between scenarios.
+- BDD sender binary: thin C program `Bdd/bdd_sender.c` reads JSON config (host, port,
+  transport, messages), sends via SolidSyslog+PosixUdpSender, exits. Behave invokes as subprocess.
+- CI: `docker compose up -d syslog-ng` before BDD step; same docker-compose.yml as devcontainer.
+- SenderSpy renamed from SpySender throughout — subject-first naming more idiomatic.
+- E2, S2.2, S2.3, S2.4 GitHub issues updated with infrastructure design notes.
+
+### Deferred
+- TLS cert management for RFC 5425 BDD scenarios — self-signed CA, generation script
+  to be version-controlled alongside Compose config. Deferred to E3.
+
+### Open questions
+- None
