@@ -52,7 +52,23 @@ PR titles must also follow this format — on squash merge the PR title becomes 
 
 ## TDD Discipline
 
-Follow Uncle Bob's Three Rules of TDD strictly:
+Follow Uncle Bob's Three Rules of TDD strictly — **red/green/refactor in strict order**:
+
+- **Red**: write the simplest failing test. Use inline literal values — do not introduce named constants
+  or helpers at this step. Compilation failures count as failures.
+- **Green**: write the minimum production code to pass the test. Hard-coded values are correct here.
+- **Refactor**: while green, extract named constants, helpers, and DRY improvements. This is the right
+  time to introduce `TEST_*` constants, field index constants, and test helpers.
+
+### Test Defaults Pattern
+
+For walking skeleton stories, use hard-coded "test default" values that are obviously fake
+(e.g. `TestHost`, `42`, the RFC 5424 publication date `2009-03-23T00:00:00.000Z`). Name them `TEST_*`.
+These are baked into production code initially; later stories drive real values in via config injection.
+
+Named constants and test helpers emerge through the refactor step — never introduced upfront.
+
+### Three Laws
 
 1. You may not write production code unless it is to make a failing unit test pass.
 2. You may not write more of a unit test than is sufficient to fail — compilation failures are failures.
