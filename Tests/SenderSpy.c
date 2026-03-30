@@ -1,4 +1,4 @@
-#include "SpySender.h"
+#include "SenderSpy.h"
 
 static int                       callCount;
 static const void*               lastBuffer;
@@ -12,24 +12,24 @@ static void Send(struct SolidSyslog_Sender* self, const void* buffer, size_t siz
     lastBuffer = buffer;
 }
 
-void SpySender_Reset(void)
+void SenderSpy_Reset(void)
 {
     callCount  = 0;
     lastBuffer = NULL;
 }
 
-const char* SpySender_LastBufferAsString(void)
+const char* SenderSpy_LastBufferAsString(void)
 {
     return (const char*) lastBuffer;
 }
 
-struct SolidSyslog_Sender* SpySender_GetSender(void)
+struct SolidSyslog_Sender* SenderSpy_GetSender(void)
 {
     sender.Send = Send;
     return &sender;
 }
 
-int SpySender_CallCount(void)
+int SenderSpy_CallCount(void)
 {
     return callCount;
 }

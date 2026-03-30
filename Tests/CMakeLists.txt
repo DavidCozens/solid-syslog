@@ -1,6 +1,6 @@
 set(TEST_SOURCES
     SolidSyslogTest.cpp
-    SpySender.c
+    SenderSpy.c
     main.cpp
 )
 

@@ -1,6 +1,6 @@
 #include "CppUTest/TestHarness.h"
 #include "SolidSyslog.h"
-#include "SpySender.h"
+#include "SenderSpy.h"
 #include <cstdlib>
 #include <string>
 
@@ -66,8 +66,8 @@ TEST_GROUP(SolidSyslog)
 
     void setup() override
     {
-        SpySender_Reset();
-        config = {SpySender_GetSender(), malloc, free};
+        SenderSpy_Reset();
+        config = {SenderSpy_GetSender(), malloc, free};
         logger = SolidSyslog_Create(&config);
     }
 
@@ -83,7 +83,7 @@ TEST_GROUP(SolidSyslog)
 
     static const char *LastMessage()
     {
-        return SpySender_LastBufferAsString();
+        return SenderSpy_LastBufferAsString();
     }
 };
 
@@ -107,25 +107,25 @@ TEST(SolidSyslog, TwoCreatesReturnDifferentHandles)
 
 TEST(SolidSyslog, EachLoggerSendsThroughItsOwnSender)
 {
-    SolidSyslog_Config secondConfig = {SpySender_GetSender(), malloc, free};
+    SolidSyslog_Config secondConfig = {SenderSpy_GetSender(), malloc, free};
     SolidSyslog*       second       = SolidSyslog_Create(&secondConfig);
 
     SolidSyslog_Log(logger);
     SolidSyslog_Log(second);
-    LONGS_EQUAL(2, SpySender_CallCount());
+    LONGS_EQUAL(2, SenderSpy_CallCount());
 
     SolidSyslog_Destroy(second);
 }
 
 TEST(SolidSyslog, NoMessagesAreSentWhenLogIsNotCalled)
 {
-    LONGS_EQUAL(0, SpySender_CallCount());
+    LONGS_EQUAL(0, SenderSpy_CallCount());
 }
 
 TEST(SolidSyslog, SingleLogCallResultsInOneSend)
 {
     Log();
-    LONGS_EQUAL(1, SpySender_CallCount());
+    LONGS_EQUAL(1, SenderSpy_CallCount());
 }
 
 TEST(SolidSyslog, PriValIs134)
@@ -192,7 +192,7 @@ static void* AlwaysFailAlloc(size_t size)
 
 TEST(SolidSyslog, CreateReturnsNullWhenAllocFails)
 {
-    SolidSyslog_Config failConfig = {SpySender_GetSender(), AlwaysFailAlloc, free};
+    SolidSyslog_Config failConfig = {SenderSpy_GetSender(), AlwaysFailAlloc, free};
     SolidSyslog*       result     = SolidSyslog_Create(&failConfig);
     POINTERS_EQUAL(nullptr, result);
 }
@@ -237,7 +237,7 @@ TEST(SolidSyslog, CreateReturnsNullWhenAllocFails)
 //   [ ] SolidSyslog_Create returns a non-NULL handle
 //   [ ] Two independently created loggers have different handles
 //   [ ] Each logger sends through its own sender (independence at behaviour level)
-//   [ ] SpySender can be substituted for any other SyslogSender without changing SolidSyslog
+//   [ ] SenderSpy can be substituted for any other SyslogSender without changing SolidSyslog
 //   [ ] NullSender (internal default) does not crash when Send is called
 //
 // E — Exceptions
