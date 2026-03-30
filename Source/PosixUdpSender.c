@@ -34,10 +34,6 @@ struct SolidSyslog_Sender* PosixUdpSender_Create(const struct PosixUdpSender_Con
 
 void PosixUdpSender_Destroy(struct SolidSyslog_Sender* sender)
 {
-    if (sender == NULL)
-    {
-        return;
-    }
     struct PosixUdpSender* self = (struct PosixUdpSender*) sender;
     close(self->fd);
     free(self);

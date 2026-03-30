@@ -103,25 +103,37 @@ TEST(PosixUdpSender, SendtoCalledWithSocketFd)
     LONGS_EQUAL(SocketSpy_SocketFd(), SocketSpy_LastSendtoFd());
 }
 
-TEST(PosixUdpSender, CloseCalledOnDestroy)
+// Destroy tests manage their own sender lifetime — no teardown Destroy needed.
+// clang-format off
+TEST_GROUP(PosixUdpSenderDestroy)
 {
-    PosixUdpSender_Destroy(sender);
-    sender = nullptr;
+    // cppcheck-suppress unreadVariable -- used in test bodies; cppcheck does not model CppUTest macros
+    struct PosixUdpSender_Config config = {0};
+
+    void setup() override { SocketSpy_Reset(); }
+    void teardown() override {}
+};
+// clang-format on
+
+TEST(PosixUdpSenderDestroy, CloseCalledOnDestroy)
+{
+    struct SolidSyslog_Sender* s = PosixUdpSender_Create(&config);
+    PosixUdpSender_Destroy(s);
     LONGS_EQUAL(1, SocketSpy_CloseCallCount());
 }
 
-TEST(PosixUdpSender, CloseCalledWithSocketFd)
+TEST(PosixUdpSenderDestroy, CloseCalledWithSocketFd)
 {
-    PosixUdpSender_Destroy(sender);
-    sender = nullptr;
+    struct SolidSyslog_Sender* s = PosixUdpSender_Create(&config);
+    PosixUdpSender_Destroy(s);
     LONGS_EQUAL(SocketSpy_SocketFd(), SocketSpy_LastClosedFd());
 }
 
-TEST(PosixUdpSender, SimpleScenario)
+TEST(PosixUdpSenderDestroy, SimpleScenario)
 {
-    sender->Send(sender, "hello", 5);
-    PosixUdpSender_Destroy(sender);
-    sender = nullptr;
+    struct SolidSyslog_Sender* s = PosixUdpSender_Create(&config);
+    s->Send(s, "hello", 5);
+    PosixUdpSender_Destroy(s);
 
     LONGS_EQUAL(1, SocketSpy_SocketCallCount());
     LONGS_EQUAL(AF_INET, SocketSpy_SocketDomain());
@@ -164,6 +176,7 @@ TEST(PosixUdpSender, SimpleScenario)
 // E — Exceptions (deferred — error handling phase)
 //   [ ] Create with NULL config returns NULL
 //   [ ] Create with valid config returns non-NULL sender
+//   [ ] Destroy with NULL sender does nothing, does not crash
 //   [ ] Send called with NULL buffer does nothing, does not crash
 //   [ ] Send called with zero length does nothing, does not crash
 //   [ ] socket returning -1 handled gracefully — Create returns NULL or Send is a no-op
