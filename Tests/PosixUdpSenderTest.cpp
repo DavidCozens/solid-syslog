@@ -117,6 +117,21 @@ TEST(PosixUdpSender, CloseCalledWithSocketFd)
     LONGS_EQUAL(SocketSpy_SocketFd(), SocketSpy_LastClosedFd());
 }
 
+TEST(PosixUdpSender, SimpleScenario)
+{
+    sender->Send(sender, "hello", 5);
+    PosixUdpSender_Destroy(sender);
+    sender = nullptr;
+
+    LONGS_EQUAL(1, SocketSpy_SocketCallCount());
+    LONGS_EQUAL(AF_INET, SocketSpy_SocketDomain());
+    LONGS_EQUAL(SOCK_DGRAM, SocketSpy_SocketType());
+    LONGS_EQUAL(1, SocketSpy_SendtoCallCount());
+    LONGS_EQUAL(AF_INET, SocketSpy_LastAddrFamily());
+    LONGS_EQUAL(514, SocketSpy_LastPort());
+    LONGS_EQUAL(1, SocketSpy_CloseCallCount());
+}
+
 // clang-format off
 // Test list — S2.1: Walking Skeleton — PosixUdpSender transmits a buffer
 //
@@ -155,6 +170,6 @@ TEST(PosixUdpSender, CloseCalledWithSocketFd)
 //   [ ] Unreachable host does not crash
 //
 // S — Simple scenario
-//   [ ] socket called once with AF_INET and SOCK_DGRAM, sendto called once with correct
+//   [x] socket called once with AF_INET and SOCK_DGRAM, sendto called once with correct
 //       address family and port, close called once on Destroy
 // clang-format on
