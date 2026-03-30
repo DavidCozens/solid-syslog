@@ -1,13 +1,13 @@
 #include "SolidSyslog.h"
-#include "SolidSyslog_Sender.h"
+#include "SolidSyslogSender.h"
 
 struct SolidSyslog
 {
-    struct SolidSyslog_Sender* sender;
-    SolidSyslog_FreeFn         free;
+    struct SolidSyslogSender* sender;
+    SolidSyslogFreeFn         free;
 };
 
-struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslog_Config* config)
+struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config)
 {
     struct SolidSyslog* instance = config->alloc(sizeof(struct SolidSyslog));
     if (instance != NULL)
@@ -26,5 +26,5 @@ void SolidSyslog_Destroy(struct SolidSyslog* logger)
 void SolidSyslog_Log(struct SolidSyslog* logger)
 {
     static const char message[] = "<134>1 2009-03-23T00:00:00.000Z TestHost TestApp 42 54 - hello world";
-    SolidSyslog_Sender_Send(logger->sender, message, sizeof(message) - 1);
+    SolidSyslogSender_Send(logger->sender, message, sizeof(message) - 1);
 }

@@ -1,21 +1,21 @@
 #ifndef SOLIDSYSLOG_H
 #define SOLIDSYSLOG_H
 
-#include "SolidSyslog_Alloc.h"
+#include "SolidSyslogAlloc.h"
 
 EXTERN_C_BEGIN
 
-    struct SolidSyslog_Sender;
+    struct SolidSyslogSender;
     struct SolidSyslog;
 
-    struct SolidSyslog_Config
+    struct SolidSyslogConfig
     {
-        struct SolidSyslog_Sender* sender;
-        SolidSyslog_AllocFn        alloc;
-        SolidSyslog_FreeFn         free;
+        struct SolidSyslogSender* sender;
+        SolidSyslogAllocFn        alloc;
+        SolidSyslogFreeFn         free;
     };
 
-    struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslog_Config* config);
+    struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config);
     void                SolidSyslog_Destroy(struct SolidSyslog * logger);
     void                SolidSyslog_Log(struct SolidSyslog * logger);
 

@@ -1,11 +1,11 @@
 #include "SenderSpy.h"
-#include "SolidSyslog_Sender_Impl.h"
+#include "SolidSyslogSenderDef.h"
 
-static int                       callCount;
-static const void*               lastBuffer;
-static struct SolidSyslog_Sender sender;
+static int                      callCount;
+static const void*              lastBuffer;
+static struct SolidSyslogSender sender;
 
-static void Send(struct SolidSyslog_Sender* self, const void* buffer, size_t size)
+static void Send(struct SolidSyslogSender* self, const void* buffer, size_t size)
 {
     (void) self;
     (void) size;
@@ -24,7 +24,7 @@ const char* SenderSpy_LastBufferAsString(void)
     return (const char*) lastBuffer;
 }
 
-struct SolidSyslog_Sender* SenderSpy_GetSender(void)
+struct SolidSyslogSender* SenderSpy_GetSender(void)
 {
     sender.Send = Send;
     return &sender;

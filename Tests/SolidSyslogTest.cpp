@@ -59,7 +59,7 @@ static std::string SyslogMsg(const char* buffer)
 // clang-format off
 TEST_GROUP(SolidSyslog)
 {
-    SolidSyslog_Config config;
+    SolidSyslogConfig config;
     // cppcheck-suppress variableScope -- member of TEST_GROUP; scope and constness managed by CppUTest macro
     // cppcheck-suppress constVariablePointer -- SolidSyslog_Log requires non-const; false positive from macro expansion
     SolidSyslog *logger;
@@ -107,8 +107,8 @@ TEST(SolidSyslog, TwoCreatesReturnDifferentHandles)
 
 TEST(SolidSyslog, EachLoggerSendsThroughItsOwnSender)
 {
-    SolidSyslog_Config secondConfig = {SenderSpy_GetSender(), malloc, free};
-    SolidSyslog*       second       = SolidSyslog_Create(&secondConfig);
+    SolidSyslogConfig secondConfig = {SenderSpy_GetSender(), malloc, free};
+    SolidSyslog*      second       = SolidSyslog_Create(&secondConfig);
 
     SolidSyslog_Log(logger);
     SolidSyslog_Log(second);
@@ -192,8 +192,8 @@ static void* AlwaysFailAlloc(size_t size)
 
 TEST(SolidSyslog, CreateReturnsNullWhenAllocFails)
 {
-    SolidSyslog_Config failConfig = {SenderSpy_GetSender(), AlwaysFailAlloc, free};
-    SolidSyslog*       result     = SolidSyslog_Create(&failConfig);
+    SolidSyslogConfig failConfig = {SenderSpy_GetSender(), AlwaysFailAlloc, free};
+    SolidSyslog*      result     = SolidSyslog_Create(&failConfig);
     POINTERS_EQUAL(nullptr, result);
 }
 
