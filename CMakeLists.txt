@@ -54,8 +54,15 @@ if(ENABLE_CPPCHECK)
     endif()
 endif()
 
+include(CheckSymbolExists)
+check_symbol_exists(sendto "sys/socket.h" HAVE_POSIX_SOCKETS)
+option(SOLIDSYSLOG_POSIX "Include POSIX UDP sender" ${HAVE_POSIX_SOCKETS})
+
 add_subdirectory(Source)
-add_subdirectory(Example)
+
+if(SOLIDSYSLOG_POSIX)
+    add_subdirectory(Example)
+endif()
 
 enable_testing()
 add_subdirectory(Tests)
