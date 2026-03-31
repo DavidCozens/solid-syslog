@@ -269,6 +269,9 @@ jobs:
       - name: Make example binary executable
         run: chmod +x build/debug/Example/SolidSyslogExample
 
+      - name: Prepare BDD output directory
+        run: mkdir -p Bdd/junit && chmod 777 Bdd/junit
+
       - name: Run BDD tests
         run: >
           docker compose -f ci/docker-compose.bdd.yml
