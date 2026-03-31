@@ -1,10 +1,15 @@
 set(TEST_SOURCES
     SolidSyslogTest.cpp
     SenderSpy.c
-    SolidSyslogUdpSenderTest.cpp
-    SocketSpy.c
     main.cpp
 )
+
+if(SOLIDSYSLOG_POSIX)
+    list(APPEND TEST_SOURCES
+        SolidSyslogUdpSenderTest.cpp
+        SocketSpy.c
+    )
+endif()
 
 add_executable(${PROJECT_NAME}Tests ${TEST_SOURCES})
 
