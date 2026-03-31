@@ -13,32 +13,38 @@ fail here.
 ## Architecture
 
 ```
-┌──────────────┐     UDP 5514     ┌──────────────┐
-│   Example    │ ──────────────── │   syslog-ng  │
-│   binary     │                  │              │
-│  (gcc ctr)   │                  │  (container) │
-└──────────────┘                  └──┬────────┬──┘
-                                     │ writes │ control socket
-                                     ▼        │ (syslog-ng-ctl volume)
-                              Bdd/output/     │
-                              received.log    │
-                                     │        │
-                                     │ reads  │ RELOAD
-                                  ┌──┴────────┴──┐
+                                  ┌──────────────┐
                                   │    Behave     │
                                   │  (container)  │
-                                  └──────────────┘
+                                  └──┬────────┬──┘
+                                     │ runs   │ reads
+                                     ▼        │
+                              ┌──────────────┐│
+                              │   Example    ││
+                              │   binary     ││
+                              └──────┬───────┘│
+                                     │        │
+                                UDP 5514      │
+                                     │        │
+                                     ▼        │
+                              ┌──────────────┐│
+                              │   syslog-ng  ││
+                              │  (container) ││
+                              └──────┬───────┘│
+                                     │ writes │
+                                     ▼        ▼
+                              Bdd/output/received.log
 ```
 
-Three Docker Compose services collaborate:
+Two Docker Compose services collaborate:
 
 | Service | Role |
 |---|---|
-| `gcc` (devcontainer) | Builds and runs the example binary that sends a syslog message |
 | `syslog-ng` | Receives UDP syslog on port 5514, parses RFC 5424, writes parsed fields to a log file |
-| `behave` | Runs Gherkin scenarios that invoke the sender and assert on the parsed output |
+| `behave` | Runs Gherkin scenarios that invoke the example binary and assert on the parsed output |
 
-All three share the workspace mount, so `Bdd/output/received.log` is visible to both
+The example binary is built in the `gcc` container but executed by Behave via `subprocess.run`.
+Both services share the workspace mount, so `Bdd/output/received.log` is visible to both
 syslog-ng (writer) and Behave (reader) without any network file transfer.
 
 ## Key files
@@ -46,7 +52,7 @@ syslog-ng (writer) and Behave (reader) without any network file transfer.
 | File | Purpose |
 |---|---|
 | `Bdd/syslog-ng/syslog-ng.conf` | syslog-ng configuration — UDP source, key=value template output |
-| `Bdd/Dockerfile.behave` | Python 3.12 slim image with Behave installed |
+| `ghcr.io/davidcozens/behave` | GHCR image — Debian trixie + Python + Behave ([source](https://github.com/DavidCozens/BehaveDocker)) |
 | `Bdd/output/` | Shared directory — syslog-ng writes here, Behave reads |
 | `Bdd/features/` | Gherkin feature files and step definitions |
 | `Example/SolidSyslogExample.c` | Minimal C program that creates a logger and sends one message |
@@ -102,9 +108,9 @@ for example, switching from UDP to TLS transport in E3.
 
 ## Test isolation
 
-Behave uses file-offset tracking for test isolation. `before_scenario` records the current byte
-offset of `received.log`, and step definitions read only new lines from that offset. This avoids
-restarting the syslog-ng container between scenarios.
+Behave uses line-count tracking for test isolation. The `Given` step records the current line
+count of `received.log`, and the `When` step waits for a new line to appear before parsing it.
+This avoids restarting the syslog-ng container between scenarios.
 
 ## Running BDD tests locally
 

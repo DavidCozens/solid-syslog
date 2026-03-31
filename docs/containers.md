@@ -38,12 +38,18 @@ docker compose -f .devcontainer/docker-compose.yml run --rm clang \
 
 When a new image tag is available:
 
-1. Build and push the new image to GHCR (`ghcr.io/davidcozens/cpputest` or `ghcr.io/davidcozens/cpputest-clang`)
-2. Update the SHA tag in `.devcontainer/docker-compose.yml`, `.github/workflows/ci.yml`, and `docs/containers.md` together
+1. Build and push the new image in the container image repo
+2. Update the SHA tag in all files that reference it (see table below), plus `docs/containers.md`
 3. Rebuild the devcontainer (`Ctrl+Shift+P` → "Dev Containers: Rebuild Container") and verify locally
 4. Raise a PR — use `chore: bump container image to <sha>` as the title
 
-All three files must always reference the same tag. Never update one without the others.
+| Image | Files to update |
+|---|---|
+| `cpputest` | `.devcontainer/docker-compose.yml`, `.github/workflows/ci.yml` |
+| `cpputest-clang` | `.devcontainer/docker-compose.yml`, `.github/workflows/ci.yml` |
+| `behave` | `.devcontainer/docker-compose.yml`, `ci/docker-compose.bdd.yml` |
+
+All references to a given image must use the same tag. Never update one without the others.
 
 ## Switching to a different container as the devcontainer
 

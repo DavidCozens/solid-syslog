@@ -112,6 +112,9 @@ Coverage report: `cmake --preset coverage && cmake --build --preset coverage --t
 Interface/   — Public headers only. No implementation. This is the API boundary.
 Source/      — Implementation. Compiled into a static library.
 Tests/       — CppUTest unit tests. Never link production code directly; always via the library.
+Example/     — Example program. Links against the library; also used as the BDD sender.
+Bdd/         — BDD test infrastructure: Gherkin features, step definitions, syslog-ng config.
+ci/          — CI-specific files (e.g. docker-compose.bdd.yml).
 ```
 
 The separation between `Interface/` and `Source/` is deliberate — it enforces the dependency inversion
@@ -155,6 +158,6 @@ and switching procedure.
 When updating an image:
 
 1. Build and push the new image in the container image repo
-2. Update the SHA tag in `.devcontainer/docker-compose.yml` and `.github/workflows/ci.yml` together
+2. Update the SHA tag in all files that reference it (see [`docs/containers.md`](docs/containers.md) for the full list)
 3. Rebuild the devcontainer and verify the new tooling works locally
 4. Then commit — use `chore: bump container image to <sha>`

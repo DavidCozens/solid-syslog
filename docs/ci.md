@@ -13,10 +13,12 @@ GitHub Actions runs all jobs in parallel on every push and pull request to `main
 | `tidy` | `tidy` | clang-tidy — pass/fail with errors in job log |
 | `cppcheck` | `cppcheck` | cppcheck static analysis |
 | `format` | — | clang-format dry-run; fails if any file needs reformatting |
+| `bdd` | — | End-to-end BDD test via Docker Compose (syslog-ng + Behave). Advisory — not a required check |
 
 ## Branch protection
 
-All jobs are required status checks. A PR cannot be merged unless all pass.
+All jobs except `bdd` are required status checks. A PR cannot be merged unless the required checks pass.
+The `bdd` job runs and reports pass/fail but does not block merge (`continue-on-error: true`).
 Direct pushes to `main` are blocked. Squash merge only.
 
 ## Release automation

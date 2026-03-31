@@ -131,8 +131,9 @@ The UUID issue is Windows/WSL-specific but there is no cost to running the comma
 - `flush_lines(1)` in syslog-ng destination config to minimise write latency.
 - Behave test isolation via file-offset tracking: `before_scenario` records byte offset,
   steps read only new lines from that offset. No container restart between scenarios.
-- BDD sender binary: thin C program `Bdd/bdd_sender.c` reads JSON config (host, port,
-  transport, messages), sends via SolidSyslog+PosixUdpSender, exits. Behave invokes as subprocess.
+- Example binary (`Example/SolidSyslogExample.c`): minimal C program that creates a logger,
+  sends one message via SolidSyslog+PosixUdpSender, exits. Behave invokes as subprocess.
+  Lives under `Example/` as a user-facing reference, doubling as the BDD sender.
 - CI: `docker compose up -d syslog-ng` before BDD step; same docker-compose.yml as devcontainer.
 - SenderSpy renamed from SpySender throughout — subject-first naming more idiomatic.
 - E2, S2.2, S2.3, S2.4 GitHub issues updated with infrastructure design notes.
@@ -140,6 +141,39 @@ The UUID issue is Windows/WSL-specific but there is no cost to running the comma
 ### Deferred
 - TLS cert management for RFC 5425 BDD scenarios — self-signed CA, generation script
   to be version-controlled alongside Compose config. Deferred to E3.
+
+### Open questions
+- None
+
+## 2026-03-31 — S2.4 BDD walking skeleton implementation
+
+### Decisions
+- syslog-ng validated as BDD test oracle — receives UDP syslog on 5514, writes parsed fields
+  via key=value template to `Bdd/output/received.log` with `flush_lines(1)`
+- syslog-ng normalises `Z` timestamps to `+00:00` via `$ISODATE` — BDD assertions match the
+  normalised form, not the sent form
+- Behave container published to GHCR (`ghcr.io/davidcozens/behave`) from new repo
+  `DavidCozens/BehaveDocker` — Debian trixie-slim base matches cpputest image for glibc
+  compatibility, includes git and openssh-client for devcontainer use
+- Devcontainer switching extended to three services: gcc, clang, behave — single `"service"`
+  change in `devcontainer.json`, `postStartCommand` guards cmake behind `BUILD_PRESET` check
+- Ctrl+Shift+B runs `behave Bdd/features/` when in the behave container (no `BUILD_PRESET` set)
+- VS Code extensions added: `ms-python.python` and `cucumber.cucumber-official`
+- CI bdd job uses artifact handoff from `build-and-test` (upload/download-artifact v4) rather
+  than rebuilding — tests the same binary that passed unit tests
+- CI bdd job is advisory (`continue-on-error: true`) — not a required status check
+- CI bdd job uses dedicated `ci/docker-compose.bdd.yml` without dev-specific volume mounts
+- syslog-ng healthcheck (`test -S /var/lib/syslog-ng/syslog-ng.ctl`) in CI compose ensures
+  readiness before Behave starts
+- JUnit XML output from Behave displayed via `dorny/test-reporter` in PR check runs
+- Compose logs captured on failure for CI debugging
+- `Example/` added to clang-format CI check
+- Test isolation via line-count tracking — `Given` records line count, `When` waits for a new
+  line — avoids root-owned file permission issues with truncation
+
+### Deferred
+- syslog-ng image not pinned to SHA — using `balabit/syslog-ng:latest`. Pin when stability matters.
+- MISRA C:2012 addon for cppcheck — future addition, not part of this story
 
 ### Open questions
 - None
