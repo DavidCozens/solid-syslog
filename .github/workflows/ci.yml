@@ -254,6 +254,9 @@ jobs:
     needs: build-and-test
     runs-on: ubuntu-latest
     continue-on-error: true
+    permissions:
+      contents: read
+      checks: write
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -270,3 +273,15 @@ jobs:
         run: >
           docker compose -f ci/docker-compose.bdd.yml
           up --build --abort-on-container-exit --exit-code-from behave
+
+      - name: BDD Test Report
+        uses: dorny/test-reporter@v3
+        if: success() || failure()
+        with:
+          name: Test Results (BDD)
+          path: Bdd/junit/TESTS-*.xml
+          reporter: java-junit
+
+      - name: Compose logs on failure
+        if: failure()
+        run: docker compose -f ci/docker-compose.bdd.yml logs --no-color

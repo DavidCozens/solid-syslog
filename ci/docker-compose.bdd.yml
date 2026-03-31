@@ -23,7 +23,7 @@ services:
     depends_on:
       syslog-ng:
         condition: service_healthy
-    command: behave Bdd/features/
+    command: behave --junit --junit-directory Bdd/junit Bdd/features/
 
 volumes:
   bdd-output:
