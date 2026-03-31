@@ -16,6 +16,37 @@ services:
     user: developer
     working_dir: /workspaces/SolidSyslog
     command: sleep infinity
+    depends_on:
+      - syslog-ng
+
+  syslog-ng:
+    image: balabit/syslog-ng:latest
+    volumes:
+      - ../Bdd/syslog-ng/syslog-ng.conf:/etc/syslog-ng/syslog-ng.conf:ro
+      - ../Bdd/output:/var/log/syslog-ng
+      - syslog-ng-ctl:/var/lib/syslog-ng
+    ports:
+      - "5514:5514/udp"
+    working_dir: /workspaces/SolidSyslog
+
+  behave:
+    build:
+      context: ../Bdd
+      dockerfile: Dockerfile.behave
+    volumes:
+      - ..:/workspaces/SolidSyslog:cached
+      - ../Bdd/output:/workspaces/SolidSyslog/Bdd/output
+      - syslog-ng-ctl:/var/lib/syslog-ng
+      - ${SSH_AUTH_SOCK}:/ssh-agent
+      - ${HOME}/.claude:/home/developer/.claude
+      - ${HOME}/.config/gh:/home/developer/.config/gh
+    environment:
+      - SSH_AUTH_SOCK=/ssh-agent
+    user: developer
+    working_dir: /workspaces/SolidSyslog
+    depends_on:
+      - syslog-ng
+    command: sleep infinity
 
   clang:
     image: ghcr.io/davidcozens/cpputest-clang:sha-6ea3f95
@@ -34,3 +65,6 @@ services:
     user: developer
     working_dir: /workspaces/SolidSyslog
     command: sleep infinity
+
+volumes:
+  syslog-ng-ctl:

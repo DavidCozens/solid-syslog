@@ -40,6 +40,14 @@ jobs:
           path: build/debug/cpputest_*.xml
           reporter: java-junit
 
+      - name: Upload example binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: solid-syslog-example
+          path: build/debug/Example/SolidSyslogExample
+          retention-days: 1
+          compression-level: 0
+
   clang-build-and-test:
     runs-on: ubuntu-latest
     permissions:
@@ -217,7 +225,7 @@ jobs:
 
       - name: Check clang-format
         run: |
-          find Interface Source Tests -name '*.c' -o -name '*.cpp' -o -name '*.h' \
+          find Interface Source Tests Example -name '*.c' -o -name '*.cpp' -o -name '*.h' \
             | xargs clang-format --dry-run --Werror
 
   cppcheck:
@@ -238,3 +246,24 @@ jobs:
 
       - name: Build with cppcheck
         run: cmake --build --preset cppcheck
+
+  bdd:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: solid-syslog-example
+          path: build/debug/Example/
+
+      - name: Make example binary executable
+        run: chmod +x build/debug/Example/SolidSyslogExample
+
+      - name: Run BDD tests
+        run: >
+          docker compose -f ci/docker-compose.bdd.yml
+          up --build --abort-on-container-exit --exit-code-from behave
