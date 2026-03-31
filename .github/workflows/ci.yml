@@ -40,6 +40,9 @@ jobs:
           path: build/debug/cpputest_*.xml
           reporter: java-junit
 
+      - name: Build example binary
+        run: cmake --build --preset debug --target SolidSyslogExample
+
       - name: Upload example binary
         uses: actions/upload-artifact@v4
         with:
