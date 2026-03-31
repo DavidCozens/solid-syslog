@@ -74,7 +74,7 @@ Test progression follows ZOMBIES order.
 
 ## Static analysis
 
-- cppcheck with MISRA C:2012 addon runs in CI
+- cppcheck runs in CI — MISRA C:2012 addon is a future addition
 - Suppressions in `misra_suppressions.txt` — each entry must have documented rationale
 - Library is MISRA-informed, not claiming certified compliance
 

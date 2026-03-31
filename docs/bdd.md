@@ -1,0 +1,148 @@
+# BDD Testing
+
+## Overview
+
+BDD (Behaviour-Driven Development) tests verify SolidSyslog end-to-end: a C program sends an
+RFC 5424 syslog message over UDP to a real syslog-ng instance, and Behave (Python) asserts that
+the received message was parsed into the expected fields.
+
+This catches conformance issues that unit tests cannot — syslog-ng's RFC 5424 parser is the test
+oracle, so a malformed message that happens to match a byte-level expectation in a unit test will
+fail here.
+
+## Architecture
+
+```
+                                  ┌──────────────┐
+                                  │    Behave     │
+                                  │  (container)  │
+                                  └──┬────────┬──┘
+                                     │ runs   │ reads
+                                     ▼        │
+                              ┌──────────────┐│
+                              │   Example    ││
+                              │   binary     ││
+                              └──────┬───────┘│
+                                     │        │
+                                UDP 5514      │
+                                     │        │
+                                     ▼        │
+                              ┌──────────────┐│
+                              │   syslog-ng  ││
+                              │  (container) ││
+                              └──────┬───────┘│
+                                     │ writes │
+                                     ▼        ▼
+                              Bdd/output/received.log
+```
+
+Two Docker Compose services collaborate:
+
+| Service | Role |
+|---|---|
+| `syslog-ng` | Receives UDP syslog on port 5514, parses RFC 5424, writes parsed fields to a log file |
+| `behave` | Runs Gherkin scenarios that invoke the example binary and assert on the parsed output |
+
+The example binary is built in the `gcc` container but executed by Behave via `subprocess.run`.
+Both services share the workspace mount, so `Bdd/output/received.log` is visible to both
+syslog-ng (writer) and Behave (reader) without any network file transfer.
+
+## Key files
+
+| File | Purpose |
+|---|---|
+| `Bdd/syslog-ng/syslog-ng.conf` | syslog-ng configuration — UDP source, key=value template output |
+| `ghcr.io/davidcozens/behave` | GHCR image — Debian trixie + Python + Behave ([source](https://github.com/DavidCozens/BehaveDocker)) |
+| `Bdd/output/` | Shared directory — syslog-ng writes here, Behave reads |
+| `Bdd/features/` | Gherkin feature files and step definitions |
+| `Example/SolidSyslogExample.c` | Minimal C program that creates a logger and sends one message |
+| `Example/CMakeLists.txt` | Builds the example binary, linked against the SolidSyslog library |
+
+## syslog-ng configuration
+
+The syslog-ng config (`Bdd/syslog-ng/syslog-ng.conf`) uses the `syslog()` source driver,
+which understands RFC 5424 natively. It writes one line per received message using a key=value
+template:
+
+```
+PRIORITY=14 TIMESTAMP=2009-03-23T00:00:00+00:00 HOSTNAME=TestHost APP_NAME=TestApp PROCID=1234 MSGID=TestMsgId STRUCTURED_DATA= MSG=Test message
+```
+
+### Important syslog-ng behaviours
+
+These are deliberate syslog-ng design choices, not bugs:
+
+| Behaviour | Detail |
+|---|---|
+| **`keep-hostname(yes)`** | Required in the source config. Without it, syslog-ng replaces the RFC 5424 HOSTNAME field with the sender's transport-level IP address. `$HOST` then reflects the parsed payload hostname; `$HOST_FROM` always contains the sender IP regardless. |
+| **Timestamp reformat** | syslog-ng normalises timestamps via `$ISODATE`. A sent value of `...T00:00:00.000Z` will appear as `...T00:00:00+00:00`. |
+| **Nil structured data** | The RFC 5424 nil value `-` for SDATA produces an empty string in `$SDATA`, not `-`. |
+| **MSG leading space** | BSD syslog convention may prepend a space to the message body. Step definitions should use `.strip()`. |
+
+### flush_lines(1)
+
+The destination uses `flush_lines(1)` so that each message is written to disk immediately.
+This avoids flaky BDD tests that poll for output before the buffer is flushed.
+
+## Reconfiguring syslog-ng from Behave
+
+The `syslog-ng` and `behave` containers share a named Docker volume (`syslog-ng-ctl`) mounted
+at `/var/lib/syslog-ng`. This exposes syslog-ng's Unix control socket to the behave container,
+allowing Behave to trigger a config reload without SSH or `docker compose exec`.
+
+Since the syslog-ng config file is bind-mounted from the workspace (`Bdd/syslog-ng/syslog-ng.conf`),
+Behave can write a new config to that path via the shared workspace mount and then reload:
+
+```python
+import socket
+
+sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+sock.connect("/var/lib/syslog-ng/syslog-ng.ctl")
+sock.sendall(b"RELOAD\n")
+response = sock.recv(1024)  # b'OK Config reload successful\n.\n'
+sock.close()
+```
+
+This will be needed when BDD scenarios require different syslog-ng source configurations —
+for example, switching from UDP to TLS transport in E3.
+
+## Test isolation
+
+Behave uses line-count tracking for test isolation. The `Given` step records the current line
+count of `received.log`, and the `When` step waits for a new line to appear before parsing it.
+This avoids restarting the syslog-ng container between scenarios.
+
+## Running BDD tests locally
+
+From WSL or a host terminal (not inside the devcontainer):
+
+```bash
+# Start syslog-ng
+docker compose -f .devcontainer/docker-compose.yml up -d syslog-ng
+
+# Build the example binary (inside the gcc container)
+docker compose -f .devcontainer/docker-compose.yml exec gcc \
+    cmake --preset debug
+docker compose -f .devcontainer/docker-compose.yml exec gcc \
+    cmake --build --preset debug
+
+# Run Behave
+docker compose -f .devcontainer/docker-compose.yml run --rm behave \
+    behave Bdd/features/
+```
+
+## Verifying syslog-ng manually
+
+To send a test message and check that syslog-ng is receiving and parsing correctly:
+
+```bash
+echo '<14>1 2009-03-23T00:00:00.000Z TestHost TestApp 1234 TestMsgId - Test message' \
+    | nc -u -w1 localhost 5514
+
+cat Bdd/output/received.log
+```
+
+If the file is not created, check that:
+1. The syslog-ng container is running: `docker compose -f .devcontainer/docker-compose.yml ps`
+2. The config is mounted correctly: `docker compose -f .devcontainer/docker-compose.yml exec syslog-ng cat /etc/syslog-ng/syslog-ng.conf`
+3. After editing `syslog-ng.conf`, reload the config — either via the control socket (see above) or by recreating the container: `docker compose rm -sf syslog-ng && docker compose up -d syslog-ng`

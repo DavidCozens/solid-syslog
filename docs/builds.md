@@ -87,6 +87,20 @@ cmake --install build/release --prefix /your/install/path
 
 This installs the static library to `lib/` and the public headers to `include/`.
 
+## BDD tests — Behave
+
+End-to-end tests run inside the `behave` devcontainer service. Switch to it by changing
+`"service": "behave"` in `.devcontainer/devcontainer.json` and rebuilding, or run from the
+gcc container:
+
+```bash
+behave Bdd/features/
+```
+
+In the behave container, **Ctrl+Shift+B** runs `behave Bdd/features/` automatically.
+
+See [BDD testing](bdd.md) for architecture details.
+
 ## JUnit XML output
 
 The `junit` target runs the tests and writes a JUnit-format XML file to the build directory.
