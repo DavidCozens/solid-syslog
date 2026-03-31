@@ -30,9 +30,7 @@ services:
     working_dir: /workspaces/SolidSyslog
 
   behave:
-    build:
-      context: ../Bdd
-      dockerfile: Dockerfile.behave
+    image: ghcr.io/davidcozens/behave:sha-b871b1c
     volumes:
       - ..:/workspaces/SolidSyslog:cached
       - ../Bdd/output:/workspaces/SolidSyslog/Bdd/output

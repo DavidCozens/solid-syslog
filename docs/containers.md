@@ -7,7 +7,7 @@
 | `ghcr.io/davidcozens/cpputest` | `sha-e7aa8a1` | devcontainer (`gcc` service), all CI jobs except clang |
 | `ghcr.io/davidcozens/cpputest-clang` | `sha-6ea3f95` | `clang` compose service, `clang-build-and-test` CI job |
 | `balabit/syslog-ng` | `latest` | `syslog-ng` service — BDD test oracle |
-| `Bdd/Dockerfile.behave` | (local build) | `behave` service — Python 3.12 + Behave for BDD scenarios |
+| `ghcr.io/davidcozens/behave` | `sha-b871b1c` | `behave` service — Debian trixie + Python 3.12 + Behave for BDD scenarios |
 
 ## Docker Compose setup
 

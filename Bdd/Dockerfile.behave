@@ -1,5 +1,0 @@
-FROM python:3.12-slim
-RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
-RUN pip install --no-cache-dir behave
-RUN groupadd -g 1000 developer && useradd -m -u 1000 -g 1000 -s /bin/bash developer
-WORKDIR /workspaces/SolidSyslog

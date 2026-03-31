@@ -12,9 +12,7 @@ services:
       retries: 10
 
   behave:
-    build:
-      context: ../Bdd
-      dockerfile: Dockerfile.behave
+    image: ghcr.io/davidcozens/behave:sha-b871b1c
     volumes:
       - ..:/workspaces/SolidSyslog
       - bdd-output:/workspaces/SolidSyslog/Bdd/output
