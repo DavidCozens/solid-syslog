@@ -46,3 +46,7 @@ SeparateDefinitionBlocks: Always
 
 # Includes
 SortIncludes: false
+
+# Recognise extern "C" wrapper macros (see Interface/ExternC.h)
+MacroBlockBegin: '^EXTERN_C_BEGIN$'
+MacroBlockEnd:   '^EXTERN_C_END$'

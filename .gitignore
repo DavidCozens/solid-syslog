@@ -46,3 +46,6 @@ cpputest_*.xml
 
 # compile_commands.json copied to workspace root by CMake Tools extension
 compile_commands.json
+
+# Claude Code local config
+.claude/

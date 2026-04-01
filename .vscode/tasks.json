@@ -7,7 +7,7 @@
         {
             "label": "build and test",
             "type": "shell",
-            "command": "cmake --build --preset ${env:BUILD_PRESET} && ctest --preset ${env:BUILD_PRESET}",
+            "command": "cmake --build --preset ${env:BUILD_PRESET} && ctest --preset ${env:BUILD_PRESET} --verbose",
             "group": {
                 "kind": "build",
                 "isDefault": true

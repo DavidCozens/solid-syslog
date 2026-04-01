@@ -29,6 +29,6 @@ Merging that PR creates a GitHub Release and tag.
 ## Permissions
 
 Each job is granted only the permissions it needs. The default token scope is
-`contents: read`. Jobs that publish test results additionally hold `checks: write`
-and `pull-requests: write`. The coverage job additionally holds `pages: write` and
-`id-token: write` for GitHub Pages deployment.
+`contents: read`. Jobs that publish test results additionally hold `checks: write`.
+The coverage job additionally holds `pages: write` and `id-token: write` for
+GitHub Pages deployment.

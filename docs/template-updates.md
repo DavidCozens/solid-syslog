@@ -30,6 +30,8 @@ template merges apply cleanly:
 - `Tests/CMakeLists.txt`
 - `.clang-format`
 - `.clang-tidy`
+- `misra_suppressions.txt`
+- `Interface/ExternC.h`
 - `docs/` (all files)
 
 If a change is needed to these files in a clone, consider whether it belongs in

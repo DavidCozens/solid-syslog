@@ -15,7 +15,6 @@ jobs:
     permissions:
       contents: read
       checks: write
-      pull-requests: write
     container:
       image: ghcr.io/davidcozens/cpputest:sha-e7aa8a1
       options: --user root
@@ -33,18 +32,19 @@ jobs:
       - name: Build and test
         run: cmake --build --preset debug --target junit
 
-      - name: Publish test results
-        uses: EnricoMi/publish-unit-test-result-action@c950f6fb443cb5af20a377fd0dfaa78838901040 # v2
-        if: always()
+      - name: Test Report
+        uses: dorny/test-reporter@v3
+        if: success() || failure()
         with:
-          files: build/debug/cpputest_*.xml
+          name: Test Results (GCC)
+          path: build/debug/cpputest_*.xml
+          reporter: java-junit
 
   clang-build-and-test:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       checks: write
-      pull-requests: write
     container:
       image: ghcr.io/davidcozens/cpputest-clang:sha-6ea3f95
       options: --user root
@@ -62,18 +62,19 @@ jobs:
       - name: Build and test
         run: cmake --build --preset clang-debug --target junit
 
-      - name: Publish test results
-        uses: EnricoMi/publish-unit-test-result-action@c950f6fb443cb5af20a377fd0dfaa78838901040 # v2
-        if: always()
+      - name: Test Report
+        uses: dorny/test-reporter@v3
+        if: success() || failure()
         with:
-          files: build/clang-debug/cpputest_*.xml
+          name: Test Results (Clang)
+          path: build/clang-debug/cpputest_*.xml
+          reporter: java-junit
 
   sanitize:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       checks: write
-      pull-requests: write
     container:
       image: ghcr.io/davidcozens/cpputest:sha-e7aa8a1
       options: --user root
@@ -91,11 +92,13 @@ jobs:
       - name: Build and test
         run: cmake --build --preset sanitize --target junit
 
-      - name: Publish test results
-        uses: EnricoMi/publish-unit-test-result-action@c950f6fb443cb5af20a377fd0dfaa78838901040 # v2
-        if: always()
+      - name: Test Report
+        uses: dorny/test-reporter@v3
+        if: success() || failure()
         with:
-          files: build/sanitize/cpputest_*.xml
+          name: Test Results (Sanitize)
+          path: build/sanitize/cpputest_*.xml
+          reporter: java-junit
 
   coverage:
     runs-on: ubuntu-latest
