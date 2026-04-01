@@ -16,7 +16,7 @@ jobs:
       contents: read
       checks: write
     container:
-      image: ghcr.io/davidcozens/cpputest:sha-e7aa8a1
+      image: ghcr.io/davidcozens/cpputest:sha-6acaccf
       options: --user root
     env:
       GIT_CONFIG_COUNT: 1
@@ -30,7 +30,7 @@ jobs:
         run: cmake --preset debug
 
       - name: Build and test
-        run: cmake --build --preset debug --target junit
+        run: cmake --build --preset debug --target junit SolidSyslogExample
 
       - name: Test Report
         uses: dorny/test-reporter@v3
@@ -39,9 +39,6 @@ jobs:
           name: Test Results (GCC)
           path: build/debug/cpputest_*.xml
           reporter: java-junit
-
-      - name: Build example binary
-        run: cmake --build --preset debug --target SolidSyslogExample
 
       - name: Upload example binary
         uses: actions/upload-artifact@v4
@@ -87,7 +84,7 @@ jobs:
       contents: read
       checks: write
     container:
-      image: ghcr.io/davidcozens/cpputest:sha-e7aa8a1
+      image: ghcr.io/davidcozens/cpputest:sha-6acaccf
       options: --user root
     env:
       GIT_CONFIG_COUNT: 1
@@ -119,7 +116,7 @@ jobs:
       pages: write
       id-token: write
     container:
-      image: ghcr.io/davidcozens/cpputest:sha-e7aa8a1
+      image: ghcr.io/davidcozens/cpputest:sha-6acaccf
       options: --user root
     env:
       GIT_CONFIG_COUNT: 1
@@ -197,7 +194,7 @@ jobs:
   tidy:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/davidcozens/cpputest:sha-e7aa8a1
+      image: ghcr.io/davidcozens/cpputest:sha-6acaccf
       options: --user root
     env:
       GIT_CONFIG_COUNT: 1
@@ -216,7 +213,7 @@ jobs:
   format:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/davidcozens/cpputest:sha-e7aa8a1
+      image: ghcr.io/davidcozens/cpputest:sha-6acaccf
       options: --user root
     env:
       GIT_CONFIG_COUNT: 1
@@ -234,7 +231,7 @@ jobs:
   cppcheck:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/davidcozens/cpputest:sha-e7aa8a1
+      image: ghcr.io/davidcozens/cpputest:sha-6acaccf
       options: --user root
     env:
       GIT_CONFIG_COUNT: 1

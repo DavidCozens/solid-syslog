@@ -29,6 +29,10 @@ no conditional compilation directives in the library source.
 
 See [CI pipeline](docs/ci.md).
 
+## BDD testing
+
+See [BDD testing](docs/bdd.md).
+
 ## Container images
 
 See [Container images](docs/containers.md).
