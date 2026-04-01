@@ -1,6 +1,6 @@
 services:
   gcc:
-    image: ghcr.io/davidcozens/cpputest:sha-e7aa8a1
+    image: ghcr.io/davidcozens/cpputest:sha-6acaccf
     volumes:
       - ..:/workspaces/SolidSyslog:cached
       - ${SSH_AUTH_SOCK}:/ssh-agent

@@ -51,6 +51,7 @@ echo "  Updated README.md"
 rm -f "$ROOT/Interface/ExampleC.h" "$ROOT/Interface/ExampleCpp.h"
 rm -f "$ROOT/Source/ExampleC.c" "$ROOT/Source/ExampleCpp.cpp"
 rm -f "$ROOT/Tests/ExampleCTests.cpp" "$ROOT/Tests/ExampleCppTests.cpp"
+rm -f "$ROOT/Example/ExampleMain.c"
 echo "  Removed example source, header, and test files"
 
 # --- Source/CMakeLists.txt: replace source file list ----------------------
@@ -97,6 +98,57 @@ void ${COMPONENT}_Destroy(void)
 }
 EOF
 echo "  Created Source/${COMPONENT}.c"
+
+# --- Create example program -----------------------------------------------
+cat > "$ROOT/Example/${COMPONENT}Main.c" << EOF
+#include "${COMPONENT}.h"
+
+int main(void)
+{
+    ${COMPONENT}_Create();
+    ${COMPONENT}_Destroy();
+    return 0;
+}
+EOF
+echo "  Created Example/${COMPONENT}Main.c"
+
+# --- Example/CMakeLists.txt: update source file ---------------------------
+sed -i "s/ExampleMain\.c/${COMPONENT}Main.c/" "$ROOT/Example/CMakeLists.txt"
+echo "  Updated Example/CMakeLists.txt"
+
+# --- Replace BDD feature and steps ----------------------------------------
+cat > "$ROOT/Bdd/features/example.feature" << EOF
+Feature: ${COMPONENT} program
+
+  The example program exercises the library and returns its exit code.
+
+  Scenario: Running the example succeeds
+    When I run the example program
+    Then the exit code should be 0
+EOF
+echo "  Updated Bdd/features/example.feature"
+
+cat > "$ROOT/Bdd/features/steps/example_steps.py" << 'EOF'
+import subprocess
+from behave import when, then
+
+
+@when("I run the example program")
+def step_run_example(context):
+    result = subprocess.run(
+        [context.example_binary],
+        capture_output=True,
+    )
+    context.exit_code = result.returncode
+
+
+@then("the exit code should be {expected_code:d}")
+def step_check_exit_code(context, expected_code):
+    assert context.exit_code == expected_code, (
+        f"Expected exit code {expected_code}, got {context.exit_code}"
+    )
+EOF
+echo "  Updated Bdd/features/steps/example_steps.py"
 
 # --- Create failing test --------------------------------------------------
 cat > "$ROOT/Tests/${COMPONENT}Test.cpp" << EOF

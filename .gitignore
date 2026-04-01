@@ -50,7 +50,8 @@ compile_commands.json
 # BDD output (syslog-ng writes here at runtime)
 Bdd/output/*
 !Bdd/output/.gitkeep
-Bdd/junit/
+Bdd/junit/*
+!Bdd/junit/.gitkeep
 
 # Claude Code local config
 .claude/
