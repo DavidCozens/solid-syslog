@@ -42,7 +42,7 @@ if(COVERAGE)
                 --output-file ${CMAKE_BINARY_DIR}/coverage.info
                 --rc branch_coverage=1
             COMMAND ${LCOV_EXECUTABLE} --remove ${CMAKE_BINARY_DIR}/coverage.info
-                "/usr/*" "/home/cpputest/*" "${CMAKE_SOURCE_DIR}/Tests/*"
+                "/usr/*" "/home/cpputest/*" "${CMAKE_SOURCE_DIR}/Tests/*" "${CMAKE_SOURCE_DIR}/Example/*"
                 --output-file ${CMAKE_BINARY_DIR}/coverage.filtered.info
                 --rc branch_coverage=1
             COMMAND ${GENHTML_EXECUTABLE} ${CMAKE_BINARY_DIR}/coverage.filtered.info
