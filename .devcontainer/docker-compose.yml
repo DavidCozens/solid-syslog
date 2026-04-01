@@ -1,6 +1,6 @@
 services:
   gcc:
-    image: ghcr.io/davidcozens/cpputest:sha-e7aa8a1
+    image: ghcr.io/davidcozens/cpputest:sha-6acaccf
     volumes:
       - ..:/workspaces/CppUTestTemplate:cached
       - ${SSH_AUTH_SOCK}:/ssh-agent
@@ -13,6 +13,19 @@ services:
     environment:
       - SSH_AUTH_SOCK=/ssh-agent
       - BUILD_PRESET=debug
+    user: developer
+    working_dir: /workspaces/CppUTestTemplate
+    command: sleep infinity
+
+  behave:
+    image: ghcr.io/davidcozens/behave:sha-b871b1c
+    volumes:
+      - ..:/workspaces/CppUTestTemplate:cached
+      - ${SSH_AUTH_SOCK}:/ssh-agent
+      - ${HOME}/.claude:/home/developer/.claude
+      - ${HOME}/.config/gh:/home/developer/.config/gh
+    environment:
+      - SSH_AUTH_SOCK=/ssh-agent
     user: developer
     working_dir: /workspaces/CppUTestTemplate
     command: sleep infinity

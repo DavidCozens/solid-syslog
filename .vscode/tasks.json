@@ -7,7 +7,7 @@
         {
             "label": "build and test",
             "type": "shell",
-            "command": "cmake --build --preset ${env:BUILD_PRESET} && ctest --preset ${env:BUILD_PRESET} --verbose",
+            "command": "if [ -z \"$BUILD_PRESET\" ]; then behave Bdd/features/; else cmake --build --preset $BUILD_PRESET && ctest --preset $BUILD_PRESET --verbose; fi",
             "group": {
                 "kind": "build",
                 "isDefault": true

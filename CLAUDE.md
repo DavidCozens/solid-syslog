@@ -112,6 +112,9 @@ Coverage report: `cmake --preset coverage && cmake --build --preset coverage --t
 Interface/   — Public headers only. No implementation. This is the API boundary.
 Source/      — Implementation. Compiled into a static library.
 Tests/       — CppUTest unit tests. Never link production code directly; always via the library.
+Example/     — Minimal example program that links the library. Also used as the BDD test subject.
+Bdd/         — BDD tests (Behave/Gherkin). Run via the behave devcontainer service or CI.
+ci/          — CI-specific configuration (e.g. Docker Compose for BDD in GitHub Actions).
 ```
 
 The separation between `Interface/` and `Source/` is deliberate — it enforces the dependency inversion

@@ -55,6 +55,7 @@ if(ENABLE_CPPCHECK)
 endif()
 
 add_subdirectory(Source)
+add_subdirectory(Example)
 
 enable_testing()
 add_subdirectory(Tests)

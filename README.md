@@ -6,6 +6,7 @@
 
 - [Building and testing](docs/builds.md)
 - [CI pipeline](docs/ci.md)
+- [BDD testing](docs/bdd.md)
 - [Container images](docs/containers.md)
 - [Creating a new component from this template](docs/cloning-template.md)
 - [Pulling template updates into a clone](docs/template-updates.md)

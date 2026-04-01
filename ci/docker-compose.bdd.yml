@@ -1,0 +1,7 @@
+services:
+  behave:
+    image: ghcr.io/davidcozens/behave:sha-b871b1c
+    volumes:
+      - ..:/workspaces/CppUTestTemplate
+    working_dir: /workspaces/CppUTestTemplate
+    command: behave --junit --junit-directory Bdd/junit Bdd/features/

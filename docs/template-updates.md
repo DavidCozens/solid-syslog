@@ -32,6 +32,8 @@ template merges apply cleanly:
 - `.clang-tidy`
 - `misra_suppressions.txt`
 - `Interface/ExternC.h`
+- `Bdd/features/environment.py`
+- `ci/docker-compose.bdd.yml`
 - `docs/` (all files)
 
 If a change is needed to these files in a clone, consider whether it belongs in

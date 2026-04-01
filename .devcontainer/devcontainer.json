@@ -23,7 +23,9 @@
                 "ms-vscode.cmake-tools",
                 "jeff-hykin.better-cpp-syntax",
                 "anthropic.claude-code",
-                "xaver.clang-format"
+                "xaver.clang-format",
+                "ms-python.python",
+                "cucumber.cucumber-official"
             ]
         }
     },

@@ -16,7 +16,7 @@ jobs:
       contents: read
       checks: write
     container:
-      image: ghcr.io/davidcozens/cpputest:sha-e7aa8a1
+      image: ghcr.io/davidcozens/cpputest:sha-6acaccf
       options: --user root
     env:
       GIT_CONFIG_COUNT: 1
@@ -30,7 +30,7 @@ jobs:
         run: cmake --preset debug
 
       - name: Build and test
-        run: cmake --build --preset debug --target junit
+        run: cmake --build --preset debug --target junit ExampleProgram
 
       - name: Test Report
         uses: dorny/test-reporter@v3
@@ -39,6 +39,14 @@ jobs:
           name: Test Results (GCC)
           path: build/debug/cpputest_*.xml
           reporter: java-junit
+
+      - name: Upload example binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: example-program
+          path: build/debug/Example/ExampleProgram
+          retention-days: 1
+          compression-level: 0
 
   clang-build-and-test:
     runs-on: ubuntu-latest
@@ -76,7 +84,7 @@ jobs:
       contents: read
       checks: write
     container:
-      image: ghcr.io/davidcozens/cpputest:sha-e7aa8a1
+      image: ghcr.io/davidcozens/cpputest:sha-6acaccf
       options: --user root
     env:
       GIT_CONFIG_COUNT: 1
@@ -108,7 +116,7 @@ jobs:
       pages: write
       id-token: write
     container:
-      image: ghcr.io/davidcozens/cpputest:sha-e7aa8a1
+      image: ghcr.io/davidcozens/cpputest:sha-6acaccf
       options: --user root
     env:
       GIT_CONFIG_COUNT: 1
@@ -186,7 +194,7 @@ jobs:
   tidy:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/davidcozens/cpputest:sha-e7aa8a1
+      image: ghcr.io/davidcozens/cpputest:sha-6acaccf
       options: --user root
     env:
       GIT_CONFIG_COUNT: 1
@@ -205,7 +213,7 @@ jobs:
   format:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/davidcozens/cpputest:sha-e7aa8a1
+      image: ghcr.io/davidcozens/cpputest:sha-6acaccf
       options: --user root
     env:
       GIT_CONFIG_COUNT: 1
@@ -217,13 +225,13 @@ jobs:
 
       - name: Check clang-format
         run: |
-          find Interface Source Tests -name '*.c' -o -name '*.cpp' -o -name '*.h' \
+          find Interface Source Tests Example -name '*.c' -o -name '*.cpp' -o -name '*.h' \
             | xargs clang-format --dry-run --Werror
 
   cppcheck:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/davidcozens/cpputest:sha-e7aa8a1
+      image: ghcr.io/davidcozens/cpputest:sha-6acaccf
       options: --user root
     env:
       GIT_CONFIG_COUNT: 1
@@ -238,3 +246,42 @@ jobs:
 
       - name: Build with cppcheck
         run: cmake --build --preset cppcheck
+
+  bdd:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+      checks: write
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: example-program
+          path: build/debug/Example/
+
+      - name: Make example binary executable
+        run: chmod +x build/debug/Example/ExampleProgram
+
+      - name: Prepare BDD output directory
+        run: mkdir -p Bdd/junit && chmod 777 Bdd/junit
+
+      - name: Run BDD tests
+        run: >
+          docker compose -f ci/docker-compose.bdd.yml
+          up --abort-on-container-exit --exit-code-from behave
+
+      - name: BDD Test Report
+        uses: dorny/test-reporter@v3
+        if: success() || failure()
+        with:
+          name: Test Results (BDD)
+          path: Bdd/junit/TESTS-*.xml
+          reporter: java-junit
+
+      - name: Compose logs on failure
+        if: failure()
+        run: docker compose -f ci/docker-compose.bdd.yml logs --no-color
