@@ -15,6 +15,7 @@ enum
 static inline uint8_t CombineFacilityAndSeverity(uint8_t facility, uint8_t severity);
 static inline bool    FacilityIsValid(uint8_t facility);
 static inline int     FormatMessage(char* buffer, size_t size, const struct SolidSyslogMessage* message, SolidSyslogClockFn clock);
+static inline bool    CaptureTimestamp(struct SolidSyslogTimestamp* ts, SolidSyslogClockFn clock);
 static inline int     FormatCharacter(char* buffer, char value);
 static inline int     FormatMicrosecond(char* buffer, uint32_t value);
 static inline int     FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFn clock);
@@ -69,14 +70,14 @@ static inline int FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFn 
 {
     (void) size;
 
-    if (clock == NULL)
+    struct SolidSyslogTimestamp ts = {0};
+    if (!CaptureTimestamp(&ts, clock))
     {
         buffer[0] = '-';
         buffer[1] = '\0';
         return 1;
     }
 
-    struct SolidSyslogTimestamp ts = clock();
     char* p = buffer;
 
     p += FormatYear(p, ts.year);
@@ -96,6 +97,17 @@ static inline int FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFn 
     *p = '\0';
 
     return (int)(p - buffer);
+}
+
+static inline bool CaptureTimestamp(struct SolidSyslogTimestamp* ts, SolidSyslogClockFn clock)
+{
+    if (clock == NULL)
+    {
+        return false;
+    }
+
+    *ts = clock();
+    return true;
 }
 
 static inline int FormatCharacter(char* buffer, char value)
