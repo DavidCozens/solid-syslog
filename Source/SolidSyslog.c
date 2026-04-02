@@ -88,24 +88,24 @@ static inline int FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFn 
 
 static inline int FormatCapturedTimestamp(char* buffer, const struct SolidSyslogTimestamp* ts)
 {
-    char* p = buffer;
+    int len = 0;
 
-    p += FormatYear(p, ts->year);
-    p += FormatCharacter(p, '-');
-    p += FormatTwoDigit(p, ts->month);
-    p += FormatCharacter(p, '-');
-    p += FormatTwoDigit(p, ts->day);
-    p += FormatCharacter(p, 'T');
-    p += FormatTwoDigit(p, ts->hour);
-    p += FormatCharacter(p, ':');
-    p += FormatTwoDigit(p, ts->minute);
-    p += FormatCharacter(p, ':');
-    p += FormatTwoDigit(p, ts->second);
-    p += FormatCharacter(p, '.');
-    p += FormatMicrosecond(p, ts->microsecond);
-    p += FormatUtcOffset(p, ts->utcOffsetMinutes);
+    len += FormatYear(buffer + len, ts->year);
+    len += FormatCharacter(buffer + len, '-');
+    len += FormatTwoDigit(buffer + len, ts->month);
+    len += FormatCharacter(buffer + len, '-');
+    len += FormatTwoDigit(buffer + len, ts->day);
+    len += FormatCharacter(buffer + len, 'T');
+    len += FormatTwoDigit(buffer + len, ts->hour);
+    len += FormatCharacter(buffer + len, ':');
+    len += FormatTwoDigit(buffer + len, ts->minute);
+    len += FormatCharacter(buffer + len, ':');
+    len += FormatTwoDigit(buffer + len, ts->second);
+    len += FormatCharacter(buffer + len, '.');
+    len += FormatMicrosecond(buffer + len, ts->microsecond);
+    len += FormatUtcOffset(buffer + len, ts->utcOffsetMinutes);
 
-    return (int)(p - buffer);
+    return len;
 }
 
 static inline bool CaptureTimestamp(struct SolidSyslogTimestamp* ts, SolidSyslogClockFn clock)
@@ -166,18 +166,15 @@ static inline int FormatUtcOffset(char* buffer, int16_t offsetMinutes)
     }
     else
     {
-        char    sign           = (offsetMinutes > 0) ? '+' : '-';
+        char    sign            = (offsetMinutes > 0) ? '+' : '-';
         int16_t absoluteMinutes = (offsetMinutes > 0) ? offsetMinutes : (int16_t)-offsetMinutes;
-        uint8_t hours          = (uint8_t)(absoluteMinutes / 60);
-        uint8_t minutes        = (uint8_t)(absoluteMinutes % 60);
-        char*   p              = buffer;
+        uint8_t hours           = (uint8_t)(absoluteMinutes / 60);
+        uint8_t minutes         = (uint8_t)(absoluteMinutes % 60);
 
-        p += FormatCharacter(p, sign);
-        p += FormatTwoDigit(p, hours);
-        p += FormatCharacter(p, ':');
-        p += FormatTwoDigit(p, minutes);
-
-        len = (int)(p - buffer);
+        len += FormatCharacter(buffer + len, sign);
+        len += FormatTwoDigit(buffer + len, hours);
+        len += FormatCharacter(buffer + len, ':');
+        len += FormatTwoDigit(buffer + len, minutes);
     }
 
     return len;
