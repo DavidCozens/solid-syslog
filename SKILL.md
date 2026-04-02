@@ -60,7 +60,7 @@ Test progression follows ZOMBIES order.
 - Variables/parameters: `camelCase`
 - Types and files: `PascalCase`
 - Follows James Grenning's style (*TDD for Embedded C*) where consistent with clang-format
-- Caller-injected memory allocation (no hidden malloc), no unions, no anonymous structs, no `#ifdef` feature flags
+- No dynamic memory allocation required — allocator is caller-injected. No unions, no anonymous structs, no `#ifdef` feature flags
 - C99 baseline
 
 ## Architecture principles
