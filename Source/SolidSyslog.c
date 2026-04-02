@@ -191,9 +191,7 @@ static inline int FormatNonZeroUtcOffset(char* buffer, int16_t offsetMinutes)
 
 static inline int FormatSign(char* buffer, int16_t value)
 {
-    buffer[0] = (value > 0) ? '+' : '-';
-    buffer[1] = '\0';
-    return 1;
+    return FormatCharacter(buffer, (value > 0) ? '+' : '-');
 }
 
 static inline uint8_t MakePrival(const struct SolidSyslogMessage* message)
