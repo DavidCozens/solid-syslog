@@ -70,6 +70,11 @@ TEST_GROUP(SolidSyslogUdpSender)
     {
         SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN);
     }
+
+    void Send(const void* buffer, size_t size) const
+    {
+        SolidSyslogSender_Send(sender, buffer, size);
+    }
 };
 
 // clang-format on
@@ -100,7 +105,7 @@ TEST(SolidSyslogUdpSender, MaxMessageSizeTransmittedWithoutTruncation)
 {
     std::array<char, TEST_MAX_MESSAGE_SIZE> buffer{};
     buffer.fill('A');
-    SolidSyslogSender_Send(sender, buffer.data(), buffer.size());
+    Send(buffer.data(), buffer.size());
     LONGS_EQUAL(TEST_MAX_MESSAGE_SIZE, SocketSpy_LastLen());
     MEMCMP_EQUAL(buffer.data(), SocketSpy_LastBuf(), TEST_MAX_MESSAGE_SIZE);
 }
@@ -236,6 +241,11 @@ TEST_GROUP(SolidSyslogUdpSenderConfig)
         config = {getPort, getHost};
         sender = SolidSyslogUdpSender_Create(&config);
     }
+
+    void Send() const
+    {
+        SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN);
+    }
 };
 
 // clang-format on
@@ -244,14 +254,14 @@ TEST(SolidSyslogUdpSenderConfig, GetPortCalledOnCreate)
 {
     CreateSender(SpyGetPort, GetDefaultHost);
     LONGS_EQUAL(1, getPortCallCount);
-    SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN);
+    Send();
     LONGS_EQUAL(1, getPortCallCount);
 }
 
 TEST(SolidSyslogUdpSenderConfig, SendtoCalledWithConfiguredPort)
 {
     CreateSender(GetAlternatePort, GetDefaultHost);
-    SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN);
+    Send();
     LONGS_EQUAL(TEST_ALTERNATE_PORT, SocketSpy_LastPort());
 }
 
@@ -259,7 +269,7 @@ TEST(SolidSyslogUdpSenderConfig, GetHostCalledOnCreate)
 {
     CreateSender(GetDefaultPort, SpyGetHost);
     LONGS_EQUAL(1, getHostCallCount);
-    SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN);
+    Send();
     LONGS_EQUAL(1, getHostCallCount);
 }
 
@@ -273,6 +283,6 @@ TEST(SolidSyslogUdpSenderConfig, GetAddrInfoCalledWithHostnameFromGetHost)
 TEST(SolidSyslogUdpSenderConfig, SendtoCalledWithResolvedAddress)
 {
     CreateSender(GetDefaultPort, GetDefaultHost);
-    SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN);
+    Send();
     STRCMP_EQUAL(TEST_DEFAULT_HOST, SocketSpy_LastAddrAsString());
 }
