@@ -7,6 +7,8 @@ set(TEST_SOURCES
 
 if(SOLIDSYSLOG_POSIX)
     list(APPEND TEST_SOURCES
+        SolidSyslogPosixClockTest.cpp
+        ClockFake.c
         SolidSyslogUdpSenderTest.cpp
         SocketSpy.c
     )
