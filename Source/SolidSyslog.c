@@ -13,9 +13,10 @@ enum
 };
 
 static inline uint8_t CombineFacilityAndSeverity(uint8_t facility, uint8_t severity);
+static inline bool    CaptureTimestamp(struct SolidSyslogTimestamp* ts, SolidSyslogClockFunction clock);
 static inline bool    FacilityIsValid(uint8_t facility);
 static inline int     FormatMessage(char* buffer, size_t size, const struct SolidSyslogMessage* message, SolidSyslogClockFunction clock);
-static inline bool    CaptureTimestamp(struct SolidSyslogTimestamp* ts, SolidSyslogClockFunction clock);
+static inline bool    TimestampIsValid(const struct SolidSyslogTimestamp* ts);
 static inline int     FormatCapturedTimestamp(char* buffer, const struct SolidSyslogTimestamp* ts);
 static inline int     FormatCharacter(char* buffer, char value);
 static inline int     FormatMicrosecond(char* buffer, uint32_t value);
@@ -115,13 +116,30 @@ static inline int FormatCapturedTimestamp(char* buffer, const struct SolidSyslog
 
 static inline bool CaptureTimestamp(struct SolidSyslogTimestamp* ts, SolidSyslogClockFunction clock)
 {
-    if (clock == NULL)
+    bool captured = false;
+
+    if (clock != NULL)
     {
-        return false;
+        *ts      = clock();
+        captured = TimestampIsValid(ts);
     }
 
-    *ts = clock();
-    return true;
+    return captured;
+}
+
+static inline bool TimestampIsValid(const struct SolidSyslogTimestamp* ts)
+{
+    bool valid = true;
+
+    valid = valid && (ts->month >= 1U) && (ts->month <= 12U);
+    valid = valid && (ts->day >= 1U) && (ts->day <= 31U);
+    valid = valid && (ts->hour <= 23U);
+    valid = valid && (ts->minute <= 59U);
+    valid = valid && (ts->second <= 59U);
+    valid = valid && (ts->microsecond <= 999999U);
+    valid = valid && (ts->utcOffsetMinutes >= -720) && (ts->utcOffsetMinutes <= 840);
+
+    return valid;
 }
 
 static inline int FormatCharacter(char* buffer, char value)

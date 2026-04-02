@@ -590,21 +590,74 @@ TEST(SolidSyslogTimestamp, UtcOffsetMinus720FormatsAsMinus1200)
     CHECK_TIMESTAMP_OFFSET("-12:00");
 }
 
-IGNORE_TEST(SolidSyslog, TimestampTestList)
+TEST(SolidSyslogTimestamp, Month0ProducesNilvalue)
 {
-    // S1.3 — Timestamp encoding (Story #18)
-    //
-    // Exceptions — out-of-range fields produce NILVALUE "-"
-    //   Month 0 produces NILVALUE
-    //   Month 13 produces NILVALUE
-    //   Day 0 produces NILVALUE
-    //   Day 32 produces NILVALUE
-    //   Hour 24 produces NILVALUE
-    //   Minute 60 produces NILVALUE
-    //   Second 60 produces NILVALUE
-    //   Microsecond 1000000 produces NILVALUE
-    //   UTC offset +841 produces NILVALUE
-    //   UTC offset -721 produces NILVALUE
+    stubTimestamp.month = 0;
+    Log();
+    CHECK_TIMESTAMP_IS_NILVALUE();
+}
+
+TEST(SolidSyslogTimestamp, Month13ProducesNilvalue)
+{
+    stubTimestamp.month = 13;
+    Log();
+    CHECK_TIMESTAMP_IS_NILVALUE();
+}
+
+TEST(SolidSyslogTimestamp, Day0ProducesNilvalue)
+{
+    stubTimestamp.day = 0;
+    Log();
+    CHECK_TIMESTAMP_IS_NILVALUE();
+}
+
+TEST(SolidSyslogTimestamp, Day32ProducesNilvalue)
+{
+    stubTimestamp.day = 32;
+    Log();
+    CHECK_TIMESTAMP_IS_NILVALUE();
+}
+
+TEST(SolidSyslogTimestamp, Hour24ProducesNilvalue)
+{
+    stubTimestamp.hour = 24;
+    Log();
+    CHECK_TIMESTAMP_IS_NILVALUE();
+}
+
+TEST(SolidSyslogTimestamp, Minute60ProducesNilvalue)
+{
+    stubTimestamp.minute = 60;
+    Log();
+    CHECK_TIMESTAMP_IS_NILVALUE();
+}
+
+TEST(SolidSyslogTimestamp, Second60ProducesNilvalue)
+{
+    stubTimestamp.second = 60;
+    Log();
+    CHECK_TIMESTAMP_IS_NILVALUE();
+}
+
+TEST(SolidSyslogTimestamp, Microsecond1000000ProducesNilvalue)
+{
+    stubTimestamp.microsecond = 1000000;
+    Log();
+    CHECK_TIMESTAMP_IS_NILVALUE();
+}
+
+TEST(SolidSyslogTimestamp, UtcOffsetPlus841ProducesNilvalue)
+{
+    stubTimestamp.utcOffsetMinutes = 841;
+    Log();
+    CHECK_TIMESTAMP_IS_NILVALUE();
+}
+
+TEST(SolidSyslogTimestamp, UtcOffsetMinus721ProducesNilvalue)
+{
+    stubTimestamp.utcOffsetMinutes = -721;
+    Log();
+    CHECK_TIMESTAMP_IS_NILVALUE();
 }
 
 IGNORE_TEST(SolidSyslog, HappyPathOnly)
