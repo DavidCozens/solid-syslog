@@ -8,7 +8,8 @@
 
 enum
 {
-    SOLIDSYSLOG_MAX_MESSAGE_SIZE = 128
+    SOLIDSYSLOG_MAX_MESSAGE_SIZE   = 128,
+    SOLIDSYSLOG_MAX_TIMESTAMP_SIZE = 33
 };
 
 static inline uint8_t CombineFacilityAndSeverity(uint8_t facility, uint8_t severity);
@@ -51,12 +52,10 @@ void SolidSyslog_Log(struct SolidSyslog* logger, const struct SolidSyslogMessage
     SolidSyslogSender_Send(logger->sender, buffer, (size_t) len);
 }
 
-static inline int FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFn clock);
-
 static inline int FormatMessage(char* buffer, size_t size, const struct SolidSyslogMessage* message, SolidSyslogClockFn clock)
 {
     uint8_t prival = MakePrival(message);
-    char    timestamp[40];
+    char    timestamp[SOLIDSYSLOG_MAX_TIMESTAMP_SIZE];
     FormatTimestamp(timestamp, sizeof(timestamp), clock);
     // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- snprintf is bounded; snprintf_s is not portable
     return snprintf(buffer, size, "<%d>1 %s TestHost TestApp 42 54 - hello world", prival, timestamp);
