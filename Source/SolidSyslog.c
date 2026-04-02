@@ -16,6 +16,7 @@ static inline uint8_t CombineFacilityAndSeverity(uint8_t facility, uint8_t sever
 static inline bool    FacilityIsValid(uint8_t facility);
 static inline int     FormatMessage(char* buffer, size_t size, const struct SolidSyslogMessage* message, SolidSyslogClockFn clock);
 static inline bool    CaptureTimestamp(struct SolidSyslogTimestamp* ts, SolidSyslogClockFn clock);
+static inline int     FormatCapturedTimestamp(char* buffer, const struct SolidSyslogTimestamp* ts);
 static inline int     FormatCharacter(char* buffer, char value);
 static inline int     FormatMicrosecond(char* buffer, uint32_t value);
 static inline int     FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFn clock);
@@ -75,28 +76,33 @@ static inline int FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFn 
 
     if (CaptureTimestamp(&ts, clock))
     {
-        char* p = buffer;
-
-        p += FormatYear(p, ts.year);
-        p += FormatCharacter(p, '-');
-        p += FormatTwoDigit(p, ts.month);
-        p += FormatCharacter(p, '-');
-        p += FormatTwoDigit(p, ts.day);
-        p += FormatCharacter(p, 'T');
-        p += FormatTwoDigit(p, ts.hour);
-        p += FormatCharacter(p, ':');
-        p += FormatTwoDigit(p, ts.minute);
-        p += FormatCharacter(p, ':');
-        p += FormatTwoDigit(p, ts.second);
-        p += FormatCharacter(p, '.');
-        p += FormatMicrosecond(p, ts.microsecond);
-        p += FormatUtcOffset(p, ts.utcOffsetMinutes);
-
-        len = (int)(p - buffer);
+        len = FormatCapturedTimestamp(buffer, &ts);
     }
 
     buffer[len] = '\0';
     return len;
+}
+
+static inline int FormatCapturedTimestamp(char* buffer, const struct SolidSyslogTimestamp* ts)
+{
+    char* p = buffer;
+
+    p += FormatYear(p, ts->year);
+    p += FormatCharacter(p, '-');
+    p += FormatTwoDigit(p, ts->month);
+    p += FormatCharacter(p, '-');
+    p += FormatTwoDigit(p, ts->day);
+    p += FormatCharacter(p, 'T');
+    p += FormatTwoDigit(p, ts->hour);
+    p += FormatCharacter(p, ':');
+    p += FormatTwoDigit(p, ts->minute);
+    p += FormatCharacter(p, ':');
+    p += FormatTwoDigit(p, ts->second);
+    p += FormatCharacter(p, '.');
+    p += FormatMicrosecond(p, ts->microsecond);
+    p += FormatUtcOffset(p, ts->utcOffsetMinutes);
+
+    return (int)(p - buffer);
 }
 
 static inline bool CaptureTimestamp(struct SolidSyslogTimestamp* ts, SolidSyslogClockFn clock)
