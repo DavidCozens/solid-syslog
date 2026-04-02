@@ -21,7 +21,7 @@ static inline int     FormatCharacter(char* buffer, char value);
 static inline int     FormatMicrosecond(char* buffer, uint32_t value);
 static inline int     FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFn clock);
 static inline int     FormatTwoDigit(char* buffer, uint8_t value);
-static inline int16_t AbsoluteMinutes(int16_t offsetMinutes);
+static inline int16_t AbsoluteInt16(int16_t offsetMinutes);
 static inline int     FormatAsHours(char* buffer, int16_t absoluteMinutes);
 static inline int     FormatAsMinutes(char* buffer, int16_t absoluteMinutes);
 static inline int     FormatNonZeroUtcOffset(char* buffer, int16_t offsetMinutes);
@@ -179,13 +179,13 @@ static inline int FormatUtcOffset(char* buffer, int16_t offsetMinutes)
 
 static inline int FormatNonZeroUtcOffset(char* buffer, int16_t offsetMinutes)
 {
-    int16_t absolute = AbsoluteMinutes(offsetMinutes);
-    int     len      = 0;
+    int16_t absoluteMinutes = AbsoluteInt16(offsetMinutes);
+    int     len             = 0;
 
     len += FormatSign(buffer + len, offsetMinutes);
-    len += FormatAsHours(buffer + len, absolute);
+    len += FormatAsHours(buffer + len, absoluteMinutes);
     len += FormatCharacter(buffer + len, ':');
-    len += FormatAsMinutes(buffer + len, absolute);
+    len += FormatAsMinutes(buffer + len, absoluteMinutes);
 
     return len;
 }
@@ -200,7 +200,7 @@ static inline int FormatAsMinutes(char* buffer, int16_t absoluteMinutes)
     return FormatTwoDigit(buffer, (uint8_t)(absoluteMinutes % 60));
 }
 
-static inline int16_t AbsoluteMinutes(int16_t offsetMinutes)
+static inline int16_t AbsoluteInt16(int16_t offsetMinutes)
 {
     return (offsetMinutes > 0) ? offsetMinutes : (int16_t)-offsetMinutes;
 }
