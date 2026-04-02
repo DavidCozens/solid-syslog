@@ -3,10 +3,16 @@
 #include "SolidSyslogSender.h"
 #include <cstring>
 
-TEST_GROUP(SenderSpy){void setup() override{SenderSpy_Reset();
-}
-}
-;
+// clang-format off
+TEST_GROUP(SenderSpy)
+{
+    void setup() override
+    {
+        SenderSpy_Reset();
+    }
+};
+
+// clang-format on
 
 TEST(SenderSpy, CallCountIsZeroAfterReset)
 {

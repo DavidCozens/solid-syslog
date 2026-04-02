@@ -1,10 +1,16 @@
 #include "CppUTest/TestHarness.h"
 #include "ClockFake.h"
 
-TEST_GROUP(ClockFake){void setup() override{ClockFake_Reset();
-}
-}
-;
+// clang-format off
+TEST_GROUP(ClockFake)
+{
+    void setup() override
+    {
+        ClockFake_Reset();
+    }
+};
+
+// clang-format on
 
 TEST(ClockFake, ClockGettimeReturnsZeroAfterReset)
 {

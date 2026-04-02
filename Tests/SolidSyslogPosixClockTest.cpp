@@ -5,11 +5,17 @@
 // 2025-04-02T00:00:00Z
 static const time_t TEST_EPOCH = 1743552000;
 
-TEST_GROUP(SolidSyslogPosixClock){void setup() override{ClockFake_Reset();
-ClockFake_SetTime(TEST_EPOCH, 0);
-}
-}
-;
+// clang-format off
+TEST_GROUP(SolidSyslogPosixClock)
+{
+    void setup() override
+    {
+        ClockFake_Reset();
+        ClockFake_SetTime(TEST_EPOCH, 0);
+    }
+};
+
+// clang-format on
 
 TEST(SolidSyslogPosixClock, YearMatchesKnownTime)
 {
