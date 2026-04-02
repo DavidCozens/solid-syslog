@@ -22,7 +22,7 @@ static inline int     FormatMicrosecond(char* buffer, uint32_t value);
 static inline int     FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFn clock);
 static inline int     FormatTwoDigit(char* buffer, uint8_t value);
 static inline int     FormatNonZeroUtcOffset(char* buffer, int16_t offsetMinutes);
-static inline char    FormatSign(int16_t value);
+static inline int     FormatSign(char* buffer, int16_t value);
 static inline int     FormatUtcOffset(char* buffer, int16_t offsetMinutes);
 static inline int     FormatYear(char* buffer, uint16_t value);
 static inline uint8_t MakePrival(const struct SolidSyslogMessage* message);
@@ -176,13 +176,12 @@ static inline int FormatUtcOffset(char* buffer, int16_t offsetMinutes)
 
 static inline int FormatNonZeroUtcOffset(char* buffer, int16_t offsetMinutes)
 {
-    char    sign            = FormatSign(offsetMinutes);
     int16_t absoluteMinutes = (offsetMinutes > 0) ? offsetMinutes : (int16_t)-offsetMinutes;
     uint8_t hours           = (uint8_t)(absoluteMinutes / 60);
     uint8_t minutes         = (uint8_t)(absoluteMinutes % 60);
     int     len             = 0;
 
-    len += FormatCharacter(buffer + len, sign);
+    len += FormatSign(buffer + len, offsetMinutes);
     len += FormatTwoDigit(buffer + len, hours);
     len += FormatCharacter(buffer + len, ':');
     len += FormatTwoDigit(buffer + len, minutes);
@@ -190,9 +189,11 @@ static inline int FormatNonZeroUtcOffset(char* buffer, int16_t offsetMinutes)
     return len;
 }
 
-static inline char FormatSign(int16_t value)
+static inline int FormatSign(char* buffer, int16_t value)
 {
-    return (value > 0) ? '+' : '-';
+    buffer[0] = (value > 0) ? '+' : '-';
+    buffer[1] = '\0';
+    return 1;
 }
 
 static inline uint8_t MakePrival(const struct SolidSyslogMessage* message)
