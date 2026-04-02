@@ -15,6 +15,7 @@ enum
 static inline uint8_t CombineFacilityAndSeverity(uint8_t facility, uint8_t severity);
 static inline bool    FacilityIsValid(uint8_t facility);
 static inline int     FormatMessage(char* buffer, size_t size, const struct SolidSyslogMessage* message, SolidSyslogClockFn clock);
+static inline int     FormatCharacter(char* buffer, char value);
 static inline int     FormatMicrosecond(char* buffer, uint32_t value);
 static inline int     FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFn clock);
 static inline int     FormatTwoDigit(char* buffer, uint8_t value);
@@ -79,22 +80,28 @@ static inline int FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFn 
     char* p = buffer;
 
     p += FormatYear(p, ts.year);
-    *p++ = '-';
+    p += FormatCharacter(p, '-');
     p += FormatTwoDigit(p, ts.month);
-    *p++ = '-';
+    p += FormatCharacter(p, '-');
     p += FormatTwoDigit(p, ts.day);
-    *p++ = 'T';
+    p += FormatCharacter(p, 'T');
     p += FormatTwoDigit(p, ts.hour);
-    *p++ = ':';
+    p += FormatCharacter(p, ':');
     p += FormatTwoDigit(p, ts.minute);
-    *p++ = ':';
+    p += FormatCharacter(p, ':');
     p += FormatTwoDigit(p, ts.second);
-    *p++ = '.';
+    p += FormatCharacter(p, '.');
     p += FormatMicrosecond(p, ts.microsecond);
     p += FormatUtcOffset(p, ts.utcOffsetMinutes);
     *p = '\0';
 
     return (int)(p - buffer);
+}
+
+static inline int FormatCharacter(char* buffer, char value)
+{
+    buffer[0] = value;
+    return 1;
 }
 
 static inline int FormatYear(char* buffer, uint16_t value)
