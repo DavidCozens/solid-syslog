@@ -131,6 +131,32 @@ TEST(SolidSyslogPosixClock, ZeroNanosecondsProducesZeroMicroseconds)
     LONGS_EQUAL(0, ts.microsecond);
 }
 
+// Epoch 0 — 1970-01-01T00:00:00Z
+TEST(SolidSyslogPosixClock, EpochZeroProduces1970)
+{
+    ClockFake_SetTime(0, 0);
+    struct SolidSyslogTimestamp ts = SolidSyslogPosixClock_GetTimestamp();
+    LONGS_EQUAL(1970, ts.year);
+    LONGS_EQUAL(1, ts.month);
+    LONGS_EQUAL(1, ts.day);
+    LONGS_EQUAL(0, ts.hour);
+    LONGS_EQUAL(0, ts.minute);
+    LONGS_EQUAL(0, ts.second);
+}
+
+// 32-bit time_t max — 2038-01-19T03:14:07Z
+TEST(SolidSyslogPosixClock, Max32BitEpochProduces2038)
+{
+    ClockFake_SetTime(2147483647, 0);
+    struct SolidSyslogTimestamp ts = SolidSyslogPosixClock_GetTimestamp();
+    LONGS_EQUAL(2038, ts.year);
+    LONGS_EQUAL(1, ts.month);
+    LONGS_EQUAL(19, ts.day);
+    LONGS_EQUAL(3, ts.hour);
+    LONGS_EQUAL(14, ts.minute);
+    LONGS_EQUAL(7, ts.second);
+}
+
 TEST(SolidSyslogPosixClock, AllFieldsInValidRanges)
 {
     struct SolidSyslogTimestamp ts = SolidSyslogPosixClock_GetTimestamp();
