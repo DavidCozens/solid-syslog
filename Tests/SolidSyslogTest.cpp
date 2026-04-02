@@ -374,49 +374,49 @@ TEST(SolidSyslogTimestamp, NullClockProducesNilvalue)
 
 TEST(SolidSyslogTimestamp, YearFormatsAsFourDigitZeroPadded)
 {
-    stubTimestamp.year = TEST_YEAR;
+    stubTimestamp.year = 2026;
     Log();
     CHECK_TIMESTAMP_YEAR("2026");
 }
 
 TEST(SolidSyslogTimestamp, MonthFormatsAsTwoDigitZeroPadded)
 {
-    stubTimestamp.month = TEST_MONTH;
+    stubTimestamp.month = 4;
     Log();
     CHECK_TIMESTAMP_MONTH("04");
 }
 
 TEST(SolidSyslogTimestamp, DayFormatsAsTwoDigitZeroPadded)
 {
-    stubTimestamp.day = TEST_DAY;
+    stubTimestamp.day = 2;
     Log();
     CHECK_TIMESTAMP_DAY("02");
 }
 
 TEST(SolidSyslogTimestamp, HourFormatsAsTwoDigitZeroPadded)
 {
-    stubTimestamp.hour = TEST_HOUR;
+    stubTimestamp.hour = 14;
     Log();
     CHECK_TIMESTAMP_HOUR("14");
 }
 
 TEST(SolidSyslogTimestamp, MinuteFormatsAsTwoDigitZeroPadded)
 {
-    stubTimestamp.minute = TEST_MINUTE;
+    stubTimestamp.minute = 30;
     Log();
     CHECK_TIMESTAMP_MINUTE("30");
 }
 
 TEST(SolidSyslogTimestamp, SecondFormatsAsTwoDigitZeroPadded)
 {
-    stubTimestamp.second = TEST_SECOND;
+    stubTimestamp.second = 7;
     Log();
     CHECK_TIMESTAMP_SECOND("07");
 }
 
 TEST(SolidSyslogTimestamp, MicrosecondFormatsAsSixDigitZeroPadded)
 {
-    stubTimestamp.microsecond = TEST_MICROSECOND;
+    stubTimestamp.microsecond = 42;
     Log();
     CHECK_TIMESTAMP_MICROSECOND(".000042");
 }
@@ -459,7 +459,7 @@ TEST(SolidSyslogTimestamp, TimestampAppearsInCorrectMessageFieldPosition)
 
 TEST(SolidSyslogTimestamp, ZeroOffsetFormatsAsZ)
 {
-    stubTimestamp.utcOffsetMinutes = TEST_UTC_OFFSET;
+    stubTimestamp.utcOffsetMinutes = 0;
     Log();
     CHECK_TIMESTAMP_OFFSET("Z");
 }
