@@ -3,13 +3,10 @@
 #include "SolidSyslogSender.h"
 #include <cstring>
 
-TEST_GROUP(SenderSpy)
-{
-    void setup() override
-    {
-        SenderSpy_Reset();
-    }
-};
+TEST_GROUP(SenderSpy){void setup() override{SenderSpy_Reset();
+}
+}
+;
 
 TEST(SenderSpy, CallCountIsZeroAfterReset)
 {
