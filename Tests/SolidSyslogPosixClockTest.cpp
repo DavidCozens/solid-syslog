@@ -157,6 +157,16 @@ TEST(SolidSyslogPosixClock, Max32BitEpochProduces2038)
     LONGS_EQUAL(7, ts.second);
 }
 
+// 2066-01-01T00:00:00Z — well beyond 32-bit time_t limit
+TEST(SolidSyslogPosixClock, NoY2038LimitOnThisPlatform)
+{
+    ClockFake_SetTime(3029529600, 0);
+    struct SolidSyslogTimestamp ts = SolidSyslogPosixClock_GetTimestamp();
+    LONGS_EQUAL(2066, ts.year);
+    LONGS_EQUAL(1, ts.month);
+    LONGS_EQUAL(1, ts.day);
+}
+
 TEST(SolidSyslogPosixClock, AllFieldsInValidRanges)
 {
     struct SolidSyslogTimestamp ts = SolidSyslogPosixClock_GetTimestamp();
