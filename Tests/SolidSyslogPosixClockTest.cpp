@@ -5,18 +5,20 @@
 // 2025-04-02T00:00:00Z
 static const time_t TEST_EPOCH = 1743552000;
 
+// clang-format off
 // NOLINTBEGIN(cppcoreguidelines-macro-usage) -- macros preserve __FILE__/__LINE__ in test failure output
-#define GET_TIMESTAMP()        SolidSyslogPosixClock_GetTimestamp()
-#define CHECK_YEAR(expected)   LONGS_EQUAL(expected, GET_TIMESTAMP().year)
-#define CHECK_MONTH(expected)  LONGS_EQUAL(expected, GET_TIMESTAMP().month)
-#define CHECK_DAY(expected)    LONGS_EQUAL(expected, GET_TIMESTAMP().day)
-#define CHECK_HOUR(expected)   LONGS_EQUAL(expected, GET_TIMESTAMP().hour)
-#define CHECK_MINUTE(expected) LONGS_EQUAL(expected, GET_TIMESTAMP().minute)
-#define CHECK_SECOND(expected) LONGS_EQUAL(expected, GET_TIMESTAMP().second)
-#define CHECK_MICROSECOND(expected)    LONGS_EQUAL(expected, GET_TIMESTAMP().microsecond)
-#define CHECK_UTC_OFFSET(expected)     LONGS_EQUAL(expected, GET_TIMESTAMP().utcOffsetMinutes)
-#define CHECK_MONTH_IS_INVALID()       LONGS_EQUAL(0, GET_TIMESTAMP().month)
+#define GET_TIMESTAMP()              SolidSyslogPosixClock_GetTimestamp()
+#define CHECK_YEAR(expected)         LONGS_EQUAL(expected, GET_TIMESTAMP().year)
+#define CHECK_MONTH(expected)        LONGS_EQUAL(expected, GET_TIMESTAMP().month)
+#define CHECK_DAY(expected)          LONGS_EQUAL(expected, GET_TIMESTAMP().day)
+#define CHECK_HOUR(expected)         LONGS_EQUAL(expected, GET_TIMESTAMP().hour)
+#define CHECK_MINUTE(expected)       LONGS_EQUAL(expected, GET_TIMESTAMP().minute)
+#define CHECK_SECOND(expected)       LONGS_EQUAL(expected, GET_TIMESTAMP().second)
+#define CHECK_MICROSECOND(expected)  LONGS_EQUAL(expected, GET_TIMESTAMP().microsecond)
+#define CHECK_UTC_OFFSET(expected)   LONGS_EQUAL(expected, GET_TIMESTAMP().utcOffsetMinutes)
+#define CHECK_MONTH_IS_INVALID()     LONGS_EQUAL(0, GET_TIMESTAMP().month)
 // NOLINTEND(cppcoreguidelines-macro-usage)
+// clang-format on
 
 // clang-format off
 TEST_GROUP(SolidSyslogPosixClock)
