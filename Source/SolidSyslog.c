@@ -158,26 +158,29 @@ static inline int FormatMicrosecond(char* buffer, uint32_t value)
 
 static inline int FormatUtcOffset(char* buffer, int16_t offsetMinutes)
 {
+    int len = 0;
+
     if (offsetMinutes == 0)
     {
-        buffer[0] = 'Z';
-        buffer[1] = '\0';
-        return 1;
+        len = FormatCharacter(buffer, 'Z');
+    }
+    else
+    {
+        char    sign           = (offsetMinutes > 0) ? '+' : '-';
+        int16_t absoluteMinutes = (offsetMinutes > 0) ? offsetMinutes : (int16_t)-offsetMinutes;
+        uint8_t hours          = (uint8_t)(absoluteMinutes / 60);
+        uint8_t minutes        = (uint8_t)(absoluteMinutes % 60);
+        char*   p              = buffer;
+
+        p += FormatCharacter(p, sign);
+        p += FormatTwoDigit(p, hours);
+        p += FormatCharacter(p, ':');
+        p += FormatTwoDigit(p, minutes);
+
+        len = (int)(p - buffer);
     }
 
-    int16_t hours   = offsetMinutes / 60;
-    int16_t minutes = offsetMinutes % 60;
-    if (minutes < 0) { minutes = (int16_t)-minutes; }
-
-    buffer[0] = (offsetMinutes > 0) ? '+' : '-';
-    if (hours < 0) { hours = (int16_t)-hours; }
-    buffer[1] = (char)('0' + hours / 10);
-    buffer[2] = (char)('0' + hours % 10);
-    buffer[3] = ':';
-    buffer[4] = (char)('0' + minutes / 10);
-    buffer[5] = (char)('0' + minutes % 10);
-    buffer[6] = '\0';
-    return 6;
+    return len;
 }
 
 static inline uint8_t MakePrival(const struct SolidSyslogMessage* message)
