@@ -37,9 +37,14 @@ static const int TIMESTAMP_MINUTE_OFFSET      = 14;
 static const int TIMESTAMP_MINUTE_LENGTH      = 2;
 static const int TIMESTAMP_SECOND_OFFSET      = 17;
 static const int TIMESTAMP_SECOND_LENGTH      = 2;
-static const int TIMESTAMP_MICROSECOND_OFFSET = 19;
-static const int TIMESTAMP_MICROSECOND_LENGTH = 7;
-static const int TIMESTAMP_OFFSET_OFFSET      = 26;
+static const int TIMESTAMP_DATE_SEP_1          = 4;
+static const int TIMESTAMP_DATE_SEP_2          = 7;
+static const int TIMESTAMP_DATE_TIME_SEP       = 10;
+static const int TIMESTAMP_TIME_SEP_1          = 13;
+static const int TIMESTAMP_TIME_SEP_2          = 16;
+static const int TIMESTAMP_MICROSECOND_OFFSET  = 19;
+static const int TIMESTAMP_MICROSECOND_LENGTH  = 7;
+static const int TIMESTAMP_OFFSET_OFFSET       = 26;
 // clang-format on
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage) -- macros preserve __FILE__/__LINE__ in test failure output
@@ -420,30 +425,30 @@ TEST(SolidSyslogTimestamp, DateFieldsSeparatedByHyphen)
 {
     Log();
     std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
-    BYTES_EQUAL('-', timestamp.at(4));
-    BYTES_EQUAL('-', timestamp.at(7));
+    BYTES_EQUAL('-', timestamp.at(TIMESTAMP_DATE_SEP_1));
+    BYTES_EQUAL('-', timestamp.at(TIMESTAMP_DATE_SEP_2));
 }
 
 TEST(SolidSyslogTimestamp, DateAndTimeSeparatedByT)
 {
     Log();
     std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
-    BYTES_EQUAL('T', timestamp.at(10));
+    BYTES_EQUAL('T', timestamp.at(TIMESTAMP_DATE_TIME_SEP));
 }
 
 TEST(SolidSyslogTimestamp, TimeFieldsSeparatedByColon)
 {
     Log();
     std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
-    BYTES_EQUAL(':', timestamp.at(13));
-    BYTES_EQUAL(':', timestamp.at(16));
+    BYTES_EQUAL(':', timestamp.at(TIMESTAMP_TIME_SEP_1));
+    BYTES_EQUAL(':', timestamp.at(TIMESTAMP_TIME_SEP_2));
 }
 
 TEST(SolidSyslogTimestamp, FractionalSecondsPrecededByDot)
 {
     Log();
     std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
-    BYTES_EQUAL('.', timestamp.at(19));
+    BYTES_EQUAL('.', timestamp.at(TIMESTAMP_MICROSECOND_OFFSET));
 }
 
 TEST(SolidSyslogTimestamp, TimestampAppearsInCorrectMessageFieldPosition)
