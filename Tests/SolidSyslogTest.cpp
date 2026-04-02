@@ -78,22 +78,26 @@ TEST_GROUP(SolidSyslog)
 
     void Log() const
     {
-        SolidSyslog_Log(logger, SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO);
+        struct SolidSyslogMessage message = {SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO};
+        SolidSyslog_Log(logger, &message);
     }
 
     void Log(enum SolidSyslog_Facility facility) const
     {
-        SolidSyslog_Log(logger, facility, SOLIDSYSLOG_SEVERITY_INFO);
+        struct SolidSyslogMessage message = {facility, SOLIDSYSLOG_SEVERITY_INFO};
+        SolidSyslog_Log(logger, &message);
     }
 
     void Log(enum SolidSyslog_Severity severity) const
     {
-        SolidSyslog_Log(logger, SOLIDSYSLOG_FACILITY_LOCAL0, severity);
+        struct SolidSyslogMessage message = {SOLIDSYSLOG_FACILITY_LOCAL0, severity};
+        SolidSyslog_Log(logger, &message);
     }
 
     void Log(enum SolidSyslog_Facility facility, enum SolidSyslog_Severity severity) const
     {
-        SolidSyslog_Log(logger, facility, severity);
+        struct SolidSyslogMessage message = {facility, severity};
+        SolidSyslog_Log(logger, &message);
     }
 
     static const char *LastMessage()
@@ -125,8 +129,9 @@ TEST(SolidSyslog, EachLoggerSendsThroughItsOwnSender)
     SolidSyslogConfig secondConfig = {SenderSpy_GetSender(), malloc, free};
     SolidSyslog*      second       = SolidSyslog_Create(&secondConfig);
 
-    SolidSyslog_Log(logger, SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO);
-    SolidSyslog_Log(second, SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO);
+    struct SolidSyslogMessage message = {SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO};
+    SolidSyslog_Log(logger, &message);
+    SolidSyslog_Log(second, &message);
     LONGS_EQUAL(2, SenderSpy_CallCount());
 
     SolidSyslog_Destroy(second);
@@ -188,7 +193,8 @@ TEST(SolidSyslog, HighestSeverityProducesCorrectPrival)
 TEST(SolidSyslog, OutOfRangeFacilityProducesErrorPrival)
 {
     // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange) -- intentionally testing out-of-range input
-    SolidSyslog_Log(logger, (enum SolidSyslog_Facility) 24, SOLIDSYSLOG_SEVERITY_INFO);
+    struct SolidSyslogMessage message = {(enum SolidSyslog_Facility) 24, SOLIDSYSLOG_SEVERITY_INFO};
+    SolidSyslog_Log(logger, &message);
     STRNCMP_EQUAL("<43>", SyslogField(LastMessage(), SYSLOG_FIELD_HEADER).c_str(), 4);
 }
 
@@ -196,8 +202,9 @@ TEST(SolidSyslog, OutOfRangeSeverityProducesErrorPrival)
 {
     enum SolidSyslog_Severity invalid = SOLIDSYSLOG_SEVERITY_DEBUG;
     // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange) -- intentionally testing out-of-range input
-    invalid = static_cast<enum SolidSyslog_Severity>(static_cast<int>(invalid) + 1);
-    SolidSyslog_Log(logger, SOLIDSYSLOG_FACILITY_LOCAL0, invalid);
+    invalid                           = static_cast<enum SolidSyslog_Severity>(static_cast<int>(invalid) + 1);
+    struct SolidSyslogMessage message = {SOLIDSYSLOG_FACILITY_LOCAL0, invalid};
+    SolidSyslog_Log(logger, &message);
     STRNCMP_EQUAL("<43>", SyslogField(LastMessage(), SYSLOG_FIELD_HEADER).c_str(), 4);
 }
 

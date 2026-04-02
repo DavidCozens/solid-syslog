@@ -54,7 +54,11 @@ int main(int argc, char* argv[])
     };
     struct SolidSyslog* logger = SolidSyslog_Create(&config);
 
-    SolidSyslog_Log(logger, facility, severity);
+    struct SolidSyslogMessage message = {
+        .facility = facility,
+        .severity = severity,
+    };
+    SolidSyslog_Log(logger, &message);
 
     SolidSyslog_Destroy(logger);
     SolidSyslogUdpSender_Destroy(sender);

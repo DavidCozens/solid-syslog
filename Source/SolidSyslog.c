@@ -12,8 +12,8 @@ enum
 
 static inline uint8_t CombineFacilityAndSeverity(uint8_t facility, uint8_t severity);
 static inline bool    FacilityIsValid(uint8_t facility);
-static inline int     FormatMessage(char* buffer, size_t size, enum SolidSyslog_Facility facility, enum SolidSyslog_Severity severity);
-static inline uint8_t MakePrival(enum SolidSyslog_Facility facility, enum SolidSyslog_Severity severity);
+static inline int     FormatMessage(char* buffer, size_t size, const struct SolidSyslogMessage* message);
+static inline uint8_t MakePrival(const struct SolidSyslogMessage* message);
 static inline bool    PrivalComponentsAreValid(uint8_t facility, uint8_t severity);
 static inline bool    SeverityIsValid(uint8_t severity);
 
@@ -39,25 +39,24 @@ void SolidSyslog_Destroy(struct SolidSyslog* logger)
     logger->free(logger);
 }
 
-void SolidSyslog_Log(struct SolidSyslog* logger, enum SolidSyslog_Facility facility, enum SolidSyslog_Severity severity)
+void SolidSyslog_Log(struct SolidSyslog* logger, const struct SolidSyslogMessage* message)
 {
-    char message[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
-    int  len = FormatMessage(message, sizeof(message), facility, severity);
-    SolidSyslogSender_Send(logger->sender, message, (size_t) len);
+    char buffer[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    int  len = FormatMessage(buffer, sizeof(buffer), message);
+    SolidSyslogSender_Send(logger->sender, buffer, (size_t) len);
 }
 
-// NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- facility and severity are distinct enum types
-static inline int FormatMessage(char* buffer, size_t size, enum SolidSyslog_Facility facility, enum SolidSyslog_Severity severity)
+static inline int FormatMessage(char* buffer, size_t size, const struct SolidSyslogMessage* message)
 {
-    uint8_t prival = MakePrival(facility, severity);
+    uint8_t prival = MakePrival(message);
     // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- snprintf is bounded; snprintf_s is not portable
     return snprintf(buffer, size, "<%d>1 2009-03-23T00:00:00.000Z TestHost TestApp 42 54 - hello world", prival);
 }
 
-static inline uint8_t MakePrival(enum SolidSyslog_Facility facility, enum SolidSyslog_Severity severity)
+static inline uint8_t MakePrival(const struct SolidSyslogMessage* message)
 {
-    uint8_t f      = (uint8_t) facility;
-    uint8_t s      = (uint8_t) severity;
+    uint8_t f      = (uint8_t) message->facility;
+    uint8_t s      = (uint8_t) message->severity;
     uint8_t prival = CombineFacilityAndSeverity(SOLIDSYSLOG_FACILITY_SYSLOG, SOLIDSYSLOG_SEVERITY_ERR);
 
     if (PrivalComponentsAreValid(f, s))
