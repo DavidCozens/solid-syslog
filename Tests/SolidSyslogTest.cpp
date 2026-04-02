@@ -7,7 +7,6 @@
 
 // clang-format off
 static const char * const TEST_PRIVAL    = "<134>";
-static const char * const TEST_TIMESTAMP = "2009-03-23T00:00:00.000Z";
 static const char * const TEST_HOSTNAME  = "TestHost";
 static const char * const TEST_APP_NAME  = "TestApp";
 static const char * const TEST_PROCID    = "42";
@@ -48,38 +47,35 @@ static const int TIMESTAMP_OFFSET_OFFSET       = 26;
 // clang-format on
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage) -- macros preserve __FILE__/__LINE__ in test failure output
-#define CHECK_PRIVAL(expected)                                                         \
-    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_HEADER).c_str(), strlen(expected))
+#define CHECK_PRIVAL(expected) STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_HEADER).c_str(), strlen(expected))
 
-#define CHECK_TIMESTAMP_YEAR(expected)                                                 \
+#define CHECK_TIMESTAMP_YEAR(expected) \
     STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_YEAR_OFFSET, TIMESTAMP_YEAR_LENGTH)
 
-#define CHECK_TIMESTAMP_MONTH(expected)                                                \
+#define CHECK_TIMESTAMP_MONTH(expected) \
     STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_MONTH_OFFSET, TIMESTAMP_MONTH_LENGTH)
 
-#define CHECK_TIMESTAMP_DAY(expected)                                                  \
+#define CHECK_TIMESTAMP_DAY(expected) \
     STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_DAY_OFFSET, TIMESTAMP_DAY_LENGTH)
 
-#define CHECK_TIMESTAMP_HOUR(expected)                                                 \
+#define CHECK_TIMESTAMP_HOUR(expected) \
     STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_HOUR_OFFSET, TIMESTAMP_HOUR_LENGTH)
 
-#define CHECK_TIMESTAMP_MINUTE(expected)                                               \
+#define CHECK_TIMESTAMP_MINUTE(expected) \
     STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_MINUTE_OFFSET, TIMESTAMP_MINUTE_LENGTH)
 
-#define CHECK_TIMESTAMP_SECOND(expected)                                               \
+#define CHECK_TIMESTAMP_SECOND(expected) \
     STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_SECOND_OFFSET, TIMESTAMP_SECOND_LENGTH)
 
-#define CHECK_TIMESTAMP_MICROSECOND(expected)                                          \
+#define CHECK_TIMESTAMP_MICROSECOND(expected) \
     STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_MICROSECOND_OFFSET, TIMESTAMP_MICROSECOND_LENGTH)
 
-#define CHECK_TIMESTAMP(expected)                                                      \
-    STRCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str())
+#define CHECK_TIMESTAMP(expected) STRCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str())
 
-#define CHECK_TIMESTAMP_OFFSET(expected)                                               \
-    STRCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).substr(TIMESTAMP_OFFSET_OFFSET).c_str())
+#define CHECK_TIMESTAMP_OFFSET(expected) STRCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).substr(TIMESTAMP_OFFSET_OFFSET).c_str())
 
-#define CHECK_TIMESTAMP_IS_NILVALUE()                                                  \
-    STRCMP_EQUAL("-", SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str())
+#define CHECK_TIMESTAMP_IS_NILVALUE() STRCMP_EQUAL("-", SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str())
+
 // NOLINTEND(cppcoreguidelines-macro-usage)
 
 static std::string SyslogField(const char* buffer, int n)
@@ -275,12 +271,6 @@ TEST(SolidSyslog, VersionIs1)
     BYTES_EQUAL('1', header.at(closingBracket + 1));
 }
 
-IGNORE_TEST(SolidSyslog, TimestampIs20090323)
-{
-    Log();
-    STRCMP_EQUAL(TEST_TIMESTAMP, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str());
-}
-
 TEST(SolidSyslog, HostnameIsTestHost)
 {
     Log();
@@ -343,6 +333,7 @@ static const int16_t  TEST_UTC_OFFSET  = 0;
 
 static struct SolidSyslogTimestamp stubTimestamp;
 
+// NOLINTNEXTLINE(modernize-redundant-void-arg) -- C linkage function matching SolidSyslogClockFunction signature
 static struct SolidSyslogTimestamp StubClock(void)
 {
     return stubTimestamp;

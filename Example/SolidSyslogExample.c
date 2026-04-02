@@ -1,5 +1,6 @@
 #include "SolidSyslog.h"
 #include "SolidSyslogConfig.h"
+#include "SolidSyslogPosixClock.h"
 #include "SolidSyslogUdpSender.h"
 
 #include <getopt.h>
@@ -52,6 +53,7 @@ int main(int argc, char* argv[])
         .sender = sender,
         .alloc  = malloc,
         .free   = free,
+        .clock  = SolidSyslogPosixClock_GetTimestamp,
     };
     struct SolidSyslog* logger = SolidSyslog_Create(&config);
 

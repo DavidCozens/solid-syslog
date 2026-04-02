@@ -5,14 +5,11 @@
 // 2025-04-02T00:00:00Z
 static const time_t TEST_EPOCH = 1743552000;
 
-TEST_GROUP(SolidSyslogPosixClock)
-{
-    void setup() override
-    {
-        ClockFake_Reset();
-        ClockFake_SetTime(TEST_EPOCH, 0);
-    }
-};
+TEST_GROUP(SolidSyslogPosixClock){void setup() override{ClockFake_Reset();
+ClockFake_SetTime(TEST_EPOCH, 0);
+}
+}
+;
 
 TEST(SolidSyslogPosixClock, YearMatchesKnownTime)
 {
@@ -72,7 +69,7 @@ TEST(SolidSyslogPosixClock, ClockGettimeFailureReturnsInvalidTimestamp)
 
 TEST(SolidSyslogPosixClock, GmtimeFailureReturnsInvalidTimestamp)
 {
-    ClockFake_SetGmtimeReturn(NULL);
+    ClockFake_SetGmtimeReturn(nullptr);
     struct SolidSyslogTimestamp ts = SolidSyslogPosixClock_GetTimestamp();
     LONGS_EQUAL(0, ts.month);
 }
@@ -89,4 +86,3 @@ TEST(SolidSyslogPosixClock, AllFieldsInValidRanges)
     CHECK(ts.microsecond <= 999999);
     LONGS_EQUAL(0, ts.utcOffsetMinutes);
 }
-

@@ -22,7 +22,7 @@ static inline int     FormatCharacter(char* buffer, char value);
 static inline int     FormatMicrosecond(char* buffer, uint32_t value);
 static inline int     FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFunction clock);
 static inline int     FormatTwoDigit(char* buffer, uint8_t value);
-static inline int16_t AbsoluteInt16(int16_t offsetMinutes);
+static inline int16_t AbsoluteInt16(int16_t value);
 static inline int     FormatAsHours(char* buffer, int16_t absoluteMinutes);
 static inline int     FormatAsMinutes(char* buffer, int16_t absoluteMinutes);
 static inline int     FormatNonZeroUtcOffset(char* buffer, int16_t offsetMinutes);
@@ -36,8 +36,8 @@ static inline bool    SeverityIsValid(uint8_t severity);
 struct SolidSyslog
 {
     struct SolidSyslogSender* sender;
-    SolidSyslogFreeFunction         free;
-    SolidSyslogClockFunction        clock;
+    SolidSyslogFreeFunction   free;
+    SolidSyslogClockFunction  clock;
 };
 
 struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config)
@@ -78,7 +78,7 @@ static inline int FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFun
     (void) size;
 
     struct SolidSyslogTimestamp ts  = {0};
-    int                        len = 0;
+    int                         len = 0;
 
     if (CaptureTimestamp(&ts, clock))
     {
@@ -151,30 +151,30 @@ static inline int FormatCharacter(char* buffer, char value)
 
 static inline int FormatYear(char* buffer, uint16_t value)
 {
-    buffer[0] = (char)('0' + (value / 1000U) % 10U);
-    buffer[1] = (char)('0' + (value / 100U) % 10U);
-    buffer[2] = (char)('0' + (value / 10U) % 10U);
-    buffer[3] = (char)('0' + value % 10U);
+    buffer[0] = (char) ('0' + ((value / 1000U) % 10U));
+    buffer[1] = (char) ('0' + ((value / 100U) % 10U));
+    buffer[2] = (char) ('0' + ((value / 10U) % 10U));
+    buffer[3] = (char) ('0' + (value % 10U));
     buffer[4] = '\0';
     return 4;
 }
 
 static inline int FormatTwoDigit(char* buffer, uint8_t value)
 {
-    buffer[0] = (char)('0' + value / 10U);
-    buffer[1] = (char)('0' + value % 10U);
+    buffer[0] = (char) ('0' + (value / 10U));
+    buffer[1] = (char) ('0' + (value % 10U));
     buffer[2] = '\0';
     return 2;
 }
 
 static inline int FormatMicrosecond(char* buffer, uint32_t value)
 {
-    buffer[0] = (char)('0' + (value / 100000U) % 10U);
-    buffer[1] = (char)('0' + (value / 10000U) % 10U);
-    buffer[2] = (char)('0' + (value / 1000U) % 10U);
-    buffer[3] = (char)('0' + (value / 100U) % 10U);
-    buffer[4] = (char)('0' + (value / 10U) % 10U);
-    buffer[5] = (char)('0' + value % 10U);
+    buffer[0] = (char) ('0' + ((value / 100000U) % 10U));
+    buffer[1] = (char) ('0' + ((value / 10000U) % 10U));
+    buffer[2] = (char) ('0' + ((value / 1000U) % 10U));
+    buffer[3] = (char) ('0' + ((value / 100U) % 10U));
+    buffer[4] = (char) ('0' + ((value / 10U) % 10U));
+    buffer[5] = (char) ('0' + (value % 10U));
     buffer[6] = '\0';
     return 6;
 }
@@ -210,17 +210,24 @@ static inline int FormatNonZeroUtcOffset(char* buffer, int16_t offsetMinutes)
 
 static inline int FormatAsHours(char* buffer, int16_t absoluteMinutes)
 {
-    return FormatTwoDigit(buffer, (uint8_t)(absoluteMinutes / 60));
+    return FormatTwoDigit(buffer, (uint8_t) (absoluteMinutes / 60));
 }
 
 static inline int FormatAsMinutes(char* buffer, int16_t absoluteMinutes)
 {
-    return FormatTwoDigit(buffer, (uint8_t)(absoluteMinutes % 60));
+    return FormatTwoDigit(buffer, (uint8_t) (absoluteMinutes % 60));
 }
 
-static inline int16_t AbsoluteInt16(int16_t offsetMinutes)
+static inline int16_t AbsoluteInt16(int16_t value)
 {
-    return (offsetMinutes > 0) ? offsetMinutes : (int16_t)-offsetMinutes;
+    int16_t result = value;
+
+    if (value < 0)
+    {
+        result = (int16_t) (-value);
+    }
+
+    return result;
 }
 
 static inline int FormatSign(char* buffer, int16_t value)

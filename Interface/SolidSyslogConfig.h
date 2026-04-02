@@ -12,9 +12,9 @@ EXTERN_C_BEGIN
     struct SolidSyslogConfig
     {
         struct SolidSyslogSender* sender;
-        SolidSyslogAllocFunction        alloc;
-        SolidSyslogFreeFunction         free;
-        SolidSyslogClockFunction        clock;
+        SolidSyslogAllocFunction  alloc;
+        SolidSyslogFreeFunction   free;
+        SolidSyslogClockFunction  clock;
     };
 
     struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config);
