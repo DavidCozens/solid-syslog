@@ -307,6 +307,17 @@ TEST(SolidSyslog, CreateReturnsNullWhenAllocFails)
     POINTERS_EQUAL(nullptr, result);
 }
 
+// clang-format off
+static const uint16_t TEST_YEAR        = 2026;
+static const uint8_t  TEST_MONTH       = 4;
+static const uint8_t  TEST_DAY         = 2;
+static const uint8_t  TEST_HOUR        = 14;
+static const uint8_t  TEST_MINUTE      = 30;
+static const uint8_t  TEST_SECOND      = 7;
+static const uint32_t TEST_MICROSECOND = 42;
+static const int16_t  TEST_UTC_OFFSET  = 0;
+// clang-format on
+
 static struct SolidSyslogTimestamp stubTimestamp;
 
 static struct SolidSyslogTimestamp StubClock(void)
@@ -320,7 +331,7 @@ TEST_GROUP_BASE(SolidSyslogTimestamp, TEST_GROUP_CppUTestGroupSolidSyslog)
     void setup() override
     {
         TEST_GROUP_CppUTestGroupSolidSyslog::setup();
-        stubTimestamp = {2026, 4, 2, 14, 30, 0, 0, 0};
+        stubTimestamp = {TEST_YEAR, TEST_MONTH, TEST_DAY, TEST_HOUR, TEST_MINUTE, TEST_SECOND, TEST_MICROSECOND, TEST_UTC_OFFSET};
         config.clock = StubClock;
         SolidSyslog_Destroy(logger);
         logger = SolidSyslog_Create(&config);
@@ -340,49 +351,49 @@ TEST(SolidSyslogTimestamp, NullClockProducesNilvalue)
 
 TEST(SolidSyslogTimestamp, YearFormatsAsFourDigitZeroPadded)
 {
-    stubTimestamp.year = 2026;
+    stubTimestamp.year = TEST_YEAR;
     Log();
     CHECK_TIMESTAMP_YEAR("2026");
 }
 
 TEST(SolidSyslogTimestamp, MonthFormatsAsTwoDigitZeroPadded)
 {
-    stubTimestamp.month = 4;
+    stubTimestamp.month = TEST_MONTH;
     Log();
     CHECK_TIMESTAMP_MONTH("04");
 }
 
 TEST(SolidSyslogTimestamp, DayFormatsAsTwoDigitZeroPadded)
 {
-    stubTimestamp.day = 2;
+    stubTimestamp.day = TEST_DAY;
     Log();
     CHECK_TIMESTAMP_DAY("02");
 }
 
 TEST(SolidSyslogTimestamp, HourFormatsAsTwoDigitZeroPadded)
 {
-    stubTimestamp.hour = 14;
+    stubTimestamp.hour = TEST_HOUR;
     Log();
     CHECK_TIMESTAMP_HOUR("14");
 }
 
 TEST(SolidSyslogTimestamp, MinuteFormatsAsTwoDigitZeroPadded)
 {
-    stubTimestamp.minute = 30;
+    stubTimestamp.minute = TEST_MINUTE;
     Log();
     CHECK_TIMESTAMP_MINUTE("30");
 }
 
 TEST(SolidSyslogTimestamp, SecondFormatsAsTwoDigitZeroPadded)
 {
-    stubTimestamp.second = 7;
+    stubTimestamp.second = TEST_SECOND;
     Log();
     CHECK_TIMESTAMP_SECOND("07");
 }
 
 TEST(SolidSyslogTimestamp, MicrosecondFormatsAsSixDigitZeroPadded)
 {
-    stubTimestamp.microsecond = 42;
+    stubTimestamp.microsecond = TEST_MICROSECOND;
     Log();
     CHECK_TIMESTAMP_MICROSECOND(".000042");
 }
@@ -419,14 +430,13 @@ TEST(SolidSyslogTimestamp, FractionalSecondsPrecededByDot)
 
 TEST(SolidSyslogTimestamp, TimestampAppearsInCorrectMessageFieldPosition)
 {
-    stubTimestamp = {2026, 4, 2, 14, 30, 0, 0, 0};
     Log();
-    CHECK_TIMESTAMP("2026-04-02T14:30:00.000000Z");
+    CHECK_TIMESTAMP("2026-04-02T14:30:07.000042Z");
 }
 
 TEST(SolidSyslogTimestamp, ZeroOffsetFormatsAsZ)
 {
-    stubTimestamp.utcOffsetMinutes = 0;
+    stubTimestamp.utcOffsetMinutes = TEST_UTC_OFFSET;
     Log();
     CHECK_TIMESTAMP_OFFSET("Z");
 }
