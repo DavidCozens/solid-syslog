@@ -120,6 +120,20 @@ ci/          — CI-specific files (e.g. docker-compose.bdd.yml).
 The separation between `Interface/` and `Source/` is deliberate — it enforces the dependency inversion
 boundary that makes the code testable and portable to embedded targets.
 
+### Public header audiences (Interface Segregation)
+
+Headers in `Interface/` are split by audience — each user includes only what they need:
+
+| Header | Audience | Provides |
+|---|---|---|
+| `SolidSyslog.h` | Application code that logs events | `SolidSyslogMessage`, `SolidSyslog_Log` |
+| `SolidSyslogConfig.h` | System setup code | `SolidSyslogConfig`, `SolidSyslog_Create`, `SolidSyslog_Destroy` |
+| `SolidSyslogPrival.h` | Any code that needs facility/severity enums | `SolidSyslog_Facility`, `SolidSyslog_Severity` |
+| `SolidSyslogSenderDef.h` | Sender implementors (extension point) | `SolidSyslogSender` vtable struct |
+| `SolidSyslogUdpSender.h` | System setup code using UDP transport | `SolidSyslogUdpSender_Create`, `_Destroy` |
+
+Most application code only needs `SolidSyslog.h` — it never sees allocators, senders, or config structs.
+
 ---
 
 ## Naming Conventions

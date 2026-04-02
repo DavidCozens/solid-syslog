@@ -1,4 +1,5 @@
 #include "SolidSyslog.h"
+#include "SolidSyslogConfig.h"
 #include "SolidSyslogSender.h"
 
 #include <stdbool.h>

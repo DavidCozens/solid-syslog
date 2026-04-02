@@ -25,6 +25,11 @@ All fields — required and optional — use a uniform field object pattern.
 Optional features are composed at link time via dead code elimination; there are
 no conditional compilation directives in the library source.
 
+Public headers are split by audience (Interface Segregation Principle):
+- **`SolidSyslog.h`** — application code that logs events
+- **`SolidSyslogConfig.h`** — system setup code that creates and destroys loggers
+- **`SolidSyslogSenderDef.h`** — transport implementors adding new sender types
+
 ## CI pipeline
 
 See [CI pipeline](docs/ci.md).

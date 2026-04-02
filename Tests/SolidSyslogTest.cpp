@@ -1,5 +1,6 @@
 #include "CppUTest/TestHarness.h"
 #include "SolidSyslog.h"
+#include "SolidSyslogConfig.h"
 #include "SenderSpy.h"
 #include <cstdlib>
 #include <string>
@@ -280,12 +281,4 @@ IGNORE_TEST(SolidSyslog, HappyPathOnly)
     //
     // Optional header fields not yet driven in — see Epic #8
     //   MSG is preceded by UTF-8 BOM
-    //
-    // Multi-logger independence not yet tested
-    //   SolidSyslog_Log called twice results in Send called twice
-    //   Two independently created loggers have different handles
-    //   Each logger sends through its own sender
-    //
-    // End-to-end validated message — see Story S2.4
-    //   A single Log call produces the fully validated RFC 5424 message
 }
