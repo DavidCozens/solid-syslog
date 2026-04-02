@@ -25,6 +25,9 @@ static const int SYSLOG_FIELD_SDATA     = 6;
 // clang-format on
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage) -- macros preserve __FILE__/__LINE__ in test failure output
+#define CHECK_PRIVAL(expected)                                                         \
+    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_HEADER).c_str(), strlen(expected))
+
 #define CHECK_TIMESTAMP_YEAR(expected)                                                 \
     STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str(), 4)
 
@@ -184,43 +187,43 @@ TEST(SolidSyslog, SingleLogCallResultsInOneSend)
 TEST(SolidSyslog, PriValIs134)
 {
     Log();
-    STRNCMP_EQUAL(TEST_PRIVAL, SyslogField(LastMessage(), SYSLOG_FIELD_HEADER).c_str(), strlen(TEST_PRIVAL));
+    CHECK_PRIVAL(TEST_PRIVAL);
 }
 
 TEST(SolidSyslog, FacilityAppearsInPrival)
 {
     Log(SOLIDSYSLOG_FACILITY_NEWS);
-    STRNCMP_EQUAL("<62>", SyslogField(LastMessage(), SYSLOG_FIELD_HEADER).c_str(), 4);
+    CHECK_PRIVAL("<62>");
 }
 
 TEST(SolidSyslog, SeverityAppearsInPrival)
 {
     Log(SOLIDSYSLOG_SEVERITY_CRIT);
-    STRNCMP_EQUAL("<130>", SyslogField(LastMessage(), SYSLOG_FIELD_HEADER).c_str(), 5);
+    CHECK_PRIVAL("<130>");
 }
 
 TEST(SolidSyslog, LowestFacilityProducesCorrectPrival)
 {
     Log(SOLIDSYSLOG_FACILITY_KERN);
-    STRNCMP_EQUAL("<6>", SyslogField(LastMessage(), SYSLOG_FIELD_HEADER).c_str(), 3);
+    CHECK_PRIVAL("<6>");
 }
 
 TEST(SolidSyslog, HighestFacilityProducesCorrectPrival)
 {
     Log(SOLIDSYSLOG_FACILITY_LOCAL7);
-    STRNCMP_EQUAL("<190>", SyslogField(LastMessage(), SYSLOG_FIELD_HEADER).c_str(), 5);
+    CHECK_PRIVAL("<190>");
 }
 
 TEST(SolidSyslog, LowestSeverityProducesCorrectPrival)
 {
     Log(SOLIDSYSLOG_SEVERITY_EMERG);
-    STRNCMP_EQUAL("<128>", SyslogField(LastMessage(), SYSLOG_FIELD_HEADER).c_str(), 5);
+    CHECK_PRIVAL("<128>");
 }
 
 TEST(SolidSyslog, HighestSeverityProducesCorrectPrival)
 {
     Log(SOLIDSYSLOG_SEVERITY_DEBUG);
-    STRNCMP_EQUAL("<135>", SyslogField(LastMessage(), SYSLOG_FIELD_HEADER).c_str(), 5);
+    CHECK_PRIVAL("<135>");
 }
 
 TEST(SolidSyslog, OutOfRangeFacilityProducesErrorPrival)
@@ -228,7 +231,7 @@ TEST(SolidSyslog, OutOfRangeFacilityProducesErrorPrival)
     // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange) -- intentionally testing out-of-range input
     struct SolidSyslogMessage message = {(enum SolidSyslog_Facility) 24, SOLIDSYSLOG_SEVERITY_INFO};
     SolidSyslog_Log(logger, &message);
-    STRNCMP_EQUAL("<43>", SyslogField(LastMessage(), SYSLOG_FIELD_HEADER).c_str(), 4);
+    CHECK_PRIVAL("<43>");
 }
 
 TEST(SolidSyslog, OutOfRangeSeverityProducesErrorPrival)
@@ -238,7 +241,7 @@ TEST(SolidSyslog, OutOfRangeSeverityProducesErrorPrival)
     invalid                           = static_cast<enum SolidSyslog_Severity>(static_cast<int>(invalid) + 1);
     struct SolidSyslogMessage message = {SOLIDSYSLOG_FACILITY_LOCAL0, invalid};
     SolidSyslog_Log(logger, &message);
-    STRNCMP_EQUAL("<43>", SyslogField(LastMessage(), SYSLOG_FIELD_HEADER).c_str(), 4);
+    CHECK_PRIVAL("<43>");
 }
 
 TEST(SolidSyslog, VersionIs1)
