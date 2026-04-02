@@ -1,6 +1,22 @@
 #include "SolidSyslog.h"
 #include "SolidSyslogSender.h"
 
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+
+enum
+{
+    SOLIDSYSLOG_MAX_MESSAGE_SIZE = 128
+};
+
+static inline uint8_t CombineFacilityAndSeverity(uint8_t facility, uint8_t severity);
+static inline bool    FacilityIsValid(uint8_t facility);
+static inline int     FormatMessage(char* buffer, size_t size, enum SolidSyslog_Facility facility, enum SolidSyslog_Severity severity);
+static inline uint8_t MakePrival(enum SolidSyslog_Facility facility, enum SolidSyslog_Severity severity);
+static inline bool    PrivalComponentsAreValid(uint8_t facility, uint8_t severity);
+static inline bool    SeverityIsValid(uint8_t severity);
+
 struct SolidSyslog
 {
     struct SolidSyslogSender* sender;
@@ -23,8 +39,51 @@ void SolidSyslog_Destroy(struct SolidSyslog* logger)
     logger->free(logger);
 }
 
-void SolidSyslog_Log(struct SolidSyslog* logger)
+void SolidSyslog_Log(struct SolidSyslog* logger, enum SolidSyslog_Facility facility, enum SolidSyslog_Severity severity)
 {
-    static const char message[] = "<134>1 2009-03-23T00:00:00.000Z TestHost TestApp 42 54 - hello world";
-    SolidSyslogSender_Send(logger->sender, message, sizeof(message) - 1);
+    char message[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    int  len = FormatMessage(message, sizeof(message), facility, severity);
+    SolidSyslogSender_Send(logger->sender, message, (size_t) len);
+}
+
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- facility and severity are distinct enum types
+static inline int FormatMessage(char* buffer, size_t size, enum SolidSyslog_Facility facility, enum SolidSyslog_Severity severity)
+{
+    uint8_t prival = MakePrival(facility, severity);
+    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- snprintf is bounded; snprintf_s is not portable
+    return snprintf(buffer, size, "<%d>1 2009-03-23T00:00:00.000Z TestHost TestApp 42 54 - hello world", prival);
+}
+
+static inline uint8_t MakePrival(enum SolidSyslog_Facility facility, enum SolidSyslog_Severity severity)
+{
+    uint8_t f      = (uint8_t) facility;
+    uint8_t s      = (uint8_t) severity;
+    uint8_t prival = CombineFacilityAndSeverity(SOLIDSYSLOG_FACILITY_SYSLOG, SOLIDSYSLOG_SEVERITY_ERR);
+
+    if (PrivalComponentsAreValid(f, s))
+    {
+        prival = CombineFacilityAndSeverity(f, s);
+    }
+
+    return prival;
+}
+
+static inline uint8_t CombineFacilityAndSeverity(uint8_t facility, uint8_t severity)
+{
+    return (uint8_t) ((facility * UINT8_C(8)) + severity);
+}
+
+static inline bool PrivalComponentsAreValid(uint8_t facility, uint8_t severity)
+{
+    return FacilityIsValid(facility) && SeverityIsValid(severity);
+}
+
+static inline bool FacilityIsValid(uint8_t facility)
+{
+    return facility <= SOLIDSYSLOG_FACILITY_LOCAL7;
+}
+
+static inline bool SeverityIsValid(uint8_t severity)
+{
+    return severity <= SOLIDSYSLOG_SEVERITY_DEBUG;
 }

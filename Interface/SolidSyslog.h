@@ -2,6 +2,7 @@
 #define SOLIDSYSLOG_H
 
 #include "SolidSyslogAlloc.h"
+#include "SolidSyslogPrival.h"
 
 EXTERN_C_BEGIN
 
@@ -17,7 +18,7 @@ EXTERN_C_BEGIN
 
     struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config);
     void                SolidSyslog_Destroy(struct SolidSyslog * logger);
-    void                SolidSyslog_Log(struct SolidSyslog * logger);
+    void                SolidSyslog_Log(struct SolidSyslog * logger, enum SolidSyslog_Facility facility, enum SolidSyslog_Severity severity);
 
 EXTERN_C_END
 

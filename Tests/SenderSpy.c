@@ -1,27 +1,36 @@
 #include "SenderSpy.h"
 #include "SolidSyslogSenderDef.h"
 
+#include <string.h>
+
+enum
+{
+    SENDERSPY_MAX_BUFFER_SIZE = 256
+};
+
 static int                      callCount;
-static const void*              lastBuffer;
+static char                     lastBuffer[SENDERSPY_MAX_BUFFER_SIZE];
 static struct SolidSyslogSender sender;
 
 static void Send(struct SolidSyslogSender* self, const void* buffer, size_t size)
 {
     (void) self;
-    (void) size;
+    size_t copySize = size < sizeof(lastBuffer) - 1 ? size : sizeof(lastBuffer) - 1;
+    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memcpy with bounded copySize; memcpy_s is not portable
+    memcpy(lastBuffer, buffer, copySize);
+    lastBuffer[copySize] = '\0';
     callCount++;
-    lastBuffer = buffer;
 }
 
 void SenderSpy_Reset(void)
 {
-    callCount  = 0;
-    lastBuffer = NULL;
+    callCount     = 0;
+    lastBuffer[0] = '\0';
 }
 
 const char* SenderSpy_LastBufferAsString(void)
 {
-    return (const char*) lastBuffer;
+    return lastBuffer;
 }
 
 struct SolidSyslogSender* SenderSpy_GetSender(void)

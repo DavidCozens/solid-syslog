@@ -52,14 +52,18 @@ def step_syslog_ng_is_running(context):
     context.lines_before = line_count(RECEIVED_LOG)
 
 
-@when("the example program sends a syslog message")
-def step_example_sends_message(context):
+def run_example(context, extra_args=None):
+    """Run the example binary and wait for syslog-ng to flush the message."""
     assert os.path.exists(EXAMPLE_BINARY), (
         f"Example binary not found at {EXAMPLE_BINARY} — build with cmake first"
     )
 
+    cmd = [os.path.join(".", EXAMPLE_BINARY)]
+    if extra_args:
+        cmd.extend(extra_args)
+
     result = subprocess.run(
-        [os.path.join(".", EXAMPLE_BINARY)],
+        cmd,
         capture_output=True,
         text=True,
         timeout=10,
@@ -76,6 +80,16 @@ def step_example_sends_message(context):
         time.sleep(0.1)
 
     context.fields = parse_syslog_line(read_last_line(RECEIVED_LOG))
+
+
+@when("the example program sends a syslog message")
+def step_example_sends_message(context):
+    run_example(context)
+
+
+@when("the example program sends a message with facility {facility:d} and severity {severity:d}")
+def step_example_sends_with_facility_severity(context, facility, severity):
+    run_example(context, ["--facility", str(facility), "--severity", str(severity)])
 
 
 @then('syslog-ng receives a message with priority "{priority}"')

@@ -78,7 +78,22 @@ TEST_GROUP(SolidSyslog)
 
     void Log() const
     {
-        SolidSyslog_Log(logger);
+        SolidSyslog_Log(logger, SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO);
+    }
+
+    void Log(enum SolidSyslog_Facility facility) const
+    {
+        SolidSyslog_Log(logger, facility, SOLIDSYSLOG_SEVERITY_INFO);
+    }
+
+    void Log(enum SolidSyslog_Severity severity) const
+    {
+        SolidSyslog_Log(logger, SOLIDSYSLOG_FACILITY_LOCAL0, severity);
+    }
+
+    void Log(enum SolidSyslog_Facility facility, enum SolidSyslog_Severity severity) const
+    {
+        SolidSyslog_Log(logger, facility, severity);
     }
 
     static const char *LastMessage()
@@ -110,8 +125,8 @@ TEST(SolidSyslog, EachLoggerSendsThroughItsOwnSender)
     SolidSyslogConfig secondConfig = {SenderSpy_GetSender(), malloc, free};
     SolidSyslog*      second       = SolidSyslog_Create(&secondConfig);
 
-    SolidSyslog_Log(logger);
-    SolidSyslog_Log(second);
+    SolidSyslog_Log(logger, SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO);
+    SolidSyslog_Log(second, SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO);
     LONGS_EQUAL(2, SenderSpy_CallCount());
 
     SolidSyslog_Destroy(second);
@@ -132,6 +147,58 @@ TEST(SolidSyslog, PriValIs134)
 {
     Log();
     STRNCMP_EQUAL(TEST_PRIVAL, SyslogField(LastMessage(), SYSLOG_FIELD_HEADER).c_str(), strlen(TEST_PRIVAL));
+}
+
+TEST(SolidSyslog, FacilityAppearsInPrival)
+{
+    Log(SOLIDSYSLOG_FACILITY_NEWS);
+    STRNCMP_EQUAL("<62>", SyslogField(LastMessage(), SYSLOG_FIELD_HEADER).c_str(), 4);
+}
+
+TEST(SolidSyslog, SeverityAppearsInPrival)
+{
+    Log(SOLIDSYSLOG_SEVERITY_CRIT);
+    STRNCMP_EQUAL("<130>", SyslogField(LastMessage(), SYSLOG_FIELD_HEADER).c_str(), 5);
+}
+
+TEST(SolidSyslog, LowestFacilityProducesCorrectPrival)
+{
+    Log(SOLIDSYSLOG_FACILITY_KERN);
+    STRNCMP_EQUAL("<6>", SyslogField(LastMessage(), SYSLOG_FIELD_HEADER).c_str(), 3);
+}
+
+TEST(SolidSyslog, HighestFacilityProducesCorrectPrival)
+{
+    Log(SOLIDSYSLOG_FACILITY_LOCAL7);
+    STRNCMP_EQUAL("<190>", SyslogField(LastMessage(), SYSLOG_FIELD_HEADER).c_str(), 5);
+}
+
+TEST(SolidSyslog, LowestSeverityProducesCorrectPrival)
+{
+    Log(SOLIDSYSLOG_SEVERITY_EMERG);
+    STRNCMP_EQUAL("<128>", SyslogField(LastMessage(), SYSLOG_FIELD_HEADER).c_str(), 5);
+}
+
+TEST(SolidSyslog, HighestSeverityProducesCorrectPrival)
+{
+    Log(SOLIDSYSLOG_SEVERITY_DEBUG);
+    STRNCMP_EQUAL("<135>", SyslogField(LastMessage(), SYSLOG_FIELD_HEADER).c_str(), 5);
+}
+
+TEST(SolidSyslog, OutOfRangeFacilityProducesErrorPrival)
+{
+    // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange) -- intentionally testing out-of-range input
+    SolidSyslog_Log(logger, (enum SolidSyslog_Facility) 24, SOLIDSYSLOG_SEVERITY_INFO);
+    STRNCMP_EQUAL("<43>", SyslogField(LastMessage(), SYSLOG_FIELD_HEADER).c_str(), 4);
+}
+
+TEST(SolidSyslog, OutOfRangeSeverityProducesErrorPrival)
+{
+    enum SolidSyslog_Severity invalid = SOLIDSYSLOG_SEVERITY_DEBUG;
+    // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange) -- intentionally testing out-of-range input
+    invalid = static_cast<enum SolidSyslog_Severity>(static_cast<int>(invalid) + 1);
+    SolidSyslog_Log(logger, SOLIDSYSLOG_FACILITY_LOCAL0, invalid);
+    STRNCMP_EQUAL("<43>", SyslogField(LastMessage(), SYSLOG_FIELD_HEADER).c_str(), 4);
 }
 
 TEST(SolidSyslog, VersionIs1)
