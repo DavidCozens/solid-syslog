@@ -47,7 +47,7 @@ Test progression follows ZOMBIES order.
 
 ## Branch and PR rules
 
-- Feature branches named after GitHub issues: `feature/issue-<N>-<short-description>`
+- Feature branches: `<type>/<short-description>` (e.g. `feat/prival-encoding`, `ci/pin-action-shas`)
 - PRs to main when a BDD scenario passes (or for infrastructure work, when CI is green)
 - Squash merge only — PR title becomes the commit message
 - PR title must follow Conventional Commits
@@ -60,7 +60,7 @@ Test progression follows ZOMBIES order.
 - Variables/parameters: `camelCase`
 - Types and files: `PascalCase`
 - Follows James Grenning's style (*TDD for Embedded C*) where consistent with clang-format
-- No dynamic memory, no unions, no anonymous structs, no `#ifdef` feature flags
+- Caller-injected memory allocation (no hidden malloc), no unions, no anonymous structs, no `#ifdef` feature flags
 - C99 baseline
 
 ## Architecture principles

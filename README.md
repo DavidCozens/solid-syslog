@@ -4,7 +4,7 @@ A structured syslog client library for embedded and industrial systems, implemen
 RFC 5424 (structured syslog), RFC 5426 (UDP transport), and RFC 5425 (TLS transport).
 
 Designed for resource-constrained environments:
-- C99, no dynamic memory allocation
+- C99, caller-injected memory allocation (no hidden malloc)
 - Transport-agnostic — UDP, TLS, or bring your own
 - No `#ifdef` feature flags — optional features composed at link time
 - MISRA C:2012 informed
