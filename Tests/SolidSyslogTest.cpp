@@ -422,27 +422,139 @@ TEST(SolidSyslogTimestamp, NegativeOffsetFormatsAsMinusHHMM)
     STRCMP_EQUAL("-05:00", offset.c_str());
 }
 
+TEST(SolidSyslogTimestamp, YearZeroFormatsAs0000)
+{
+    stubTimestamp.year = 0;
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    STRNCMP_EQUAL("0000", timestamp.c_str(), 4);
+}
+
+TEST(SolidSyslogTimestamp, Year9999FormatsAs9999)
+{
+    stubTimestamp.year = 9999;
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    STRNCMP_EQUAL("9999", timestamp.c_str(), 4);
+}
+
+TEST(SolidSyslogTimestamp, Month1FormatsAs01)
+{
+    stubTimestamp.month = 1;
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    STRNCMP_EQUAL("01", timestamp.c_str() + 5, 2);
+}
+
+TEST(SolidSyslogTimestamp, Month12FormatsAs12)
+{
+    stubTimestamp.month = 12;
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    STRNCMP_EQUAL("12", timestamp.c_str() + 5, 2);
+}
+
+TEST(SolidSyslogTimestamp, Day1FormatsAs01)
+{
+    stubTimestamp.day = 1;
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    STRNCMP_EQUAL("01", timestamp.c_str() + 8, 2);
+}
+
+TEST(SolidSyslogTimestamp, Day31FormatsAs31)
+{
+    stubTimestamp.day = 31;
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    STRNCMP_EQUAL("31", timestamp.c_str() + 8, 2);
+}
+
+TEST(SolidSyslogTimestamp, Hour0FormatsAs00)
+{
+    stubTimestamp.hour = 0;
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    STRNCMP_EQUAL("00", timestamp.c_str() + 11, 2);
+}
+
+TEST(SolidSyslogTimestamp, Hour23FormatsAs23)
+{
+    stubTimestamp.hour = 23;
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    STRNCMP_EQUAL("23", timestamp.c_str() + 11, 2);
+}
+
+TEST(SolidSyslogTimestamp, Minute0FormatsAs00)
+{
+    stubTimestamp.minute = 0;
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    STRNCMP_EQUAL("00", timestamp.c_str() + 14, 2);
+}
+
+TEST(SolidSyslogTimestamp, Minute59FormatsAs59)
+{
+    stubTimestamp.minute = 59;
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    STRNCMP_EQUAL("59", timestamp.c_str() + 14, 2);
+}
+
+TEST(SolidSyslogTimestamp, Second0FormatsAs00)
+{
+    stubTimestamp.second = 0;
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    STRNCMP_EQUAL("00", timestamp.c_str() + 17, 2);
+}
+
+TEST(SolidSyslogTimestamp, Second59FormatsAs59)
+{
+    stubTimestamp.second = 59;
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    STRNCMP_EQUAL("59", timestamp.c_str() + 17, 2);
+}
+
+TEST(SolidSyslogTimestamp, Microsecond0FormatsAs000000)
+{
+    stubTimestamp.microsecond = 0;
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    STRNCMP_EQUAL(".000000", timestamp.c_str() + 19, 7);
+}
+
+TEST(SolidSyslogTimestamp, Microsecond999999FormatsAs999999)
+{
+    stubTimestamp.microsecond = 999999;
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    STRNCMP_EQUAL(".999999", timestamp.c_str() + 19, 7);
+}
+
+TEST(SolidSyslogTimestamp, UtcOffsetPlus840FormatsAsPlus1400)
+{
+    stubTimestamp.utcOffsetMinutes = 840;
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    std::string offset    = timestamp.substr(26);
+    STRCMP_EQUAL("+14:00", offset.c_str());
+}
+
+TEST(SolidSyslogTimestamp, UtcOffsetMinus720FormatsAsMinus1200)
+{
+    stubTimestamp.utcOffsetMinutes = -720;
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    std::string offset    = timestamp.substr(26);
+    STRCMP_EQUAL("-12:00", offset.c_str());
+}
+
 IGNORE_TEST(SolidSyslog, TimestampTestList)
 {
     // S1.3 — Timestamp encoding (Story #18)
-    //
-    // Boundaries
-    //   Year 0 formats as "0000"
-    //   Year 9999 formats as "9999"
-    //   Month 1 formats as "01"
-    //   Month 12 formats as "12"
-    //   Day 1 formats as "01"
-    //   Day 31 formats as "31"
-    //   Hour 0 formats as "00"
-    //   Hour 23 formats as "23"
-    //   Minute 0 formats as "00"
-    //   Minute 59 formats as "59"
-    //   Second 0 formats as "00"
-    //   Second 59 formats as "59"
-    //   Microsecond 0 formats as ".000000"
-    //   Microsecond 999999 formats as ".999999"
-    //   UTC offset +840 formats as "+14:00"
-    //   UTC offset -720 formats as "-12:00"
     //
     // Exceptions — out-of-range fields produce NILVALUE "-"
     //   Month 0 produces NILVALUE
