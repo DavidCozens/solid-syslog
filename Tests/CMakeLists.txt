@@ -1,6 +1,7 @@
 set(TEST_SOURCES
     SolidSyslogTest.cpp
     SolidSyslogPrivalTest.cpp
+    SenderSpyTest.cpp
     SenderSpy.c
     main.cpp
 )
@@ -8,6 +9,7 @@ set(TEST_SOURCES
 if(SOLIDSYSLOG_POSIX)
     list(APPEND TEST_SOURCES
         SolidSyslogPosixClockTest.cpp
+        ClockFakeTest.cpp
         ClockFake.c
         SolidSyslogUdpSenderTest.cpp
         SocketSpy.c
