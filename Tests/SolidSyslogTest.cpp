@@ -24,36 +24,54 @@ static const int SYSLOG_FIELD_MSGID     = 5;
 static const int SYSLOG_FIELD_SDATA     = 6;
 // clang-format on
 
+// clang-format off
+static const int TIMESTAMP_YEAR_OFFSET        = 0;
+static const int TIMESTAMP_YEAR_LENGTH        = 4;
+static const int TIMESTAMP_MONTH_OFFSET       = 5;
+static const int TIMESTAMP_MONTH_LENGTH       = 2;
+static const int TIMESTAMP_DAY_OFFSET         = 8;
+static const int TIMESTAMP_DAY_LENGTH         = 2;
+static const int TIMESTAMP_HOUR_OFFSET        = 11;
+static const int TIMESTAMP_HOUR_LENGTH        = 2;
+static const int TIMESTAMP_MINUTE_OFFSET      = 14;
+static const int TIMESTAMP_MINUTE_LENGTH      = 2;
+static const int TIMESTAMP_SECOND_OFFSET      = 17;
+static const int TIMESTAMP_SECOND_LENGTH      = 2;
+static const int TIMESTAMP_MICROSECOND_OFFSET = 19;
+static const int TIMESTAMP_MICROSECOND_LENGTH = 7;
+static const int TIMESTAMP_OFFSET_OFFSET      = 26;
+// clang-format on
+
 // NOLINTBEGIN(cppcoreguidelines-macro-usage) -- macros preserve __FILE__/__LINE__ in test failure output
 #define CHECK_PRIVAL(expected)                                                         \
     STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_HEADER).c_str(), strlen(expected))
 
 #define CHECK_TIMESTAMP_YEAR(expected)                                                 \
-    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str(), 4)
+    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_YEAR_OFFSET, TIMESTAMP_YEAR_LENGTH)
 
 #define CHECK_TIMESTAMP_MONTH(expected)                                                \
-    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + 5, 2)
+    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_MONTH_OFFSET, TIMESTAMP_MONTH_LENGTH)
 
 #define CHECK_TIMESTAMP_DAY(expected)                                                  \
-    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + 8, 2)
+    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_DAY_OFFSET, TIMESTAMP_DAY_LENGTH)
 
 #define CHECK_TIMESTAMP_HOUR(expected)                                                 \
-    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + 11, 2)
+    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_HOUR_OFFSET, TIMESTAMP_HOUR_LENGTH)
 
 #define CHECK_TIMESTAMP_MINUTE(expected)                                               \
-    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + 14, 2)
+    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_MINUTE_OFFSET, TIMESTAMP_MINUTE_LENGTH)
 
 #define CHECK_TIMESTAMP_SECOND(expected)                                               \
-    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + 17, 2)
+    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_SECOND_OFFSET, TIMESTAMP_SECOND_LENGTH)
 
 #define CHECK_TIMESTAMP_MICROSECOND(expected)                                          \
-    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + 19, 7)
+    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_MICROSECOND_OFFSET, TIMESTAMP_MICROSECOND_LENGTH)
 
 #define CHECK_TIMESTAMP(expected)                                                      \
     STRCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str())
 
 #define CHECK_TIMESTAMP_OFFSET(expected)                                               \
-    STRCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).substr(26).c_str())
+    STRCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).substr(TIMESTAMP_OFFSET_OFFSET).c_str())
 
 #define CHECK_TIMESTAMP_IS_NILVALUE()                                                  \
     STRCMP_EQUAL("-", SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str())
