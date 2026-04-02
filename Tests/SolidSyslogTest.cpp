@@ -26,72 +26,34 @@ static const int SYSLOG_FIELD_SDATA     = 6;
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage) -- macros preserve __FILE__/__LINE__ in test failure output
 #define CHECK_TIMESTAMP_YEAR(expected)                                                 \
-    do {                                                                               \
-        Log();                                                                         \
-        std::string ts_ = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);          \
-        STRNCMP_EQUAL(expected, ts_.c_str(), 4);                                       \
-    } while (0)
+    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str(), 4)
 
 #define CHECK_TIMESTAMP_MONTH(expected)                                                \
-    do {                                                                               \
-        Log();                                                                         \
-        std::string ts_ = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);          \
-        STRNCMP_EQUAL(expected, ts_.c_str() + 5, 2);                                   \
-    } while (0)
+    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + 5, 2)
 
 #define CHECK_TIMESTAMP_DAY(expected)                                                  \
-    do {                                                                               \
-        Log();                                                                         \
-        std::string ts_ = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);          \
-        STRNCMP_EQUAL(expected, ts_.c_str() + 8, 2);                                   \
-    } while (0)
+    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + 8, 2)
 
 #define CHECK_TIMESTAMP_HOUR(expected)                                                 \
-    do {                                                                               \
-        Log();                                                                         \
-        std::string ts_ = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);          \
-        STRNCMP_EQUAL(expected, ts_.c_str() + 11, 2);                                  \
-    } while (0)
+    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + 11, 2)
 
 #define CHECK_TIMESTAMP_MINUTE(expected)                                               \
-    do {                                                                               \
-        Log();                                                                         \
-        std::string ts_ = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);          \
-        STRNCMP_EQUAL(expected, ts_.c_str() + 14, 2);                                  \
-    } while (0)
+    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + 14, 2)
 
 #define CHECK_TIMESTAMP_SECOND(expected)                                               \
-    do {                                                                               \
-        Log();                                                                         \
-        std::string ts_ = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);          \
-        STRNCMP_EQUAL(expected, ts_.c_str() + 17, 2);                                  \
-    } while (0)
+    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + 17, 2)
 
 #define CHECK_TIMESTAMP_MICROSECOND(expected)                                          \
-    do {                                                                               \
-        Log();                                                                         \
-        std::string ts_ = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);          \
-        STRNCMP_EQUAL(expected, ts_.c_str() + 19, 7);                                  \
-    } while (0)
+    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + 19, 7)
 
 #define CHECK_TIMESTAMP(expected)                                                      \
-    do {                                                                               \
-        Log();                                                                         \
-        STRCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str()); \
-    } while (0)
+    STRCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str())
 
 #define CHECK_TIMESTAMP_OFFSET(expected)                                               \
-    do {                                                                               \
-        Log();                                                                         \
-        std::string ts_ = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);          \
-        STRCMP_EQUAL(expected, ts_.substr(26).c_str());                                 \
-    } while (0)
+    STRCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).substr(26).c_str())
 
 #define CHECK_TIMESTAMP_IS_NILVALUE()                                                  \
-    do {                                                                               \
-        Log();                                                                         \
-        STRCMP_EQUAL("-", SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str());  \
-    } while (0)
+    STRCMP_EQUAL("-", SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str())
 // NOLINTEND(cppcoreguidelines-macro-usage)
 
 static std::string SyslogField(const char* buffer, int n)
@@ -369,48 +331,56 @@ TEST(SolidSyslogTimestamp, NullClockProducesNilvalue)
     config.clock = nullptr;
     SolidSyslog_Destroy(logger);
     logger = SolidSyslog_Create(&config);
+    Log();
     CHECK_TIMESTAMP_IS_NILVALUE();
 }
 
 TEST(SolidSyslogTimestamp, YearFormatsAsFourDigitZeroPadded)
 {
     stubTimestamp.year = 2026;
+    Log();
     CHECK_TIMESTAMP_YEAR("2026");
 }
 
 TEST(SolidSyslogTimestamp, MonthFormatsAsTwoDigitZeroPadded)
 {
     stubTimestamp.month = 4;
+    Log();
     CHECK_TIMESTAMP_MONTH("04");
 }
 
 TEST(SolidSyslogTimestamp, DayFormatsAsTwoDigitZeroPadded)
 {
     stubTimestamp.day = 2;
+    Log();
     CHECK_TIMESTAMP_DAY("02");
 }
 
 TEST(SolidSyslogTimestamp, HourFormatsAsTwoDigitZeroPadded)
 {
     stubTimestamp.hour = 14;
+    Log();
     CHECK_TIMESTAMP_HOUR("14");
 }
 
 TEST(SolidSyslogTimestamp, MinuteFormatsAsTwoDigitZeroPadded)
 {
     stubTimestamp.minute = 30;
+    Log();
     CHECK_TIMESTAMP_MINUTE("30");
 }
 
 TEST(SolidSyslogTimestamp, SecondFormatsAsTwoDigitZeroPadded)
 {
     stubTimestamp.second = 7;
+    Log();
     CHECK_TIMESTAMP_SECOND("07");
 }
 
 TEST(SolidSyslogTimestamp, MicrosecondFormatsAsSixDigitZeroPadded)
 {
     stubTimestamp.microsecond = 42;
+    Log();
     CHECK_TIMESTAMP_MICROSECOND(".000042");
 }
 
@@ -447,120 +417,140 @@ TEST(SolidSyslogTimestamp, FractionalSecondsPrecededByDot)
 TEST(SolidSyslogTimestamp, TimestampAppearsInCorrectMessageFieldPosition)
 {
     stubTimestamp = {2026, 4, 2, 14, 30, 0, 0, 0};
+    Log();
     CHECK_TIMESTAMP("2026-04-02T14:30:00.000000Z");
 }
 
 TEST(SolidSyslogTimestamp, ZeroOffsetFormatsAsZ)
 {
     stubTimestamp.utcOffsetMinutes = 0;
+    Log();
     CHECK_TIMESTAMP_OFFSET("Z");
 }
 
 TEST(SolidSyslogTimestamp, PositiveOffsetFormatsAsPlusHHMM)
 {
     stubTimestamp.utcOffsetMinutes = 330;
+    Log();
     CHECK_TIMESTAMP_OFFSET("+05:30");
 }
 
 TEST(SolidSyslogTimestamp, NegativeOffsetFormatsAsMinusHHMM)
 {
     stubTimestamp.utcOffsetMinutes = -300;
+    Log();
     CHECK_TIMESTAMP_OFFSET("-05:00");
 }
 
 TEST(SolidSyslogTimestamp, YearZeroFormatsAs0000)
 {
     stubTimestamp.year = 0;
+    Log();
     CHECK_TIMESTAMP_YEAR("0000");
 }
 
 TEST(SolidSyslogTimestamp, Year9999FormatsAs9999)
 {
     stubTimestamp.year = 9999;
+    Log();
     CHECK_TIMESTAMP_YEAR("9999");
 }
 
 TEST(SolidSyslogTimestamp, Month1FormatsAs01)
 {
     stubTimestamp.month = 1;
+    Log();
     CHECK_TIMESTAMP_MONTH("01");
 }
 
 TEST(SolidSyslogTimestamp, Month12FormatsAs12)
 {
     stubTimestamp.month = 12;
+    Log();
     CHECK_TIMESTAMP_MONTH("12");
 }
 
 TEST(SolidSyslogTimestamp, Day1FormatsAs01)
 {
     stubTimestamp.day = 1;
+    Log();
     CHECK_TIMESTAMP_DAY("01");
 }
 
 TEST(SolidSyslogTimestamp, Day31FormatsAs31)
 {
     stubTimestamp.day = 31;
+    Log();
     CHECK_TIMESTAMP_DAY("31");
 }
 
 TEST(SolidSyslogTimestamp, Hour0FormatsAs00)
 {
     stubTimestamp.hour = 0;
+    Log();
     CHECK_TIMESTAMP_HOUR("00");
 }
 
 TEST(SolidSyslogTimestamp, Hour23FormatsAs23)
 {
     stubTimestamp.hour = 23;
+    Log();
     CHECK_TIMESTAMP_HOUR("23");
 }
 
 TEST(SolidSyslogTimestamp, Minute0FormatsAs00)
 {
     stubTimestamp.minute = 0;
+    Log();
     CHECK_TIMESTAMP_MINUTE("00");
 }
 
 TEST(SolidSyslogTimestamp, Minute59FormatsAs59)
 {
     stubTimestamp.minute = 59;
+    Log();
     CHECK_TIMESTAMP_MINUTE("59");
 }
 
 TEST(SolidSyslogTimestamp, Second0FormatsAs00)
 {
     stubTimestamp.second = 0;
+    Log();
     CHECK_TIMESTAMP_SECOND("00");
 }
 
 TEST(SolidSyslogTimestamp, Second59FormatsAs59)
 {
     stubTimestamp.second = 59;
+    Log();
     CHECK_TIMESTAMP_SECOND("59");
 }
 
 TEST(SolidSyslogTimestamp, Microsecond0FormatsAs000000)
 {
     stubTimestamp.microsecond = 0;
+    Log();
     CHECK_TIMESTAMP_MICROSECOND(".000000");
 }
 
 TEST(SolidSyslogTimestamp, Microsecond999999FormatsAs999999)
 {
     stubTimestamp.microsecond = 999999;
+    Log();
     CHECK_TIMESTAMP_MICROSECOND(".999999");
 }
 
 TEST(SolidSyslogTimestamp, UtcOffsetPlus840FormatsAsPlus1400)
 {
     stubTimestamp.utcOffsetMinutes = 840;
+    Log();
     CHECK_TIMESTAMP_OFFSET("+14:00");
 }
 
 TEST(SolidSyslogTimestamp, UtcOffsetMinus720FormatsAsMinus1200)
 {
     stubTimestamp.utcOffsetMinutes = -720;
+    Log();
     CHECK_TIMESTAMP_OFFSET("-12:00");
 }
 
