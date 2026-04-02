@@ -28,6 +28,8 @@ no conditional compilation directives in the library source.
 Public headers are split by audience (Interface Segregation Principle):
 - **`SolidSyslog.h`** — application code that logs events
 - **`SolidSyslogConfig.h`** — system setup code that creates and destroys loggers
+- **`SolidSyslogTimestamp.h`** — timestamp struct and clock function typedef
+- **`SolidSyslogPosixClock.h`** — POSIX clock helper (`clock_gettime` + `gmtime_r`)
 - **`SolidSyslogSenderDef.h`** — transport implementors adding new sender types
 
 ## CI pipeline

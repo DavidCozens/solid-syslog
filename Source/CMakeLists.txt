@@ -4,7 +4,10 @@ set(SOURCES
 )
 
 if(SOLIDSYSLOG_POSIX)
-    list(APPEND SOURCES SolidSyslogUdpSender.c)
+    list(APPEND SOURCES
+        SolidSyslogPosixClock.c
+        SolidSyslogUdpSender.c
+    )
 endif()
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})

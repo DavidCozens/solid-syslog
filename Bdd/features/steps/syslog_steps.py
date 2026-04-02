@@ -2,6 +2,7 @@ import os
 import re
 import subprocess
 import time
+from datetime import datetime, timezone
 
 from behave import given, when, then
 
@@ -103,6 +104,17 @@ def step_check_priority(context, priority):
 def step_check_timestamp(context, timestamp):
     assert context.fields["TIMESTAMP"] == timestamp, (
         f"Expected timestamp {timestamp}, got {context.fields.get('TIMESTAMP')}"
+    )
+
+
+@then("syslog-ng receives a message with a timestamp within {seconds:d} seconds of now")
+def step_check_timestamp_within(context, seconds):
+    raw = context.fields["TIMESTAMP"]
+    received = datetime.fromisoformat(raw).astimezone(timezone.utc)
+    now = datetime.now(timezone.utc)
+    delta = abs((now - received).total_seconds())
+    assert delta <= seconds, (
+        f"Timestamp {raw} is {delta:.1f}s from now, expected within {seconds}s"
     )
 
 

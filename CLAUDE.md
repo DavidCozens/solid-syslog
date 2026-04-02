@@ -129,8 +129,10 @@ Headers in `Interface/` are split by audience — each user includes only what t
 | `SolidSyslog.h` | Application code that logs events | `SolidSyslogMessage`, `SolidSyslog_Log` |
 | `SolidSyslogConfig.h` | System setup code | `SolidSyslogConfig`, `SolidSyslog_Create`, `SolidSyslog_Destroy` |
 | `SolidSyslogPrival.h` | Any code that needs facility/severity enums | `SolidSyslog_Facility`, `SolidSyslog_Severity` |
+| `SolidSyslogTimestamp.h` | Any code that needs the timestamp struct | `SolidSyslogTimestamp`, `SolidSyslogClockFunction` |
 | `SolidSyslogSenderDef.h` | Sender implementors (extension point) | `SolidSyslogSender` vtable struct |
 | `SolidSyslogUdpSender.h` | System setup code using UDP transport | `SolidSyslogUdpSender_Create`, `_Destroy` |
+| `SolidSyslogPosixClock.h` | System setup code using POSIX clock | `SolidSyslogPosixClock_GetTimestamp` |
 
 Most application code only needs `SolidSyslog.h` — it never sees allocators, senders, or config structs.
 
