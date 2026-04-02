@@ -13,7 +13,7 @@ enum
 
 static inline uint8_t CombineFacilityAndSeverity(uint8_t facility, uint8_t severity);
 static inline bool    FacilityIsValid(uint8_t facility);
-static inline int     FormatMessage(char* buffer, size_t size, const struct SolidSyslogMessage* message);
+static inline int     FormatMessage(char* buffer, size_t size, const struct SolidSyslogMessage* message, SolidSyslogClockFn clock);
 static inline uint8_t MakePrival(const struct SolidSyslogMessage* message);
 static inline bool    PrivalComponentsAreValid(uint8_t facility, uint8_t severity);
 static inline bool    SeverityIsValid(uint8_t severity);
@@ -22,6 +22,7 @@ struct SolidSyslog
 {
     struct SolidSyslogSender* sender;
     SolidSyslogFreeFn         free;
+    SolidSyslogClockFn        clock;
 };
 
 struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config)
@@ -31,6 +32,7 @@ struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config)
     {
         instance->sender = config->sender;
         instance->free   = config->free;
+        instance->clock  = config->clock;
     }
     return instance;
 }
@@ -43,15 +45,16 @@ void SolidSyslog_Destroy(struct SolidSyslog* logger)
 void SolidSyslog_Log(struct SolidSyslog* logger, const struct SolidSyslogMessage* message)
 {
     char buffer[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
-    int  len = FormatMessage(buffer, sizeof(buffer), message);
+    int  len = FormatMessage(buffer, sizeof(buffer), message, logger->clock);
     SolidSyslogSender_Send(logger->sender, buffer, (size_t) len);
 }
 
-static inline int FormatMessage(char* buffer, size_t size, const struct SolidSyslogMessage* message)
+static inline int FormatMessage(char* buffer, size_t size, const struct SolidSyslogMessage* message, SolidSyslogClockFn clock)
 {
-    uint8_t prival = MakePrival(message);
+    uint8_t     prival    = MakePrival(message);
+    const char* timestamp = (clock != NULL) ? "2009-03-23T00:00:00.000Z" : "-";
     // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- snprintf is bounded; snprintf_s is not portable
-    return snprintf(buffer, size, "<%d>1 2009-03-23T00:00:00.000Z TestHost TestApp 42 54 - hello world", prival);
+    return snprintf(buffer, size, "<%d>1 %s TestHost TestApp 42 54 - hello world", prival, timestamp);
 }
 
 static inline uint8_t MakePrival(const struct SolidSyslogMessage* message)

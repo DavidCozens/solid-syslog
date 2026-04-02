@@ -68,7 +68,7 @@ TEST_GROUP(SolidSyslog)
     void setup() override
     {
         SenderSpy_Reset();
-        config = {SenderSpy_GetSender(), malloc, free};
+        config = {SenderSpy_GetSender(), malloc, free, nullptr};
         logger = SolidSyslog_Create(&config);
     }
 
@@ -127,7 +127,7 @@ TEST(SolidSyslog, TwoCreatesReturnDifferentHandles)
 
 TEST(SolidSyslog, EachLoggerSendsThroughItsOwnSender)
 {
-    SolidSyslogConfig secondConfig = {SenderSpy_GetSender(), malloc, free};
+    SolidSyslogConfig secondConfig = {SenderSpy_GetSender(), malloc, free, nullptr};
     SolidSyslog*      second       = SolidSyslog_Create(&secondConfig);
 
     struct SolidSyslogMessage message = {SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO};
@@ -217,7 +217,7 @@ TEST(SolidSyslog, VersionIs1)
     BYTES_EQUAL('1', header.at(closingBracket + 1));
 }
 
-TEST(SolidSyslog, TimestampIs20090323)
+IGNORE_TEST(SolidSyslog, TimestampIs20090323)
 {
     Log();
     STRCMP_EQUAL(TEST_TIMESTAMP, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str());
@@ -267,9 +267,81 @@ static void* AlwaysFailAlloc(size_t size)
 
 TEST(SolidSyslog, CreateReturnsNullWhenAllocFails)
 {
-    SolidSyslogConfig failConfig = {SenderSpy_GetSender(), AlwaysFailAlloc, free};
+    SolidSyslogConfig failConfig = {SenderSpy_GetSender(), AlwaysFailAlloc, free, nullptr};
     SolidSyslog*      result     = SolidSyslog_Create(&failConfig);
     POINTERS_EQUAL(nullptr, result);
+}
+
+// clang-format off
+TEST_GROUP_BASE(SolidSyslogTimestamp, TEST_GROUP_CppUTestGroupSolidSyslog)
+{
+};
+
+// clang-format on
+
+TEST(SolidSyslogTimestamp, NullClockProducesNilvalue)
+{
+    Log();
+    STRCMP_EQUAL("-", SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str());
+}
+
+IGNORE_TEST(SolidSyslog, TimestampTestList)
+{
+    // S1.3 — Timestamp encoding (Story #18)
+    //
+    // Zero
+    //   NULL clock function in config produces NILVALUE "-" in timestamp field
+    //
+    // One — individual field formatting
+    //   Year formats as 4-digit zero-padded (e.g. "2026")
+    //   Month formats as 2-digit zero-padded (e.g. "04")
+    //   Day formats as 2-digit zero-padded (e.g. "02")
+    //   Hour formats as 2-digit zero-padded (e.g. "09")
+    //   Minute formats as 2-digit zero-padded (e.g. "05")
+    //   Second formats as 2-digit zero-padded (e.g. "07")
+    //   Microseconds format as 6-digit zero-padded fractional (e.g. ".000042")
+    //
+    // One — framing
+    //   Date separator is "-" between year-month-day
+    //   Date and time separated by "T"
+    //   Time separator is ":" between hour:minute:second
+    //   Fractional seconds preceded by "."
+    //   Timestamp appears in the correct message field position
+    //
+    // One — UTC offset
+    //   Zero offset formats as "Z"
+    //   Positive offset formats as "+HH:MM" (e.g. +05:30 for 330 minutes)
+    //   Negative offset formats as "-HH:MM" (e.g. -05:00 for -300 minutes)
+    //
+    // Boundaries
+    //   Year 0 formats as "0000"
+    //   Year 9999 formats as "9999"
+    //   Month 1 formats as "01"
+    //   Month 12 formats as "12"
+    //   Day 1 formats as "01"
+    //   Day 31 formats as "31"
+    //   Hour 0 formats as "00"
+    //   Hour 23 formats as "23"
+    //   Minute 0 formats as "00"
+    //   Minute 59 formats as "59"
+    //   Second 0 formats as "00"
+    //   Second 59 formats as "59"
+    //   Microsecond 0 formats as ".000000"
+    //   Microsecond 999999 formats as ".999999"
+    //   UTC offset +840 formats as "+14:00"
+    //   UTC offset -720 formats as "-12:00"
+    //
+    // Exceptions — out-of-range fields produce NILVALUE "-"
+    //   Month 0 produces NILVALUE
+    //   Month 13 produces NILVALUE
+    //   Day 0 produces NILVALUE
+    //   Day 32 produces NILVALUE
+    //   Hour 24 produces NILVALUE
+    //   Minute 60 produces NILVALUE
+    //   Second 60 produces NILVALUE
+    //   Microsecond 1000000 produces NILVALUE
+    //   UTC offset +841 produces NILVALUE
+    //   UTC offset -721 produces NILVALUE
 }
 
 IGNORE_TEST(SolidSyslog, HappyPathOnly)
