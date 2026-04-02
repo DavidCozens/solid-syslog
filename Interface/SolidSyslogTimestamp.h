@@ -19,7 +19,7 @@ EXTERN_C_BEGIN
         int16_t  utcOffsetMinutes;
     };
 
-    typedef struct SolidSyslogTimestamp (*SolidSyslogClockFn)(void);
+    typedef struct SolidSyslogTimestamp (*SolidSyslogClockFunction)(void);
 
 EXTERN_C_END
 

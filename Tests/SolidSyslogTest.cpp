@@ -37,11 +37,11 @@ static const int TIMESTAMP_MINUTE_OFFSET      = 14;
 static const int TIMESTAMP_MINUTE_LENGTH      = 2;
 static const int TIMESTAMP_SECOND_OFFSET      = 17;
 static const int TIMESTAMP_SECOND_LENGTH      = 2;
-static const int TIMESTAMP_DATE_SEP_1          = 4;
-static const int TIMESTAMP_DATE_SEP_2          = 7;
-static const int TIMESTAMP_DATE_TIME_SEP       = 10;
-static const int TIMESTAMP_TIME_SEP_1          = 13;
-static const int TIMESTAMP_TIME_SEP_2          = 16;
+static const int TIMESTAMP_DATE_SEPARATOR_1          = 4;
+static const int TIMESTAMP_DATE_SEPARATOR_2          = 7;
+static const int TIMESTAMP_DATE_TIME_SEPARATOR       = 10;
+static const int TIMESTAMP_TIME_SEPARATOR_1          = 13;
+static const int TIMESTAMP_TIME_SEPARATOR_2          = 16;
 static const int TIMESTAMP_MICROSECOND_OFFSET  = 19;
 static const int TIMESTAMP_MICROSECOND_LENGTH  = 7;
 static const int TIMESTAMP_OFFSET_OFFSET       = 26;
@@ -425,23 +425,23 @@ TEST(SolidSyslogTimestamp, DateFieldsSeparatedByHyphen)
 {
     Log();
     std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
-    BYTES_EQUAL('-', timestamp.at(TIMESTAMP_DATE_SEP_1));
-    BYTES_EQUAL('-', timestamp.at(TIMESTAMP_DATE_SEP_2));
+    BYTES_EQUAL('-', timestamp.at(TIMESTAMP_DATE_SEPARATOR_1));
+    BYTES_EQUAL('-', timestamp.at(TIMESTAMP_DATE_SEPARATOR_2));
 }
 
 TEST(SolidSyslogTimestamp, DateAndTimeSeparatedByT)
 {
     Log();
     std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
-    BYTES_EQUAL('T', timestamp.at(TIMESTAMP_DATE_TIME_SEP));
+    BYTES_EQUAL('T', timestamp.at(TIMESTAMP_DATE_TIME_SEPARATOR));
 }
 
 TEST(SolidSyslogTimestamp, TimeFieldsSeparatedByColon)
 {
     Log();
     std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
-    BYTES_EQUAL(':', timestamp.at(TIMESTAMP_TIME_SEP_1));
-    BYTES_EQUAL(':', timestamp.at(TIMESTAMP_TIME_SEP_2));
+    BYTES_EQUAL(':', timestamp.at(TIMESTAMP_TIME_SEPARATOR_1));
+    BYTES_EQUAL(':', timestamp.at(TIMESTAMP_TIME_SEPARATOR_2));
 }
 
 TEST(SolidSyslogTimestamp, FractionalSecondsPrecededByDot)

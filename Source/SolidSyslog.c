@@ -14,12 +14,12 @@ enum
 
 static inline uint8_t CombineFacilityAndSeverity(uint8_t facility, uint8_t severity);
 static inline bool    FacilityIsValid(uint8_t facility);
-static inline int     FormatMessage(char* buffer, size_t size, const struct SolidSyslogMessage* message, SolidSyslogClockFn clock);
-static inline bool    CaptureTimestamp(struct SolidSyslogTimestamp* ts, SolidSyslogClockFn clock);
+static inline int     FormatMessage(char* buffer, size_t size, const struct SolidSyslogMessage* message, SolidSyslogClockFunction clock);
+static inline bool    CaptureTimestamp(struct SolidSyslogTimestamp* ts, SolidSyslogClockFunction clock);
 static inline int     FormatCapturedTimestamp(char* buffer, const struct SolidSyslogTimestamp* ts);
 static inline int     FormatCharacter(char* buffer, char value);
 static inline int     FormatMicrosecond(char* buffer, uint32_t value);
-static inline int     FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFn clock);
+static inline int     FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFunction clock);
 static inline int     FormatTwoDigit(char* buffer, uint8_t value);
 static inline int16_t AbsoluteInt16(int16_t offsetMinutes);
 static inline int     FormatAsHours(char* buffer, int16_t absoluteMinutes);
@@ -35,8 +35,8 @@ static inline bool    SeverityIsValid(uint8_t severity);
 struct SolidSyslog
 {
     struct SolidSyslogSender* sender;
-    SolidSyslogFreeFn         free;
-    SolidSyslogClockFn        clock;
+    SolidSyslogFreeFunction         free;
+    SolidSyslogClockFunction        clock;
 };
 
 struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config)
@@ -63,7 +63,7 @@ void SolidSyslog_Log(struct SolidSyslog* logger, const struct SolidSyslogMessage
     SolidSyslogSender_Send(logger->sender, buffer, (size_t) len);
 }
 
-static inline int FormatMessage(char* buffer, size_t size, const struct SolidSyslogMessage* message, SolidSyslogClockFn clock)
+static inline int FormatMessage(char* buffer, size_t size, const struct SolidSyslogMessage* message, SolidSyslogClockFunction clock)
 {
     uint8_t prival = MakePrival(message);
     char    timestamp[SOLIDSYSLOG_MAX_TIMESTAMP_SIZE];
@@ -72,7 +72,7 @@ static inline int FormatMessage(char* buffer, size_t size, const struct SolidSys
     return snprintf(buffer, size, "<%d>1 %s TestHost TestApp 42 54 - hello world", prival, timestamp);
 }
 
-static inline int FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFn clock)
+static inline int FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFunction clock)
 {
     (void) size;
 
@@ -113,7 +113,7 @@ static inline int FormatCapturedTimestamp(char* buffer, const struct SolidSyslog
     return len;
 }
 
-static inline bool CaptureTimestamp(struct SolidSyslogTimestamp* ts, SolidSyslogClockFn clock)
+static inline bool CaptureTimestamp(struct SolidSyslogTimestamp* ts, SolidSyslogClockFunction clock)
 {
     if (clock == NULL)
     {

@@ -6,8 +6,8 @@
 
 EXTERN_C_BEGIN
 
-    typedef void* (*SolidSyslogAllocFn)(size_t size);
-    typedef void (*SolidSyslogFreeFn)(void* ptr);
+    typedef void* (*SolidSyslogAllocFunction)(size_t size);
+    typedef void (*SolidSyslogFreeFunction)(void* ptr);
 
 EXTERN_C_END
 
