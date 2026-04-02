@@ -14,6 +14,8 @@ enum
 static inline uint8_t CombineFacilityAndSeverity(uint8_t facility, uint8_t severity);
 static inline bool    FacilityIsValid(uint8_t facility);
 static inline int     FormatMessage(char* buffer, size_t size, const struct SolidSyslogMessage* message, SolidSyslogClockFn clock);
+static inline int     FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFn clock);
+static inline int     FormatUtcOffset(char* buffer, size_t size, int16_t offsetMinutes);
 static inline uint8_t MakePrival(const struct SolidSyslogMessage* message);
 static inline bool    PrivalComponentsAreValid(uint8_t facility, uint8_t severity);
 static inline bool    SeverityIsValid(uint8_t severity);
@@ -49,12 +51,49 @@ void SolidSyslog_Log(struct SolidSyslog* logger, const struct SolidSyslogMessage
     SolidSyslogSender_Send(logger->sender, buffer, (size_t) len);
 }
 
+static inline int FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFn clock);
+
 static inline int FormatMessage(char* buffer, size_t size, const struct SolidSyslogMessage* message, SolidSyslogClockFn clock)
 {
-    uint8_t     prival    = MakePrival(message);
-    const char* timestamp = (clock != NULL) ? "2009-03-23T00:00:00.000Z" : "-";
+    uint8_t prival = MakePrival(message);
+    char    timestamp[40];
+    FormatTimestamp(timestamp, sizeof(timestamp), clock);
     // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- snprintf is bounded; snprintf_s is not portable
     return snprintf(buffer, size, "<%d>1 %s TestHost TestApp 42 54 - hello world", prival, timestamp);
+}
+
+static inline int FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFn clock)
+{
+    if (clock == NULL)
+    {
+        // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling)
+        return snprintf(buffer, size, "-");
+    }
+
+    struct SolidSyslogTimestamp ts = clock();
+
+    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling)
+    int len = snprintf(buffer, size, "%04u-%02u-%02uT%02u:%02u:%02u.%06u",
+                       ts.year, ts.month, ts.day, ts.hour, ts.minute, ts.second, ts.microsecond);
+
+    len += FormatUtcOffset(buffer + len, size - (size_t) len, ts.utcOffsetMinutes);
+
+    return len;
+}
+
+static inline int FormatUtcOffset(char* buffer, size_t size, int16_t offsetMinutes)
+{
+    if (offsetMinutes == 0)
+    {
+        // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling)
+        return snprintf(buffer, size, "Z");
+    }
+
+    int hours   = offsetMinutes / 60;
+    int minutes = offsetMinutes % 60;
+    if (minutes < 0) { minutes = -minutes; }
+    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling)
+    return snprintf(buffer, size, "%+03d:%02d", hours, minutes);
 }
 
 static inline uint8_t MakePrival(const struct SolidSyslogMessage* message)

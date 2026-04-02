@@ -272,46 +272,159 @@ TEST(SolidSyslog, CreateReturnsNullWhenAllocFails)
     POINTERS_EQUAL(nullptr, result);
 }
 
+static struct SolidSyslogTimestamp stubTimestamp;
+
+static struct SolidSyslogTimestamp StubClock(void)
+{
+    return stubTimestamp;
+}
+
 // clang-format off
 TEST_GROUP_BASE(SolidSyslogTimestamp, TEST_GROUP_CppUTestGroupSolidSyslog)
 {
+    void setup() override
+    {
+        TEST_GROUP_CppUTestGroupSolidSyslog::setup();
+        stubTimestamp = {2026, 4, 2, 14, 30, 0, 0, 0};
+        config.clock = StubClock;
+        SolidSyslog_Destroy(logger);
+        logger = SolidSyslog_Create(&config);
+    }
 };
 
 // clang-format on
 
 TEST(SolidSyslogTimestamp, NullClockProducesNilvalue)
 {
+    config.clock = nullptr;
+    SolidSyslog_Destroy(logger);
+    logger = SolidSyslog_Create(&config);
     Log();
     STRCMP_EQUAL("-", SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str());
+}
+
+TEST(SolidSyslogTimestamp, YearFormatsAsFourDigitZeroPadded)
+{
+    stubTimestamp.year = 2026;
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    STRNCMP_EQUAL("2026", timestamp.c_str(), 4);
+}
+
+TEST(SolidSyslogTimestamp, MonthFormatsAsTwoDigitZeroPadded)
+{
+    stubTimestamp.month = 4;
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    STRNCMP_EQUAL("04", timestamp.c_str() + 5, 2);
+}
+
+TEST(SolidSyslogTimestamp, DayFormatsAsTwoDigitZeroPadded)
+{
+    stubTimestamp.day = 2;
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    STRNCMP_EQUAL("02", timestamp.c_str() + 8, 2);
+}
+
+TEST(SolidSyslogTimestamp, HourFormatsAsTwoDigitZeroPadded)
+{
+    stubTimestamp.hour = 14;
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    STRNCMP_EQUAL("14", timestamp.c_str() + 11, 2);
+}
+
+TEST(SolidSyslogTimestamp, MinuteFormatsAsTwoDigitZeroPadded)
+{
+    stubTimestamp.minute = 30;
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    STRNCMP_EQUAL("30", timestamp.c_str() + 14, 2);
+}
+
+TEST(SolidSyslogTimestamp, SecondFormatsAsTwoDigitZeroPadded)
+{
+    stubTimestamp.second = 7;
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    STRNCMP_EQUAL("07", timestamp.c_str() + 17, 2);
+}
+
+TEST(SolidSyslogTimestamp, MicrosecondFormatsAsSixDigitZeroPadded)
+{
+    stubTimestamp.microsecond = 42;
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    STRNCMP_EQUAL(".000042", timestamp.c_str() + 19, 7);
+}
+
+TEST(SolidSyslogTimestamp, DateFieldsSeparatedByHyphen)
+{
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    BYTES_EQUAL('-', timestamp.at(4));
+    BYTES_EQUAL('-', timestamp.at(7));
+}
+
+TEST(SolidSyslogTimestamp, DateAndTimeSeparatedByT)
+{
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    BYTES_EQUAL('T', timestamp.at(10));
+}
+
+TEST(SolidSyslogTimestamp, TimeFieldsSeparatedByColon)
+{
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    BYTES_EQUAL(':', timestamp.at(13));
+    BYTES_EQUAL(':', timestamp.at(16));
+}
+
+TEST(SolidSyslogTimestamp, FractionalSecondsPrecededByDot)
+{
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    BYTES_EQUAL('.', timestamp.at(19));
+}
+
+TEST(SolidSyslogTimestamp, TimestampAppearsInCorrectMessageFieldPosition)
+{
+    stubTimestamp = {2026, 4, 2, 14, 30, 0, 0, 0};
+    Log();
+    STRCMP_EQUAL("2026-04-02T14:30:00.000000Z", SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str());
+}
+
+TEST(SolidSyslogTimestamp, ZeroOffsetFormatsAsZ)
+{
+    stubTimestamp.utcOffsetMinutes = 0;
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    BYTES_EQUAL('Z', timestamp.at(timestamp.size() - 1));
+}
+
+TEST(SolidSyslogTimestamp, PositiveOffsetFormatsAsPlusHHMM)
+{
+    stubTimestamp.utcOffsetMinutes = 330;
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    std::string offset    = timestamp.substr(26);
+    STRCMP_EQUAL("+05:30", offset.c_str());
+}
+
+TEST(SolidSyslogTimestamp, NegativeOffsetFormatsAsMinusHHMM)
+{
+    stubTimestamp.utcOffsetMinutes = -300;
+    Log();
+    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    std::string offset    = timestamp.substr(26);
+    STRCMP_EQUAL("-05:00", offset.c_str());
 }
 
 IGNORE_TEST(SolidSyslog, TimestampTestList)
 {
     // S1.3 — Timestamp encoding (Story #18)
-    //
-    // Zero
-    //   NULL clock function in config produces NILVALUE "-" in timestamp field
-    //
-    // One — individual field formatting
-    //   Year formats as 4-digit zero-padded (e.g. "2026")
-    //   Month formats as 2-digit zero-padded (e.g. "04")
-    //   Day formats as 2-digit zero-padded (e.g. "02")
-    //   Hour formats as 2-digit zero-padded (e.g. "09")
-    //   Minute formats as 2-digit zero-padded (e.g. "05")
-    //   Second formats as 2-digit zero-padded (e.g. "07")
-    //   Microseconds format as 6-digit zero-padded fractional (e.g. ".000042")
-    //
-    // One — framing
-    //   Date separator is "-" between year-month-day
-    //   Date and time separated by "T"
-    //   Time separator is ":" between hour:minute:second
-    //   Fractional seconds preceded by "."
-    //   Timestamp appears in the correct message field position
-    //
-    // One — UTC offset
-    //   Zero offset formats as "Z"
-    //   Positive offset formats as "+HH:MM" (e.g. +05:30 for 330 minutes)
-    //   Negative offset formats as "-HH:MM" (e.g. -05:00 for -300 minutes)
     //
     // Boundaries
     //   Year 0 formats as "0000"
