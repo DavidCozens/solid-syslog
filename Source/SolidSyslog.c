@@ -83,7 +83,6 @@ static inline int FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFn 
         len = FormatCharacter(buffer, '-');
     }
 
-    buffer[len] = '\0';
     return len;
 }
 
@@ -123,6 +122,7 @@ static inline bool CaptureTimestamp(struct SolidSyslogTimestamp* ts, SolidSyslog
 static inline int FormatCharacter(char* buffer, char value)
 {
     buffer[0] = value;
+    buffer[1] = '\0';
     return 1;
 }
 
@@ -132,6 +132,7 @@ static inline int FormatYear(char* buffer, uint16_t value)
     buffer[1] = (char)('0' + (value / 100U) % 10U);
     buffer[2] = (char)('0' + (value / 10U) % 10U);
     buffer[3] = (char)('0' + value % 10U);
+    buffer[4] = '\0';
     return 4;
 }
 
@@ -139,6 +140,7 @@ static inline int FormatTwoDigit(char* buffer, uint8_t value)
 {
     buffer[0] = (char)('0' + value / 10U);
     buffer[1] = (char)('0' + value % 10U);
+    buffer[2] = '\0';
     return 2;
 }
 
@@ -150,6 +152,7 @@ static inline int FormatMicrosecond(char* buffer, uint32_t value)
     buffer[3] = (char)('0' + (value / 100U) % 10U);
     buffer[4] = (char)('0' + (value / 10U) % 10U);
     buffer[5] = (char)('0' + value % 10U);
+    buffer[6] = '\0';
     return 6;
 }
 
@@ -158,6 +161,7 @@ static inline int FormatUtcOffset(char* buffer, int16_t offsetMinutes)
     if (offsetMinutes == 0)
     {
         buffer[0] = 'Z';
+        buffer[1] = '\0';
         return 1;
     }
 
@@ -172,6 +176,7 @@ static inline int FormatUtcOffset(char* buffer, int16_t offsetMinutes)
     buffer[3] = ':';
     buffer[4] = (char)('0' + minutes / 10);
     buffer[5] = (char)('0' + minutes % 10);
+    buffer[6] = '\0';
     return 6;
 }
 
