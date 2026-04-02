@@ -55,7 +55,7 @@ syslog-ng (writer) and Behave (reader) without any network file transfer.
 | `ghcr.io/davidcozens/behave` | GHCR image — Debian trixie + Python + Behave ([source](https://github.com/DavidCozens/BehaveDocker)) |
 | `Bdd/output/` | Shared directory — syslog-ng writes here, Behave reads |
 | `Bdd/features/` | Gherkin feature files and step definitions |
-| `Example/SolidSyslogExample.c` | Minimal C program that creates a logger and sends one message |
+| `Example/SolidSyslogExample.c` | Minimal C program that creates a logger and sends one message. Accepts `--facility` and `--severity` CLI flags (defaults to local0/info) |
 | `Example/CMakeLists.txt` | Builds the example binary, linked against the SolidSyslog library |
 
 ## syslog-ng configuration

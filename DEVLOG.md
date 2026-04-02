@@ -51,11 +51,10 @@
 - GitHub Issue story template — still deferred, not needed yet
 
 ### Open questions
-- Boundary truncation policy: when field values exceed RFC 5424 max length (HOSTNAME 255,
-  APP-NAME 48, MSGID 32), should the library truncate silently or return an error?
-  Raised in E1.2, E1.4, E1.5 — decision needed before implementation of those stories
-- Out-of-range PRIVAL handling: invalid facility or severity values — clamp or reject?
-  Raised in E1.2 — decision needed before implementation
+- ~~Boundary truncation policy~~ — resolved 2026-04-01: always send, truncate strings,
+  consider adjusting PRIVAL to indicate the problem. See S1.2 entry.
+- ~~Out-of-range PRIVAL handling~~ — resolved 2026-04-01: override to facility 5 /
+  severity 3 (PRIVAL 43), send message with remaining fields as-is. See S1.2 entry.
 
 ## 2026-03-30 — Devcontainer SSH agent bind mount fix
 
@@ -177,3 +176,33 @@ The UUID issue is Windows/WSL-specific but there is no cost to running the comma
 
 ### Open questions
 - None
+
+## 2026-04-01 — S1.2 story rewrite and design decisions
+
+### Decisions
+- S1.2 rewritten with BDD acceptance criteria — Gherkin scenarios replace the ZOMBIES
+  unit test list as the story's acceptance criteria. TDD still drives the implementation
+  underneath; BDD covers the observable end-to-end behaviour.
+- Out-of-range PRIVAL handling resolved: invalid facility or severity → override both to
+  facility 5 (syslog) / severity 3 (err), producing PRIVAL 43. The message is still sent
+  with all other fields as-is. This makes the error observable via BDD and avoids silent
+  data loss.
+- Boundary truncation policy resolved: the library always sends a message regardless of
+  input. Strings exceeding RFC 5424 field limits (HOSTNAME 255, APP-NAME 48, MSGID 32)
+  will be truncated. In each case, adjusting PRIVAL to indicate the problem will be
+  considered. Error reporting deferred to a later story.
+- Example program CLI: `--facility` and `--severity` flags via `getopt_long`. All fields
+  default to the S1.1 test defaults when omitted. Future stories add flags for their own
+  fields (e.g. `--hostname`, `--message`). This approach scales to multi-message scenarios
+  needed for buffering (E4) without premature design — the example can evolve as needed.
+- Existing walking skeleton BDD scenario remains unchanged — the defaults match S1.1
+  values so existing tests continue to pass without modification.
+
+### Deferred
+- Error reporting API — deferred to a later story
+- Additional CLI flags for other message fields — deferred to E1.3–E1.5
+
+### Open questions
+- Example program unit tests — as the example grows (more CLI flags per story), should it
+  get its own unit tests? Current decision is to rely on BDD coverage, but revisit if the
+  example starts containing non-trivial logic or if BDD proves too coarse to catch bugs.
