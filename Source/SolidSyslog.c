@@ -71,12 +71,16 @@ static inline int FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFn 
 {
     (void) size;
 
-    struct SolidSyslogTimestamp ts = {0};
-    int len = FormatCharacter(buffer, '-');
+    struct SolidSyslogTimestamp ts  = {0};
+    int                        len = 0;
 
     if (CaptureTimestamp(&ts, clock))
     {
         len = FormatCapturedTimestamp(buffer, &ts);
+    }
+    else
+    {
+        len = FormatCharacter(buffer, '-');
     }
 
     buffer[len] = '\0';
