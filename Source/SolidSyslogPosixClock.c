@@ -8,7 +8,7 @@ struct SolidSyslogTimestamp SolidSyslogPosixClock_GetTimestamp(void)
     struct timespec             now;
     struct tm                   breakdown;
 
-    if (clock_gettime(CLOCK_REALTIME, &now) == 0 && gmtime_r(&now.tv_sec, &breakdown) != NULL)
+    if ((clock_gettime(CLOCK_REALTIME, &now) == 0) && (gmtime_r(&now.tv_sec, &breakdown) != NULL))
     {
         timestamp.year        = (uint16_t) (breakdown.tm_year + 1900);
         timestamp.month       = (uint8_t) (breakdown.tm_mon + 1);
