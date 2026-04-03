@@ -30,6 +30,8 @@ Public headers are split by audience (Interface Segregation Principle):
 - **`SolidSyslogConfig.h`** — system setup code that creates and destroys loggers
 - **`SolidSyslogTimestamp.h`** — timestamp struct and clock function typedef
 - **`SolidSyslogPosixClock.h`** — POSIX clock helper (`clock_gettime` + `gmtime_r`)
+- **`SolidSyslogPosixHostname.h`** — POSIX hostname helper (`gethostname`)
+- **`SolidSyslogPosixProcId.h`** — POSIX process ID helper (`getpid`)
 - **`SolidSyslogSenderDef.h`** — transport implementors adding new sender types
 
 ## CI pipeline

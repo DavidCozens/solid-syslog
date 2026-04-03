@@ -300,18 +300,19 @@ TEST(SolidSyslog, HostnameFromGetHostnameAppearsInMessage)
     CHECK_HOSTNAME("MyHost");
 }
 
+TEST(SolidSyslog, HostnameIsNotHardCoded)
+{
+    StringFake_SetHostname(TEST_HOSTNAME);
+    Log();
+    CHECK_HOSTNAME(TEST_HOSTNAME);
+}
+
 TEST(SolidSyslog, NullGetAppNameProducesNilvalue)
 {
     config.getAppName = nullptr;
     ReplaceLogger();
     Log();
     CHECK_APP_NAME("-");
-}
-
-IGNORE_TEST(SolidSyslog, HostnameIsTestHost)
-{
-    Log();
-    STRCMP_EQUAL(TEST_HOSTNAME, SyslogField(LastMessage(), SYSLOG_FIELD_HOSTNAME).c_str());
 }
 
 TEST(SolidSyslog, AppNameFromGetAppNameAppearsInMessage)
@@ -321,10 +322,11 @@ TEST(SolidSyslog, AppNameFromGetAppNameAppearsInMessage)
     CHECK_APP_NAME("MyApp");
 }
 
-IGNORE_TEST(SolidSyslog, AppNameIsTestApp)
+TEST(SolidSyslog, AppNameIsNotHardCoded)
 {
+    StringFake_SetAppName(TEST_APP_NAME);
     Log();
-    STRCMP_EQUAL(TEST_APP_NAME, SyslogField(LastMessage(), SYSLOG_FIELD_APP_NAME).c_str());
+    CHECK_APP_NAME(TEST_APP_NAME);
 }
 
 TEST(SolidSyslog, NullGetProcIdProducesNilvalue)
@@ -342,10 +344,11 @@ TEST(SolidSyslog, ProcIdFromGetProcIdAppearsInMessage)
     CHECK_PROCID("9999");
 }
 
-IGNORE_TEST(SolidSyslog, ProcIdIs42)
+TEST(SolidSyslog, ProcIdIsNotHardCoded)
 {
+    StringFake_SetProcId(TEST_PROCID);
     Log();
-    STRCMP_EQUAL(TEST_PROCID, SyslogField(LastMessage(), SYSLOG_FIELD_PROCID).c_str());
+    CHECK_PROCID(TEST_PROCID);
 }
 
 TEST(SolidSyslog, MsgIdIs54)
@@ -797,38 +800,6 @@ TEST(SolidSyslog, EmptyProcIdProducesNilvalue)
     StringFake_SetProcId("");
     Log();
     CHECK_PROCID("-");
-}
-
-IGNORE_TEST(SolidSyslog, HeaderFieldsTestList)
-{
-    // S1.4 — Hostname, AppName, ProcId (Story #19)
-    //
-    // Zero — NULL function pointers
-    //   NULL getHostname produces NILVALUE "-" in hostname field
-    //   NULL getAppName produces NILVALUE "-" in app-name field
-    //   NULL getProcId produces NILVALUE "-" in procid field
-    //
-    // One — injected values appear in message
-    //   Hostname from getHostname appears in correct field position
-    //   AppName from getAppName appears in correct field position
-    //   ProcId from getProcId appears in correct field position
-    //
-    // One — return value semantics
-    //   Empty string from getHostname produces NILVALUE "-"
-    //   Empty string from getAppName produces NILVALUE "-"
-    //   Empty string from getProcId produces NILVALUE "-"
-    //   Getter returning NULL produces NILVALUE "-"
-    //
-    // Boundaries — RFC 5424 field length limits (PRINTUSASCII, byte truncation)
-    //   Hostname at exactly 255 chars is accepted
-    //   Hostname at 256 chars is truncated to 255
-    //   AppName at exactly 48 chars is accepted
-    //   AppName at 49 chars is truncated to 48
-    //   ProcId at exactly 128 chars is accepted
-    //   ProcId at 129 chars is truncated to 128
-    //
-    // Deferred to E12 (Error Handling, #31)
-    //   PRINTUSASCII validation — substitute non-compliant bytes (33–126)
 }
 
 IGNORE_TEST(SolidSyslog, HappyPathOnly)
