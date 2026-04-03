@@ -9,6 +9,7 @@ enum
 {
     SOLIDSYSLOG_MAX_APP_NAME_SIZE  = 49,
     SOLIDSYSLOG_MAX_HOSTNAME_SIZE  = 256,
+    SOLIDSYSLOG_MAX_PROCID_SIZE    = 129,
     SOLIDSYSLOG_MAX_MESSAGE_SIZE   = 128,
     SOLIDSYSLOG_MAX_TIMESTAMP_SIZE = 33
 };
@@ -24,6 +25,7 @@ static inline int     FormatAppName(char* buffer, SolidSyslogStringFunction getA
 static inline int     FormatHostname(char* buffer, SolidSyslogStringFunction getHostname);
 static inline int     FormatNilvalue(char* buffer);
 static inline int     FormatMicrosecond(char* buffer, uint32_t value);
+static inline int     FormatProcId(char* buffer, SolidSyslogStringFunction getProcId);
 static inline int     FormatPrival(char* buffer, uint8_t prival);
 static inline int     FormatVersion(char* buffer);
 static inline int     FormatSpace(char* buffer);
@@ -48,6 +50,7 @@ struct SolidSyslog
     SolidSyslogClockFunction  clock;
     SolidSyslogStringFunction getHostname;
     SolidSyslogStringFunction getAppName;
+    SolidSyslogStringFunction getProcId;
 };
 
 struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config)
@@ -60,6 +63,7 @@ struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config)
         instance->clock       = config->clock;
         instance->getHostname = config->getHostname;
         instance->getAppName  = config->getAppName;
+        instance->getProcId   = config->getProcId;
     }
     return instance;
 }
@@ -89,7 +93,9 @@ static inline int FormatMessage(const struct SolidSyslog* self, char* buffer, si
     len += FormatHostname(buffer + len, self->getHostname);
     len += FormatSpace(buffer + len);
     len += FormatAppName(buffer + len, self->getAppName);
-    len += FormatString(buffer + len, " 42 54 - hello world");
+    len += FormatSpace(buffer + len);
+    len += FormatProcId(buffer + len, self->getProcId);
+    len += FormatString(buffer + len, " 54 - hello world");
 
     return len;
 }
@@ -182,6 +188,22 @@ static inline int FormatHostname(char* buffer, SolidSyslogStringFunction getHost
     if (getHostname != NULL)
     {
         len = getHostname(buffer, SOLIDSYSLOG_MAX_HOSTNAME_SIZE);
+    }
+    else
+    {
+        len = FormatNilvalue(buffer);
+    }
+
+    return len;
+}
+
+static inline int FormatProcId(char* buffer, SolidSyslogStringFunction getProcId)
+{
+    int len = 0;
+
+    if (getProcId != NULL)
+    {
+        len = getProcId(buffer, SOLIDSYSLOG_MAX_PROCID_SIZE);
     }
     else
     {

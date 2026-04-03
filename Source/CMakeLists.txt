@@ -6,6 +6,8 @@ set(SOURCES
 if(SOLIDSYSLOG_POSIX)
     list(APPEND SOURCES
         SolidSyslogPosixClock.c
+        SolidSyslogPosixHostname.c
+        SolidSyslogPosixProcId.c
         SolidSyslogUdpSender.c
     )
 endif()

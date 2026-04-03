@@ -81,6 +81,8 @@ static const int TIMESTAMP_OFFSET_OFFSET       = 26;
 
 #define CHECK_APP_NAME(expected) STRCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_APP_NAME).c_str())
 
+#define CHECK_PROCID(expected) STRCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_PROCID).c_str())
+
 // NOLINTEND(cppcoreguidelines-macro-usage)
 
 static std::string SyslogField(const char* buffer, int n)
@@ -128,7 +130,7 @@ TEST_GROUP(SolidSyslog)
     {
         SenderSpy_Reset();
         StringFake_Reset();
-        config = {SenderSpy_GetSender(), malloc, free, nullptr, StringFake_GetHostname, StringFake_GetAppName};
+        config = {SenderSpy_GetSender(), malloc, free, nullptr, StringFake_GetHostname, StringFake_GetAppName, StringFake_GetProcId};
         logger = SolidSyslog_Create(&config);
     }
 
@@ -193,7 +195,7 @@ TEST(SolidSyslog, TwoCreatesReturnDifferentHandles)
 
 TEST(SolidSyslog, EachLoggerSendsThroughItsOwnSender)
 {
-    SolidSyslogConfig secondConfig = {SenderSpy_GetSender(), malloc, free, nullptr, nullptr, nullptr};
+    SolidSyslogConfig secondConfig = {SenderSpy_GetSender(), malloc, free, nullptr, nullptr, nullptr, nullptr};
     SolidSyslog*      second       = SolidSyslog_Create(&secondConfig);
 
     struct SolidSyslogMessage message = {SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO};
@@ -325,7 +327,22 @@ IGNORE_TEST(SolidSyslog, AppNameIsTestApp)
     STRCMP_EQUAL(TEST_APP_NAME, SyslogField(LastMessage(), SYSLOG_FIELD_APP_NAME).c_str());
 }
 
-TEST(SolidSyslog, ProcIdIs42)
+TEST(SolidSyslog, NullGetProcIdProducesNilvalue)
+{
+    config.getProcId = nullptr;
+    ReplaceLogger();
+    Log();
+    CHECK_PROCID("-");
+}
+
+TEST(SolidSyslog, ProcIdFromGetProcIdAppearsInMessage)
+{
+    StringFake_SetProcId("9999");
+    Log();
+    CHECK_PROCID("9999");
+}
+
+IGNORE_TEST(SolidSyslog, ProcIdIs42)
 {
     Log();
     STRCMP_EQUAL(TEST_PROCID, SyslogField(LastMessage(), SYSLOG_FIELD_PROCID).c_str());
@@ -357,7 +374,7 @@ static void* AlwaysFailAlloc(size_t size)
 
 TEST(SolidSyslog, CreateReturnsNullWhenAllocFails)
 {
-    SolidSyslogConfig failConfig = {SenderSpy_GetSender(), AlwaysFailAlloc, free, nullptr, nullptr, nullptr};
+    SolidSyslogConfig failConfig = {SenderSpy_GetSender(), AlwaysFailAlloc, free, nullptr, nullptr, nullptr, nullptr};
     SolidSyslog*      result     = SolidSyslog_Create(&failConfig);
     POINTERS_EQUAL(nullptr, result);
 }
