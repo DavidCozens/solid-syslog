@@ -385,12 +385,6 @@ TEST(SolidSyslog, MessageIdAt33CharsIsTruncatedTo32)
     CHECK_MSGID(expected.c_str());
 }
 
-IGNORE_TEST(SolidSyslog, MsgIdIs54)
-{
-    Log();
-    STRCMP_EQUAL(TEST_MSGID, SyslogField(LastMessage(), SYSLOG_FIELD_MSGID).c_str());
-}
-
 TEST(SolidSyslog, StructuredDataIsNilValue)
 {
     Log();
@@ -459,12 +453,6 @@ TEST(SolidSyslog, HugeMessageDoesNotCorruptMemory)
     Log();
     std::string result = SyslogMsg(LastMessage());
     CHECK(result.size() <= SOLIDSYSLOG_MAX_MESSAGE_SIZE);
-}
-
-IGNORE_TEST(SolidSyslog, MsgIsHelloWorld)
-{
-    Log();
-    STRCMP_EQUAL(TEST_MSG, SyslogMsg(LastMessage()).c_str());
 }
 
 static void* AlwaysFailAlloc(size_t size)
@@ -900,37 +888,6 @@ TEST(SolidSyslog, EmptyProcIdProducesNilvalue)
     StringFake_SetProcId("");
     Log();
     CHECK_PROCID("-");
-}
-
-IGNORE_TEST(SolidSyslog, MessageFieldsTestList)
-{
-    // S1.5 — MessageId and Message (Story #20)
-    //
-    // Zero
-    //   NULL messageId produces NILVALUE "-" in msgid field
-    //   NULL message omits MSG field entirely
-    //
-    // One — fields appear in message
-    //   MessageId appears in correct field position
-    //   Message appears at end of assembled message
-    //   MessageId is not hard-coded
-    //
-    // One — return value semantics
-    //   Empty messageId produces NILVALUE "-"
-    //   Empty message omits MSG field
-    //
-    // Boundaries — RFC 5424 field length limits
-    //   MessageId at exactly 32 chars is accepted
-    //   MessageId at 33 chars is truncated to 32
-    //
-    // Simple scenario
-    //   Structured data is always NILVALUE "-"
-    //
-    // Deferred to E6 (Optional Header Fields, #8)
-    //   MSG preceded by UTF-8 BOM
-    //
-    // Deferred to E12 (Error Handling, #31)
-    //   PRINTUSASCII validation for MSGID
 }
 
 IGNORE_TEST(SolidSyslog, HappyPathOnly)
