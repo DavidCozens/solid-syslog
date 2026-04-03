@@ -1,5 +1,6 @@
 #include "SolidSyslog.h"
 #include "SolidSyslogConfig.h"
+#include "SolidSyslogNullBuffer.h"
 #include "SolidSyslogPosixClock.h"
 #include "SolidSyslogPosixHostname.h"
 #include "SolidSyslogPosixProcId.h"
@@ -79,9 +80,10 @@ int main(int argc, char* argv[])
         .getHost = GetHost,
     };
     struct SolidSyslogSender* sender = SolidSyslogUdpSender_Create(&udpConfig);
+    struct SolidSyslogBuffer* buffer = SolidSyslogNullBuffer_Create(sender);
 
     struct SolidSyslogConfig config = {
-        .sender      = sender,
+        .buffer      = buffer,
         .alloc       = malloc,
         .free        = free,
         .clock       = SolidSyslogPosixClock_GetTimestamp,
@@ -100,6 +102,7 @@ int main(int argc, char* argv[])
     SolidSyslog_Log(logger, &message);
 
     SolidSyslog_Destroy(logger);
+    SolidSyslogNullBuffer_Destroy(buffer);
     SolidSyslogUdpSender_Destroy(sender);
 
     return 0;

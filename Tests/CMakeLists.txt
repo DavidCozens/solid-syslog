@@ -1,5 +1,6 @@
 set(TEST_SOURCES
     SolidSyslogTest.cpp
+    SolidSyslogNullBufferTest.cpp
     SolidSyslogPrivalTest.cpp
     SenderSpyTest.cpp
     SenderSpy.c

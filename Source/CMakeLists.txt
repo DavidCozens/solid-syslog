@@ -1,5 +1,7 @@
 set(SOURCES
     SolidSyslog.c
+    SolidSyslogBuffer.c
+    SolidSyslogNullBuffer.c
     SolidSyslogSender.c
 )
 

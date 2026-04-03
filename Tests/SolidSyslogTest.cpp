@@ -1,6 +1,7 @@
 #include "CppUTest/TestHarness.h"
 #include "SolidSyslog.h"
 #include "SolidSyslogConfig.h"
+#include "SolidSyslogNullBuffer.h"
 #include "SenderSpy.h"
 #include "StringFake.h"
 #include <cstdlib>
@@ -128,12 +129,15 @@ TEST_GROUP(SolidSyslog)
     // cppcheck-suppress constVariablePointer -- SolidSyslog_Log requires non-const; false positive from macro expansion
     SolidSyslog *logger;
     SolidSyslogMessage message;
+    // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
+    SolidSyslogBuffer *buffer;
 
     void setup() override
     {
         SenderSpy_Reset();
         StringFake_Reset();
-        config = {SenderSpy_GetSender(), malloc, free, nullptr, StringFake_GetHostname, StringFake_GetAppName, StringFake_GetProcId};
+        buffer = SolidSyslogNullBuffer_Create(SenderSpy_GetSender());
+        config = {buffer, malloc, free, nullptr, StringFake_GetHostname, StringFake_GetAppName, StringFake_GetProcId};
         logger = SolidSyslog_Create(&config);
         message = {SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO, nullptr, nullptr};
     }
@@ -141,6 +145,7 @@ TEST_GROUP(SolidSyslog)
     void teardown() override
     {
         SolidSyslog_Destroy(logger);
+        SolidSyslogNullBuffer_Destroy(buffer);
     }
 
     void ReplaceLogger()
@@ -180,14 +185,16 @@ TEST(SolidSyslog, TwoCreatesReturnDifferentHandles)
 
 TEST(SolidSyslog, EachLoggerSendsThroughItsOwnSender)
 {
-    SolidSyslogConfig secondConfig = {SenderSpy_GetSender(), malloc, free, nullptr, nullptr, nullptr, nullptr};
-    SolidSyslog*      second       = SolidSyslog_Create(&secondConfig);
+    SolidSyslogBuffer* secondBuffer = SolidSyslogNullBuffer_Create(SenderSpy_GetSender());
+    SolidSyslogConfig  secondConfig = {secondBuffer, malloc, free, nullptr, nullptr, nullptr, nullptr};
+    SolidSyslog*       second       = SolidSyslog_Create(&secondConfig);
 
     SolidSyslog_Log(logger, &message);
     SolidSyslog_Log(second, &message);
     LONGS_EQUAL(2, SenderSpy_CallCount());
 
     SolidSyslog_Destroy(second);
+    SolidSyslogNullBuffer_Destroy(secondBuffer);
 }
 
 TEST(SolidSyslog, NoMessagesAreSentWhenLogIsNotCalled)
@@ -463,7 +470,7 @@ static void* AlwaysFailAlloc(size_t size)
 
 TEST(SolidSyslog, CreateReturnsNullWhenAllocFails)
 {
-    SolidSyslogConfig failConfig = {SenderSpy_GetSender(), AlwaysFailAlloc, free, nullptr, nullptr, nullptr, nullptr};
+    SolidSyslogConfig failConfig = {buffer, AlwaysFailAlloc, free, nullptr, nullptr, nullptr, nullptr};
     SolidSyslog*      result     = SolidSyslog_Create(&failConfig);
     POINTERS_EQUAL(nullptr, result);
 }
