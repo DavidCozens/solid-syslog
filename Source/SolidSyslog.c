@@ -23,6 +23,7 @@ static inline int     FormatCapturedTimestamp(char* buffer, const struct SolidSy
 static inline int     FormatCharacter(char* buffer, char value);
 static inline int     FormatAppName(char* buffer, SolidSyslogStringFunction getAppName);
 static inline int     FormatHostname(char* buffer, SolidSyslogStringFunction getHostname);
+static inline int     FormatMsgId(char* buffer, const char* messageId);
 static inline int     FormatNilvalue(char* buffer);
 static inline int     FormatMicrosecond(char* buffer, uint32_t value);
 static inline int     FormatProcId(char* buffer, SolidSyslogStringFunction getProcId);
@@ -42,6 +43,7 @@ static inline int     FormatYear(char* buffer, uint16_t value);
 static inline uint8_t MakePrival(const struct SolidSyslogMessage* message);
 static inline bool    PrivalComponentsAreValid(uint8_t facility, uint8_t severity);
 static inline bool    SeverityIsValid(uint8_t severity);
+static inline bool    StringIsValid(const char* value);
 
 struct SolidSyslog
 {
@@ -95,7 +97,9 @@ static inline int FormatMessage(const struct SolidSyslog* self, char* buffer, si
     len += FormatAppName(buffer + len, self->getAppName);
     len += FormatSpace(buffer + len);
     len += FormatProcId(buffer + len, self->getProcId);
-    len += FormatString(buffer + len, " 54 - hello world");
+    len += FormatSpace(buffer + len);
+    len += FormatMsgId(buffer + len, message->messageId);
+    len += FormatString(buffer + len, " - hello world");
 
     return len;
 }
@@ -174,6 +178,23 @@ static inline int FormatCharacter(char* buffer, char value)
     buffer[0] = value;
     buffer[1] = '\0';
     return 1;
+}
+
+static inline int FormatMsgId(char* buffer, const char* messageId)
+{
+    int len = 0;
+
+    if (StringIsValid(messageId))
+    {
+        len = FormatString(buffer, messageId);
+    }
+
+    if (len == 0)
+    {
+        len = FormatNilvalue(buffer);
+    }
+
+    return len;
 }
 
 static inline int FormatNilvalue(char* buffer)
@@ -391,4 +412,9 @@ static inline bool FacilityIsValid(uint8_t facility)
 static inline bool SeverityIsValid(uint8_t severity)
 {
     return severity <= SOLIDSYSLOG_SEVERITY_DEBUG;
+}
+
+static inline bool StringIsValid(const char* value)
+{
+    return (value != NULL) && (value[0] != '\0');
 }

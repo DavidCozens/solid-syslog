@@ -83,6 +83,8 @@ static const int TIMESTAMP_OFFSET_OFFSET       = 26;
 
 #define CHECK_PROCID(expected) STRCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_PROCID).c_str())
 
+#define CHECK_MSGID(expected) STRCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_MSGID).c_str())
+
 // NOLINTEND(cppcoreguidelines-macro-usage)
 
 static std::string SyslogField(const char* buffer, int n)
@@ -125,6 +127,7 @@ TEST_GROUP(SolidSyslog)
     // cppcheck-suppress variableScope -- member of TEST_GROUP; scope and constness managed by CppUTest macro
     // cppcheck-suppress constVariablePointer -- SolidSyslog_Log requires non-const; false positive from macro expansion
     SolidSyslog *logger;
+    SolidSyslogMessage message;
 
     void setup() override
     {
@@ -132,6 +135,7 @@ TEST_GROUP(SolidSyslog)
         StringFake_Reset();
         config = {SenderSpy_GetSender(), malloc, free, nullptr, StringFake_GetHostname, StringFake_GetAppName, StringFake_GetProcId};
         logger = SolidSyslog_Create(&config);
+        message = {SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO, nullptr};
     }
 
     void teardown() override
@@ -147,25 +151,6 @@ TEST_GROUP(SolidSyslog)
 
     void Log() const
     {
-        struct SolidSyslogMessage message = {SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO};
-        SolidSyslog_Log(logger, &message);
-    }
-
-    void Log(enum SolidSyslog_Facility facility) const
-    {
-        struct SolidSyslogMessage message = {facility, SOLIDSYSLOG_SEVERITY_INFO};
-        SolidSyslog_Log(logger, &message);
-    }
-
-    void Log(enum SolidSyslog_Severity severity) const
-    {
-        struct SolidSyslogMessage message = {SOLIDSYSLOG_FACILITY_LOCAL0, severity};
-        SolidSyslog_Log(logger, &message);
-    }
-
-    void Log(enum SolidSyslog_Facility facility, enum SolidSyslog_Severity severity) const
-    {
-        struct SolidSyslogMessage message = {facility, severity};
         SolidSyslog_Log(logger, &message);
     }
 
@@ -198,7 +183,6 @@ TEST(SolidSyslog, EachLoggerSendsThroughItsOwnSender)
     SolidSyslogConfig secondConfig = {SenderSpy_GetSender(), malloc, free, nullptr, nullptr, nullptr, nullptr};
     SolidSyslog*      second       = SolidSyslog_Create(&secondConfig);
 
-    struct SolidSyslogMessage message = {SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO};
     SolidSyslog_Log(logger, &message);
     SolidSyslog_Log(second, &message);
     LONGS_EQUAL(2, SenderSpy_CallCount());
@@ -225,45 +209,51 @@ TEST(SolidSyslog, PriValIs134)
 
 TEST(SolidSyslog, FacilityAppearsInPrival)
 {
-    Log(SOLIDSYSLOG_FACILITY_NEWS);
+    message.facility = SOLIDSYSLOG_FACILITY_NEWS;
+    Log();
     CHECK_PRIVAL("<62>");
 }
 
 TEST(SolidSyslog, SeverityAppearsInPrival)
 {
-    Log(SOLIDSYSLOG_SEVERITY_CRIT);
+    message.severity = SOLIDSYSLOG_SEVERITY_CRIT;
+    Log();
     CHECK_PRIVAL("<130>");
 }
 
 TEST(SolidSyslog, LowestFacilityProducesCorrectPrival)
 {
-    Log(SOLIDSYSLOG_FACILITY_KERN);
+    message.facility = SOLIDSYSLOG_FACILITY_KERN;
+    Log();
     CHECK_PRIVAL("<6>");
 }
 
 TEST(SolidSyslog, HighestFacilityProducesCorrectPrival)
 {
-    Log(SOLIDSYSLOG_FACILITY_LOCAL7);
+    message.facility = SOLIDSYSLOG_FACILITY_LOCAL7;
+    Log();
     CHECK_PRIVAL("<190>");
 }
 
 TEST(SolidSyslog, LowestSeverityProducesCorrectPrival)
 {
-    Log(SOLIDSYSLOG_SEVERITY_EMERG);
+    message.severity = SOLIDSYSLOG_SEVERITY_EMERG;
+    Log();
     CHECK_PRIVAL("<128>");
 }
 
 TEST(SolidSyslog, HighestSeverityProducesCorrectPrival)
 {
-    Log(SOLIDSYSLOG_SEVERITY_DEBUG);
+    message.severity = SOLIDSYSLOG_SEVERITY_DEBUG;
+    Log();
     CHECK_PRIVAL("<135>");
 }
 
 TEST(SolidSyslog, OutOfRangeFacilityProducesErrorPrival)
 {
     // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange) -- intentionally testing out-of-range input
-    struct SolidSyslogMessage message = {(enum SolidSyslog_Facility) 24, SOLIDSYSLOG_SEVERITY_INFO};
-    SolidSyslog_Log(logger, &message);
+    message.facility = (enum SolidSyslog_Facility) 24;
+    Log();
     CHECK_PRIVAL("<43>");
 }
 
@@ -271,9 +261,9 @@ TEST(SolidSyslog, OutOfRangeSeverityProducesErrorPrival)
 {
     enum SolidSyslog_Severity invalid = SOLIDSYSLOG_SEVERITY_DEBUG;
     // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange) -- intentionally testing out-of-range input
-    invalid                           = static_cast<enum SolidSyslog_Severity>(static_cast<int>(invalid) + 1);
-    struct SolidSyslogMessage message = {SOLIDSYSLOG_FACILITY_LOCAL0, invalid};
-    SolidSyslog_Log(logger, &message);
+    invalid          = static_cast<enum SolidSyslog_Severity>(static_cast<int>(invalid) + 1);
+    message.severity = invalid;
+    Log();
     CHECK_PRIVAL("<43>");
 }
 
@@ -351,7 +341,27 @@ TEST(SolidSyslog, ProcIdIsNotHardCoded)
     CHECK_PROCID(TEST_PROCID);
 }
 
-TEST(SolidSyslog, MsgIdIs54)
+TEST(SolidSyslog, NullMessageIdProducesNilvalue)
+{
+    Log();
+    CHECK_MSGID("-");
+}
+
+TEST(SolidSyslog, MessageIdAppearsInMessage)
+{
+    message.messageId = "ID47";
+    Log();
+    CHECK_MSGID("ID47");
+}
+
+TEST(SolidSyslog, MessageIdIsNotHardCoded)
+{
+    message.messageId = TEST_MSGID;
+    Log();
+    CHECK_MSGID(TEST_MSGID);
+}
+
+IGNORE_TEST(SolidSyslog, MsgIdIs54)
 {
     Log();
     STRCMP_EQUAL(TEST_MSGID, SyslogField(LastMessage(), SYSLOG_FIELD_MSGID).c_str());
@@ -773,7 +783,9 @@ TEST(SolidSyslog, AllFieldsAtMaxLengthProducesValidMessage)
     stubTimestamp = {9999, 12, 31, 23, 59, 59, 999999, 840};
     config.clock  = StubClock;
     ReplaceLogger();
-    Log(SOLIDSYSLOG_FACILITY_LOCAL7, SOLIDSYSLOG_SEVERITY_DEBUG);
+    message.facility = SOLIDSYSLOG_FACILITY_LOCAL7;
+    message.severity = SOLIDSYSLOG_SEVERITY_DEBUG;
+    Log();
     CHECK_PRIVAL("<191>");
     CHECK_TIMESTAMP("9999-12-31T23:59:59.999999+14:00");
     CHECK_HOSTNAME(maxHostname.c_str());
