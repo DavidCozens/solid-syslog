@@ -10,7 +10,7 @@ Feature: Message header fields
   Scenario: App name matches the example program
     Given syslog-ng is running
     When the example program sends a syslog message
-    Then syslog-ng receives a message with app name "SolidSyslogExample"
+    Then the app name is "SolidSyslogExample"
 
   Scenario: Process ID matches the example program PID
     Given syslog-ng is running
