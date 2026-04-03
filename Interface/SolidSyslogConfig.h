@@ -7,13 +7,13 @@
 
 EXTERN_C_BEGIN
 
-    struct SolidSyslogSender;
+    struct SolidSyslogBuffer;
 
     typedef size_t (*SolidSyslogStringFunction)(char* buffer, size_t size);
 
     struct SolidSyslogConfig
     {
-        struct SolidSyslogSender* sender;
+        struct SolidSyslogBuffer* buffer;
         SolidSyslogAllocFunction  alloc;
         SolidSyslogFreeFunction   free;
         SolidSyslogClockFunction  clock;

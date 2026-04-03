@@ -1,6 +1,6 @@
 #include "SolidSyslog.h"
+#include "SolidSyslogBuffer.h"
 #include "SolidSyslogConfig.h"
-#include "SolidSyslogSender.h"
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -49,7 +49,7 @@ static inline bool    TimestampIsValid(const struct SolidSyslogTimestamp* ts);
 
 struct SolidSyslog
 {
-    struct SolidSyslogSender* sender;
+    struct SolidSyslogBuffer* buffer;
     SolidSyslogFreeFunction   free;
     SolidSyslogClockFunction  clock;
     SolidSyslogStringFunction getHostname;
@@ -62,7 +62,7 @@ struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config)
     struct SolidSyslog* instance = config->alloc(sizeof(struct SolidSyslog));
     if (instance != NULL)
     {
-        instance->sender      = config->sender;
+        instance->buffer      = config->buffer;
         instance->free        = config->free;
         instance->clock       = config->clock;
         instance->getHostname = config->getHostname;
@@ -79,9 +79,9 @@ void SolidSyslog_Destroy(struct SolidSyslog* logger)
 
 void SolidSyslog_Log(struct SolidSyslog* logger, const struct SolidSyslogMessage* message)
 {
-    char   buffer[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
-    size_t len = FormatMessage(logger, buffer, sizeof(buffer), message);
-    SolidSyslogSender_Send(logger->sender, buffer, len);
+    char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    size_t len = FormatMessage(logger, buf, sizeof(buf), message);
+    SolidSyslogBuffer_Write(logger->buffer, buf, len);
 }
 
 static inline size_t FormatMessage(const struct SolidSyslog* self, char* buffer, size_t size, const struct SolidSyslogMessage* message)
