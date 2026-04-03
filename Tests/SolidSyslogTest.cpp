@@ -361,6 +361,30 @@ TEST(SolidSyslog, MessageIdIsNotHardCoded)
     CHECK_MSGID(TEST_MSGID);
 }
 
+TEST(SolidSyslog, EmptyMessageIdProducesNilvalue)
+{
+    message.messageId = "";
+    Log();
+    CHECK_MSGID("-");
+}
+
+TEST(SolidSyslog, MessageIdAt32CharsIsAccepted)
+{
+    std::string maxMsgId(32, 'M');
+    message.messageId = maxMsgId.c_str();
+    Log();
+    CHECK_MSGID(maxMsgId.c_str());
+}
+
+TEST(SolidSyslog, MessageIdAt33CharsIsTruncatedTo32)
+{
+    std::string longMsgId(33, 'M');
+    message.messageId = longMsgId.c_str();
+    Log();
+    std::string expected(32, 'M');
+    CHECK_MSGID(expected.c_str());
+}
+
 IGNORE_TEST(SolidSyslog, MsgIdIs54)
 {
     Log();

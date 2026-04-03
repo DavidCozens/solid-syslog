@@ -9,6 +9,7 @@ enum
 {
     SOLIDSYSLOG_MAX_APP_NAME_SIZE  = 49,
     SOLIDSYSLOG_MAX_HOSTNAME_SIZE  = 256,
+    SOLIDSYSLOG_MAX_MSGID_SIZE     = 33,
     SOLIDSYSLOG_MAX_PROCID_SIZE    = 129,
     SOLIDSYSLOG_MAX_MESSAGE_SIZE   = 512,
     SOLIDSYSLOG_MAX_TIMESTAMP_SIZE = 33
@@ -23,6 +24,7 @@ static inline int     FormatCapturedTimestamp(char* buffer, const struct SolidSy
 static inline int     FormatCharacter(char* buffer, char value);
 static inline int     FormatAppName(char* buffer, SolidSyslogStringFunction getAppName);
 static inline int     FormatHostname(char* buffer, SolidSyslogStringFunction getHostname);
+static inline int     FormatBoundedString(char* buffer, const char* source, size_t maxLength);
 static inline int     FormatMsgId(char* buffer, const char* messageId);
 static inline int     FormatNilvalue(char* buffer);
 static inline int     FormatMicrosecond(char* buffer, uint32_t value);
@@ -186,7 +188,7 @@ static inline int FormatMsgId(char* buffer, const char* messageId)
 
     if (StringIsValid(messageId))
     {
-        len = FormatString(buffer, messageId);
+        len = FormatBoundedString(buffer, messageId, SOLIDSYSLOG_MAX_MSGID_SIZE - 1);
     }
 
     if (len == 0)
@@ -280,6 +282,18 @@ static inline int FormatSpace(char* buffer)
 static inline int FormatVersion(char* buffer)
 {
     return FormatCharacter(buffer, '1');
+}
+
+static inline int FormatBoundedString(char* buffer, const char* source, size_t maxLength)
+{
+    int len = 0;
+    while ((source[len] != '\0') && ((size_t) len < maxLength))
+    {
+        buffer[len] = source[len];
+        len++;
+    }
+    buffer[len] = '\0';
+    return len;
 }
 
 static inline int FormatString(char* buffer, const char* source)
