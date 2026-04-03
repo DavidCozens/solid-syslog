@@ -8,7 +8,7 @@ EXTERN_C_BEGIN
 
     struct SolidSyslogBuffer;
 
-    void SolidSyslogBuffer_Write(struct SolidSyslogBuffer* buffer, const void* data, size_t size);
+    void SolidSyslogBuffer_Write(struct SolidSyslogBuffer * buffer, const void* data, size_t size);
 
 EXTERN_C_END
 

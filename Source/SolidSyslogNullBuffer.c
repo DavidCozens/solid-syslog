@@ -15,8 +15,8 @@ struct SolidSyslogNullBuffer
 struct SolidSyslogBuffer* SolidSyslogNullBuffer_Create(struct SolidSyslogSender* sender)
 {
     struct SolidSyslogNullBuffer* self = malloc(sizeof(struct SolidSyslogNullBuffer));
-    self->base.Write = Write;
-    self->sender     = sender;
+    self->base.Write                   = Write;
+    self->sender                       = sender;
     return &self->base;
 }
 
