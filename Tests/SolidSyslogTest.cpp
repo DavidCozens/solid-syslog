@@ -2,6 +2,7 @@
 #include "SolidSyslog.h"
 #include "SolidSyslogConfig.h"
 #include "SenderSpy.h"
+#include "StringFake.h"
 #include <cstdlib>
 #include <string>
 
@@ -76,6 +77,12 @@ static const int TIMESTAMP_OFFSET_OFFSET       = 26;
 
 #define CHECK_TIMESTAMP_IS_NILVALUE() STRCMP_EQUAL("-", SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str())
 
+#define CHECK_HOSTNAME(expected) STRCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_HOSTNAME).c_str())
+
+#define CHECK_APP_NAME(expected) STRCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_APP_NAME).c_str())
+
+#define CHECK_PROCID(expected) STRCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_PROCID).c_str())
+
 // NOLINTEND(cppcoreguidelines-macro-usage)
 
 static std::string SyslogField(const char* buffer, int n)
@@ -122,13 +129,20 @@ TEST_GROUP(SolidSyslog)
     void setup() override
     {
         SenderSpy_Reset();
-        config = {SenderSpy_GetSender(), malloc, free, nullptr};
+        StringFake_Reset();
+        config = {SenderSpy_GetSender(), malloc, free, nullptr, StringFake_GetHostname, StringFake_GetAppName, StringFake_GetProcId};
         logger = SolidSyslog_Create(&config);
     }
 
     void teardown() override
     {
         SolidSyslog_Destroy(logger);
+    }
+
+    void ReplaceLogger()
+    {
+        SolidSyslog_Destroy(logger);
+        logger = SolidSyslog_Create(&config);
     }
 
     void Log() const
@@ -181,7 +195,7 @@ TEST(SolidSyslog, TwoCreatesReturnDifferentHandles)
 
 TEST(SolidSyslog, EachLoggerSendsThroughItsOwnSender)
 {
-    SolidSyslogConfig secondConfig = {SenderSpy_GetSender(), malloc, free, nullptr};
+    SolidSyslogConfig secondConfig = {SenderSpy_GetSender(), malloc, free, nullptr, nullptr, nullptr, nullptr};
     SolidSyslog*      second       = SolidSyslog_Create(&secondConfig);
 
     struct SolidSyslogMessage message = {SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO};
@@ -271,22 +285,70 @@ TEST(SolidSyslog, VersionIs1)
     BYTES_EQUAL('1', header.at(closingBracket + 1));
 }
 
-TEST(SolidSyslog, HostnameIsTestHost)
+TEST(SolidSyslog, NullGetHostnameProducesNilvalue)
 {
+    config.getHostname = nullptr;
+    ReplaceLogger();
     Log();
-    STRCMP_EQUAL(TEST_HOSTNAME, SyslogField(LastMessage(), SYSLOG_FIELD_HOSTNAME).c_str());
+    CHECK_HOSTNAME("-");
 }
 
-TEST(SolidSyslog, AppNameIsTestApp)
+TEST(SolidSyslog, HostnameFromGetHostnameAppearsInMessage)
 {
+    StringFake_SetHostname("MyHost");
     Log();
-    STRCMP_EQUAL(TEST_APP_NAME, SyslogField(LastMessage(), SYSLOG_FIELD_APP_NAME).c_str());
+    CHECK_HOSTNAME("MyHost");
 }
 
-TEST(SolidSyslog, ProcIdIs42)
+TEST(SolidSyslog, HostnameIsNotHardCoded)
 {
+    StringFake_SetHostname(TEST_HOSTNAME);
     Log();
-    STRCMP_EQUAL(TEST_PROCID, SyslogField(LastMessage(), SYSLOG_FIELD_PROCID).c_str());
+    CHECK_HOSTNAME(TEST_HOSTNAME);
+}
+
+TEST(SolidSyslog, NullGetAppNameProducesNilvalue)
+{
+    config.getAppName = nullptr;
+    ReplaceLogger();
+    Log();
+    CHECK_APP_NAME("-");
+}
+
+TEST(SolidSyslog, AppNameFromGetAppNameAppearsInMessage)
+{
+    StringFake_SetAppName("MyApp");
+    Log();
+    CHECK_APP_NAME("MyApp");
+}
+
+TEST(SolidSyslog, AppNameIsNotHardCoded)
+{
+    StringFake_SetAppName(TEST_APP_NAME);
+    Log();
+    CHECK_APP_NAME(TEST_APP_NAME);
+}
+
+TEST(SolidSyslog, NullGetProcIdProducesNilvalue)
+{
+    config.getProcId = nullptr;
+    ReplaceLogger();
+    Log();
+    CHECK_PROCID("-");
+}
+
+TEST(SolidSyslog, ProcIdFromGetProcIdAppearsInMessage)
+{
+    StringFake_SetProcId("9999");
+    Log();
+    CHECK_PROCID("9999");
+}
+
+TEST(SolidSyslog, ProcIdIsNotHardCoded)
+{
+    StringFake_SetProcId(TEST_PROCID);
+    Log();
+    CHECK_PROCID(TEST_PROCID);
 }
 
 TEST(SolidSyslog, MsgIdIs54)
@@ -315,7 +377,7 @@ static void* AlwaysFailAlloc(size_t size)
 
 TEST(SolidSyslog, CreateReturnsNullWhenAllocFails)
 {
-    SolidSyslogConfig failConfig = {SenderSpy_GetSender(), AlwaysFailAlloc, free, nullptr};
+    SolidSyslogConfig failConfig = {SenderSpy_GetSender(), AlwaysFailAlloc, free, nullptr, nullptr, nullptr, nullptr};
     SolidSyslog*      result     = SolidSyslog_Create(&failConfig);
     POINTERS_EQUAL(nullptr, result);
 }
@@ -347,8 +409,7 @@ TEST_GROUP_BASE(SolidSyslogTimestamp, TEST_GROUP_CppUTestGroupSolidSyslog)
         TEST_GROUP_CppUTestGroupSolidSyslog::setup();
         stubTimestamp = {TEST_YEAR, TEST_MONTH, TEST_DAY, TEST_HOUR, TEST_MINUTE, TEST_SECOND, TEST_MICROSECOND, TEST_UTC_OFFSET};
         config.clock = StubClock;
-        SolidSyslog_Destroy(logger);
-        logger = SolidSyslog_Create(&config);
+        ReplaceLogger();
     }
 };
 
@@ -357,8 +418,7 @@ TEST_GROUP_BASE(SolidSyslogTimestamp, TEST_GROUP_CppUTestGroupSolidSyslog)
 TEST(SolidSyslogTimestamp, NullClockProducesNilvalue)
 {
     config.clock = nullptr;
-    SolidSyslog_Destroy(logger);
-    logger = SolidSyslog_Create(&config);
+    ReplaceLogger();
     Log();
     CHECK_TIMESTAMP_IS_NILVALUE();
 }
@@ -649,6 +709,97 @@ TEST(SolidSyslogTimestamp, UtcOffsetMinus721ProducesNilvalue)
     stubTimestamp.utcOffsetMinutes = -721;
     Log();
     CHECK_TIMESTAMP_IS_NILVALUE();
+}
+
+TEST(SolidSyslog, HostnameAt255CharsIsAccepted)
+{
+    std::string longHostname(255, 'H');
+    StringFake_SetHostname(longHostname.c_str());
+    Log();
+    CHECK_HOSTNAME(longHostname.c_str());
+}
+
+TEST(SolidSyslog, HostnameAt256CharsIsTruncatedTo255)
+{
+    std::string longHostname(256, 'H');
+    StringFake_SetHostname(longHostname.c_str());
+    Log();
+    std::string expected(255, 'H');
+    CHECK_HOSTNAME(expected.c_str());
+}
+
+TEST(SolidSyslog, AppNameAt48CharsIsAccepted)
+{
+    std::string longAppName(48, 'A');
+    StringFake_SetAppName(longAppName.c_str());
+    Log();
+    CHECK_APP_NAME(longAppName.c_str());
+}
+
+TEST(SolidSyslog, AppNameAt49CharsIsTruncatedTo48)
+{
+    std::string longAppName(49, 'A');
+    StringFake_SetAppName(longAppName.c_str());
+    Log();
+    std::string expected(48, 'A');
+    CHECK_APP_NAME(expected.c_str());
+}
+
+TEST(SolidSyslog, ProcIdAt128CharsIsAccepted)
+{
+    std::string longProcId(128, 'P');
+    StringFake_SetProcId(longProcId.c_str());
+    Log();
+    CHECK_PROCID(longProcId.c_str());
+}
+
+TEST(SolidSyslog, ProcIdAt129CharsIsTruncatedTo128)
+{
+    std::string longProcId(129, 'P');
+    StringFake_SetProcId(longProcId.c_str());
+    Log();
+    std::string expected(128, 'P');
+    CHECK_PROCID(expected.c_str());
+}
+
+TEST(SolidSyslog, AllFieldsAtMaxLengthProducesValidMessage)
+{
+    std::string maxHostname(255, 'H');
+    std::string maxAppName(48, 'A');
+    std::string maxProcId(128, 'P');
+    StringFake_SetHostname(maxHostname.c_str());
+    StringFake_SetAppName(maxAppName.c_str());
+    StringFake_SetProcId(maxProcId.c_str());
+    stubTimestamp = {9999, 12, 31, 23, 59, 59, 999999, 840};
+    config.clock  = StubClock;
+    ReplaceLogger();
+    Log(SOLIDSYSLOG_FACILITY_LOCAL7, SOLIDSYSLOG_SEVERITY_DEBUG);
+    CHECK_PRIVAL("<191>");
+    CHECK_TIMESTAMP("9999-12-31T23:59:59.999999+14:00");
+    CHECK_HOSTNAME(maxHostname.c_str());
+    CHECK_APP_NAME(maxAppName.c_str());
+    CHECK_PROCID(maxProcId.c_str());
+}
+
+TEST(SolidSyslog, EmptyHostnameProducesNilvalue)
+{
+    StringFake_SetHostname("");
+    Log();
+    CHECK_HOSTNAME("-");
+}
+
+TEST(SolidSyslog, EmptyAppNameProducesNilvalue)
+{
+    StringFake_SetAppName("");
+    Log();
+    CHECK_APP_NAME("-");
+}
+
+TEST(SolidSyslog, EmptyProcIdProducesNilvalue)
+{
+    StringFake_SetProcId("");
+    Log();
+    CHECK_PROCID("-");
 }
 
 IGNORE_TEST(SolidSyslog, HappyPathOnly)

@@ -133,6 +133,8 @@ Headers in `Interface/` are split by audience — each user includes only what t
 | `SolidSyslogSenderDef.h` | Sender implementors (extension point) | `SolidSyslogSender` vtable struct |
 | `SolidSyslogUdpSender.h` | System setup code using UDP transport | `SolidSyslogUdpSender_Create`, `_Destroy` |
 | `SolidSyslogPosixClock.h` | System setup code using POSIX clock | `SolidSyslogPosixClock_GetTimestamp` |
+| `SolidSyslogPosixHostname.h` | System setup code using POSIX hostname | `SolidSyslogPosixHostname_Get` |
+| `SolidSyslogPosixProcId.h` | System setup code using POSIX process ID | `SolidSyslogPosixProcId_Get` |
 
 Most application code only needs `SolidSyslog.h` — it never sees allocators, senders, or config structs.
 

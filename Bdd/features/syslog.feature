@@ -7,8 +7,8 @@ Feature: Walking skeleton end-to-end
     When the example program sends a syslog message
     Then syslog-ng receives a message with priority "134"
     And syslog-ng receives a message with a timestamp within 5 seconds of now
-    And the hostname is "TestHost"
-    And the app name is "TestApp"
-    And the process ID is "42"
+    And syslog-ng receives a message with the system hostname
+    And the app name is "SolidSyslogExample"
+    And syslog-ng receives a message with the process ID of the example program
     And the message ID is "54"
     And the message is "hello world"

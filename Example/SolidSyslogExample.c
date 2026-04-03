@@ -1,10 +1,28 @@
 #include "SolidSyslog.h"
 #include "SolidSyslogConfig.h"
 #include "SolidSyslogPosixClock.h"
+#include "SolidSyslogPosixHostname.h"
+#include "SolidSyslogPosixProcId.h"
 #include "SolidSyslogUdpSender.h"
 
 #include <getopt.h>
 #include <stdlib.h>
+#include <string.h>
+
+static const char* appName;
+
+static int GetAppName(char* buffer, size_t size)
+{
+    size_t len = strlen(appName);
+    if (len >= size)
+    {
+        len = size - 1;
+    }
+    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memcpy with bounded len; memcpy_s is not portable
+    memcpy(buffer, appName, len);
+    buffer[len] = '\0';
+    return (int) len;
+}
 
 static const char* GetHost(void)
 {
@@ -18,6 +36,9 @@ static int GetPort(void)
 
 int main(int argc, char* argv[])
 {
+    const char* slash = strrchr(argv[0], '/');
+    appName           = (slash != NULL) ? slash + 1 : argv[0];
+
     enum SolidSyslog_Facility facility = SOLIDSYSLOG_FACILITY_LOCAL0;
     enum SolidSyslog_Severity severity = SOLIDSYSLOG_SEVERITY_INFO;
 
@@ -50,10 +71,13 @@ int main(int argc, char* argv[])
     struct SolidSyslogSender* sender = SolidSyslogUdpSender_Create(&udpConfig);
 
     struct SolidSyslogConfig config = {
-        .sender = sender,
-        .alloc  = malloc,
-        .free   = free,
-        .clock  = SolidSyslogPosixClock_GetTimestamp,
+        .sender      = sender,
+        .alloc       = malloc,
+        .free        = free,
+        .clock       = SolidSyslogPosixClock_GetTimestamp,
+        .getHostname = SolidSyslogPosixHostname_Get,
+        .getAppName  = GetAppName,
+        .getProcId   = SolidSyslogPosixProcId_Get,
     };
     struct SolidSyslog* logger = SolidSyslog_Create(&config);
 

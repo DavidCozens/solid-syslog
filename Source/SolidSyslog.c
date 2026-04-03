@@ -4,22 +4,32 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdio.h>
 
 enum
 {
-    SOLIDSYSLOG_MAX_MESSAGE_SIZE   = 128,
+    SOLIDSYSLOG_MAX_APP_NAME_SIZE  = 49,
+    SOLIDSYSLOG_MAX_HOSTNAME_SIZE  = 256,
+    SOLIDSYSLOG_MAX_PROCID_SIZE    = 129,
+    SOLIDSYSLOG_MAX_MESSAGE_SIZE   = 512,
     SOLIDSYSLOG_MAX_TIMESTAMP_SIZE = 33
 };
 
 static inline uint8_t CombineFacilityAndSeverity(uint8_t facility, uint8_t severity);
 static inline bool    CaptureTimestamp(struct SolidSyslogTimestamp* ts, SolidSyslogClockFunction clock);
 static inline bool    FacilityIsValid(uint8_t facility);
-static inline int     FormatMessage(char* buffer, size_t size, const struct SolidSyslogMessage* message, SolidSyslogClockFunction clock);
+static inline int     FormatMessage(const struct SolidSyslog* self, char* buffer, size_t size, const struct SolidSyslogMessage* message);
 static inline bool    TimestampIsValid(const struct SolidSyslogTimestamp* ts);
 static inline int     FormatCapturedTimestamp(char* buffer, const struct SolidSyslogTimestamp* ts);
 static inline int     FormatCharacter(char* buffer, char value);
+static inline int     FormatAppName(char* buffer, SolidSyslogStringFunction getAppName);
+static inline int     FormatHostname(char* buffer, SolidSyslogStringFunction getHostname);
+static inline int     FormatNilvalue(char* buffer);
 static inline int     FormatMicrosecond(char* buffer, uint32_t value);
+static inline int     FormatProcId(char* buffer, SolidSyslogStringFunction getProcId);
+static inline int     FormatPrival(char* buffer, uint8_t prival);
+static inline int     FormatVersion(char* buffer);
+static inline int     FormatSpace(char* buffer);
+static inline int     FormatString(char* buffer, const char* source);
 static inline int     FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFunction clock);
 static inline int     FormatTwoDigit(char* buffer, uint8_t value);
 static inline int16_t AbsoluteInt16(int16_t value);
@@ -38,6 +48,9 @@ struct SolidSyslog
     struct SolidSyslogSender* sender;
     SolidSyslogFreeFunction   free;
     SolidSyslogClockFunction  clock;
+    SolidSyslogStringFunction getHostname;
+    SolidSyslogStringFunction getAppName;
+    SolidSyslogStringFunction getProcId;
 };
 
 struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config)
@@ -45,9 +58,12 @@ struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config)
     struct SolidSyslog* instance = config->alloc(sizeof(struct SolidSyslog));
     if (instance != NULL)
     {
-        instance->sender = config->sender;
-        instance->free   = config->free;
-        instance->clock  = config->clock;
+        instance->sender      = config->sender;
+        instance->free        = config->free;
+        instance->clock       = config->clock;
+        instance->getHostname = config->getHostname;
+        instance->getAppName  = config->getAppName;
+        instance->getProcId   = config->getProcId;
     }
     return instance;
 }
@@ -60,17 +76,28 @@ void SolidSyslog_Destroy(struct SolidSyslog* logger)
 void SolidSyslog_Log(struct SolidSyslog* logger, const struct SolidSyslogMessage* message)
 {
     char buffer[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
-    int  len = FormatMessage(buffer, sizeof(buffer), message, logger->clock);
+    int  len = FormatMessage(logger, buffer, sizeof(buffer), message);
     SolidSyslogSender_Send(logger->sender, buffer, (size_t) len);
 }
 
-static inline int FormatMessage(char* buffer, size_t size, const struct SolidSyslogMessage* message, SolidSyslogClockFunction clock)
+static inline int FormatMessage(const struct SolidSyslog* self, char* buffer, size_t size, const struct SolidSyslogMessage* message)
 {
-    uint8_t prival = MakePrival(message);
-    char    timestamp[SOLIDSYSLOG_MAX_TIMESTAMP_SIZE];
-    FormatTimestamp(timestamp, sizeof(timestamp), clock);
-    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- snprintf is bounded; snprintf_s is not portable
-    return snprintf(buffer, size, "<%d>1 %s TestHost TestApp 42 54 - hello world", prival, timestamp);
+    (void) size;
+    int len = 0;
+
+    len += FormatPrival(buffer + len, MakePrival(message));
+    len += FormatVersion(buffer + len);
+    len += FormatSpace(buffer + len);
+    len += FormatTimestamp(buffer + len, SOLIDSYSLOG_MAX_TIMESTAMP_SIZE, self->clock);
+    len += FormatSpace(buffer + len);
+    len += FormatHostname(buffer + len, self->getHostname);
+    len += FormatSpace(buffer + len);
+    len += FormatAppName(buffer + len, self->getAppName);
+    len += FormatSpace(buffer + len);
+    len += FormatProcId(buffer + len, self->getProcId);
+    len += FormatString(buffer + len, " 54 - hello world");
+
+    return len;
 }
 
 static inline int FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFunction clock)
@@ -86,7 +113,7 @@ static inline int FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFun
     }
     else
     {
-        len = FormatCharacter(buffer, '-');
+        len = FormatNilvalue(buffer);
     }
 
     return len;
@@ -147,6 +174,103 @@ static inline int FormatCharacter(char* buffer, char value)
     buffer[0] = value;
     buffer[1] = '\0';
     return 1;
+}
+
+static inline int FormatNilvalue(char* buffer)
+{
+    return FormatCharacter(buffer, '-');
+}
+
+static inline int FormatHostname(char* buffer, SolidSyslogStringFunction getHostname)
+{
+    int len = 0;
+
+    if (getHostname != NULL)
+    {
+        len = getHostname(buffer, SOLIDSYSLOG_MAX_HOSTNAME_SIZE);
+    }
+
+    if (len == 0)
+    {
+        len = FormatNilvalue(buffer);
+    }
+
+    return len;
+}
+
+static inline int FormatProcId(char* buffer, SolidSyslogStringFunction getProcId)
+{
+    int len = 0;
+
+    if (getProcId != NULL)
+    {
+        len = getProcId(buffer, SOLIDSYSLOG_MAX_PROCID_SIZE);
+    }
+
+    if (len == 0)
+    {
+        len = FormatNilvalue(buffer);
+    }
+
+    return len;
+}
+
+static inline int FormatAppName(char* buffer, SolidSyslogStringFunction getAppName)
+{
+    int len = 0;
+
+    if (getAppName != NULL)
+    {
+        len = getAppName(buffer, SOLIDSYSLOG_MAX_APP_NAME_SIZE);
+    }
+
+    if (len == 0)
+    {
+        len = FormatNilvalue(buffer);
+    }
+
+    return len;
+}
+
+static inline int FormatPrival(char* buffer, uint8_t prival)
+{
+    int len = 0;
+
+    len += FormatCharacter(buffer + len, '<');
+    if (prival >= 100U)
+    {
+        len += FormatCharacter(buffer + len, (char) ('0' + (prival / 100U)));
+    }
+    if (prival >= 10U)
+    {
+        len += FormatCharacter(buffer + len, (char) ('0' + ((prival / 10U) % 10U)));
+    }
+    len += FormatCharacter(buffer + len, (char) ('0' + (prival % 10U)));
+    len += FormatCharacter(buffer + len, '>');
+
+    return len;
+}
+
+static inline int FormatSpace(char* buffer)
+{
+    return FormatCharacter(buffer, ' ');
+}
+
+static inline int FormatVersion(char* buffer)
+{
+    return FormatCharacter(buffer, '1');
+}
+
+static inline int FormatString(char* buffer, const char* source)
+{
+    int len = 0;
+    while (source[len] != '\0')
+    {
+        buffer[len] = source[len];
+        len++;
+    }
+    buffer[len] = '\0';
+    return len;
 }
 
 static inline int FormatYear(char* buffer, uint16_t value)

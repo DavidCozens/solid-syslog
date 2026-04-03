@@ -1,5 +1,6 @@
 import os
 import re
+import socket
 import subprocess
 import time
 from datetime import datetime, timezone
@@ -63,14 +64,16 @@ def run_example(context, extra_args=None):
     if extra_args:
         cmd.extend(extra_args)
 
-    result = subprocess.run(
+    process = subprocess.Popen(
         cmd,
-        capture_output=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         text=True,
-        timeout=10,
     )
-    assert result.returncode == 0, (
-        f"Example binary failed: {result.stderr}"
+    context.example_pid = process.pid
+    stdout, stderr = process.communicate(timeout=10)
+    assert process.returncode == 0, (
+        f"Example binary failed: {stderr}"
     )
 
     # Wait for syslog-ng to flush a new line to disk
@@ -115,6 +118,22 @@ def step_check_timestamp_within(context, seconds):
     delta = abs((now - received).total_seconds())
     assert delta <= seconds, (
         f"Timestamp {raw} is {delta:.1f}s from now, expected within {seconds}s"
+    )
+
+
+@then("syslog-ng receives a message with the system hostname")
+def step_check_system_hostname(context):
+    expected = socket.gethostname()
+    assert context.fields["HOSTNAME"] == expected, (
+        f"Expected hostname {expected}, got {context.fields.get('HOSTNAME')}"
+    )
+
+
+@then("syslog-ng receives a message with the process ID of the example program")
+def step_check_example_pid(context):
+    expected = str(context.example_pid)
+    assert context.fields["PROCID"] == expected, (
+        f"Expected PID {expected}, got {context.fields.get('PROCID')}"
     )
 
 

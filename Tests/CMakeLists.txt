@@ -3,6 +3,8 @@ set(TEST_SOURCES
     SolidSyslogPrivalTest.cpp
     SenderSpyTest.cpp
     SenderSpy.c
+    StringFakeTest.cpp
+    StringFake.c
     main.cpp
 )
 
