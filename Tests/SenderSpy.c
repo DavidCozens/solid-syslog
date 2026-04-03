@@ -5,7 +5,7 @@
 
 enum
 {
-    SENDERSPY_MAX_BUFFER_SIZE = 256
+    SENDERSPY_MAX_BUFFER_SIZE = 1024
 };
 
 static int                      callCount;

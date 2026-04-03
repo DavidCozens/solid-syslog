@@ -708,6 +708,97 @@ TEST(SolidSyslogTimestamp, UtcOffsetMinus721ProducesNilvalue)
     CHECK_TIMESTAMP_IS_NILVALUE();
 }
 
+TEST(SolidSyslog, HostnameAt255CharsIsAccepted)
+{
+    std::string longHostname(255, 'H');
+    StringFake_SetHostname(longHostname.c_str());
+    Log();
+    CHECK_HOSTNAME(longHostname.c_str());
+}
+
+TEST(SolidSyslog, HostnameAt256CharsIsTruncatedTo255)
+{
+    std::string longHostname(256, 'H');
+    StringFake_SetHostname(longHostname.c_str());
+    Log();
+    std::string expected(255, 'H');
+    CHECK_HOSTNAME(expected.c_str());
+}
+
+TEST(SolidSyslog, AppNameAt48CharsIsAccepted)
+{
+    std::string longAppName(48, 'A');
+    StringFake_SetAppName(longAppName.c_str());
+    Log();
+    CHECK_APP_NAME(longAppName.c_str());
+}
+
+TEST(SolidSyslog, AppNameAt49CharsIsTruncatedTo48)
+{
+    std::string longAppName(49, 'A');
+    StringFake_SetAppName(longAppName.c_str());
+    Log();
+    std::string expected(48, 'A');
+    CHECK_APP_NAME(expected.c_str());
+}
+
+TEST(SolidSyslog, ProcIdAt128CharsIsAccepted)
+{
+    std::string longProcId(128, 'P');
+    StringFake_SetProcId(longProcId.c_str());
+    Log();
+    CHECK_PROCID(longProcId.c_str());
+}
+
+TEST(SolidSyslog, ProcIdAt129CharsIsTruncatedTo128)
+{
+    std::string longProcId(129, 'P');
+    StringFake_SetProcId(longProcId.c_str());
+    Log();
+    std::string expected(128, 'P');
+    CHECK_PROCID(expected.c_str());
+}
+
+TEST(SolidSyslog, AllFieldsAtMaxLengthProducesValidMessage)
+{
+    std::string maxHostname(255, 'H');
+    std::string maxAppName(48, 'A');
+    std::string maxProcId(128, 'P');
+    StringFake_SetHostname(maxHostname.c_str());
+    StringFake_SetAppName(maxAppName.c_str());
+    StringFake_SetProcId(maxProcId.c_str());
+    stubTimestamp = {9999, 12, 31, 23, 59, 59, 999999, 840};
+    config.clock  = StubClock;
+    ReplaceLogger();
+    Log(SOLIDSYSLOG_FACILITY_LOCAL7, SOLIDSYSLOG_SEVERITY_DEBUG);
+    CHECK_PRIVAL("<191>");
+    CHECK_TIMESTAMP("9999-12-31T23:59:59.999999+14:00");
+    CHECK_HOSTNAME(maxHostname.c_str());
+    CHECK_APP_NAME(maxAppName.c_str());
+    CHECK_PROCID(maxProcId.c_str());
+}
+
+TEST(SolidSyslog, EmptyHostnameProducesNilvalue)
+{
+    StringFake_SetHostname("");
+    Log();
+    CHECK_HOSTNAME("-");
+}
+
+TEST(SolidSyslog, EmptyAppNameProducesNilvalue)
+{
+    StringFake_SetAppName("");
+    Log();
+    CHECK_APP_NAME("-");
+}
+
+TEST(SolidSyslog, EmptyProcIdProducesNilvalue)
+{
+    StringFake_SetProcId("");
+    Log();
+    CHECK_PROCID("-");
+}
+
 IGNORE_TEST(SolidSyslog, HeaderFieldsTestList)
 {
     // S1.4 — Hostname, AppName, ProcId (Story #19)

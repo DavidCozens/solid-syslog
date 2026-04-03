@@ -189,7 +189,8 @@ static inline int FormatHostname(char* buffer, SolidSyslogStringFunction getHost
     {
         len = getHostname(buffer, SOLIDSYSLOG_MAX_HOSTNAME_SIZE);
     }
-    else
+
+    if (len == 0)
     {
         len = FormatNilvalue(buffer);
     }
@@ -205,7 +206,8 @@ static inline int FormatProcId(char* buffer, SolidSyslogStringFunction getProcId
     {
         len = getProcId(buffer, SOLIDSYSLOG_MAX_PROCID_SIZE);
     }
-    else
+
+    if (len == 0)
     {
         len = FormatNilvalue(buffer);
     }
@@ -221,7 +223,8 @@ static inline int FormatAppName(char* buffer, SolidSyslogStringFunction getAppNa
     {
         len = getAppName(buffer, SOLIDSYSLOG_MAX_APP_NAME_SIZE);
     }
-    else
+
+    if (len == 0)
     {
         len = FormatNilvalue(buffer);
     }
