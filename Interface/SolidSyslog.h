@@ -13,6 +13,7 @@ EXTERN_C_BEGIN
         enum SolidSyslog_Facility facility;
         enum SolidSyslog_Severity severity;
         const char*               messageId;
+        const char*               msg;
     };
 
     void SolidSyslog_Log(struct SolidSyslog * logger, const struct SolidSyslogMessage* message);

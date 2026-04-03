@@ -135,7 +135,7 @@ TEST_GROUP(SolidSyslog)
         StringFake_Reset();
         config = {SenderSpy_GetSender(), malloc, free, nullptr, StringFake_GetHostname, StringFake_GetAppName, StringFake_GetProcId};
         logger = SolidSyslog_Create(&config);
-        message = {SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO, nullptr};
+        message = {SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO, nullptr, nullptr};
     }
 
     void teardown() override
@@ -397,7 +397,34 @@ TEST(SolidSyslog, StructuredDataIsNilValue)
     STRCMP_EQUAL(TEST_SDATA, SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
 }
 
-TEST(SolidSyslog, MsgIsHelloWorld)
+TEST(SolidSyslog, NullMessageOmitsMsgField)
+{
+    Log();
+    STRCMP_EQUAL("", SyslogMsg(LastMessage()).c_str());
+}
+
+TEST(SolidSyslog, MessageBodyAppearsInMessage)
+{
+    message.msg = "system started";
+    Log();
+    STRCMP_EQUAL("system started", SyslogMsg(LastMessage()).c_str());
+}
+
+TEST(SolidSyslog, EmptyMessageOmitsMsgField)
+{
+    message.msg = "";
+    Log();
+    STRCMP_EQUAL("", SyslogMsg(LastMessage()).c_str());
+}
+
+TEST(SolidSyslog, MessageBodyIsNotHardCoded)
+{
+    message.msg = TEST_MSG;
+    Log();
+    STRCMP_EQUAL(TEST_MSG, SyslogMsg(LastMessage()).c_str());
+}
+
+IGNORE_TEST(SolidSyslog, MsgIsHelloWorld)
 {
     Log();
     STRCMP_EQUAL(TEST_MSG, SyslogMsg(LastMessage()).c_str());

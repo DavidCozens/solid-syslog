@@ -25,6 +25,7 @@ static inline int     FormatCharacter(char* buffer, char value);
 static inline int     FormatAppName(char* buffer, SolidSyslogStringFunction getAppName);
 static inline int     FormatHostname(char* buffer, SolidSyslogStringFunction getHostname);
 static inline int     FormatBoundedString(char* buffer, const char* source, size_t maxLength);
+static inline int     FormatMsg(char* buffer, const char* msg);
 static inline int     FormatMsgId(char* buffer, const char* messageId);
 static inline int     FormatNilvalue(char* buffer);
 static inline int     FormatMicrosecond(char* buffer, uint32_t value);
@@ -33,6 +34,7 @@ static inline int     FormatPrival(char* buffer, uint8_t prival);
 static inline int     FormatVersion(char* buffer);
 static inline int     FormatSpace(char* buffer);
 static inline int     FormatString(char* buffer, const char* source);
+static inline int     FormatStructuredData(char* buffer);
 static inline int     FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFunction clock);
 static inline int     FormatTwoDigit(char* buffer, uint8_t value);
 static inline int16_t AbsoluteInt16(int16_t value);
@@ -101,7 +103,9 @@ static inline int FormatMessage(const struct SolidSyslog* self, char* buffer, si
     len += FormatProcId(buffer + len, self->getProcId);
     len += FormatSpace(buffer + len);
     len += FormatMsgId(buffer + len, message->messageId);
-    len += FormatString(buffer + len, " - hello world");
+    len += FormatSpace(buffer + len);
+    len += FormatStructuredData(buffer + len);
+    len += FormatMsg(buffer + len, message->msg);
 
     return len;
 }
@@ -180,6 +184,19 @@ static inline int FormatCharacter(char* buffer, char value)
     buffer[0] = value;
     buffer[1] = '\0';
     return 1;
+}
+
+static inline int FormatMsg(char* buffer, const char* msg)
+{
+    int len = 0;
+
+    if (StringIsValid(msg))
+    {
+        len += FormatSpace(buffer + len);
+        len += FormatString(buffer + len, msg);
+    }
+
+    return len;
 }
 
 static inline int FormatMsgId(char* buffer, const char* messageId)
@@ -294,6 +311,11 @@ static inline int FormatBoundedString(char* buffer, const char* source, size_t m
     }
     buffer[len] = '\0';
     return len;
+}
+
+static inline int FormatStructuredData(char* buffer)
+{
+    return FormatNilvalue(buffer);
 }
 
 static inline int FormatString(char* buffer, const char* source)
