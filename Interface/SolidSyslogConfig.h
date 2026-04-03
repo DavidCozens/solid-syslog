@@ -9,7 +9,7 @@ EXTERN_C_BEGIN
 
     struct SolidSyslogSender;
 
-    typedef int (*SolidSyslogStringFunction)(char* buffer, size_t size);
+    typedef size_t (*SolidSyslogStringFunction)(char* buffer, size_t size);
 
     struct SolidSyslogConfig
     {

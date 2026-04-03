@@ -5,7 +5,7 @@
 
 EXTERN_C_BEGIN
 
-    int SolidSyslogPosixProcId_Get(char* buffer, size_t size);
+    size_t SolidSyslogPosixProcId_Get(char* buffer, size_t size);
 
 EXTERN_C_END
 

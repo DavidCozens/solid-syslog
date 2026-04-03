@@ -3,7 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 
-int SolidSyslogPosixHostname_Get(char* buffer, size_t size)
+size_t SolidSyslogPosixHostname_Get(char* buffer, size_t size)
 {
     if (gethostname(buffer, size) != 0)
     {
@@ -12,5 +12,5 @@ int SolidSyslogPosixHostname_Get(char* buffer, size_t size)
     }
 
     buffer[size - 1] = '\0';
-    return (int) strlen(buffer);
+    return strlen(buffer);
 }
