@@ -76,6 +76,8 @@ static const int TIMESTAMP_OFFSET_OFFSET       = 26;
 
 #define CHECK_TIMESTAMP_IS_NILVALUE() STRCMP_EQUAL("-", SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str())
 
+#define CHECK_HOSTNAME(expected) STRCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_HOSTNAME).c_str())
+
 // NOLINTEND(cppcoreguidelines-macro-usage)
 
 static std::string SyslogField(const char* buffer, int n)
@@ -122,13 +124,19 @@ TEST_GROUP(SolidSyslog)
     void setup() override
     {
         SenderSpy_Reset();
-        config = {SenderSpy_GetSender(), malloc, free, nullptr};
+        config = {SenderSpy_GetSender(), malloc, free, nullptr, nullptr};
         logger = SolidSyslog_Create(&config);
     }
 
     void teardown() override
     {
         SolidSyslog_Destroy(logger);
+    }
+
+    void ReplaceLogger()
+    {
+        SolidSyslog_Destroy(logger);
+        logger = SolidSyslog_Create(&config);
     }
 
     void Log() const
@@ -181,7 +189,7 @@ TEST(SolidSyslog, TwoCreatesReturnDifferentHandles)
 
 TEST(SolidSyslog, EachLoggerSendsThroughItsOwnSender)
 {
-    SolidSyslogConfig secondConfig = {SenderSpy_GetSender(), malloc, free, nullptr};
+    SolidSyslogConfig secondConfig = {SenderSpy_GetSender(), malloc, free, nullptr, nullptr};
     SolidSyslog*      second       = SolidSyslog_Create(&secondConfig);
 
     struct SolidSyslogMessage message = {SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO};
@@ -271,7 +279,21 @@ TEST(SolidSyslog, VersionIs1)
     BYTES_EQUAL('1', header.at(closingBracket + 1));
 }
 
-TEST(SolidSyslog, HostnameIsTestHost)
+TEST(SolidSyslog, NullGetHostnameProducesNilvalue)
+{
+    config.getHostname = nullptr;
+    ReplaceLogger();
+    Log();
+    CHECK_HOSTNAME("-");
+}
+
+TEST(SolidSyslog, HostnameFromGetHostnameAppearsInMessage)
+{
+    Log();
+    CHECK_HOSTNAME("MyHost");
+}
+
+IGNORE_TEST(SolidSyslog, HostnameIsTestHost)
 {
     Log();
     STRCMP_EQUAL(TEST_HOSTNAME, SyslogField(LastMessage(), SYSLOG_FIELD_HOSTNAME).c_str());
@@ -315,7 +337,7 @@ static void* AlwaysFailAlloc(size_t size)
 
 TEST(SolidSyslog, CreateReturnsNullWhenAllocFails)
 {
-    SolidSyslogConfig failConfig = {SenderSpy_GetSender(), AlwaysFailAlloc, free, nullptr};
+    SolidSyslogConfig failConfig = {SenderSpy_GetSender(), AlwaysFailAlloc, free, nullptr, nullptr};
     SolidSyslog*      result     = SolidSyslog_Create(&failConfig);
     POINTERS_EQUAL(nullptr, result);
 }
@@ -347,8 +369,7 @@ TEST_GROUP_BASE(SolidSyslogTimestamp, TEST_GROUP_CppUTestGroupSolidSyslog)
         TEST_GROUP_CppUTestGroupSolidSyslog::setup();
         stubTimestamp = {TEST_YEAR, TEST_MONTH, TEST_DAY, TEST_HOUR, TEST_MINUTE, TEST_SECOND, TEST_MICROSECOND, TEST_UTC_OFFSET};
         config.clock = StubClock;
-        SolidSyslog_Destroy(logger);
-        logger = SolidSyslog_Create(&config);
+        ReplaceLogger();
     }
 };
 
@@ -357,8 +378,7 @@ TEST_GROUP_BASE(SolidSyslogTimestamp, TEST_GROUP_CppUTestGroupSolidSyslog)
 TEST(SolidSyslogTimestamp, NullClockProducesNilvalue)
 {
     config.clock = nullptr;
-    SolidSyslog_Destroy(logger);
-    logger = SolidSyslog_Create(&config);
+    ReplaceLogger();
     Log();
     CHECK_TIMESTAMP_IS_NILVALUE();
 }

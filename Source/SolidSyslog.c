@@ -8,6 +8,7 @@
 
 enum
 {
+    SOLIDSYSLOG_MAX_HOSTNAME_SIZE  = 256,
     SOLIDSYSLOG_MAX_MESSAGE_SIZE   = 128,
     SOLIDSYSLOG_MAX_TIMESTAMP_SIZE = 33
 };
@@ -15,7 +16,8 @@ enum
 static inline uint8_t CombineFacilityAndSeverity(uint8_t facility, uint8_t severity);
 static inline bool    CaptureTimestamp(struct SolidSyslogTimestamp* ts, SolidSyslogClockFunction clock);
 static inline bool    FacilityIsValid(uint8_t facility);
-static inline int     FormatMessage(char* buffer, size_t size, const struct SolidSyslogMessage* message, SolidSyslogClockFunction clock);
+static inline int     FormatMessage(char* buffer, size_t size, const struct SolidSyslogMessage* message, SolidSyslogClockFunction clock,
+                                    SolidSyslogStringFunction getHostname);
 static inline bool    TimestampIsValid(const struct SolidSyslogTimestamp* ts);
 static inline int     FormatCapturedTimestamp(char* buffer, const struct SolidSyslogTimestamp* ts);
 static inline int     FormatCharacter(char* buffer, char value);
@@ -38,6 +40,7 @@ struct SolidSyslog
     struct SolidSyslogSender* sender;
     SolidSyslogFreeFunction   free;
     SolidSyslogClockFunction  clock;
+    SolidSyslogStringFunction getHostname;
 };
 
 struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config)
@@ -45,9 +48,10 @@ struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config)
     struct SolidSyslog* instance = config->alloc(sizeof(struct SolidSyslog));
     if (instance != NULL)
     {
-        instance->sender = config->sender;
-        instance->free   = config->free;
-        instance->clock  = config->clock;
+        instance->sender      = config->sender;
+        instance->free        = config->free;
+        instance->clock       = config->clock;
+        instance->getHostname = config->getHostname;
     }
     return instance;
 }
@@ -60,17 +64,29 @@ void SolidSyslog_Destroy(struct SolidSyslog* logger)
 void SolidSyslog_Log(struct SolidSyslog* logger, const struct SolidSyslogMessage* message)
 {
     char buffer[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
-    int  len = FormatMessage(buffer, sizeof(buffer), message, logger->clock);
+    int  len = FormatMessage(buffer, sizeof(buffer), message, logger->clock, logger->getHostname);
     SolidSyslogSender_Send(logger->sender, buffer, (size_t) len);
 }
 
-static inline int FormatMessage(char* buffer, size_t size, const struct SolidSyslogMessage* message, SolidSyslogClockFunction clock)
+static inline int FormatMessage(char* buffer, size_t size, const struct SolidSyslogMessage* message, SolidSyslogClockFunction clock,
+                                SolidSyslogStringFunction getHostname)
 {
     uint8_t prival = MakePrival(message);
+    char    hostname[SOLIDSYSLOG_MAX_HOSTNAME_SIZE];
     char    timestamp[SOLIDSYSLOG_MAX_TIMESTAMP_SIZE];
+
+    if (getHostname != NULL)
+    {
+        getHostname(hostname, sizeof(hostname));
+    }
+    else
+    {
+        hostname[0] = '-';
+        hostname[1] = '\0';
+    }
     FormatTimestamp(timestamp, sizeof(timestamp), clock);
     // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- snprintf is bounded; snprintf_s is not portable
-    return snprintf(buffer, size, "<%d>1 %s TestHost TestApp 42 54 - hello world", prival, timestamp);
+    return snprintf(buffer, size, "<%d>1 %s %s TestApp 42 54 - hello world", prival, timestamp, hostname);
 }
 
 static inline int FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFunction clock)
