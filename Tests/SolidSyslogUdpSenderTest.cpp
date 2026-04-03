@@ -7,12 +7,12 @@
 #include <netinet/in.h>
 
 // clang-format off
-static const char * const TEST_MESSAGE          = "hello";
-static const size_t       TEST_MESSAGE_LEN      = 5;
-static const char * const TEST_DEFAULT_HOST     = "127.0.0.1";
-static const int          TEST_DEFAULT_PORT     = 514;
-static const int          TEST_ALTERNATE_PORT   = 9999;
-static const size_t       TEST_MAX_MESSAGE_SIZE = 1024;
+static const char* const TEST_MESSAGE          = "hello";
+static const size_t      TEST_MESSAGE_LEN      = 5;
+static const char* const TEST_DEFAULT_HOST     = "127.0.0.1";
+static const int         TEST_DEFAULT_PORT     = 514;
+static const int         TEST_ALTERNATE_PORT   = 9999;
+static const size_t      TEST_MAX_MESSAGE_SIZE = 1024;
 // clang-format on
 
 static int GetDefaultPort()
@@ -219,7 +219,7 @@ TEST(SolidSyslogUdpSenderDestroy, SimpleScenario)
 TEST_GROUP(SolidSyslogUdpSenderConfig)
 {
     // cppcheck-suppress unreadVariable -- assigned in CreateSender and used via SolidSyslogUdpSender_Create; cppcheck does not model CppUTest macros
-    struct SolidSyslogUdpSenderConfig config = {};
+    struct SolidSyslogUdpSenderConfig config = {GetDefaultPort, GetDefaultHost};
     // cppcheck-suppress constVariablePointer -- Send requires non-const self; false positive from macro expansion
     // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
     struct SolidSyslogSender* sender = nullptr;
@@ -236,9 +236,8 @@ TEST_GROUP(SolidSyslogUdpSenderConfig)
         SolidSyslogUdpSender_Destroy(sender);
     }
 
-    void CreateSender(int (*getPort)(), const char* (*getHost)())
+    void CreateSender()
     {
-        config = {getPort, getHost};
         sender = SolidSyslogUdpSender_Create(&config);
     }
 
@@ -252,7 +251,8 @@ TEST_GROUP(SolidSyslogUdpSenderConfig)
 
 TEST(SolidSyslogUdpSenderConfig, GetPortCalledOnCreate)
 {
-    CreateSender(SpyGetPort, GetDefaultHost);
+    config.getPort = SpyGetPort;
+    CreateSender();
     LONGS_EQUAL(1, getPortCallCount);
     Send();
     LONGS_EQUAL(1, getPortCallCount);
@@ -260,14 +260,16 @@ TEST(SolidSyslogUdpSenderConfig, GetPortCalledOnCreate)
 
 TEST(SolidSyslogUdpSenderConfig, SendtoCalledWithConfiguredPort)
 {
-    CreateSender(GetAlternatePort, GetDefaultHost);
+    config.getPort = GetAlternatePort;
+    CreateSender();
     Send();
     LONGS_EQUAL(TEST_ALTERNATE_PORT, SocketSpy_LastPort());
 }
 
 TEST(SolidSyslogUdpSenderConfig, GetHostCalledOnCreate)
 {
-    CreateSender(GetDefaultPort, SpyGetHost);
+    config.getHost = SpyGetHost;
+    CreateSender();
     LONGS_EQUAL(1, getHostCallCount);
     Send();
     LONGS_EQUAL(1, getHostCallCount);
@@ -275,14 +277,15 @@ TEST(SolidSyslogUdpSenderConfig, GetHostCalledOnCreate)
 
 TEST(SolidSyslogUdpSenderConfig, GetAddrInfoCalledWithHostnameFromGetHost)
 {
-    CreateSender(GetDefaultPort, SpyGetHost);
+    config.getHost = SpyGetHost;
+    CreateSender();
     LONGS_EQUAL(1, SocketSpy_GetAddrInfoCallCount());
     STRCMP_EQUAL(TEST_DEFAULT_HOST, SocketSpy_LastGetAddrInfoHostname());
 }
 
 TEST(SolidSyslogUdpSenderConfig, SendtoCalledWithResolvedAddress)
 {
-    CreateSender(GetDefaultPort, GetDefaultHost);
+    CreateSender();
     Send();
     STRCMP_EQUAL(TEST_DEFAULT_HOST, SocketSpy_LastAddrAsString());
 }
