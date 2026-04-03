@@ -6,6 +6,11 @@
 
 EXTERN_C_BEGIN
 
+    enum
+    {
+        SOLIDSYSLOG_MAX_MESSAGE_SIZE = 512
+    };
+
     struct SolidSyslog;
 
     struct SolidSyslogMessage

@@ -11,7 +11,6 @@ enum
     SOLIDSYSLOG_MAX_HOSTNAME_SIZE  = 256,
     SOLIDSYSLOG_MAX_MSGID_SIZE     = 33,
     SOLIDSYSLOG_MAX_PROCID_SIZE    = 129,
-    SOLIDSYSLOG_MAX_MESSAGE_SIZE   = 512,
     SOLIDSYSLOG_MAX_TIMESTAMP_SIZE = 33
 };
 
@@ -25,7 +24,7 @@ static inline int     FormatCharacter(char* buffer, char value);
 static inline int     FormatAppName(char* buffer, SolidSyslogStringFunction getAppName);
 static inline int     FormatHostname(char* buffer, SolidSyslogStringFunction getHostname);
 static inline int     FormatBoundedString(char* buffer, const char* source, size_t maxLength);
-static inline int     FormatMsg(char* buffer, const char* msg);
+static inline int     FormatMsg(char* buffer, const char* msg, size_t remaining);
 static inline int     FormatMsgId(char* buffer, const char* messageId);
 static inline int     FormatNilvalue(char* buffer);
 static inline int     FormatMicrosecond(char* buffer, uint32_t value);
@@ -88,7 +87,6 @@ void SolidSyslog_Log(struct SolidSyslog* logger, const struct SolidSyslogMessage
 
 static inline int FormatMessage(const struct SolidSyslog* self, char* buffer, size_t size, const struct SolidSyslogMessage* message)
 {
-    (void) size;
     int len = 0;
 
     len += FormatPrival(buffer + len, MakePrival(message));
@@ -105,7 +103,7 @@ static inline int FormatMessage(const struct SolidSyslog* self, char* buffer, si
     len += FormatMsgId(buffer + len, message->messageId);
     len += FormatSpace(buffer + len);
     len += FormatStructuredData(buffer + len);
-    len += FormatMsg(buffer + len, message->msg);
+    len += FormatMsg(buffer + len, message->msg, size - (size_t) len);
 
     return len;
 }
@@ -186,14 +184,14 @@ static inline int FormatCharacter(char* buffer, char value)
     return 1;
 }
 
-static inline int FormatMsg(char* buffer, const char* msg)
+static inline int FormatMsg(char* buffer, const char* msg, size_t remaining)
 {
     int len = 0;
 
     if (StringIsValid(msg))
     {
         len += FormatSpace(buffer + len);
-        len += FormatString(buffer + len, msg);
+        len += FormatBoundedString(buffer + len, msg, remaining - (size_t) len);
     }
 
     return len;

@@ -424,6 +424,41 @@ TEST(SolidSyslog, MessageBodyIsNotHardCoded)
     STRCMP_EQUAL(TEST_MSG, SyslogMsg(LastMessage()).c_str());
 }
 
+TEST(SolidSyslog, MessageWithSpacesIsPreserved)
+{
+    message.msg = "hello world with spaces";
+    Log();
+    STRCMP_EQUAL("hello world with spaces", SyslogMsg(LastMessage()).c_str());
+}
+
+TEST(SolidSyslog, MessageFillsRemainingBuffer)
+{
+    std::string header("<134>1 - - - - - - ");
+    std::string longMsg(SOLIDSYSLOG_MAX_MESSAGE_SIZE - header.size(), 'X');
+    message.msg = longMsg.c_str();
+    Log();
+    STRCMP_EQUAL(longMsg.c_str(), SyslogMsg(LastMessage()).c_str());
+}
+
+TEST(SolidSyslog, MessageTruncatedWhenExceedingBuffer)
+{
+    std::string header("<134>1 - - - - - - ");
+    std::string longMsg(SOLIDSYSLOG_MAX_MESSAGE_SIZE - header.size() + 100, 'X');
+    message.msg = longMsg.c_str();
+    Log();
+    std::string expected(SOLIDSYSLOG_MAX_MESSAGE_SIZE - header.size(), 'X');
+    STRCMP_EQUAL(expected.c_str(), SyslogMsg(LastMessage()).c_str());
+}
+
+TEST(SolidSyslog, HugeMessageDoesNotCorruptMemory)
+{
+    std::string hugeMsg(10000, 'Z');
+    message.msg = hugeMsg.c_str();
+    Log();
+    std::string result = SyslogMsg(LastMessage());
+    CHECK(result.size() <= SOLIDSYSLOG_MAX_MESSAGE_SIZE);
+}
+
 IGNORE_TEST(SolidSyslog, MsgIsHelloWorld)
 {
     Log();
