@@ -2,6 +2,7 @@
 #include "SolidSyslog.h"
 #include "SolidSyslogConfig.h"
 #include "SenderSpy.h"
+#include "StringFake.h"
 #include <cstdlib>
 #include <string>
 
@@ -124,7 +125,8 @@ TEST_GROUP(SolidSyslog)
     void setup() override
     {
         SenderSpy_Reset();
-        config = {SenderSpy_GetSender(), malloc, free, nullptr, nullptr};
+        StringFake_Reset();
+        config = {SenderSpy_GetSender(), malloc, free, nullptr, StringFake_GetHostname};
         logger = SolidSyslog_Create(&config);
     }
 
@@ -289,6 +291,7 @@ TEST(SolidSyslog, NullGetHostnameProducesNilvalue)
 
 TEST(SolidSyslog, HostnameFromGetHostnameAppearsInMessage)
 {
+    StringFake_SetHostname("MyHost");
     Log();
     CHECK_HOSTNAME("MyHost");
 }
