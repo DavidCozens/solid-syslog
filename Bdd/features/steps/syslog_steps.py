@@ -106,7 +106,7 @@ def step_example_sends_with_body(context, body):
     run_example(context, ["--message", body])
 
 
-@when('the example program sends a message with message ID "{msgid}" and body "{body}"')
+@when('the example program sends a complete message with message ID "{msgid}" and body "{body}"')
 def step_example_sends_with_msgid_and_body(context, msgid, body):
     run_example(context, ["--msgid", msgid, "--message", body])
 

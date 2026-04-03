@@ -13,7 +13,7 @@ Feature: Message ID and message body
 
   Scenario: Complete RFC 5424 message with all fields
     Given syslog-ng is running
-    When the example program sends a message with message ID "CONN" and body "session opened"
+    When the example program sends a complete message with message ID "CONN" and body "session opened"
     Then syslog-ng receives a message with priority "134"
     And syslog-ng receives a message with a timestamp within 5 seconds of now
     And syslog-ng receives a message with the system hostname
