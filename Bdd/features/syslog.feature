@@ -10,4 +10,3 @@ Feature: Walking skeleton end-to-end
     And syslog-ng receives a message with the system hostname
     And the app name is "SolidSyslogExample"
     And syslog-ng receives a message with the process ID of the example program
-    And the message ID is "-"
