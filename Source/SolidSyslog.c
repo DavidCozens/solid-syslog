@@ -7,6 +7,7 @@
 
 enum
 {
+    SOLIDSYSLOG_MAX_APP_NAME_SIZE  = 49,
     SOLIDSYSLOG_MAX_HOSTNAME_SIZE  = 256,
     SOLIDSYSLOG_MAX_MESSAGE_SIZE   = 128,
     SOLIDSYSLOG_MAX_TIMESTAMP_SIZE = 33
@@ -19,7 +20,9 @@ static inline int     FormatMessage(const struct SolidSyslog* self, char* buffer
 static inline bool    TimestampIsValid(const struct SolidSyslogTimestamp* ts);
 static inline int     FormatCapturedTimestamp(char* buffer, const struct SolidSyslogTimestamp* ts);
 static inline int     FormatCharacter(char* buffer, char value);
+static inline int     FormatAppName(char* buffer, SolidSyslogStringFunction getAppName);
 static inline int     FormatHostname(char* buffer, SolidSyslogStringFunction getHostname);
+static inline int     FormatNilvalue(char* buffer);
 static inline int     FormatMicrosecond(char* buffer, uint32_t value);
 static inline int     FormatPrival(char* buffer, uint8_t prival);
 static inline int     FormatVersion(char* buffer);
@@ -44,6 +47,7 @@ struct SolidSyslog
     SolidSyslogFreeFunction   free;
     SolidSyslogClockFunction  clock;
     SolidSyslogStringFunction getHostname;
+    SolidSyslogStringFunction getAppName;
 };
 
 struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config)
@@ -55,6 +59,7 @@ struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config)
         instance->free        = config->free;
         instance->clock       = config->clock;
         instance->getHostname = config->getHostname;
+        instance->getAppName  = config->getAppName;
     }
     return instance;
 }
@@ -82,7 +87,9 @@ static inline int FormatMessage(const struct SolidSyslog* self, char* buffer, si
     len += FormatTimestamp(buffer + len, SOLIDSYSLOG_MAX_TIMESTAMP_SIZE, self->clock);
     len += FormatSpace(buffer + len);
     len += FormatHostname(buffer + len, self->getHostname);
-    len += FormatString(buffer + len, " TestApp 42 54 - hello world");
+    len += FormatSpace(buffer + len);
+    len += FormatAppName(buffer + len, self->getAppName);
+    len += FormatString(buffer + len, " 42 54 - hello world");
 
     return len;
 }
@@ -100,7 +107,7 @@ static inline int FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFun
     }
     else
     {
-        len = FormatCharacter(buffer, '-');
+        len = FormatNilvalue(buffer);
     }
 
     return len;
@@ -163,6 +170,11 @@ static inline int FormatCharacter(char* buffer, char value)
     return 1;
 }
 
+static inline int FormatNilvalue(char* buffer)
+{
+    return FormatCharacter(buffer, '-');
+}
+
 static inline int FormatHostname(char* buffer, SolidSyslogStringFunction getHostname)
 {
     int len = 0;
@@ -173,7 +185,23 @@ static inline int FormatHostname(char* buffer, SolidSyslogStringFunction getHost
     }
     else
     {
-        len = FormatCharacter(buffer, '-');
+        len = FormatNilvalue(buffer);
+    }
+
+    return len;
+}
+
+static inline int FormatAppName(char* buffer, SolidSyslogStringFunction getAppName)
+{
+    int len = 0;
+
+    if (getAppName != NULL)
+    {
+        len = getAppName(buffer, SOLIDSYSLOG_MAX_APP_NAME_SIZE);
+    }
+    else
+    {
+        len = FormatNilvalue(buffer);
     }
 
     return len;

@@ -18,6 +18,7 @@ EXTERN_C_BEGIN
         SolidSyslogFreeFunction   free;
         SolidSyslogClockFunction  clock;
         SolidSyslogStringFunction getHostname;
+        SolidSyslogStringFunction getAppName;
     };
 
     struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config);
