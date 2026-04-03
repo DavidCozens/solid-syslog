@@ -11,7 +11,7 @@
 
 static const char* appName;
 
-static int GetAppName(char* buffer, size_t size)
+static size_t GetAppName(char* buffer, size_t size)
 {
     size_t len = strlen(appName);
     if (len >= size)
@@ -21,7 +21,7 @@ static int GetAppName(char* buffer, size_t size)
     // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memcpy with bounded len; memcpy_s is not portable
     memcpy(buffer, appName, len);
     buffer[len] = '\0';
-    return (int) len;
+    return len;
 }
 
 static const char* GetHost(void)

@@ -434,7 +434,8 @@ TEST(SolidSyslog, MessageWithSpacesIsPreserved)
 TEST(SolidSyslog, MessageFillsRemainingBuffer)
 {
     std::string header("<134>1 - - - - - - ");
-    std::string longMsg(SOLIDSYSLOG_MAX_MESSAGE_SIZE - header.size(), 'X');
+    size_t      maxMsg = SOLIDSYSLOG_MAX_MESSAGE_SIZE - header.size() - 1;
+    std::string longMsg(maxMsg, 'X');
     message.msg = longMsg.c_str();
     Log();
     STRCMP_EQUAL(longMsg.c_str(), SyslogMsg(LastMessage()).c_str());
@@ -443,10 +444,11 @@ TEST(SolidSyslog, MessageFillsRemainingBuffer)
 TEST(SolidSyslog, MessageTruncatedWhenExceedingBuffer)
 {
     std::string header("<134>1 - - - - - - ");
-    std::string longMsg(SOLIDSYSLOG_MAX_MESSAGE_SIZE - header.size() + 100, 'X');
+    size_t      maxMsg = SOLIDSYSLOG_MAX_MESSAGE_SIZE - header.size() - 1;
+    std::string longMsg(maxMsg + 100, 'X');
     message.msg = longMsg.c_str();
     Log();
-    std::string expected(SOLIDSYSLOG_MAX_MESSAGE_SIZE - header.size(), 'X');
+    std::string expected(maxMsg, 'X');
     STRCMP_EQUAL(expected.c_str(), SyslogMsg(LastMessage()).c_str());
 }
 
