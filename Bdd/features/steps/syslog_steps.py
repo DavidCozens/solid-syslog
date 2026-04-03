@@ -96,6 +96,21 @@ def step_example_sends_with_facility_severity(context, facility, severity):
     run_example(context, ["--facility", str(facility), "--severity", str(severity)])
 
 
+@when('the example program sends a message with message ID "{msgid}"')
+def step_example_sends_with_msgid(context, msgid):
+    run_example(context, ["--msgid", msgid])
+
+
+@when('the example program sends a message with body "{body}"')
+def step_example_sends_with_body(context, body):
+    run_example(context, ["--message", body])
+
+
+@when('the example program sends a message with message ID "{msgid}" and body "{body}"')
+def step_example_sends_with_msgid_and_body(context, msgid, body):
+    run_example(context, ["--msgid", msgid, "--message", body])
+
+
 @then('syslog-ng receives a message with priority "{priority}"')
 def step_check_priority(context, priority):
     assert context.fields["PRIORITY"] == priority, (
