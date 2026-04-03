@@ -10,13 +10,13 @@ All changes to `main` must go via a pull request — direct pushes are blocked b
 becomes the single commit message — so the PR title must follow Conventional Commits format (see below).
 
 **Before raising a PR:**
-- All CI checks must pass: build-and-test, clang-build-and-test, sanitize, coverage, tidy, cppcheck, format
+- All CI checks must pass: build-and-test, clang-build-and-test, sanitize, coverage, tidy, cppcheck, format, bdd
 - Commits on the branch can be informal (work-in-progress messages are fine)
 - The PR title is what matters — it becomes the permanent commit message on `main`
 
 **Branch protection rules (configured on GitHub):**
 - Direct pushes to `main` are blocked
-- PRs require all status checks to pass before merging: build-and-test, clang-build-and-test, sanitize, coverage, tidy, cppcheck, format
+- PRs require all status checks to pass before merging: build-and-test, clang-build-and-test, sanitize, coverage, tidy, cppcheck, format, bdd
 - Squash merge only — other merge strategies are disabled
 - Branches are deleted automatically after merge
 
