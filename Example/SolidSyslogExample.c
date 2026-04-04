@@ -47,7 +47,10 @@ int SolidSyslogExample_Run(int argc, char* argv[])
         .messageId = options.messageId,
         .msg       = options.msg,
     };
-    SolidSyslog_Log(logger, &message);
+    for (int i = 0; i < options.count; i++)
+    {
+        SolidSyslog_Log(logger, &message);
+    }
 
     SolidSyslog_Destroy(logger);
     SolidSyslogNullBuffer_Destroy(buffer);

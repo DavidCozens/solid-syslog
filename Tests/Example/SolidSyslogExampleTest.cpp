@@ -121,6 +121,16 @@ TEST(SolidSyslogExample, MsgIdFlagAppearsInMessage)
     CHECK(std::strstr(SocketSpy_LastBufAsString(), "ID47") != nullptr);
 }
 
+TEST(SolidSyslogExample, CountFlagSendsMultipleMessages)
+{
+    char  arg0[] = "SolidSyslogExample";
+    char  arg1[] = "--count";
+    char  arg2[] = "3";
+    char* argv[] = {arg0, arg1, arg2, nullptr};
+    Run(3, argv);
+    LONGS_EQUAL(3, SocketSpy_SendtoCallCount());
+}
+
 TEST(SolidSyslogExample, MessageFlagAppearsInMessage)
 {
     char  arg0[] = "SolidSyslogExample";

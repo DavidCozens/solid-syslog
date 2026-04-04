@@ -12,6 +12,7 @@ EXTERN_C_BEGIN
         enum SolidSyslog_Severity severity;
         const char*               messageId;
         const char*               msg;
+        int                       count;
     };
 
     int ExampleCommandLine_Parse(int argc, char* argv[], struct ExampleOptions* options);
