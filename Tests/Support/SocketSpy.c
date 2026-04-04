@@ -5,8 +5,13 @@
 #include <string.h>
 #include <sys/socket.h>
 
+enum
+{
+    SOCKETSPY_MAX_BUFFER_SIZE = 2048
+};
+
 static int                sendtoCallCount;
-static const void*        lastBuf;
+static char               lastBufCopy[SOCKETSPY_MAX_BUFFER_SIZE];
 static size_t             lastLen;
 static int                lastFlags;
 static struct sockaddr_in lastAddr;
@@ -31,7 +36,7 @@ static struct addrinfo    fakeAddrInfo;
 void SocketSpy_Reset(void)
 {
     sendtoCallCount   = 0;
-    lastBuf           = NULL;
+    lastBufCopy[0]    = '\0';
     lastLen           = 0;
     lastFlags         = 0;
     lastAddr          = (struct sockaddr_in) {0};
@@ -64,12 +69,12 @@ int SocketSpy_SendtoCallCount(void)
 
 const void* SocketSpy_LastBuf(void)
 {
-    return lastBuf;
+    return lastBufCopy;
 }
 
 const char* SocketSpy_LastBufAsString(void)
 {
-    return (const char*) lastBuf;
+    return lastBufCopy;
 }
 
 size_t SocketSpy_LastLen(void)
@@ -173,12 +178,15 @@ ssize_t sendto(int sockfd, const void* buf, size_t len, int flags, const struct 
 // clang-format on
 {
     sendtoCallCount++;
-    lastSendtoFd = sockfd;
-    lastBuf      = buf;
-    lastLen      = len;
-    lastFlags    = flags;
-    lastAddr     = *(const struct sockaddr_in*) dest_addr;
-    lastAddrLen  = addrlen;
+    lastSendtoFd    = sockfd;
+    size_t copySize = len < sizeof(lastBufCopy) - 1 ? len : sizeof(lastBufCopy) - 1;
+    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memcpy with bounded copySize; memcpy_s is not portable
+    memcpy(lastBufCopy, buf, copySize);
+    lastBufCopy[copySize] = '\0';
+    lastLen               = len;
+    lastFlags             = flags;
+    lastAddr              = *(const struct sockaddr_in*) dest_addr;
+    lastAddrLen           = addrlen;
     return (ssize_t) len;
 }
 
