@@ -1,6 +1,7 @@
 #include "SolidSyslog.h"
 #include "SolidSyslogBuffer.h"
 #include "SolidSyslogConfig.h"
+#include "SolidSyslogSender.h"
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -50,6 +51,7 @@ static inline bool    TimestampIsValid(const struct SolidSyslogTimestamp* ts);
 struct SolidSyslog
 {
     struct SolidSyslogBuffer* buffer;
+    struct SolidSyslogSender* sender;
     SolidSyslogFreeFunction   free;
     SolidSyslogClockFunction  clock;
     SolidSyslogStringFunction getHostname;
@@ -63,6 +65,7 @@ struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config)
     if (instance != NULL)
     {
         instance->buffer      = config->buffer;
+        instance->sender      = config->sender;
         instance->free        = config->free;
         instance->clock       = config->clock;
         instance->getHostname = config->getHostname;
@@ -79,7 +82,16 @@ void SolidSyslog_Destroy(struct SolidSyslog* logger)
 
 bool SolidSyslog_Service(struct SolidSyslog* logger)
 {
-    return SolidSyslogBuffer_Read(logger->buffer);
+    char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    size_t len = 0;
+
+    if (SolidSyslogBuffer_Read(logger->buffer, buf, sizeof(buf), &len))
+    {
+        SolidSyslogSender_Send(logger->sender, buf, len);
+        return true;
+    }
+
+    return false;
 }
 
 void SolidSyslog_Log(struct SolidSyslog* logger, const struct SolidSyslogMessage* message)

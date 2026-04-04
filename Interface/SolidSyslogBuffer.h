@@ -10,7 +10,7 @@ EXTERN_C_BEGIN
     struct SolidSyslogBuffer;
 
     void SolidSyslogBuffer_Write(struct SolidSyslogBuffer * buffer, const void* data, size_t size);
-    bool SolidSyslogBuffer_Read(struct SolidSyslogBuffer * buffer);
+    bool SolidSyslogBuffer_Read(struct SolidSyslogBuffer * buffer, void* data, size_t maxSize, size_t* bytesRead);
 
 EXTERN_C_END
 

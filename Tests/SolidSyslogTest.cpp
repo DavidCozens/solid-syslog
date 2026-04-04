@@ -2,6 +2,7 @@
 #include "SolidSyslog.h"
 #include "SolidSyslogConfig.h"
 #include "SolidSyslogNullBuffer.h"
+#include "BufferFake.h"
 #include "SenderSpy.h"
 #include "StringFake.h"
 #include <cstdlib>
@@ -137,7 +138,7 @@ TEST_GROUP(SolidSyslog)
         SenderSpy_Reset();
         StringFake_Reset();
         buffer = SolidSyslogNullBuffer_Create(SenderSpy_GetSender());
-        config = {buffer, malloc, free, nullptr, StringFake_GetHostname, StringFake_GetAppName, StringFake_GetProcId};
+        config = {buffer, nullptr, malloc, free, nullptr, StringFake_GetHostname, StringFake_GetAppName, StringFake_GetProcId};
         logger = SolidSyslog_Create(&config);
         message = {SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO, nullptr, nullptr};
     }
@@ -186,7 +187,7 @@ TEST(SolidSyslog, TwoCreatesReturnDifferentHandles)
 TEST(SolidSyslog, EachLoggerSendsThroughItsOwnSender)
 {
     SolidSyslogBuffer* secondBuffer = SolidSyslogNullBuffer_Create(SenderSpy_GetSender());
-    SolidSyslogConfig  secondConfig = {secondBuffer, malloc, free, nullptr, nullptr, nullptr, nullptr};
+    SolidSyslogConfig  secondConfig = {secondBuffer, nullptr, malloc, free, nullptr, nullptr, nullptr, nullptr};
     SolidSyslog*       second       = SolidSyslog_Create(&secondConfig);
 
     SolidSyslog_Log(logger, &message);
@@ -470,7 +471,7 @@ static void* AlwaysFailAlloc(size_t size)
 
 TEST(SolidSyslog, CreateReturnsNullWhenAllocFails)
 {
-    SolidSyslogConfig failConfig = {buffer, AlwaysFailAlloc, free, nullptr, nullptr, nullptr, nullptr};
+    SolidSyslogConfig failConfig = {buffer, nullptr, AlwaysFailAlloc, free, nullptr, nullptr, nullptr, nullptr};
     SolidSyslog*      result     = SolidSyslog_Create(&failConfig);
     POINTERS_EQUAL(nullptr, result);
 }
@@ -907,6 +908,24 @@ TEST(SolidSyslog, MultipleServiceCallsReturnNothingToSend)
 {
     CHECK_FALSE(SolidSyslog_Service(logger));
     CHECK_FALSE(SolidSyslog_Service(logger));
+}
+
+TEST(SolidSyslog, ServiceSendsMessageReadFromBuffer)
+{
+    SolidSyslogBuffer*  fakeBuffer = BufferFake_Create();
+    SolidSyslogConfig   serviceConfig = {fakeBuffer, SenderSpy_GetSender(), malloc, free, nullptr, nullptr, nullptr, nullptr};
+    SolidSyslog*        serviceLogger = SolidSyslog_Create(&serviceConfig);
+
+    SolidSyslogBuffer_Write(fakeBuffer, "test", 4);
+    SenderSpy_Reset();
+    bool sent = SolidSyslog_Service(serviceLogger);
+
+    CHECK_TRUE(sent);
+    LONGS_EQUAL(1, SenderSpy_CallCount());
+    STRCMP_EQUAL("test", SenderSpy_LastBufferAsString());
+
+    SolidSyslog_Destroy(serviceLogger);
+    BufferFake_Destroy(fakeBuffer);
 }
 
 IGNORE_TEST(SolidSyslog, HappyPathOnly)
