@@ -1,5 +1,6 @@
 set(EXAMPLE_TEST_SOURCES
     SolidSyslogExampleTest.cpp
+    ExampleServiceThreadTest.cpp
     main.cpp
 )
 
@@ -16,5 +17,6 @@ target_sources(ExampleTests PRIVATE
     ${CMAKE_SOURCE_DIR}/Example/SolidSyslogExample.c
     ${CMAKE_SOURCE_DIR}/Example/Common/ExampleAppName.c
     ${CMAKE_SOURCE_DIR}/Example/Common/ExampleCommandLine.c
+    ${CMAKE_SOURCE_DIR}/Example/Common/ExampleServiceThread.c
     ${CMAKE_SOURCE_DIR}/Example/Common/ExampleUdpConfig.c
 )
