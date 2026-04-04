@@ -106,8 +106,13 @@ IGNORE_TEST(SolidSyslogPosixMqBuffer, HappyPathOnly)
     // Error handling not yet implemented — see Epic #31
     //   Create with zero maxMessageSize or maxMessages
     //   Create when mq_open fails returns NULL
-    //   Write when queue is full (back-pressure / overflow)
+    //   Write with NULL buffer does not crash
+    //   Write with NULL data does not crash
+    //   Read with NULL buffer does not crash
+    //   Read with NULL data does not crash
+    //   Read with NULL bytesRead does not crash
     //   Destroy with NULL buffer does not crash
+    //   Write when queue is full (back-pressure / overflow)
     //
     // Blocking mode not yet implemented — see S4.5 or later
     //   Read blocks waiting for a message (O_NONBLOCK removed)
