@@ -51,14 +51,11 @@ static bool Read(struct SolidSyslogBuffer* self, void* data, size_t maxSize, siz
 {
     struct SolidSyslogPosixMqBuffer* mqBuffer = (struct SolidSyslogPosixMqBuffer*) self;
     ssize_t                          received = mq_receive(mqBuffer->mq, data, maxSize, NULL);
+    bool                             success  = received >= 0;
 
-    if (received < 0)
-    {
-        return false;
-    }
+    *bytesRead = success ? (size_t) received : 0;
 
-    *bytesRead = (size_t) received;
-    return true;
+    return success;
 }
 
 static void Write(struct SolidSyslogBuffer* self, const void* data, size_t size)
