@@ -1,12 +1,18 @@
-add_subdirectory(Support)
+if(SOLIDSYSLOG_POSIX)
+    add_subdirectory(Support)
+    add_subdirectory(Example)
+endif()
 
 set(TEST_SOURCES
     SolidSyslogTest.cpp
     SolidSyslogNullBufferTest.cpp
     SolidSyslogPrivalTest.cpp
     BufferFakeTest.cpp
+    BufferFake.c
     SenderSpyTest.cpp
+    SenderSpy.c
     StringFakeTest.cpp
+    StringFake.c
     main.cpp
 )
 
@@ -21,7 +27,11 @@ endif()
 
 add_executable(${PROJECT_NAME}Tests ${TEST_SOURCES})
 
-target_link_libraries(${PROJECT_NAME}Tests PRIVATE ${PROJECT_NAME} TestSupport CppUTest CppUTestExt pthread)
+target_link_libraries(${PROJECT_NAME}Tests PRIVATE ${PROJECT_NAME} CppUTest CppUTestExt pthread)
+
+if(SOLIDSYSLOG_POSIX)
+    target_link_libraries(${PROJECT_NAME}Tests PRIVATE PosixFakes)
+endif()
 
 # Standard CppUTest console output via ctest -V
 add_test(NAME ${PROJECT_NAME}Tests COMMAND ${PROJECT_NAME}Tests)

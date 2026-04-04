@@ -1,18 +1,10 @@
-set(SUPPORT_SOURCES
-    BufferFake.c
-    SenderSpy.c
-    StringFake.c
+set(POSIX_FAKES_SOURCES
+    ClockFake.c
+    SocketSpy.c
 )
 
-if(SOLIDSYSLOG_POSIX)
-    list(APPEND SUPPORT_SOURCES
-        ClockFake.c
-        SocketSpy.c
-    )
-endif()
+add_library(PosixFakes STATIC ${POSIX_FAKES_SOURCES})
 
-add_library(TestSupport STATIC ${SUPPORT_SOURCES})
+target_include_directories(PosixFakes PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-target_include_directories(TestSupport PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-
-target_link_libraries(TestSupport PUBLIC ${PROJECT_NAME})
+target_link_libraries(PosixFakes PUBLIC ${PROJECT_NAME})

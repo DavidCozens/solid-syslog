@@ -1,3 +1,4 @@
+#include "SolidSyslogExample.h"
 #include "SolidSyslog.h"
 #include "SolidSyslogConfig.h"
 #include "SolidSyslogNullBuffer.h"
@@ -35,7 +36,7 @@ static int GetPort(void)
     return 5514;
 }
 
-int main(int argc, char* argv[])
+int SolidSyslogExample_Run(int argc, char* argv[])
 {
     const char* slash = strrchr(argv[0], '/');
     appName           = (slash != NULL) ? slash + 1 : argv[0];
