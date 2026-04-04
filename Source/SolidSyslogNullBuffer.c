@@ -4,6 +4,7 @@
 
 #include <stdlib.h>
 
+static bool Read(struct SolidSyslogBuffer* self);
 static void Write(struct SolidSyslogBuffer* self, const void* data, size_t size);
 
 struct SolidSyslogNullBuffer
@@ -16,6 +17,7 @@ struct SolidSyslogBuffer* SolidSyslogNullBuffer_Create(struct SolidSyslogSender*
 {
     struct SolidSyslogNullBuffer* self = malloc(sizeof(struct SolidSyslogNullBuffer));
     self->base.Write                   = Write;
+    self->base.Read                    = Read;
     self->sender                       = sender;
     return &self->base;
 }
@@ -23,6 +25,12 @@ struct SolidSyslogBuffer* SolidSyslogNullBuffer_Create(struct SolidSyslogSender*
 void SolidSyslogNullBuffer_Destroy(struct SolidSyslogBuffer* buffer)
 {
     free(buffer);
+}
+
+static bool Read(struct SolidSyslogBuffer* self)
+{
+    (void) self;
+    return false;
 }
 
 static void Write(struct SolidSyslogBuffer* self, const void* data, size_t size)

@@ -4,3 +4,8 @@ void SolidSyslogBuffer_Write(struct SolidSyslogBuffer* buffer, const void* data,
 {
     buffer->Write(buffer, data, size);
 }
+
+bool SolidSyslogBuffer_Read(struct SolidSyslogBuffer* buffer)
+{
+    return buffer->Read(buffer);
+}

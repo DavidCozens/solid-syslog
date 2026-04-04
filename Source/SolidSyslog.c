@@ -77,6 +77,11 @@ void SolidSyslog_Destroy(struct SolidSyslog* logger)
     logger->free(logger);
 }
 
+bool SolidSyslog_Service(struct SolidSyslog* logger)
+{
+    return SolidSyslogBuffer_Read(logger->buffer);
+}
+
 void SolidSyslog_Log(struct SolidSyslog* logger, const struct SolidSyslogMessage* message)
 {
     char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
