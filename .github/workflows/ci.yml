@@ -405,7 +405,7 @@ jobs:
                   "id": "cppcheck",
                   "tools": [
                     {
-                      "id": "cppcheck",
+                      "id": "gcc",
                       "pattern": "**/cppcheck-report/cppcheck-output.txt"
                     }
                   ]
