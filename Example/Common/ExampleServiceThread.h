@@ -9,7 +9,7 @@ EXTERN_C_BEGIN
 
     struct SolidSyslog;
 
-    void ExampleServiceThread_Run(struct SolidSyslog* logger, volatile bool* shutdown);
+    void ExampleServiceThread_Run(struct SolidSyslog * logger, volatile bool* shutdown);
 
 EXTERN_C_END
 

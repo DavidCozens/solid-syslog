@@ -17,6 +17,7 @@ TEST_GROUP(SolidSyslogExample)
         optind = 1;
     }
 
+    // NOLINTNEXTLINE(readability-convert-member-functions-to-static) -- CppUTest TEST_GROUP method
     int Run(int argc, char* argv[])
     {
         return SolidSyslogExample_Run(argc, argv);

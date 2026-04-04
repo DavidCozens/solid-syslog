@@ -12,12 +12,8 @@ int ExampleCommandLine_Parse(int argc, char* argv[], struct ExampleOptions* opti
     options->count     = 1;
 
     static struct option longOptions[] = {
-        {"facility", required_argument, NULL, 'f'},
-        {"severity", required_argument, NULL, 's'},
-        {"msgid", required_argument, NULL, 'i'},
-        {"message", required_argument, NULL, 'm'},
-        {"count", required_argument, NULL, 'c'},
-        {NULL, 0, NULL, 0},
+        {"facility", required_argument, NULL, 'f'}, {"severity", required_argument, NULL, 's'}, {"msgid", required_argument, NULL, 'i'},
+        {"message", required_argument, NULL, 'm'},  {"count", required_argument, NULL, 'c'},    {NULL, 0, NULL, 0},
     };
 
     int opt = 0;

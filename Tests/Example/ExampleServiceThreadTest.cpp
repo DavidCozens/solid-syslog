@@ -16,6 +16,7 @@ TEST_GROUP(ExampleServiceThread)
     struct SolidSyslogSender* sender = nullptr;
     struct SolidSyslogBuffer* buffer = nullptr;
     struct SolidSyslog*       logger = nullptr;
+    // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
     volatile bool             shutdown;
 
     void setup() override
@@ -30,6 +31,7 @@ TEST_GROUP(ExampleServiceThread)
         buffer = SolidSyslogPosixMqBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
 
         SolidSyslogConfig config = {buffer, sender, malloc, free, nullptr, nullptr, nullptr, nullptr};
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
         logger = SolidSyslog_Create(&config);
     }
 

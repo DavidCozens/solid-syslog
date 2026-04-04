@@ -59,8 +59,8 @@ int main(int argc, char* argv[])
 
     shutdown_flag = false;
 
-    struct ServiceThreadArgs threadArgs = {logger, &shutdown_flag};
-    pthread_t                serviceThread;
+    struct ServiceThreadArgs threadArgs    = {logger, &shutdown_flag};
+    pthread_t                serviceThread = 0;
     pthread_create(&serviceThread, NULL, ServiceThreadEntry, &threadArgs);
 
     struct SolidSyslogMessage message = {
