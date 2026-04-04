@@ -43,6 +43,14 @@ jobs:
           path: build/debug/cpputest_*.xml
           reporter: java-junit
 
+      - name: Upload JUnit XML
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-gcc
+          path: build/debug/cpputest_*.xml
+          retention-days: 1
+
       - name: Upload example binaries
         uses: actions/upload-artifact@v4
         with:
@@ -83,6 +91,14 @@ jobs:
           path: build/clang-debug/cpputest_*.xml
           reporter: java-junit
 
+      - name: Upload JUnit XML
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-clang
+          path: build/clang-debug/cpputest_*.xml
+          retention-days: 1
+
   sanitize:
     runs-on: ubuntu-latest
     permissions:
@@ -112,6 +128,14 @@ jobs:
           name: Test Results (Sanitize)
           path: build/sanitize/cpputest_*.xml
           reporter: java-junit
+
+      - name: Upload JUnit XML
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-sanitize
+          path: build/sanitize/cpputest_*.xml
+          retention-days: 1
 
   coverage:
     runs-on: ubuntu-latest
@@ -213,7 +237,16 @@ jobs:
         run: cmake --preset tidy
 
       - name: Build with clang-tidy
-        run: cmake --build --preset tidy
+        shell: bash
+        run: set -o pipefail && cmake --build --preset tidy 2>&1 | tee build/tidy/clang-tidy-output.txt
+
+      - name: Upload clang-tidy output
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clang-tidy-report
+          path: build/tidy/clang-tidy-output.txt
+          retention-days: 1
 
   format:
     runs-on: ubuntu-latest
@@ -252,6 +285,27 @@ jobs:
       - name: Build with cppcheck
         run: cmake --build --preset cppcheck
 
+      - name: Generate cppcheck XML report
+        if: success() || failure()
+        run: >
+          cppcheck
+          --enable=warning,style,performance,portability
+          --suppress=missingIncludeSystem
+          --inline-suppr
+          --std=c11
+          -IInterface
+          --xml --xml-version=2
+          Source/
+          2> build/cppcheck/cppcheck-report.xml
+
+      - name: Upload cppcheck report
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cppcheck-report
+          path: build/cppcheck/cppcheck-report.xml
+          retention-days: 1
+
   bdd:
     needs: build-and-test
     runs-on: ubuntu-latest
@@ -286,6 +340,100 @@ jobs:
           path: Bdd/junit/TESTS-*.xml
           reporter: java-junit
 
+      - name: Upload JUnit XML
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-bdd
+          path: Bdd/junit/TESTS-*.xml
+          retention-days: 1
+
       - name: Compose logs on failure
         if: failure()
         run: docker compose -f ci/docker-compose.bdd.yml logs --no-color
+
+  quality-summary:
+    if: always() && github.event_name == 'pull_request'
+    needs: [build-and-test, clang-build-and-test, sanitize, tidy, cppcheck, bdd]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Download JUnit artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: junit-*
+          path: quality-reports/
+
+      - name: Download clang-tidy report
+        uses: actions/download-artifact@v4
+        with:
+          name: clang-tidy-report
+          path: quality-reports/
+
+      - name: Download cppcheck report
+        uses: actions/download-artifact@v4
+        with:
+          name: cppcheck-report
+          path: quality-reports/
+      - name: Quality Monitor
+        uses: uhafner/quality-monitor@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pr-number: ${{ github.event.pull_request.number }}
+          checks-name: Quality Summary
+          config: >
+            {
+              "tests": {
+                "name": "Tests",
+                "tools": [
+                  {
+                    "id": "junit",
+                    "name": "Unit Tests (GCC)",
+                    "pattern": "**/junit-gcc/cpputest_*.xml"
+                  },
+                  {
+                    "id": "junit",
+                    "name": "Unit Tests (Clang)",
+                    "pattern": "**/junit-clang/cpputest_*.xml"
+                  },
+                  {
+                    "id": "junit",
+                    "name": "Unit Tests (Sanitize)",
+                    "pattern": "**/junit-sanitize/cpputest_*.xml"
+                  },
+                  {
+                    "id": "junit",
+                    "name": "BDD Tests",
+                    "pattern": "**/junit-bdd/TESTS-*.xml"
+                  }
+                ]
+              },
+              "analysis": [
+                {
+                  "name": "clang-tidy",
+                  "id": "clang-tidy",
+                  "tools": [
+                    {
+                      "id": "clang-tidy",
+                      "pattern": "**/clang-tidy-output.txt"
+                    }
+                  ]
+                },
+                {
+                  "name": "cppcheck",
+                  "id": "cppcheck",
+                  "tools": [
+                    {
+                      "id": "cppcheck",
+                      "pattern": "**/cppcheck-report.xml"
+                    }
+                  ]
+                }
+              ]
+            }
