@@ -353,7 +353,7 @@ jobs:
         run: docker compose -f ci/docker-compose.bdd.yml logs --no-color
 
   quality-summary:
-    if: always()
+    if: always() && github.event_name == 'pull_request'
     needs: [build-and-test, clang-build-and-test, sanitize, tidy, cppcheck, bdd]
     runs-on: ubuntu-latest
     permissions:
@@ -395,22 +395,22 @@ jobs:
                   {
                     "id": "junit",
                     "name": "Unit Tests (GCC)",
-                    "pattern": "**/junit-gcc/cpputest_*.xml"
+                    "pattern": "**/junit-gcc/**/cpputest_*.xml"
                   },
                   {
                     "id": "junit",
                     "name": "Unit Tests (Clang)",
-                    "pattern": "**/junit-clang/cpputest_*.xml"
+                    "pattern": "**/junit-clang/**/cpputest_*.xml"
                   },
                   {
                     "id": "junit",
                     "name": "Unit Tests (Sanitize)",
-                    "pattern": "**/junit-sanitize/cpputest_*.xml"
+                    "pattern": "**/junit-sanitize/**/cpputest_*.xml"
                   },
                   {
                     "id": "junit",
                     "name": "BDD Tests",
-                    "pattern": "**/junit-bdd/TESTS-*.xml"
+                    "pattern": "**/junit-bdd/**/TESTS-*.xml"
                   }
                 ]
               },
@@ -421,7 +421,7 @@ jobs:
                   "tools": [
                     {
                       "id": "clang-tidy",
-                      "pattern": "**/clang-tidy-report/clang-tidy-output.txt"
+                      "pattern": "**/clang-tidy-report/build/tidy/clang-tidy-output.txt"
                     }
                   ]
                 },
@@ -431,7 +431,7 @@ jobs:
                   "tools": [
                     {
                       "id": "cppcheck",
-                      "pattern": "**/cppcheck-report/cppcheck-report.xml"
+                      "pattern": "**/cppcheck-report/build/cppcheck/cppcheck-report.xml"
                     }
                   ]
                 }
