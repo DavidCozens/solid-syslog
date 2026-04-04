@@ -897,12 +897,25 @@ TEST(SolidSyslog, EmptyProcIdProducesNilvalue)
     CHECK_PROCID("-");
 }
 
+TEST(SolidSyslog, ServiceReturnsNothingToSendWithNullBuffer)
+{
+    bool sent = SolidSyslog_Service(logger);
+    CHECK_FALSE(sent);
+}
+
+TEST(SolidSyslog, MultipleServiceCallsReturnNothingToSend)
+{
+    CHECK_FALSE(SolidSyslog_Service(logger));
+    CHECK_FALSE(SolidSyslog_Service(logger));
+}
+
 IGNORE_TEST(SolidSyslog, HappyPathOnly)
 {
     // Error handling not yet implemented — see Epic #31
     //   SolidSyslog_Create with a NULL config returns NULL
     //   SolidSyslog_Destroy with a NULL handle does not crash
     //   SolidSyslog_Log on NULL handle does nothing, does not crash
+    //   SolidSyslog_Service on NULL handle does nothing, does not crash
     //
     // Optional header fields not yet driven in — see Epic #8
     //   MSG is preceded by UTF-8 BOM

@@ -64,6 +64,12 @@ TEST(SolidSyslogNullBuffer, NoWritesResultInNoSends)
     LONGS_EQUAL(0, SenderSpy_CallCount());
 }
 
+TEST(SolidSyslogNullBuffer, ReadReturnsNothingToSend)
+{
+    bool sent = SolidSyslogBuffer_Read(buffer);
+    CHECK_FALSE(sent);
+}
+
 IGNORE_TEST(SolidSyslogNullBuffer, HappyPathOnly)
 {
     // Error handling not yet implemented — see Epic #31
