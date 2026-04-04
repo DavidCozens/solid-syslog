@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.2.0](https://github.com/DavidCozens/solid-syslog/compare/v1.1.0...v1.2.0) (2026-04-04)
+
+
+### Features
+
+* S4.1 buffer abstraction and NullBuffer ([#57](https://github.com/DavidCozens/solid-syslog/issues/57)) ([32237ce](https://github.com/DavidCozens/solid-syslog/commit/32237cee3ef4c1e84b65f2886076bb9724c0a88d))
+* S4.2 SolidSyslog_Service API and Buffer Read ([#58](https://github.com/DavidCozens/solid-syslog/issues/58)) ([5293a1d](https://github.com/DavidCozens/solid-syslog/commit/5293a1dcb5509caf0694ef7095fc93e097d9d867))
+* S4.3 PosixMqBuffer — POSIX message queue buffer ([#59](https://github.com/DavidCozens/solid-syslog/issues/59)) ([35228e5](https://github.com/DavidCozens/solid-syslog/commit/35228e5ba8ce5d817aad5798570251f77d62f07e))
+* S4.4 BDD — buffered message delivery through syslog-ng ([#62](https://github.com/DavidCozens/solid-syslog/issues/62)) ([7bb2254](https://github.com/DavidCozens/solid-syslog/commit/7bb22542e00839404b9d95319fbe821112d7c1bc))
+* S4.4 example restructure — shared code, threaded example, test harness ([#61](https://github.com/DavidCozens/solid-syslog/issues/61)) ([ed8b559](https://github.com/DavidCozens/solid-syslog/commit/ed8b559cfc954f47f268a55609d93524afdad8d9))
+
+
+### CI / Build
+
+* unified quality dashboard with Quality Monitor ([#63](https://github.com/DavidCozens/solid-syslog/issues/63)) ([fb8c0a1](https://github.com/DavidCozens/solid-syslog/commit/fb8c0a1d71ca036c0ebd3cee0249e2a85c889bab))
+
+
+### Refactoring
+
+* align function ordering and test style with conventions ([#49](https://github.com/DavidCozens/solid-syslog/issues/49)) ([b11ea91](https://github.com/DavidCozens/solid-syslog/commit/b11ea9199fd6b7ca4476b54b7cc4e3c9ec000d69))
+
 ## [1.1.0](https://github.com/DavidCozens/solid-syslog/compare/v1.0.0...v1.1.0) (2026-04-03)
 
 
