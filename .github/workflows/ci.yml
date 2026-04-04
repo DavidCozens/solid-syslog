@@ -30,7 +30,10 @@ jobs:
         run: cmake --preset debug
 
       - name: Build and test
-        run: cmake --build --preset debug --target junit SolidSyslogExample SolidSyslogThreadedExample
+        run: cmake --build --preset debug --target junit ExampleTests SolidSyslogExample SolidSyslogThreadedExample
+
+      - name: Run example tests
+        run: cd build/debug && ./Tests/Example/ExampleTests -ojunit -k ExampleTests
 
       - name: Test Report
         uses: dorny/test-reporter@v3

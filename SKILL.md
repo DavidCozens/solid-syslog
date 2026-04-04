@@ -66,8 +66,12 @@ Test progression follows ZOMBIES order.
 ## Architecture principles
 
 - OO-in-C: structs with function pointers (vtable pattern)
-- Dependency injection for transport and buffering
-- Null object pattern throughout
+- Dependency injection for transport, buffering, clock, hostname, allocator
+- Buffer abstraction decouples formatting from sending: `SolidSyslog_Log` writes to buffer,
+  `SolidSyslog_Service` reads from buffer and sends. Implementations: NullBuffer (direct send,
+  single-task), PosixMqBuffer (thread-safe POSIX message queue), CircularBuffer (planned,
+  bare-metal with mutex injection)
+- Null object pattern throughout (NullBuffer is the buffer null object)
 - All fields use uniform field object pattern with format function pointer
 - Optional features composed at link time — no conditional compilation
 - C11 static assertions via compatibility shim
