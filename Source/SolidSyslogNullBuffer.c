@@ -32,7 +32,7 @@ static bool Read(struct SolidSyslogBuffer* self, void* data, size_t maxSize, siz
     (void) self;
     (void) data;
     (void) maxSize;
-    (void) bytesRead;
+    *bytesRead = 0;
     return false;
 }
 

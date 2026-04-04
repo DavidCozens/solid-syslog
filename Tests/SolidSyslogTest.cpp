@@ -912,9 +912,9 @@ TEST(SolidSyslog, MultipleServiceCallsReturnNothingToSend)
 
 TEST(SolidSyslog, ServiceSendsMessageReadFromBuffer)
 {
-    SolidSyslogBuffer*  fakeBuffer = BufferFake_Create();
-    SolidSyslogConfig   serviceConfig = {fakeBuffer, SenderSpy_GetSender(), malloc, free, nullptr, nullptr, nullptr, nullptr};
-    SolidSyslog*        serviceLogger = SolidSyslog_Create(&serviceConfig);
+    SolidSyslogBuffer* fakeBuffer    = BufferFake_Create();
+    SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderSpy_GetSender(), malloc, free, nullptr, nullptr, nullptr, nullptr};
+    SolidSyslog*       serviceLogger = SolidSyslog_Create(&serviceConfig);
 
     SolidSyslogBuffer_Write(fakeBuffer, "test", 4);
     SenderSpy_Reset();
