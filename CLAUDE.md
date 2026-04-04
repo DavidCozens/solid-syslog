@@ -109,12 +109,16 @@ Coverage report: `cmake --preset coverage && cmake --build --preset coverage --t
 ## Project Structure
 
 ```
-Interface/   — Public headers only. No implementation. This is the API boundary.
-Source/      — Implementation. Compiled into a static library.
-Tests/       — CppUTest unit tests. Never link production code directly; always via the library.
-Example/     — Example program. Links against the library; also used as the BDD sender.
-Bdd/         — BDD test infrastructure: Gherkin features, step definitions, syslog-ng config.
-ci/          — CI-specific files (e.g. docker-compose.bdd.yml).
+Interface/        — Public headers only. No implementation. This is the API boundary.
+Source/           — Implementation. Compiled into a static library.
+Tests/            — CppUTest unit tests. Never link production code directly; always via the library.
+Tests/Support/    — PosixFakes static lib (SocketSpy, ClockFake) — shared across test executables.
+Tests/Example/    — Example code unit tests (ExampleTests executable).
+Example/Common/   — Shared example code (CLI parsing, app name, UDP config, service thread).
+Example/SingleTask/ — Single-task example (NullBuffer, bare-metal model). BDD sender.
+Example/Threaded/ — Threaded example (PosixMqBuffer, two pthreads). BDD sender.
+Bdd/              — BDD test infrastructure: Gherkin features, step definitions, syslog-ng config.
+ci/               — CI-specific files (e.g. docker-compose.bdd.yml).
 ```
 
 The separation between `Interface/` and `Source/` is deliberate — it enforces the dependency inversion
@@ -126,17 +130,21 @@ Headers in `Interface/` are split by audience — each user includes only what t
 
 | Header | Audience | Provides |
 |---|---|---|
-| `SolidSyslog.h` | Application code that logs events | `SolidSyslogMessage`, `SolidSyslog_Log` |
+| `SolidSyslog.h` | Application code that logs events | `SolidSyslogMessage`, `SolidSyslog_Log`, `SolidSyslog_Service` |
 | `SolidSyslogConfig.h` | System setup code | `SolidSyslogConfig`, `SolidSyslog_Create`, `SolidSyslog_Destroy` |
 | `SolidSyslogPrival.h` | Any code that needs facility/severity enums | `SolidSyslog_Facility`, `SolidSyslog_Severity` |
 | `SolidSyslogTimestamp.h` | Any code that needs the timestamp struct | `SolidSyslogTimestamp`, `SolidSyslogClockFunction` |
+| `SolidSyslogAlloc.h` | System setup code providing allocators | `SolidSyslogAllocFunction`, `SolidSyslogFreeFunction` |
 | `SolidSyslogSenderDef.h` | Sender implementors (extension point) | `SolidSyslogSender` vtable struct |
 | `SolidSyslogUdpSender.h` | System setup code using UDP transport | `SolidSyslogUdpSender_Create`, `_Destroy` |
+| `SolidSyslogBufferDef.h` | Buffer implementors (extension point) | `SolidSyslogBuffer` vtable struct |
+| `SolidSyslogNullBuffer.h` | System setup code (single-task, no buffering) | `SolidSyslogNullBuffer_Create`, `_Destroy` |
+| `SolidSyslogPosixMqBuffer.h` | System setup code using POSIX message queue buffer | `SolidSyslogPosixMqBuffer_Create`, `_Destroy` |
 | `SolidSyslogPosixClock.h` | System setup code using POSIX clock | `SolidSyslogPosixClock_GetTimestamp` |
 | `SolidSyslogPosixHostname.h` | System setup code using POSIX hostname | `SolidSyslogPosixHostname_Get` |
 | `SolidSyslogPosixProcId.h` | System setup code using POSIX process ID | `SolidSyslogPosixProcId_Get` |
 
-Most application code only needs `SolidSyslog.h` — it never sees allocators, senders, or config structs.
+Most application code only needs `SolidSyslog.h` — it never sees allocators, senders, buffers, or config structs.
 
 ---
 

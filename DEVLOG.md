@@ -206,3 +206,49 @@ The UUID issue is Windows/WSL-specific but there is no cost to running the comma
 - Example program unit tests — as the example grows (more CLI flags per story), should it
   get its own unit tests? Current decision is to rely on BDD coverage, but revisit if the
   example starts containing non-trivial logic or if BDD proves too coarse to catch bugs.
+
+## 2026-04-03 — E4 Buffering epic
+
+### Decisions
+- E4 decomposed into 6 stories (S4.1–S4.6), GitHub Issues #50–#55.
+- Buffer abstraction inserted between formatting and sending. `SolidSyslog_Log` writes to
+  a `SolidSyslogBuffer` vtable; `SolidSyslog_Service` reads from it and sends via
+  `SolidSyslogSender`. One message per Service call — caller controls the loop.
+- NullBuffer: Write sends immediately via injected sender. Service returns false. Current
+  single-task behaviour preserved as a special case.
+- PosixMqBuffer: `mq_send`/`mq_receive` with O_NONBLOCK. Thread-safe with zero
+  application-level synchronization. Kernel manages the queue.
+- `SolidSyslogConfig` holds both `buffer` and `sender`. NullBuffer owns its own sender
+  internally; real buffers use the sender on SolidSyslog for the Service path.
+- `SolidSyslogBuffer_Read` signature: `bool Read(buffer, void* data, size_t maxSize,
+  size_t* bytesRead)` — out-params for data, single-exit with bytesRead always initialised.
+- Read return type is `bool` for now. May evolve to an enum (MESSAGE_SENT, NOTHING_TO_SEND,
+  MESSAGES_LOST) when overflow handling lands in S4.5/S4.6.
+- `volatile bool` for service thread shutdown (not `atomic_bool`) to avoid C/C++ atomics
+  incompatibility in the shared header. Pragmatically correct for the single-writer pattern.
+
+### Architecture — example restructure
+- Example split into `SingleTask/` (NullBuffer, bare-metal model) and `Threaded/`
+  (PosixMqBuffer, two pthreads). Shared code in `Example/Common/`: command line parsing,
+  app name, UDP config, service thread loop.
+- Example code tested via separate `ExampleTests` executable using PosixFakes link-seam:
+  real SolidSyslog library, real UdpSender, real PosixMqBuffer — only POSIX system calls
+  (socket, sendto, clock_gettime etc.) intercepted by strong-symbol fakes.
+- Test fakes split: PosixFakes static lib (SocketSpy, ClockFake) shared across test
+  executables; SolidSyslog-level fakes (SenderSpy, BufferFake, StringFake) compiled
+  directly into library tests only.
+
+### Test counts
+- 182 library unit tests (SolidSyslogTests)
+- 17 example unit tests (ExampleTests)
+- 16 BDD scenarios (14 existing + 2 buffered delivery)
+
+### Deferred
+- Circular buffer (S4.5) — bare-metal targets, mutex injection, overflow handling
+- Overflow notification (S4.6) — RFC-compliant messages-lost reporting
+- Run common BDD scenarios against both executables — future parameterisation
+- CI test result aggregation and trend tracking — Issue #60
+- ExampleTests not yet run in CI — to be added
+
+### Open questions
+- None

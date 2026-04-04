@@ -6,6 +6,7 @@ RFC 5424 (structured syslog), RFC 5426 (UDP transport), and RFC 5425 (TLS transp
 Designed for resource-constrained environments:
 - C99, no dynamic memory allocation required — allocator is caller-injected
 - Transport-agnostic — UDP, TLS, or bring your own
+- Buffer-agnostic — NullBuffer (direct send), POSIX message queue, or bring your own
 - No `#ifdef` feature flags — optional features composed at link time
 - MISRA C:2012 informed
 - Dependency injection throughout — fully testable without a network
@@ -26,13 +27,17 @@ Optional features are composed at link time via dead code elimination; there are
 no conditional compilation directives in the library source.
 
 Public headers are split by audience (Interface Segregation Principle):
-- **`SolidSyslog.h`** — application code that logs events
+- **`SolidSyslog.h`** — application code that logs events (`Log`, `Service`)
 - **`SolidSyslogConfig.h`** — system setup code that creates and destroys loggers
-- **`SolidSyslogTimestamp.h`** — timestamp struct and clock function typedef
-- **`SolidSyslogPosixClock.h`** — POSIX clock helper (`clock_gettime` + `gmtime_r`)
-- **`SolidSyslogPosixHostname.h`** — POSIX hostname helper (`gethostname`)
-- **`SolidSyslogPosixProcId.h`** — POSIX process ID helper (`getpid`)
-- **`SolidSyslogSenderDef.h`** — transport implementors adding new sender types
+- **`SolidSyslogSenderDef.h`** / **`SolidSyslogBufferDef.h`** — extension points for custom senders and buffers
+- **`SolidSyslogNullBuffer.h`** — direct-send buffer for single-task systems
+- **`SolidSyslogPosixMqBuffer.h`** — thread-safe POSIX message queue buffer
+- **`SolidSyslogUdpSender.h`** — UDP transport
+- **`SolidSyslogPosixClock.h`** / **`PosixHostname.h`** / **`PosixProcId.h`** — POSIX helpers
+
+Two example programs demonstrate usage:
+- **`Example/SingleTask/`** — NullBuffer, single-task bare-metal model
+- **`Example/Threaded/`** — PosixMqBuffer, two pthreads (logger + service)
 
 ## CI pipeline
 
