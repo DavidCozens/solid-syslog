@@ -66,7 +66,9 @@ TEST(SolidSyslogNullBuffer, NoWritesResultInNoSends)
 
 TEST(SolidSyslogNullBuffer, ReadReturnsNothingToSend)
 {
-    bool sent = SolidSyslogBuffer_Read(buffer);
+    char   data[512];
+    size_t bytesRead = 0;
+    bool   sent      = SolidSyslogBuffer_Read(buffer, data, sizeof(data), &bytesRead);
     CHECK_FALSE(sent);
 }
 

@@ -4,7 +4,7 @@
 
 #include <stdlib.h>
 
-static bool Read(struct SolidSyslogBuffer* self);
+static bool Read(struct SolidSyslogBuffer* self, void* data, size_t maxSize, size_t* bytesRead);
 static void Write(struct SolidSyslogBuffer* self, const void* data, size_t size);
 
 struct SolidSyslogNullBuffer
@@ -27,9 +27,12 @@ void SolidSyslogNullBuffer_Destroy(struct SolidSyslogBuffer* buffer)
     free(buffer);
 }
 
-static bool Read(struct SolidSyslogBuffer* self)
+static bool Read(struct SolidSyslogBuffer* self, void* data, size_t maxSize, size_t* bytesRead)
 {
     (void) self;
+    (void) data;
+    (void) maxSize;
+    *bytesRead = 0;
     return false;
 }
 

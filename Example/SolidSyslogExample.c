@@ -84,6 +84,7 @@ int main(int argc, char* argv[])
 
     struct SolidSyslogConfig config = {
         .buffer      = buffer,
+        .sender      = NULL,
         .alloc       = malloc,
         .free        = free,
         .clock       = SolidSyslogPosixClock_GetTimestamp,
