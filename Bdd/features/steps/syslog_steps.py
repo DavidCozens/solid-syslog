@@ -9,6 +9,7 @@ from behave import given, when, then
 
 RECEIVED_LOG = "Bdd/output/received.log"
 EXAMPLE_BINARY = "build/debug/Example/SolidSyslogExample"
+THREADED_BINARY = "build/debug/Example/SolidSyslogThreadedExample"
 SYSLOG_NG_CTL = "/var/lib/syslog-ng/syslog-ng.ctl"
 
 
@@ -54,13 +55,14 @@ def step_syslog_ng_is_running(context):
     context.lines_before = line_count(RECEIVED_LOG)
 
 
-def run_example(context, extra_args=None):
-    """Run the example binary and wait for syslog-ng to flush the message."""
-    assert os.path.exists(EXAMPLE_BINARY), (
-        f"Example binary not found at {EXAMPLE_BINARY} — build with cmake first"
+def run_example(context, extra_args=None, binary=None, expected_messages=1):
+    """Run an example binary and wait for syslog-ng to flush the message(s)."""
+    binary = binary or EXAMPLE_BINARY
+    assert os.path.exists(binary), (
+        f"Example binary not found at {binary} — build with cmake first"
     )
 
-    cmd = [os.path.join(".", EXAMPLE_BINARY)]
+    cmd = [os.path.join(".", binary)]
     if extra_args:
         cmd.extend(extra_args)
 
@@ -76,19 +78,35 @@ def run_example(context, extra_args=None):
         f"Example binary failed: {stderr}"
     )
 
-    # Wait for syslog-ng to flush a new line to disk
+    # Wait for syslog-ng to flush the expected number of new lines
+    expected_total = context.lines_before + expected_messages
     deadline = time.monotonic() + 5
-    while line_count(RECEIVED_LOG) <= context.lines_before:
+    while line_count(RECEIVED_LOG) < expected_total:
         if time.monotonic() > deadline:
-            assert False, "syslog-ng did not write a new line within 5 seconds"
+            actual = line_count(RECEIVED_LOG) - context.lines_before
+            assert False, (
+                f"syslog-ng received {actual} of {expected_messages} "
+                f"messages within 5 seconds"
+            )
         time.sleep(0.1)
 
     context.fields = parse_syslog_line(read_last_line(RECEIVED_LOG))
+    context.message_count = line_count(RECEIVED_LOG) - context.lines_before
 
 
 @when("the example program sends a syslog message")
 def step_example_sends_message(context):
     run_example(context)
+
+
+@when("the threaded example sends a syslog message")
+def step_threaded_sends_message(context):
+    run_example(context, binary=THREADED_BINARY)
+
+
+@when("the threaded example sends {count:d} syslog messages")
+def step_threaded_sends_multiple(context, count):
+    run_example(context, ["--count", str(count)], binary=THREADED_BINARY, expected_messages=count)
 
 
 @when("the example program sends a message with facility {facility:d} and severity {severity:d}")
@@ -184,4 +202,11 @@ def step_check_msgid(context, msgid):
 def step_check_msg(context, msg):
     assert context.fields["MSG"] == msg, (
         f"Expected message {msg}, got {context.fields.get('MSG')}"
+    )
+
+
+@then("syslog-ng receives {count:d} messages")
+def step_check_message_count(context, count):
+    assert context.message_count == count, (
+        f"Expected {count} messages, got {context.message_count}"
     )
