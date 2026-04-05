@@ -4,6 +4,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static inline size_t SolidSyslogFormat_MinSize(size_t a, size_t b)
+{
+    return (a < b) ? a : b;
+}
+
 static inline size_t SolidSyslogFormat_Character(char* buffer, char value)
 {
     buffer[0] = value;
