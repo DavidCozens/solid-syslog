@@ -7,6 +7,12 @@ set(SOURCES
     SolidSyslogStructuredData.c
 )
 
+if(HAVE_STDATOMIC_H)
+    list(APPEND SOURCES
+        SolidSyslogAtomicCounter.c
+    )
+endif()
+
 if(SOLIDSYSLOG_POSIX)
     list(APPEND SOURCES
         SolidSyslogPosixClock.c

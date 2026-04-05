@@ -1,4 +1,5 @@
 #include "CppUTest/TestHarness.h"
+#include "SolidSyslogAtomicCounter.h"
 #include "SolidSyslogMetaSd.h"
 #include "SolidSyslogStructuredData.h"
 
@@ -7,17 +8,20 @@
 // clang-format off
 TEST_GROUP(SolidSyslogMetaSd)
 {
+    SolidSyslogAtomicCounter* counter;
     SolidSyslogStructuredData* sd;
     char buffer[256];
 
     void setup() override
     {
-        sd = SolidSyslogMetaSd_Create(malloc);
+        counter = SolidSyslogAtomicCounter_Create(malloc);
+        sd = SolidSyslogMetaSd_Create(malloc, counter);
     }
 
     void teardown() override
     {
         SolidSyslogMetaSd_Destroy(sd, free);
+        SolidSyslogAtomicCounter_Destroy(counter, free);
     }
 
     size_t Format()

@@ -17,6 +17,12 @@ set(TEST_SOURCES
     main.cpp
 )
 
+if(HAVE_STDATOMIC_H)
+    list(APPEND TEST_SOURCES
+        SolidSyslogAtomicCounterTest.cpp
+    )
+endif()
+
 if(SOLIDSYSLOG_POSIX)
     list(APPEND TEST_SOURCES
         SolidSyslogPosixClockTest.cpp

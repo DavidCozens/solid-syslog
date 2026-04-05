@@ -1,5 +1,6 @@
 #include "CppUTest/TestHarness.h"
 #include "SolidSyslog.h"
+#include "SolidSyslogAtomicCounter.h"
 #include "SolidSyslogConfig.h"
 #include "SolidSyslogMetaSd.h"
 #include "SolidSyslogNullBuffer.h"
@@ -466,34 +467,40 @@ TEST(SolidSyslog, InjectedSdObjectFormatIsCalledDuringLog)
 
 TEST(SolidSyslog, MetaSdProducesSequenceIdInStructuredData)
 {
-    SolidSyslogStructuredData* metaSd = SolidSyslogMetaSd_Create(malloc);
+    SolidSyslogAtomicCounter*  counter = SolidSyslogAtomicCounter_Create(malloc);
+    SolidSyslogStructuredData* metaSd  = SolidSyslogMetaSd_Create(malloc, counter);
     config.sd = metaSd;
     ReplaceLogger();
     Log();
     STRCMP_EQUAL("[meta sequenceId=\"1\"]", SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
     SolidSyslogMetaSd_Destroy(metaSd, free);
+    SolidSyslogAtomicCounter_Destroy(counter, free);
 }
 
 TEST(SolidSyslog, MetaSdSequenceIdIncrementsAcrossLogCalls)
 {
-    SolidSyslogStructuredData* metaSd = SolidSyslogMetaSd_Create(malloc);
+    SolidSyslogAtomicCounter*  counter = SolidSyslogAtomicCounter_Create(malloc);
+    SolidSyslogStructuredData* metaSd  = SolidSyslogMetaSd_Create(malloc, counter);
     config.sd = metaSd;
     ReplaceLogger();
     Log();
     Log();
     STRCMP_EQUAL("[meta sequenceId=\"2\"]", SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
     SolidSyslogMetaSd_Destroy(metaSd, free);
+    SolidSyslogAtomicCounter_Destroy(counter, free);
 }
 
 TEST(SolidSyslog, MsgFieldPreservedWithMetaSd)
 {
-    SolidSyslogStructuredData* metaSd = SolidSyslogMetaSd_Create(malloc);
+    SolidSyslogAtomicCounter*  counter = SolidSyslogAtomicCounter_Create(malloc);
+    SolidSyslogStructuredData* metaSd  = SolidSyslogMetaSd_Create(malloc, counter);
     config.sd = metaSd;
     ReplaceLogger();
     message.msg = "hello world";
     Log();
     STRCMP_EQUAL("hello world", SyslogMsg(LastMessage()).c_str());
     SolidSyslogMetaSd_Destroy(metaSd, free);
+    SolidSyslogAtomicCounter_Destroy(counter, free);
 }
 
 TEST(SolidSyslog, NullMessageOmitsMsgField)

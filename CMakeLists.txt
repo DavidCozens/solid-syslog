@@ -58,6 +58,9 @@ include(CheckSymbolExists)
 check_symbol_exists(sendto "sys/socket.h" HAVE_POSIX_SOCKETS)
 option(SOLIDSYSLOG_POSIX "Include POSIX UDP sender" ${HAVE_POSIX_SOCKETS})
 
+include(CheckIncludeFile)
+check_include_file(stdatomic.h HAVE_STDATOMIC_H)
+
 add_subdirectory(Source)
 
 if(SOLIDSYSLOG_POSIX)

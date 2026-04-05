@@ -1,26 +1,26 @@
 #include "SolidSyslogMetaSd.h"
+#include "SolidSyslogAtomicCounter.h"
 #include "SolidSyslogStructuredDataDef.h"
 
-#include <stdatomic.h>
 #include <stdint.h>
 #include <string.h>
 
 struct SolidSyslogMetaSd
 {
-    struct SolidSyslogStructuredData base;
-    atomic_uint_fast32_t             sequenceId;
+    struct SolidSyslogStructuredData  base;
+    struct SolidSyslogAtomicCounter*  counter;
 };
 
 static size_t FormatUint32(char* buffer, uint32_t value);
 static size_t Format(struct SolidSyslogStructuredData* self, char* buffer, size_t size);
 
-struct SolidSyslogStructuredData* SolidSyslogMetaSd_Create(SolidSyslogAllocFunction alloc)
+struct SolidSyslogStructuredData* SolidSyslogMetaSd_Create(SolidSyslogAllocFunction alloc, struct SolidSyslogAtomicCounter* counter)
 {
     struct SolidSyslogMetaSd* instance = alloc(sizeof(struct SolidSyslogMetaSd));
     if (instance != NULL)
     {
         instance->base.Format = Format;
-        atomic_init(&instance->sequenceId, 0);
+        instance->counter     = counter;
     }
     return &instance->base;
 }
@@ -33,7 +33,7 @@ void SolidSyslogMetaSd_Destroy(struct SolidSyslogStructuredData* sd, SolidSyslog
 static size_t Format(struct SolidSyslogStructuredData* self, char* buffer, size_t size)
 {
     struct SolidSyslogMetaSd* meta = (struct SolidSyslogMetaSd*) self;
-    uint_fast32_t             id   = atomic_fetch_add(&meta->sequenceId, 1) + 1;
+    uint_fast32_t             id   = SolidSyslogAtomicCounter_Increment(meta->counter);
 
     const char* prefix = "[meta sequenceId=\"";
     const char* suffix = "\"]";
