@@ -1,4 +1,5 @@
 #include "StringFake.h"
+#include "SolidSyslogFormat.h"
 
 #include <string.h>
 
@@ -58,6 +59,5 @@ static size_t CopyBounded(char* buffer, size_t size, const char* source)
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- length and bufferSize are semantically distinct
 static size_t ClampToBufferSize(size_t length, size_t bufferSize)
 {
-    size_t maxLength = bufferSize - 1;
-    return (length < maxLength) ? length : maxLength;
+    return SolidSyslogFormat_MinSize(length, bufferSize - 1);
 }
