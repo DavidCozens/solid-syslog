@@ -35,20 +35,19 @@ void BufferFake_Destroy(struct SolidSyslogBuffer* buffer)
 
 static bool Read(struct SolidSyslogBuffer* self, void* data, size_t maxSize, size_t* bytesRead)
 {
-    struct BufferFake* fake = (struct BufferFake*) self;
+    struct BufferFake* fake    = (struct BufferFake*) self;
+    bool               success = fake->pending;
 
-    if (!fake->pending)
+    if (success)
     {
-        return false;
+        size_t copySize = fake->storedSize < maxSize ? fake->storedSize : maxSize;
+        // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memcpy with bounded copySize; memcpy_s is not portable
+        memcpy(data, fake->stored, copySize);
+        *bytesRead    = copySize;
+        fake->pending = false;
     }
 
-    size_t copySize = fake->storedSize < maxSize ? fake->storedSize : maxSize;
-    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memcpy with bounded copySize; memcpy_s is not portable
-    memcpy(data, fake->stored, copySize);
-    *bytesRead    = copySize;
-    fake->pending = false;
-
-    return true;
+    return success;
 }
 
 static void Write(struct SolidSyslogBuffer* self, const void* data, size_t size)
