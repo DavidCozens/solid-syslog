@@ -4,8 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-static inline size_t   CountDigits(uint32_t value);
-static inline uint32_t PowerOf10(size_t exponent);
+static inline size_t CountSignificantDigits(uint32_t value);
+static inline void   FormatLeastSignificantDigits(char* buffer, uint32_t value, size_t count);
 
 static inline size_t SolidSyslogFormat_Character(char* buffer, char value)
 {
@@ -34,19 +34,13 @@ static inline size_t SolidSyslogFormat_Nilvalue(char* buffer)
 
 static inline size_t SolidSyslogFormat_Uint32(char* buffer, uint32_t value)
 {
-    size_t   digits  = CountDigits(value);
-    uint32_t divisor = PowerOf10(digits - 1);
-
-    for (size_t i = 0; i < digits; i++)
-    {
-        buffer[i] = (char) ('0' + ((value / divisor) % 10U));
-        divisor /= 10U;
-    }
+    size_t digits = CountSignificantDigits(value);
+    FormatLeastSignificantDigits(buffer, value, digits);
     buffer[digits] = '\0';
     return digits;
 }
 
-static inline size_t CountDigits(uint32_t value)
+static inline size_t CountSignificantDigits(uint32_t value)
 {
     size_t count = 1;
     while (value >= 10U)
@@ -57,14 +51,15 @@ static inline size_t CountDigits(uint32_t value)
     return count;
 }
 
-static inline uint32_t PowerOf10(size_t exponent)
+static inline void FormatLeastSignificantDigits(char* buffer, uint32_t value, size_t count)
 {
-    uint32_t result = 1;
-    for (size_t i = 0; i < exponent; i++)
+    size_t i = count;
+    while (i > 0)
     {
-        result *= 10U;
+        i--;
+        buffer[i] = (char) ('0' + (value % 10U));
+        value /= 10U;
     }
-    return result;
 }
 
 #endif /* SOLIDSYSLOGFORMAT_H */
