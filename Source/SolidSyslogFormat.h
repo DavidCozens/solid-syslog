@@ -16,6 +16,11 @@ static inline size_t SolidSyslogFormat_Nilvalue(char* buffer)
     return SolidSyslogFormat_Character(buffer, '-');
 }
 
+static inline char SolidSyslogFormat_DigitToChar(uint32_t value)
+{
+    return (char) ('0' + (value % 10U));
+}
+
 size_t SolidSyslogFormat_BoundedString(char* buffer, const char* source, size_t bufferSize);
 size_t SolidSyslogFormat_Uint32(char* buffer, uint32_t value);
 

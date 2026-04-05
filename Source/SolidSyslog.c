@@ -132,13 +132,13 @@ static inline size_t FormatPrival(char* buffer, uint8_t prival)
     len += SolidSyslogFormat_Character(buffer + len, '<');
     if (prival >= 100U)
     {
-        len += SolidSyslogFormat_Character(buffer + len, (char) ('0' + (prival / 100U)));
+        len += SolidSyslogFormat_Character(buffer + len, SolidSyslogFormat_DigitToChar(prival / 100U));
     }
     if (prival >= 10U)
     {
-        len += SolidSyslogFormat_Character(buffer + len, (char) ('0' + ((prival / 10U) % 10U)));
+        len += SolidSyslogFormat_Character(buffer + len, SolidSyslogFormat_DigitToChar(prival / 10U));
     }
-    len += SolidSyslogFormat_Character(buffer + len, (char) ('0' + (prival % 10U)));
+    len += SolidSyslogFormat_Character(buffer + len, SolidSyslogFormat_DigitToChar(prival));
     len += SolidSyslogFormat_Character(buffer + len, '>');
 
     return len;
@@ -259,30 +259,30 @@ static inline size_t FormatCapturedTimestamp(char* buffer, const struct SolidSys
 
 static inline size_t FormatYear(char* buffer, uint16_t value)
 {
-    buffer[0] = (char) ('0' + ((value / 1000U) % 10U));
-    buffer[1] = (char) ('0' + ((value / 100U) % 10U));
-    buffer[2] = (char) ('0' + ((value / 10U) % 10U));
-    buffer[3] = (char) ('0' + (value % 10U));
+    buffer[0] = SolidSyslogFormat_DigitToChar(value / 1000U);
+    buffer[1] = SolidSyslogFormat_DigitToChar(value / 100U);
+    buffer[2] = SolidSyslogFormat_DigitToChar(value / 10U);
+    buffer[3] = SolidSyslogFormat_DigitToChar(value);
     buffer[4] = '\0';
     return 4;
 }
 
 static inline size_t FormatTwoDigit(char* buffer, uint8_t value)
 {
-    buffer[0] = (char) ('0' + (value / 10U));
-    buffer[1] = (char) ('0' + (value % 10U));
+    buffer[0] = SolidSyslogFormat_DigitToChar(value / 10U);
+    buffer[1] = SolidSyslogFormat_DigitToChar(value);
     buffer[2] = '\0';
     return 2;
 }
 
 static inline size_t FormatMicrosecond(char* buffer, uint32_t value)
 {
-    buffer[0] = (char) ('0' + ((value / 100000U) % 10U));
-    buffer[1] = (char) ('0' + ((value / 10000U) % 10U));
-    buffer[2] = (char) ('0' + ((value / 1000U) % 10U));
-    buffer[3] = (char) ('0' + ((value / 100U) % 10U));
-    buffer[4] = (char) ('0' + ((value / 10U) % 10U));
-    buffer[5] = (char) ('0' + (value % 10U));
+    buffer[0] = SolidSyslogFormat_DigitToChar(value / 100000U);
+    buffer[1] = SolidSyslogFormat_DigitToChar(value / 10000U);
+    buffer[2] = SolidSyslogFormat_DigitToChar(value / 1000U);
+    buffer[3] = SolidSyslogFormat_DigitToChar(value / 100U);
+    buffer[4] = SolidSyslogFormat_DigitToChar(value / 10U);
+    buffer[5] = SolidSyslogFormat_DigitToChar(value);
     buffer[6] = '\0';
     return 6;
 }

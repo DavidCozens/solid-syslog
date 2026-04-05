@@ -41,7 +41,7 @@ static void FormatLeastSignificantDigits(char* buffer, uint32_t value, size_t co
     while (i > 0)
     {
         i--;
-        buffer[i] = (char) ('0' + (value % 10U));
+        buffer[i] = SolidSyslogFormat_DigitToChar(value);
         value /= 10U;
     }
 }
