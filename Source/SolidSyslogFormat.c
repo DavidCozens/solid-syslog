@@ -1,5 +1,8 @@
 #include "SolidSyslogFormat.h"
 
+static size_t   CountDigits(uint32_t value);
+static uint32_t PowerOf10(size_t exponent);
+
 size_t SolidSyslogFormat_Character(char* buffer, char value)
 {
     buffer[0] = value;
@@ -27,27 +30,35 @@ size_t SolidSyslogFormat_Nilvalue(char* buffer)
 
 size_t SolidSyslogFormat_Uint32(char* buffer, uint32_t value)
 {
-    char   temp[11];
-    size_t pos = 0;
+    size_t   digits  = CountDigits(value);
+    uint32_t divisor = PowerOf10(digits - 1);
 
-    if (value == 0)
+    for (size_t i = 0; i < digits; i++)
     {
-        buffer[0] = '0';
-        buffer[1] = '\0';
-        return 1;
+        buffer[i] = (char) ('0' + ((value / divisor) % 10U));
+        divisor /= 10U;
     }
+    buffer[digits] = '\0';
+    return digits;
+}
 
-    uint32_t remaining = value;
-    while (remaining > 0)
+static size_t CountDigits(uint32_t value)
+{
+    size_t count = 1;
+    while (value >= 10U)
     {
-        temp[pos++] = (char) ('0' + (remaining % 10));
-        remaining /= 10;
+        count++;
+        value /= 10U;
     }
+    return count;
+}
 
-    for (size_t i = 0; i < pos; i++)
+static uint32_t PowerOf10(size_t exponent)
+{
+    uint32_t result = 1;
+    for (size_t i = 0; i < exponent; i++)
     {
-        buffer[i] = temp[pos - 1 - i];
+        result *= 10U;
     }
-    buffer[pos] = '\0';
-    return pos;
+    return result;
 }
