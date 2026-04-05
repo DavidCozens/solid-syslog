@@ -10,7 +10,7 @@ size_t SolidSyslogPosixHostname_Get(char* buffer, size_t size)
     if (gethostname(buffer, size) == 0)
     {
         buffer[size - 1] = '\0';
-        len = strlen(buffer);
+        len              = strlen(buffer);
     }
 
     buffer[len] = '\0';

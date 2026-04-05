@@ -56,7 +56,7 @@ struct SolidSyslog
     SolidSyslogStringFunction         getHostname;
     SolidSyslogStringFunction         getAppName;
     SolidSyslogStringFunction         getProcId;
-    struct SolidSyslogStructuredData*  sd;
+    struct SolidSyslogStructuredData* sd;
 };
 
 struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config)

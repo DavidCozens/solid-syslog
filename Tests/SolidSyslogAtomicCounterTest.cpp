@@ -6,10 +6,12 @@
 // clang-format off
 TEST_GROUP(SolidSyslogAtomicCounter)
 {
+    // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
     SolidSyslogAtomicCounter* counter;
 
     void setup() override
     {
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
         counter = SolidSyslogAtomicCounter_Create(malloc);
     }
 

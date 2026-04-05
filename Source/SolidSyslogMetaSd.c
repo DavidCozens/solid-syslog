@@ -7,8 +7,8 @@
 
 struct SolidSyslogMetaSd
 {
-    struct SolidSyslogStructuredData  base;
-    struct SolidSyslogAtomicCounter*  counter;
+    struct SolidSyslogStructuredData base;
+    struct SolidSyslogAtomicCounter* counter;
 };
 
 static size_t Format(struct SolidSyslogStructuredData* self, char* buffer, size_t size);

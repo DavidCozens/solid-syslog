@@ -8,7 +8,9 @@
 // clang-format off
 TEST_GROUP(SolidSyslogMetaSd)
 {
+    // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
     SolidSyslogAtomicCounter* counter;
+    // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
     SolidSyslogStructuredData* sd;
     char buffer[256];
 

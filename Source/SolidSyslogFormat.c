@@ -35,6 +35,7 @@ static size_t CountSignificantDigits(uint32_t value)
     return count;
 }
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- value is the number to format, count is the digit width; distinct semantics
 static void FormatLeastSignificantDigits(char* buffer, uint32_t value, size_t count)
 {
     size_t i = count;

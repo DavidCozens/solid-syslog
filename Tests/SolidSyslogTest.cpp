@@ -469,7 +469,7 @@ TEST(SolidSyslog, MetaSdProducesSequenceIdInStructuredData)
 {
     SolidSyslogAtomicCounter*  counter = SolidSyslogAtomicCounter_Create(malloc);
     SolidSyslogStructuredData* metaSd  = SolidSyslogMetaSd_Create(malloc, counter);
-    config.sd = metaSd;
+    config.sd                          = metaSd;
     ReplaceLogger();
     Log();
     STRCMP_EQUAL("[meta sequenceId=\"1\"]", SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
@@ -481,7 +481,7 @@ TEST(SolidSyslog, MetaSdSequenceIdIncrementsAcrossLogCalls)
 {
     SolidSyslogAtomicCounter*  counter = SolidSyslogAtomicCounter_Create(malloc);
     SolidSyslogStructuredData* metaSd  = SolidSyslogMetaSd_Create(malloc, counter);
-    config.sd = metaSd;
+    config.sd                          = metaSd;
     ReplaceLogger();
     Log();
     Log();
@@ -494,7 +494,7 @@ TEST(SolidSyslog, MsgFieldPreservedWithMetaSd)
 {
     SolidSyslogAtomicCounter*  counter = SolidSyslogAtomicCounter_Create(malloc);
     SolidSyslogStructuredData* metaSd  = SolidSyslogMetaSd_Create(malloc, counter);
-    config.sd = metaSd;
+    config.sd                          = metaSd;
     ReplaceLogger();
     message.msg = "hello world";
     Log();
