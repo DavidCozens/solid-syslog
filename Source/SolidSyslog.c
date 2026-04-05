@@ -2,6 +2,7 @@
 #include "SolidSyslogBuffer.h"
 #include "SolidSyslogConfig.h"
 #include "SolidSyslogSender.h"
+#include "SolidSyslogStructuredData.h"
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -36,7 +37,7 @@ static inline size_t  FormatPrival(char* buffer, uint8_t prival);
 static inline size_t  FormatProcId(char* buffer, SolidSyslogStringFunction getProcId);
 static inline size_t  FormatSign(char* buffer, int16_t value);
 static inline size_t  FormatSpace(char* buffer);
-static inline size_t  FormatStructuredData(char* buffer);
+static inline size_t  FormatStructuredData(char* buffer, size_t size, struct SolidSyslogStructuredData* sd);
 static inline size_t  FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFunction clock);
 static inline size_t  FormatTwoDigit(char* buffer, uint8_t value);
 static inline size_t  FormatUtcOffset(char* buffer, int16_t offsetMinutes);
@@ -50,13 +51,14 @@ static inline bool    TimestampIsValid(const struct SolidSyslogTimestamp* ts);
 
 struct SolidSyslog
 {
-    struct SolidSyslogBuffer* buffer;
-    struct SolidSyslogSender* sender;
-    SolidSyslogFreeFunction   free;
-    SolidSyslogClockFunction  clock;
-    SolidSyslogStringFunction getHostname;
-    SolidSyslogStringFunction getAppName;
-    SolidSyslogStringFunction getProcId;
+    struct SolidSyslogBuffer*         buffer;
+    struct SolidSyslogSender*         sender;
+    SolidSyslogFreeFunction           free;
+    SolidSyslogClockFunction          clock;
+    SolidSyslogStringFunction         getHostname;
+    SolidSyslogStringFunction         getAppName;
+    SolidSyslogStringFunction         getProcId;
+    struct SolidSyslogStructuredData*  sd;
 };
 
 struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config)
@@ -71,6 +73,7 @@ struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config)
         instance->getHostname = config->getHostname;
         instance->getAppName  = config->getAppName;
         instance->getProcId   = config->getProcId;
+        instance->sd          = config->sd;
     }
     return instance;
 }
@@ -118,7 +121,7 @@ static inline size_t FormatMessage(const struct SolidSyslog* self, char* buffer,
     len += FormatSpace(buffer + len);
     len += FormatMsgId(buffer + len, message->messageId);
     len += FormatSpace(buffer + len);
-    len += FormatStructuredData(buffer + len);
+    len += FormatStructuredData(buffer + len, size - len, self->sd);
     len += FormatMsg(buffer + len, message->msg, size - len);
 
     return len;
@@ -440,8 +443,13 @@ static inline size_t FormatBoundedString(char* buffer, const char* source, size_
     return len;
 }
 
-static inline size_t FormatStructuredData(char* buffer)
+static inline size_t FormatStructuredData(char* buffer, size_t size, struct SolidSyslogStructuredData* sd)
 {
+    if (sd != NULL)
+    {
+        return SolidSyslogStructuredData_Format(sd, buffer, size);
+    }
+
     return FormatNilvalue(buffer);
 }
 

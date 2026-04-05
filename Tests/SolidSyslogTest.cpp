@@ -2,10 +2,12 @@
 #include "SolidSyslog.h"
 #include "SolidSyslogConfig.h"
 #include "SolidSyslogNullBuffer.h"
+#include "SolidSyslogStructuredDataDef.h"
 #include "BufferFake.h"
 #include "SenderSpy.h"
 #include "StringFake.h"
 #include <cstdlib>
+#include <cstring>
 #include <string>
 
 // clang-format off
@@ -89,6 +91,16 @@ static const int TIMESTAMP_OFFSET_OFFSET       = 26;
 
 // NOLINTEND(cppcoreguidelines-macro-usage)
 
+static size_t SdSpyFormat(struct SolidSyslogStructuredData* /* self */, char* buffer, size_t /* size */)
+{
+    const char* text = "[spy]";
+    size_t      len  = strlen(text);
+    memcpy(buffer, text, len + 1);
+    return len;
+}
+
+static struct SolidSyslogStructuredData sdSpy = {SdSpyFormat};
+
 static std::string SyslogField(const char* buffer, int n)
 {
     std::string            s(buffer);
@@ -138,7 +150,7 @@ TEST_GROUP(SolidSyslog)
         SenderSpy_Reset();
         StringFake_Reset();
         buffer = SolidSyslogNullBuffer_Create(SenderSpy_GetSender());
-        config = {buffer, nullptr, malloc, free, nullptr, StringFake_GetHostname, StringFake_GetAppName, StringFake_GetProcId};
+        config = {buffer, nullptr, malloc, free, nullptr, StringFake_GetHostname, StringFake_GetAppName, StringFake_GetProcId, nullptr};
         logger = SolidSyslog_Create(&config);
         message = {SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO, nullptr, nullptr};
     }
@@ -187,7 +199,7 @@ TEST(SolidSyslog, TwoCreatesReturnDifferentHandles)
 TEST(SolidSyslog, EachLoggerSendsThroughItsOwnSender)
 {
     SolidSyslogBuffer* secondBuffer = SolidSyslogNullBuffer_Create(SenderSpy_GetSender());
-    SolidSyslogConfig  secondConfig = {secondBuffer, nullptr, malloc, free, nullptr, nullptr, nullptr, nullptr};
+    SolidSyslogConfig  secondConfig = {secondBuffer, nullptr, malloc, free, nullptr, nullptr, nullptr, nullptr, nullptr};
     SolidSyslog*       second       = SolidSyslog_Create(&secondConfig);
 
     SolidSyslog_Log(logger, &message);
@@ -399,6 +411,14 @@ TEST(SolidSyslog, StructuredDataIsNilValue)
     STRCMP_EQUAL(TEST_SDATA, SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
 }
 
+TEST(SolidSyslog, InjectedSdObjectFormatIsCalledDuringLog)
+{
+    config.sd = &sdSpy;
+    ReplaceLogger();
+    Log();
+    STRCMP_EQUAL("[spy]", SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
+}
+
 TEST(SolidSyslog, NullMessageOmitsMsgField)
 {
     Log();
@@ -471,7 +491,7 @@ static void* AlwaysFailAlloc(size_t size)
 
 TEST(SolidSyslog, CreateReturnsNullWhenAllocFails)
 {
-    SolidSyslogConfig failConfig = {buffer, nullptr, AlwaysFailAlloc, free, nullptr, nullptr, nullptr, nullptr};
+    SolidSyslogConfig failConfig = {buffer, nullptr, AlwaysFailAlloc, free, nullptr, nullptr, nullptr, nullptr, nullptr};
     SolidSyslog*      result     = SolidSyslog_Create(&failConfig);
     POINTERS_EQUAL(nullptr, result);
 }
@@ -913,7 +933,7 @@ TEST(SolidSyslog, MultipleServiceCallsReturnNothingToSend)
 TEST(SolidSyslog, ServiceSendsMessageReadFromBuffer)
 {
     SolidSyslogBuffer* fakeBuffer    = BufferFake_Create();
-    SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderSpy_GetSender(), malloc, free, nullptr, nullptr, nullptr, nullptr};
+    SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderSpy_GetSender(), malloc, free, nullptr, nullptr, nullptr, nullptr, nullptr};
     SolidSyslog*       serviceLogger = SolidSyslog_Create(&serviceConfig);
 
     SolidSyslogBuffer_Write(fakeBuffer, "test", 4);

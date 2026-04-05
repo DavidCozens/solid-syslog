@@ -3,6 +3,7 @@ set(SOURCES
     SolidSyslogBuffer.c
     SolidSyslogNullBuffer.c
     SolidSyslogSender.c
+    SolidSyslogStructuredData.c
 )
 
 if(SOLIDSYSLOG_POSIX)
