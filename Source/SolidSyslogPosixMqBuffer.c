@@ -1,11 +1,11 @@
 #include "SolidSyslogPosixMqBuffer.h"
 #include "SolidSyslogBufferDef.h"
 #include "SolidSyslogFormat.h"
+#include "SolidSyslogPosixProcId.h"
 
 #include <mqueue.h>
 #include <stdlib.h>
 #include <time.h>
-#include <unistd.h>
 
 static bool Read(struct SolidSyslogBuffer* self, void* data, size_t maxSize, size_t* bytesRead);
 static void Write(struct SolidSyslogBuffer* self, const void* data, size_t size);
@@ -25,7 +25,7 @@ struct SolidSyslogBuffer* SolidSyslogPosixMqBuffer_Create(size_t maxMessageSize,
 
     size_t nameLen = 0;
     nameLen += SolidSyslogFormat_BoundedString(self->name + nameLen, "/solidsyslog_", sizeof(self->name) - nameLen);
-    nameLen += SolidSyslogFormat_Uint32(self->name + nameLen, (uint32_t) getpid());
+    nameLen += SolidSyslogPosixProcId_Get(self->name + nameLen, sizeof(self->name) - nameLen);
 
     struct mq_attr attr = {0};
     attr.mq_maxmsg      = maxMessages;
