@@ -5,6 +5,7 @@ endif()
 
 set(TEST_SOURCES
     SolidSyslogTest.cpp
+    SolidSyslogMetaSdTest.cpp
     SolidSyslogNullBufferTest.cpp
     SolidSyslogPrivalTest.cpp
     BufferFakeTest.cpp
