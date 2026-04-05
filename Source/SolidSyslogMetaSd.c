@@ -1,13 +1,14 @@
 #include "SolidSyslogMetaSd.h"
 #include "SolidSyslogStructuredDataDef.h"
 
+#include <stdatomic.h>
 #include <stdint.h>
 #include <string.h>
 
 struct SolidSyslogMetaSd
 {
     struct SolidSyslogStructuredData base;
-    uint32_t                         sequenceId;
+    atomic_uint_fast32_t             sequenceId;
 };
 
 static size_t FormatUint32(char* buffer, uint32_t value);
@@ -19,7 +20,7 @@ struct SolidSyslogStructuredData* SolidSyslogMetaSd_Create(SolidSyslogAllocFunct
     if (instance != NULL)
     {
         instance->base.Format = Format;
-        instance->sequenceId  = 0;
+        atomic_init(&instance->sequenceId, 0);
     }
     return &instance->base;
 }
@@ -32,7 +33,7 @@ void SolidSyslogMetaSd_Destroy(struct SolidSyslogStructuredData* sd, SolidSyslog
 static size_t Format(struct SolidSyslogStructuredData* self, char* buffer, size_t size)
 {
     struct SolidSyslogMetaSd* meta = (struct SolidSyslogMetaSd*) self;
-    meta->sequenceId++;
+    uint_fast32_t             id   = atomic_fetch_add(&meta->sequenceId, 1) + 1;
 
     const char* prefix = "[meta sequenceId=\"";
     const char* suffix = "\"]";
@@ -45,7 +46,7 @@ static size_t Format(struct SolidSyslogStructuredData* self, char* buffer, size_
         len += prefixLen;
     }
 
-    len += FormatUint32(buffer + len, meta->sequenceId);
+    len += FormatUint32(buffer + len, (uint32_t) id);
 
     size_t suffixLen = strlen(suffix);
     if (len + suffixLen < size)
