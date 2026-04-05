@@ -30,7 +30,7 @@ TEST_GROUP(ExampleServiceThread)
         sender = SolidSyslogUdpSender_Create(&udpConfig);
         buffer = SolidSyslogPosixMqBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
 
-        SolidSyslogConfig config = {buffer, sender, malloc, free, nullptr, nullptr, nullptr, nullptr};
+        SolidSyslogConfig config = {buffer, sender, malloc, free, nullptr, nullptr, nullptr, nullptr, nullptr};
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
         logger = SolidSyslog_Create(&config);
     }

@@ -1,12 +1,11 @@
 #include "SolidSyslogPosixMqBuffer.h"
 #include "SolidSyslogBufferDef.h"
+#include "SolidSyslogFormat.h"
+#include "SolidSyslogPosixProcId.h"
 
 #include <mqueue.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <time.h>
-#include <unistd.h>
 
 static bool Read(struct SolidSyslogBuffer* self, void* data, size_t maxSize, size_t* bytesRead);
 static void Write(struct SolidSyslogBuffer* self, const void* data, size_t size);
@@ -24,8 +23,10 @@ struct SolidSyslogBuffer* SolidSyslogPosixMqBuffer_Create(size_t maxMessageSize,
 {
     struct SolidSyslogPosixMqBuffer* self = calloc(1, sizeof(struct SolidSyslogPosixMqBuffer));
 
-    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- snprintf with bounded size; snprintf_s is not portable
-    snprintf(self->name, sizeof(self->name), "/solidsyslog_%d", getpid());
+    size_t nameLen = 0;
+    nameLen += SolidSyslogFormat_BoundedString(self->name + nameLen, "/solidsyslog_", sizeof(self->name) - nameLen);
+    nameLen += SolidSyslogPosixProcId_Get(self->name + nameLen, sizeof(self->name) - nameLen);
+    (void) nameLen;
 
     struct mq_attr attr = {0};
     attr.mq_maxmsg      = maxMessages;

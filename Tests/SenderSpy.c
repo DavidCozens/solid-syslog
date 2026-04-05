@@ -1,4 +1,5 @@
 #include "SenderSpy.h"
+#include "SolidSyslogFormat.h"
 #include "SolidSyslogSenderDef.h"
 
 #include <string.h>
@@ -16,7 +17,7 @@ static struct SolidSyslogSender sender;
 static void Send(struct SolidSyslogSender* self, const void* buffer, size_t size)
 {
     (void) self;
-    size_t copySize = size < sizeof(lastBuffer) - 1 ? size : sizeof(lastBuffer) - 1;
+    size_t copySize = SolidSyslogFormat_MinSize(size, sizeof(lastBuffer) - 1);
     // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memcpy with bounded copySize; memcpy_s is not portable
     memcpy(lastBuffer, buffer, copySize);
     lastBuffer[copySize] = '\0';

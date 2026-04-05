@@ -21,6 +21,13 @@ def line_count(path):
         return sum(1 for _ in f)
 
 
+def read_new_lines(path, skip):
+    """Return all lines after the first 'skip' lines."""
+    with open(path) as f:
+        lines = f.readlines()
+    return [line.strip() for line in lines[skip:] if line.strip()]
+
+
 def read_last_line(path):
     """Return the last non-empty line from a file."""
     with open(path) as f:
@@ -36,6 +43,12 @@ def parse_syslog_line(line):
     fields = {}
     for match in re.finditer(r"(\w+)=(\S+)", line):
         fields[match.group(1)] = match.group(2)
+
+    # STRUCTURED_DATA may contain spaces and special chars — capture between
+    # "STRUCTURED_DATA=" and " MSG="
+    sd_match = re.search(r"STRUCTURED_DATA=(.*?) MSG=", line)
+    if sd_match:
+        fields["STRUCTURED_DATA"] = sd_match.group(1)
 
     # MSG may contain spaces — capture everything after "MSG="
     msg_match = re.search(r"MSG=(.*)", line)
@@ -90,8 +103,9 @@ def run_example(context, extra_args=None, binary=None, expected_messages=1):
             )
         time.sleep(0.1)
 
-    context.fields = parse_syslog_line(read_last_line(RECEIVED_LOG))
-    context.message_count = line_count(RECEIVED_LOG) - context.lines_before
+    context.all_lines = read_new_lines(RECEIVED_LOG, context.lines_before)
+    context.fields = parse_syslog_line(context.all_lines[-1])
+    context.message_count = len(context.all_lines)
 
 
 @when("the example program sends a syslog message")
@@ -205,8 +219,42 @@ def step_check_msg(context, msg):
     )
 
 
+@when("the example program sends {count:d} syslog messages")
+def step_example_sends_multiple(context, count):
+    run_example(context, ["--count", str(count)], expected_messages=count)
+
+
 @then("syslog-ng receives {count:d} messages")
 def step_check_message_count(context, count):
     assert context.message_count == count, (
         f"Expected {count} messages, got {context.message_count}"
     )
+
+
+@then('the structured data contains sequenceId "{value}"')
+def step_check_sequence_id(context, value):
+    sd = context.fields.get("STRUCTURED_DATA", "")
+    match = re.search(r'sequenceId="(\d+)"', sd)
+    assert match, (
+        f"No sequenceId found in structured data: {sd}"
+    )
+    assert match.group(1) == value, (
+        f"Expected sequenceId {value}, got {match.group(1)}"
+    )
+
+
+@then("syslog-ng receives {count:d} messages with sequential sequenceId values")
+def step_check_sequential_ids(context, count):
+    assert context.message_count == count, (
+        f"Expected {count} messages, got {context.message_count}"
+    )
+    for i, line in enumerate(context.all_lines, start=1):
+        fields = parse_syslog_line(line)
+        sd = fields.get("STRUCTURED_DATA", "")
+        match = re.search(r'sequenceId="(\d+)"', sd)
+        assert match, (
+            f"Message {i}: no sequenceId in structured data: {sd}"
+        )
+        assert match.group(1) == str(i), (
+            f"Message {i}: expected sequenceId {i}, got {match.group(1)}"
+        )

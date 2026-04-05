@@ -3,7 +3,9 @@
 #include "ExampleCommandLine.h"
 #include "ExampleUdpConfig.h"
 #include "SolidSyslog.h"
+#include "SolidSyslogAtomicCounter.h"
 #include "SolidSyslogConfig.h"
+#include "SolidSyslogMetaSd.h"
 #include "SolidSyslogNullBuffer.h"
 #include "SolidSyslogPosixClock.h"
 #include "SolidSyslogPosixHostname.h"
@@ -26,8 +28,10 @@ int SolidSyslogExample_Run(int argc, char* argv[])
         .getPort = ExampleUdpConfig_GetPort,
         .getHost = ExampleUdpConfig_GetHost,
     };
-    struct SolidSyslogSender* sender = SolidSyslogUdpSender_Create(&udpConfig);
-    struct SolidSyslogBuffer* buffer = SolidSyslogNullBuffer_Create(sender);
+    struct SolidSyslogSender*         sender  = SolidSyslogUdpSender_Create(&udpConfig);
+    struct SolidSyslogBuffer*         buffer  = SolidSyslogNullBuffer_Create(sender);
+    struct SolidSyslogAtomicCounter*  counter = SolidSyslogAtomicCounter_Create(malloc);
+    struct SolidSyslogStructuredData* metaSd  = SolidSyslogMetaSd_Create(malloc, counter);
 
     struct SolidSyslogConfig config = {
         .buffer      = buffer,
@@ -38,6 +42,7 @@ int SolidSyslogExample_Run(int argc, char* argv[])
         .getHostname = SolidSyslogPosixHostname_Get,
         .getAppName  = ExampleAppName_Get,
         .getProcId   = SolidSyslogPosixProcId_Get,
+        .sd          = metaSd,
     };
     struct SolidSyslog* logger = SolidSyslog_Create(&config);
 
@@ -53,6 +58,8 @@ int SolidSyslogExample_Run(int argc, char* argv[])
     }
 
     SolidSyslog_Destroy(logger);
+    SolidSyslogMetaSd_Destroy(metaSd, free);
+    SolidSyslogAtomicCounter_Destroy(counter, free);
     SolidSyslogNullBuffer_Destroy(buffer);
     SolidSyslogUdpSender_Destroy(sender);
 

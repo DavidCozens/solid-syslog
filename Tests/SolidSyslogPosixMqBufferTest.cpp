@@ -90,7 +90,7 @@ TEST(SolidSyslogPosixMqBuffer, SecondReadAfterSingleWriteReturnsFalse)
 TEST(SolidSyslogPosixMqBuffer, ServiceSendsMessageWrittenViaLog)
 {
     SenderSpy_Reset();
-    SolidSyslogConfig config = {buffer, SenderSpy_GetSender(), malloc, free, nullptr, nullptr, nullptr, nullptr};
+    SolidSyslogConfig config = {buffer, SenderSpy_GetSender(), malloc, free, nullptr, nullptr, nullptr, nullptr, nullptr};
     SolidSyslog*      logger = SolidSyslog_Create(&config);
 
     SolidSyslogMessage message = {SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO, nullptr, nullptr};

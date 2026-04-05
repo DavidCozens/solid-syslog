@@ -1,7 +1,9 @@
 #include "SolidSyslog.h"
 #include "SolidSyslogBuffer.h"
 #include "SolidSyslogConfig.h"
+#include "SolidSyslogFormat.h"
 #include "SolidSyslogSender.h"
+#include "SolidSyslogStructuredData.h"
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -22,21 +24,18 @@ static inline bool    FacilityIsValid(uint8_t facility);
 static inline size_t  FormatAppName(char* buffer, SolidSyslogStringFunction getAppName);
 static inline size_t  FormatAsHours(char* buffer, int16_t absoluteMinutes);
 static inline size_t  FormatAsMinutes(char* buffer, int16_t absoluteMinutes);
-static inline size_t  FormatBoundedString(char* buffer, const char* source, size_t bufferSize);
 static inline size_t  FormatCapturedTimestamp(char* buffer, const struct SolidSyslogTimestamp* ts);
-static inline size_t  FormatCharacter(char* buffer, char value);
 static inline size_t  FormatHostname(char* buffer, SolidSyslogStringFunction getHostname);
 static inline size_t  FormatMessage(const struct SolidSyslog* self, char* buffer, size_t size, const struct SolidSyslogMessage* message);
 static inline size_t  FormatMicrosecond(char* buffer, uint32_t value);
 static inline size_t  FormatMsg(char* buffer, const char* msg, size_t remaining);
 static inline size_t  FormatMsgId(char* buffer, const char* messageId);
-static inline size_t  FormatNilvalue(char* buffer);
 static inline size_t  FormatNonZeroUtcOffset(char* buffer, int16_t offsetMinutes);
 static inline size_t  FormatPrival(char* buffer, uint8_t prival);
 static inline size_t  FormatProcId(char* buffer, SolidSyslogStringFunction getProcId);
 static inline size_t  FormatSign(char* buffer, int16_t value);
 static inline size_t  FormatSpace(char* buffer);
-static inline size_t  FormatStructuredData(char* buffer);
+static inline size_t  FormatStructuredData(char* buffer, size_t size, struct SolidSyslogStructuredData* sd);
 static inline size_t  FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFunction clock);
 static inline size_t  FormatTwoDigit(char* buffer, uint8_t value);
 static inline size_t  FormatUtcOffset(char* buffer, int16_t offsetMinutes);
@@ -50,13 +49,14 @@ static inline bool    TimestampIsValid(const struct SolidSyslogTimestamp* ts);
 
 struct SolidSyslog
 {
-    struct SolidSyslogBuffer* buffer;
-    struct SolidSyslogSender* sender;
-    SolidSyslogFreeFunction   free;
-    SolidSyslogClockFunction  clock;
-    SolidSyslogStringFunction getHostname;
-    SolidSyslogStringFunction getAppName;
-    SolidSyslogStringFunction getProcId;
+    struct SolidSyslogBuffer*         buffer;
+    struct SolidSyslogSender*         sender;
+    SolidSyslogFreeFunction           free;
+    SolidSyslogClockFunction          clock;
+    SolidSyslogStringFunction         getHostname;
+    SolidSyslogStringFunction         getAppName;
+    SolidSyslogStringFunction         getProcId;
+    struct SolidSyslogStructuredData* sd;
 };
 
 struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config)
@@ -71,6 +71,7 @@ struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config)
         instance->getHostname = config->getHostname;
         instance->getAppName  = config->getAppName;
         instance->getProcId   = config->getProcId;
+        instance->sd          = config->sd;
     }
     return instance;
 }
@@ -118,7 +119,7 @@ static inline size_t FormatMessage(const struct SolidSyslog* self, char* buffer,
     len += FormatSpace(buffer + len);
     len += FormatMsgId(buffer + len, message->messageId);
     len += FormatSpace(buffer + len);
-    len += FormatStructuredData(buffer + len);
+    len += FormatStructuredData(buffer + len, size - len, self->sd);
     len += FormatMsg(buffer + len, message->msg, size - len);
 
     return len;
@@ -128,26 +129,19 @@ static inline size_t FormatPrival(char* buffer, uint8_t prival)
 {
     size_t len = 0;
 
-    len += FormatCharacter(buffer + len, '<');
+    len += SolidSyslogFormat_Character(buffer + len, '<');
     if (prival >= 100U)
     {
-        len += FormatCharacter(buffer + len, (char) ('0' + (prival / 100U)));
+        len += SolidSyslogFormat_Character(buffer + len, SolidSyslogFormat_DigitToChar(prival / 100U));
     }
     if (prival >= 10U)
     {
-        len += FormatCharacter(buffer + len, (char) ('0' + ((prival / 10U) % 10U)));
+        len += SolidSyslogFormat_Character(buffer + len, SolidSyslogFormat_DigitToChar(prival / 10U));
     }
-    len += FormatCharacter(buffer + len, (char) ('0' + (prival % 10U)));
-    len += FormatCharacter(buffer + len, '>');
+    len += SolidSyslogFormat_Character(buffer + len, SolidSyslogFormat_DigitToChar(prival));
+    len += SolidSyslogFormat_Character(buffer + len, '>');
 
     return len;
-}
-
-static inline size_t FormatCharacter(char* buffer, char value)
-{
-    buffer[0] = value;
-    buffer[1] = '\0';
-    return 1;
 }
 
 static inline uint8_t MakePrival(const struct SolidSyslogMessage* message)
@@ -186,12 +180,12 @@ static inline bool SeverityIsValid(uint8_t severity)
 
 static inline size_t FormatVersion(char* buffer)
 {
-    return FormatCharacter(buffer, '1');
+    return SolidSyslogFormat_Character(buffer, '1');
 }
 
 static inline size_t FormatSpace(char* buffer)
 {
-    return FormatCharacter(buffer, ' ');
+    return SolidSyslogFormat_Character(buffer, ' ');
 }
 
 static inline size_t FormatTimestamp(char* buffer, size_t size, SolidSyslogClockFunction clock)
@@ -207,7 +201,7 @@ static inline size_t FormatTimestamp(char* buffer, size_t size, SolidSyslogClock
     }
     else
     {
-        len = FormatNilvalue(buffer);
+        len = SolidSyslogFormat_Nilvalue(buffer);
     }
 
     return len;
@@ -246,17 +240,17 @@ static inline size_t FormatCapturedTimestamp(char* buffer, const struct SolidSys
     size_t len = 0;
 
     len += FormatYear(buffer + len, ts->year);
-    len += FormatCharacter(buffer + len, '-');
+    len += SolidSyslogFormat_Character(buffer + len, '-');
     len += FormatTwoDigit(buffer + len, ts->month);
-    len += FormatCharacter(buffer + len, '-');
+    len += SolidSyslogFormat_Character(buffer + len, '-');
     len += FormatTwoDigit(buffer + len, ts->day);
-    len += FormatCharacter(buffer + len, 'T');
+    len += SolidSyslogFormat_Character(buffer + len, 'T');
     len += FormatTwoDigit(buffer + len, ts->hour);
-    len += FormatCharacter(buffer + len, ':');
+    len += SolidSyslogFormat_Character(buffer + len, ':');
     len += FormatTwoDigit(buffer + len, ts->minute);
-    len += FormatCharacter(buffer + len, ':');
+    len += SolidSyslogFormat_Character(buffer + len, ':');
     len += FormatTwoDigit(buffer + len, ts->second);
-    len += FormatCharacter(buffer + len, '.');
+    len += SolidSyslogFormat_Character(buffer + len, '.');
     len += FormatMicrosecond(buffer + len, ts->microsecond);
     len += FormatUtcOffset(buffer + len, ts->utcOffsetMinutes);
 
@@ -265,30 +259,30 @@ static inline size_t FormatCapturedTimestamp(char* buffer, const struct SolidSys
 
 static inline size_t FormatYear(char* buffer, uint16_t value)
 {
-    buffer[0] = (char) ('0' + ((value / 1000U) % 10U));
-    buffer[1] = (char) ('0' + ((value / 100U) % 10U));
-    buffer[2] = (char) ('0' + ((value / 10U) % 10U));
-    buffer[3] = (char) ('0' + (value % 10U));
+    buffer[0] = SolidSyslogFormat_DigitToChar(value / 1000U);
+    buffer[1] = SolidSyslogFormat_DigitToChar(value / 100U);
+    buffer[2] = SolidSyslogFormat_DigitToChar(value / 10U);
+    buffer[3] = SolidSyslogFormat_DigitToChar(value);
     buffer[4] = '\0';
     return 4;
 }
 
 static inline size_t FormatTwoDigit(char* buffer, uint8_t value)
 {
-    buffer[0] = (char) ('0' + (value / 10U));
-    buffer[1] = (char) ('0' + (value % 10U));
+    buffer[0] = SolidSyslogFormat_DigitToChar(value / 10U);
+    buffer[1] = SolidSyslogFormat_DigitToChar(value);
     buffer[2] = '\0';
     return 2;
 }
 
 static inline size_t FormatMicrosecond(char* buffer, uint32_t value)
 {
-    buffer[0] = (char) ('0' + ((value / 100000U) % 10U));
-    buffer[1] = (char) ('0' + ((value / 10000U) % 10U));
-    buffer[2] = (char) ('0' + ((value / 1000U) % 10U));
-    buffer[3] = (char) ('0' + ((value / 100U) % 10U));
-    buffer[4] = (char) ('0' + ((value / 10U) % 10U));
-    buffer[5] = (char) ('0' + (value % 10U));
+    buffer[0] = SolidSyslogFormat_DigitToChar(value / 100000U);
+    buffer[1] = SolidSyslogFormat_DigitToChar(value / 10000U);
+    buffer[2] = SolidSyslogFormat_DigitToChar(value / 1000U);
+    buffer[3] = SolidSyslogFormat_DigitToChar(value / 100U);
+    buffer[4] = SolidSyslogFormat_DigitToChar(value / 10U);
+    buffer[5] = SolidSyslogFormat_DigitToChar(value);
     buffer[6] = '\0';
     return 6;
 }
@@ -299,7 +293,7 @@ static inline size_t FormatUtcOffset(char* buffer, int16_t offsetMinutes)
 
     if (offsetMinutes == 0)
     {
-        len = FormatCharacter(buffer, 'Z');
+        len = SolidSyslogFormat_Character(buffer, 'Z');
     }
     else
     {
@@ -316,7 +310,7 @@ static inline size_t FormatNonZeroUtcOffset(char* buffer, int16_t offsetMinutes)
 
     len += FormatSign(buffer + len, offsetMinutes);
     len += FormatAsHours(buffer + len, absoluteMinutes);
-    len += FormatCharacter(buffer + len, ':');
+    len += SolidSyslogFormat_Character(buffer + len, ':');
     len += FormatAsMinutes(buffer + len, absoluteMinutes);
 
     return len;
@@ -336,7 +330,7 @@ static inline int16_t AbsoluteInt16(int16_t value)
 
 static inline size_t FormatSign(char* buffer, int16_t value)
 {
-    return FormatCharacter(buffer, (value > 0) ? '+' : '-');
+    return SolidSyslogFormat_Character(buffer, (value > 0) ? '+' : '-');
 }
 
 static inline size_t FormatAsHours(char* buffer, int16_t absoluteMinutes)
@@ -347,11 +341,6 @@ static inline size_t FormatAsHours(char* buffer, int16_t absoluteMinutes)
 static inline size_t FormatAsMinutes(char* buffer, int16_t absoluteMinutes)
 {
     return FormatTwoDigit(buffer, (uint8_t) (absoluteMinutes % 60));
-}
-
-static inline size_t FormatNilvalue(char* buffer)
-{
-    return FormatCharacter(buffer, '-');
 }
 
 static inline size_t FormatHostname(char* buffer, SolidSyslogStringFunction getHostname)
@@ -365,7 +354,7 @@ static inline size_t FormatHostname(char* buffer, SolidSyslogStringFunction getH
 
     if (len == 0)
     {
-        len = FormatNilvalue(buffer);
+        len = SolidSyslogFormat_Nilvalue(buffer);
     }
 
     return len;
@@ -382,7 +371,7 @@ static inline size_t FormatAppName(char* buffer, SolidSyslogStringFunction getAp
 
     if (len == 0)
     {
-        len = FormatNilvalue(buffer);
+        len = SolidSyslogFormat_Nilvalue(buffer);
     }
 
     return len;
@@ -399,7 +388,7 @@ static inline size_t FormatProcId(char* buffer, SolidSyslogStringFunction getPro
 
     if (len == 0)
     {
-        len = FormatNilvalue(buffer);
+        len = SolidSyslogFormat_Nilvalue(buffer);
     }
 
     return len;
@@ -411,12 +400,12 @@ static inline size_t FormatMsgId(char* buffer, const char* messageId)
 
     if (StringIsValid(messageId))
     {
-        len = FormatBoundedString(buffer, messageId, SOLIDSYSLOG_MAX_MSGID_SIZE);
+        len = SolidSyslogFormat_BoundedString(buffer, messageId, SOLIDSYSLOG_MAX_MSGID_SIZE);
     }
 
     if (len == 0)
     {
-        len = FormatNilvalue(buffer);
+        len = SolidSyslogFormat_Nilvalue(buffer);
     }
 
     return len;
@@ -427,22 +416,14 @@ static inline bool StringIsValid(const char* value)
     return (value != NULL) && (value[0] != '\0');
 }
 
-static inline size_t FormatBoundedString(char* buffer, const char* source, size_t bufferSize)
+static inline size_t FormatStructuredData(char* buffer, size_t size, struct SolidSyslogStructuredData* sd)
 {
-    size_t maxLength = (bufferSize > 0) ? bufferSize - 1 : 0;
-    size_t len       = 0;
-    while ((len < maxLength) && (source[len] != '\0'))
+    if (sd != NULL)
     {
-        buffer[len] = source[len];
-        len++;
+        return SolidSyslogStructuredData_Format(sd, buffer, size);
     }
-    buffer[len] = '\0';
-    return len;
-}
 
-static inline size_t FormatStructuredData(char* buffer)
-{
-    return FormatNilvalue(buffer);
+    return SolidSyslogFormat_Nilvalue(buffer);
 }
 
 static inline size_t FormatMsg(char* buffer, const char* msg, size_t remaining)
@@ -452,7 +433,7 @@ static inline size_t FormatMsg(char* buffer, const char* msg, size_t remaining)
     if (StringIsValid(msg))
     {
         len += FormatSpace(buffer + len);
-        len += FormatBoundedString(buffer + len, msg, remaining - len);
+        len += SolidSyslogFormat_BoundedString(buffer + len, msg, remaining - len);
     }
 
     return len;

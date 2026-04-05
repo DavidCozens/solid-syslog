@@ -1,5 +1,6 @@
 #include "BufferFake.h"
 #include "SolidSyslogBufferDef.h"
+#include "SolidSyslogFormat.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -35,27 +36,26 @@ void BufferFake_Destroy(struct SolidSyslogBuffer* buffer)
 
 static bool Read(struct SolidSyslogBuffer* self, void* data, size_t maxSize, size_t* bytesRead)
 {
-    struct BufferFake* fake = (struct BufferFake*) self;
+    struct BufferFake* fake    = (struct BufferFake*) self;
+    bool               success = fake->pending;
 
-    if (!fake->pending)
+    if (success)
     {
-        return false;
+        size_t copySize = SolidSyslogFormat_MinSize(fake->storedSize, maxSize);
+        // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memcpy with bounded copySize; memcpy_s is not portable
+        memcpy(data, fake->stored, copySize);
+        *bytesRead    = copySize;
+        fake->pending = false;
     }
 
-    size_t copySize = fake->storedSize < maxSize ? fake->storedSize : maxSize;
-    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memcpy with bounded copySize; memcpy_s is not portable
-    memcpy(data, fake->stored, copySize);
-    *bytesRead    = copySize;
-    fake->pending = false;
-
-    return true;
+    return success;
 }
 
 static void Write(struct SolidSyslogBuffer* self, const void* data, size_t size)
 {
     struct BufferFake* fake = (struct BufferFake*) self;
 
-    size_t copySize = size < sizeof(fake->stored) ? size : sizeof(fake->stored);
+    size_t copySize = SolidSyslogFormat_MinSize(size, sizeof(fake->stored));
     // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memcpy with bounded copySize; memcpy_s is not portable
     memcpy(fake->stored, data, copySize);
     fake->storedSize = copySize;

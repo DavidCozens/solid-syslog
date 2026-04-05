@@ -1,9 +1,18 @@
 set(SOURCES
     SolidSyslog.c
     SolidSyslogBuffer.c
+    SolidSyslogFormat.c
+    SolidSyslogMetaSd.c
     SolidSyslogNullBuffer.c
     SolidSyslogSender.c
+    SolidSyslogStructuredData.c
 )
+
+if(HAVE_STDATOMIC_H)
+    list(APPEND SOURCES
+        SolidSyslogAtomicCounter.c
+    )
+endif()
 
 if(SOLIDSYSLOG_POSIX)
     list(APPEND SOURCES

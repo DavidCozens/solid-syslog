@@ -5,6 +5,7 @@ endif()
 
 set(TEST_SOURCES
     SolidSyslogTest.cpp
+    SolidSyslogMetaSdTest.cpp
     SolidSyslogNullBufferTest.cpp
     SolidSyslogPrivalTest.cpp
     BufferFakeTest.cpp
@@ -15,6 +16,12 @@ set(TEST_SOURCES
     StringFake.c
     main.cpp
 )
+
+if(HAVE_STDATOMIC_H)
+    list(APPEND TEST_SOURCES
+        SolidSyslogAtomicCounterTest.cpp
+    )
+endif()
 
 if(SOLIDSYSLOG_POSIX)
     list(APPEND TEST_SOURCES
@@ -28,6 +35,7 @@ endif()
 add_executable(${PROJECT_NAME}Tests ${TEST_SOURCES})
 
 target_link_libraries(${PROJECT_NAME}Tests PRIVATE ${PROJECT_NAME} CppUTest CppUTestExt pthread)
+target_include_directories(${PROJECT_NAME}Tests PRIVATE ${CMAKE_SOURCE_DIR}/Source)
 
 if(SOLIDSYSLOG_POSIX)
     target_link_libraries(${PROJECT_NAME}Tests PRIVATE PosixFakes)
