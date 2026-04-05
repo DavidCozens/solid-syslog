@@ -1,6 +1,7 @@
 #include "CppUTest/TestHarness.h"
 #include "SolidSyslog.h"
 #include "SolidSyslogConfig.h"
+#include "SolidSyslogMetaSd.h"
 #include "SolidSyslogNullBuffer.h"
 #include "SolidSyslogStructuredDataDef.h"
 #include "BufferFake.h"
@@ -101,34 +102,78 @@ static size_t SdSpyFormat(struct SolidSyslogStructuredData* /* self */, char* bu
 
 static struct SolidSyslogStructuredData sdSpy = {SdSpyFormat};
 
-static std::string SyslogField(const char* buffer, int n)
+static std::string::size_type SkipSdata(const std::string& s, std::string::size_type pos)
 {
-    std::string            s(buffer);
+    if (pos < s.size() && s[pos] == '[')
+    {
+        while (pos < s.size() && s[pos] == '[')
+        {
+            pos = s.find(']', pos);
+            if (pos == std::string::npos)
+            {
+                return std::string::npos;
+            }
+            pos++;
+        }
+        return pos;
+    }
+    auto end = s.find(' ', pos);
+    return end == std::string::npos ? s.size() : end;
+}
+
+static std::string::size_type FindFieldStart(const std::string& s, int n)
+{
     std::string::size_type pos = 0;
     for (int i = 0; i < n; i++)
     {
-        pos = s.find(' ', pos);
+        if (i == SYSLOG_FIELD_SDATA)
+        {
+            pos = SkipSdata(s, pos);
+        }
+        else
+        {
+            pos = s.find(' ', pos);
+        }
         if (pos == std::string::npos)
         {
-            return {};
+            return std::string::npos;
         }
-        pos++;
+        if (s[pos] == ' ')
+        {
+            pos++;
+        }
     }
-    std::string::size_type end = s.find(' ', pos);
+    return pos;
+}
+
+static std::string SyslogField(const char* buffer, int n)
+{
+    std::string            s(buffer);
+    std::string::size_type pos = FindFieldStart(s, n);
+    if (pos == std::string::npos)
+    {
+        return {};
+    }
+
+    std::string::size_type end = (n == SYSLOG_FIELD_SDATA) ? SkipSdata(s, pos) : s.find(' ', pos);
     return s.substr(pos, end == std::string::npos ? std::string::npos : end - pos);
 }
 
 static std::string SyslogMsg(const char* buffer)
 {
     std::string            s(buffer);
-    std::string::size_type pos = 0;
-    for (int i = 0; i < SYSLOG_FIELD_SDATA + 1; i++)
+    std::string::size_type pos = FindFieldStart(s, SYSLOG_FIELD_SDATA);
+    if (pos == std::string::npos)
     {
-        pos = s.find(' ', pos);
-        if (pos == std::string::npos)
-        {
-            return {};
-        }
+        return {};
+    }
+    pos = SkipSdata(s, pos);
+    if (pos == std::string::npos || pos >= s.size())
+    {
+        return {};
+    }
+    if (s[pos] == ' ')
+    {
         pos++;
     }
     return s.substr(pos);
@@ -417,6 +462,38 @@ TEST(SolidSyslog, InjectedSdObjectFormatIsCalledDuringLog)
     ReplaceLogger();
     Log();
     STRCMP_EQUAL("[spy]", SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
+}
+
+TEST(SolidSyslog, MetaSdProducesSequenceIdInStructuredData)
+{
+    SolidSyslogStructuredData* metaSd = SolidSyslogMetaSd_Create(malloc);
+    config.sd = metaSd;
+    ReplaceLogger();
+    Log();
+    STRCMP_EQUAL("[meta sequenceId=\"1\"]", SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
+    SolidSyslogMetaSd_Destroy(metaSd, free);
+}
+
+TEST(SolidSyslog, MetaSdSequenceIdIncrementsAcrossLogCalls)
+{
+    SolidSyslogStructuredData* metaSd = SolidSyslogMetaSd_Create(malloc);
+    config.sd = metaSd;
+    ReplaceLogger();
+    Log();
+    Log();
+    STRCMP_EQUAL("[meta sequenceId=\"2\"]", SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
+    SolidSyslogMetaSd_Destroy(metaSd, free);
+}
+
+TEST(SolidSyslog, MsgFieldPreservedWithMetaSd)
+{
+    SolidSyslogStructuredData* metaSd = SolidSyslogMetaSd_Create(malloc);
+    config.sd = metaSd;
+    ReplaceLogger();
+    message.msg = "hello world";
+    Log();
+    STRCMP_EQUAL("hello world", SyslogMsg(LastMessage()).c_str());
+    SolidSyslogMetaSd_Destroy(metaSd, free);
 }
 
 TEST(SolidSyslog, NullMessageOmitsMsgField)
