@@ -354,7 +354,7 @@ jobs:
 
   quality-summary:
     if: always() && github.event_name == 'pull_request'
-    needs: [build-and-test, clang-build-and-test, sanitize, tidy, cppcheck, bdd]
+    needs: [build-and-test, clang-build-and-test, sanitize, coverage, tidy, cppcheck, format, bdd]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -371,12 +371,14 @@ jobs:
           path: quality-reports/
 
       - name: Download clang-tidy report
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           name: clang-tidy-report
           path: quality-reports/
 
       - name: Download cppcheck report
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           name: cppcheck-report
