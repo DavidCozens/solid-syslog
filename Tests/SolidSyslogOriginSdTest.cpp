@@ -1,0 +1,144 @@
+#include "CppUTest/TestHarness.h"
+#include "SolidSyslogOriginSd.h"
+#include "SolidSyslogStructuredData.h"
+
+#include <cstdlib>
+#include <cstring>
+
+// clang-format off
+TEST_GROUP(SolidSyslogOriginSd)
+{
+    // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
+    SolidSyslogStructuredData* sd;
+    char buffer[256];
+
+    void setup() override
+    {
+        sd = SolidSyslogOriginSd_Create(malloc, "TestSoftware", "9.8.7");
+    }
+
+    void teardown() override
+    {
+        SolidSyslogOriginSd_Destroy(sd, free);
+    }
+
+    size_t format()
+    {
+        return SolidSyslogStructuredData_Format(sd, buffer, sizeof(buffer));
+    }
+};
+
+// clang-format on
+
+TEST(SolidSyslogOriginSd, CreateReturnsNonNull)
+{
+    CHECK(sd != nullptr);
+}
+
+TEST(SolidSyslogOriginSd, FormatContainsSoftwareName)
+{
+    format();
+    CHECK(strstr(buffer, "software=\"TestSoftware\"") != nullptr);
+}
+
+TEST(SolidSyslogOriginSd, FormatContainsSwVersion)
+{
+    format();
+    CHECK(strstr(buffer, "swVersion=\"9.8.7\"") != nullptr);
+}
+
+TEST(SolidSyslogOriginSd, FormatProducesCompleteOriginSd)
+{
+    format();
+    STRCMP_EQUAL("[origin software=\"TestSoftware\" swVersion=\"9.8.7\"]", buffer);
+}
+
+TEST(SolidSyslogOriginSd, FormatReturnsLength)
+{
+    size_t len = format();
+    LONGS_EQUAL(strlen(buffer), len);
+}
+
+TEST(SolidSyslogOriginSd, DifferentValuesProduceDifferentOutput)
+{
+    SolidSyslogOriginSd_Destroy(sd, free);
+    sd = SolidSyslogOriginSd_Create(malloc, "OtherSoft", "1.2.3");
+
+    format();
+    STRCMP_EQUAL("[origin software=\"OtherSoft\" swVersion=\"1.2.3\"]", buffer);
+}
+
+TEST(SolidSyslogOriginSd, SoftwareAtMaxLength)
+{
+    SolidSyslogOriginSd_Destroy(sd, free);
+    sd = SolidSyslogOriginSd_Create(malloc, "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijkl", "1.0");
+
+    format();
+    CHECK(strstr(buffer, "software=\"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijkl\"") != nullptr);
+}
+
+TEST(SolidSyslogOriginSd, SoftwareTruncatedBeyondMaxLength)
+{
+    SolidSyslogOriginSd_Destroy(sd, free);
+    sd = SolidSyslogOriginSd_Create(malloc, "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklX", "1.0");
+
+    format();
+    STRCMP_EQUAL("[origin software=\"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijkl\" swVersion=\"1.0\"]", buffer);
+}
+
+TEST(SolidSyslogOriginSd, SwVersionAtMaxLength)
+{
+    SolidSyslogOriginSd_Destroy(sd, free);
+    sd = SolidSyslogOriginSd_Create(malloc, "S", "ABCDEFGHIJKLMNOPQRSTUVWXYZ012345");
+
+    format();
+    CHECK(strstr(buffer, "swVersion=\"ABCDEFGHIJKLMNOPQRSTUVWXYZ012345\"") != nullptr);
+}
+
+TEST(SolidSyslogOriginSd, SwVersionTruncatedBeyondMaxLength)
+{
+    SolidSyslogOriginSd_Destroy(sd, free);
+    sd = SolidSyslogOriginSd_Create(malloc, "S", "ABCDEFGHIJKLMNOPQRSTUVWXYZ012345X");
+
+    format();
+    STRCMP_EQUAL("[origin software=\"S\" swVersion=\"ABCDEFGHIJKLMNOPQRSTUVWXYZ012345\"]", buffer);
+}
+
+TEST(SolidSyslogOriginSd, EmptySoftwareString)
+{
+    SolidSyslogOriginSd_Destroy(sd, free);
+    sd = SolidSyslogOriginSd_Create(malloc, "", "1.0");
+
+    format();
+    STRCMP_EQUAL("[origin software=\"\" swVersion=\"1.0\"]", buffer);
+}
+
+TEST(SolidSyslogOriginSd, EmptySwVersionString)
+{
+    SolidSyslogOriginSd_Destroy(sd, free);
+    sd = SolidSyslogOriginSd_Create(malloc, "S", "");
+
+    format();
+    STRCMP_EQUAL("[origin software=\"S\" swVersion=\"\"]", buffer);
+}
+
+TEST(SolidSyslogOriginSd, NullSoftwareReturnsNull)
+{
+    SolidSyslogOriginSd_Destroy(sd, free);
+    sd = SolidSyslogOriginSd_Create(malloc, nullptr, "1.0");
+
+    CHECK(sd == nullptr);
+}
+
+TEST(SolidSyslogOriginSd, NullSwVersionReturnsNull)
+{
+    SolidSyslogOriginSd_Destroy(sd, free);
+    sd = SolidSyslogOriginSd_Create(malloc, "S", nullptr);
+
+    CHECK(sd == nullptr);
+}
+
+TEST(SolidSyslogOriginSd, DestroyDoesNotCrash)
+{
+    // Covered by teardown — this test documents the intent
+}

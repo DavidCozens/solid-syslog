@@ -36,6 +36,7 @@ Public headers are split by audience (Interface Segregation Principle):
 - **`SolidSyslogStructuredDataDef.h`** — extension point for custom structured data
 - **`SolidSyslogMetaSd.h`** — sequenceId structured data (RFC 5424 §7.3)
 - **`SolidSyslogTimeQualitySd.h`** — timeQuality structured data (RFC 5424 §7.1)
+- **`SolidSyslogOriginSd.h`** — origin structured data (RFC 5424 §7.2)
 - **`SolidSyslogPosixClock.h`** / **`PosixHostname.h`** / **`PosixProcId.h`** — POSIX helpers
 
 Two example programs demonstrate usage:

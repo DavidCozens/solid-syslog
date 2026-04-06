@@ -7,6 +7,7 @@ set(SOURCES
     SolidSyslogSender.c
     SolidSyslogStructuredData.c
     SolidSyslogTimeQualitySd.c
+    SolidSyslogOriginSd.c
 )
 
 if(HAVE_STDATOMIC_H)

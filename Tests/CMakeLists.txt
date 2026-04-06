@@ -7,6 +7,7 @@ set(TEST_SOURCES
     SolidSyslogTest.cpp
     SolidSyslogMetaSdTest.cpp
     SolidSyslogTimeQualitySdTest.cpp
+    SolidSyslogOriginSdTest.cpp
     SolidSyslogNullBufferTest.cpp
     SolidSyslogPrivalTest.cpp
     BufferFakeTest.cpp

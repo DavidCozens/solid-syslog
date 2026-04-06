@@ -6,6 +6,7 @@
 #include "SolidSyslogAtomicCounter.h"
 #include "SolidSyslogConfig.h"
 #include "SolidSyslogMetaSd.h"
+#include "SolidSyslogOriginSd.h"
 #include "SolidSyslogTimeQualitySd.h"
 #include "SolidSyslogPosixClock.h"
 #include "SolidSyslogPosixHostname.h"
@@ -57,8 +58,9 @@ int main(int argc, char* argv[])
     struct SolidSyslogAtomicCounter*  counter     = SolidSyslogAtomicCounter_Create(malloc);
     struct SolidSyslogStructuredData* metaSd      = SolidSyslogMetaSd_Create(malloc, counter);
     struct SolidSyslogStructuredData* timeQuality = SolidSyslogTimeQualitySd_Create(malloc, GetTimeQuality);
+    struct SolidSyslogStructuredData* originSd    = SolidSyslogOriginSd_Create(malloc, "SolidSyslogExample", "0.7.0");
 
-    struct SolidSyslogStructuredData* sdList[] = {metaSd, timeQuality};
+    struct SolidSyslogStructuredData* sdList[] = {metaSd, timeQuality, originSd};
 
     struct SolidSyslogConfig config = {
         .buffer      = buffer,
@@ -95,6 +97,7 @@ int main(int argc, char* argv[])
     pthread_join(serviceThread, NULL);
 
     SolidSyslog_Destroy(logger);
+    SolidSyslogOriginSd_Destroy(originSd, free);
     SolidSyslogTimeQualitySd_Destroy(timeQuality, free);
     SolidSyslogMetaSd_Destroy(metaSd, free);
     SolidSyslogAtomicCounter_Destroy(counter, free);

@@ -253,6 +253,32 @@ The UUID issue is Windows/WSL-specific but there is no cost to running the comma
 ### Open questions
 - None
 
+## 2026-04-06 — S7.3 origin structured data
+
+### Decisions
+- OriginSd pre-formats `[origin software="X" swVersion="Y"]` once at Create time.
+  Unlike timeQuality (dynamic callback) or meta (incrementing counter), origin
+  parameters are static for the lifetime of the logger.
+- Fixed buffer (`char formatted[115]`) sized for maximum RFC 5424 §7.2 parameter
+  lengths: software max 48, swVersion max 32, plus framing characters.
+- Per-parameter truncation enforced at Create — strings exceeding RFC limits are
+  silently truncated. NULL parameters rejected (Create returns NULL).
+- `formattedLength` stored for future robustness (preferred over null termination),
+  though not yet used by Format() — deferred to E12.
+- enterpriseId and ip parameters deferred to new story S7.5 (#75).
+
+### Test counts
+- 227 library unit tests (SolidSyslogTests)
+- 17 example unit tests (ExampleTests)
+- 23 BDD scenarios (20 existing + 3 origin)
+
+### Deferred
+- enterpriseId and ip origin parameters — S7.5 (#75)
+- Use formattedLength in Format() instead of null termination — E12 (#31)
+
+### Open questions
+- None
+
 ## 2026-04-06 — S7.2 timeQuality structured data
 
 ### Decisions
