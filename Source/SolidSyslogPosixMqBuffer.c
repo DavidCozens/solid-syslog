@@ -4,7 +4,6 @@
 #include "SolidSyslogPosixProcId.h"
 
 #include <mqueue.h>
-#include <stdlib.h>
 #include <time.h>
 
 static bool Read(struct SolidSyslogBuffer* self, void* data, size_t maxSize, size_t* bytesRead);
@@ -18,34 +17,36 @@ struct SolidSyslogPosixMqBuffer
     size_t                   maxMessageSize;
 };
 
+static struct SolidSyslogPosixMqBuffer instance;
+
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- distinct semantic meaning; struct wrapper would over-engineer
 struct SolidSyslogBuffer* SolidSyslogPosixMqBuffer_Create(size_t maxMessageSize, long maxMessages)
 {
-    struct SolidSyslogPosixMqBuffer* self = calloc(1, sizeof(struct SolidSyslogPosixMqBuffer));
+    instance = (struct SolidSyslogPosixMqBuffer) {0};
 
     size_t nameLen = 0;
-    nameLen += SolidSyslogFormat_BoundedString(self->name + nameLen, "/solidsyslog_", sizeof(self->name) - nameLen);
-    nameLen += SolidSyslogPosixProcId_Get(self->name + nameLen, sizeof(self->name) - nameLen);
+    nameLen += SolidSyslogFormat_BoundedString(instance.name + nameLen, "/solidsyslog_", sizeof(instance.name) - nameLen);
+    nameLen += SolidSyslogPosixProcId_Get(instance.name + nameLen, sizeof(instance.name) - nameLen);
     (void) nameLen;
 
     struct mq_attr attr = {0};
     attr.mq_maxmsg      = maxMessages;
     attr.mq_msgsize     = (long) maxMessageSize;
 
-    self->mq             = mq_open(self->name, O_CREAT | O_RDWR | O_NONBLOCK, 0600, &attr);
-    self->maxMessageSize = maxMessageSize;
-    self->base.Write     = Write;
-    self->base.Read      = Read;
+    instance.mq             = mq_open(instance.name, O_CREAT | O_RDWR | O_NONBLOCK, 0600, &attr);
+    instance.maxMessageSize = maxMessageSize;
+    instance.base.Write     = Write;
+    instance.base.Read      = Read;
 
-    return &self->base;
+    return &instance.base;
 }
 
 void SolidSyslogPosixMqBuffer_Destroy(struct SolidSyslogBuffer* buffer)
 {
-    struct SolidSyslogPosixMqBuffer* self = (struct SolidSyslogPosixMqBuffer*) buffer;
-    mq_close(self->mq);
-    mq_unlink(self->name);
-    free(self);
+    (void) buffer;
+    mq_close(instance.mq);
+    mq_unlink(instance.name);
+    instance = (struct SolidSyslogPosixMqBuffer) {0};
 }
 
 static bool Read(struct SolidSyslogBuffer* self, void* data, size_t maxSize, size_t* bytesRead)

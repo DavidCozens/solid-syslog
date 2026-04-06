@@ -2,7 +2,6 @@
 #include "SolidSyslogBufferDef.h"
 #include "SolidSyslogFormat.h"
 
-#include <stdlib.h>
 #include <string.h>
 
 enum
@@ -21,17 +20,20 @@ struct BufferFake
     bool                     pending;
 };
 
+static struct BufferFake instance;
+
 struct SolidSyslogBuffer* BufferFake_Create(void)
 {
-    struct BufferFake* self = calloc(1, sizeof(struct BufferFake));
-    self->base.Write        = Write;
-    self->base.Read         = Read;
-    return &self->base;
+    instance            = (struct BufferFake) {0};
+    instance.base.Write = Write;
+    instance.base.Read  = Read;
+    return &instance.base;
 }
 
 void BufferFake_Destroy(struct SolidSyslogBuffer* buffer)
 {
-    free(buffer);
+    (void) buffer;
+    instance = (struct BufferFake) {0};
 }
 
 static bool Read(struct SolidSyslogBuffer* self, void* data, size_t maxSize, size_t* bytesRead)

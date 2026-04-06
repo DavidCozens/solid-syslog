@@ -273,7 +273,7 @@ The UUID issue is Windows/WSL-specific but there is no cost to running the comma
   `ServiceThreadArgs` struct eliminated from threaded example.
 
 ### Test counts
-- 223 library unit tests (SolidSyslogTests) — 4 removed (multi-instance/allocation)
+- 224 library unit tests (SolidSyslogTests) — 4 removed (multi-instance/allocation), 1 added (nil function safety)
 - 17 example unit tests (ExampleTests)
 - 23 BDD scenarios (unchanged — behaviour identical)
 
