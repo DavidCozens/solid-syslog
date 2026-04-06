@@ -13,20 +13,19 @@ struct SolidSyslogMetaSd
 
 static size_t Format(struct SolidSyslogStructuredData* self, char* buffer, size_t size);
 
-struct SolidSyslogStructuredData* SolidSyslogMetaSd_Create(SolidSyslogAllocFunction alloc, struct SolidSyslogAtomicCounter* counter)
+static struct SolidSyslogMetaSd instance;
+
+struct SolidSyslogStructuredData* SolidSyslogMetaSd_Create(struct SolidSyslogAtomicCounter* counter)
 {
-    struct SolidSyslogMetaSd* instance = alloc(sizeof(struct SolidSyslogMetaSd));
-    if (instance != NULL)
-    {
-        instance->base.Format = Format;
-        instance->counter     = counter;
-    }
-    return &instance->base;
+    instance.base.Format = Format;
+    instance.counter     = counter;
+    return &instance.base;
 }
 
-void SolidSyslogMetaSd_Destroy(struct SolidSyslogStructuredData* sd, SolidSyslogFreeFunction dealloc)
+void SolidSyslogMetaSd_Destroy(void)
 {
-    dealloc(sd);
+    instance.base.Format = NULL;
+    instance.counter     = NULL;
 }
 
 static size_t Format(struct SolidSyslogStructuredData* self, char* buffer, size_t size)

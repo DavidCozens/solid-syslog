@@ -21,7 +21,7 @@ TEST_GROUP(BufferFake)
 
     void teardown() override
     {
-        BufferFake_Destroy(buffer);
+        BufferFake_Destroy();
     }
 
     void Write() const

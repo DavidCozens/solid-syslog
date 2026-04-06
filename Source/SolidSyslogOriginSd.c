@@ -20,31 +20,32 @@ static size_t Format(struct SolidSyslogStructuredData* self, char* buffer, size_
 static size_t FormatParam(char* buffer, const char* value, size_t remaining, size_t paramMax);
 static size_t Min(size_t a, size_t b);
 
-struct SolidSyslogStructuredData* SolidSyslogOriginSd_Create(SolidSyslogAllocFunction alloc, const char* software, const char* swVersion)
+static struct SolidSyslogOriginSd instance;
+
+struct SolidSyslogStructuredData* SolidSyslogOriginSd_Create(const char* software, const char* swVersion)
 {
     if ((software == NULL) || (swVersion == NULL))
     {
         return NULL;
     }
 
-    struct SolidSyslogOriginSd* instance = alloc(sizeof(struct SolidSyslogOriginSd));
-    if (instance != NULL)
-    {
-        instance->base.Format = Format;
-        size_t len            = 0;
-        len += SolidSyslogFormat_BoundedString(instance->formatted + len, "[origin software=\"", ORIGIN_FORMATTED_MAX - len);
-        len += FormatParam(instance->formatted + len, software, ORIGIN_FORMATTED_MAX - len, ORIGIN_SOFTWARE_MAX);
-        len += SolidSyslogFormat_BoundedString(instance->formatted + len, "\" swVersion=\"", ORIGIN_FORMATTED_MAX - len);
-        len += FormatParam(instance->formatted + len, swVersion, ORIGIN_FORMATTED_MAX - len, ORIGIN_SWVERSION_MAX);
-        len += SolidSyslogFormat_BoundedString(instance->formatted + len, "\"]", ORIGIN_FORMATTED_MAX - len);
-        instance->formattedLength = len;
-    }
-    return &instance->base;
+    instance.base.Format = Format;
+    size_t len           = 0;
+    len += SolidSyslogFormat_BoundedString(instance.formatted + len, "[origin software=\"", ORIGIN_FORMATTED_MAX - len);
+    len += FormatParam(instance.formatted + len, software, ORIGIN_FORMATTED_MAX - len, ORIGIN_SOFTWARE_MAX);
+    len += SolidSyslogFormat_BoundedString(instance.formatted + len, "\" swVersion=\"", ORIGIN_FORMATTED_MAX - len);
+    len += FormatParam(instance.formatted + len, swVersion, ORIGIN_FORMATTED_MAX - len, ORIGIN_SWVERSION_MAX);
+    len += SolidSyslogFormat_BoundedString(instance.formatted + len, "\"]", ORIGIN_FORMATTED_MAX - len);
+    instance.formattedLength = len;
+
+    return &instance.base;
 }
 
-void SolidSyslogOriginSd_Destroy(struct SolidSyslogStructuredData* sd, SolidSyslogFreeFunction dealloc)
+void SolidSyslogOriginSd_Destroy(void)
 {
-    dealloc(sd);
+    instance.base.Format     = NULL;
+    instance.formattedLength = 0;
+    instance.formatted[0]    = '\0';
 }
 
 static size_t FormatParam(char* buffer, const char* value, size_t remaining, size_t paramMax)

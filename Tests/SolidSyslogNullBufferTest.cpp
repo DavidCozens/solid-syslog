@@ -19,7 +19,7 @@ TEST_GROUP(SolidSyslogNullBuffer)
 
     void teardown() override
     {
-        SolidSyslogNullBuffer_Destroy(buffer);
+        SolidSyslogNullBuffer_Destroy();
     }
 
     void Write() const

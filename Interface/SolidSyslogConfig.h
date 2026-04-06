@@ -2,8 +2,9 @@
 #define SOLIDSYSLOGCONFIG_H
 
 #include "SolidSyslog.h"
-#include "SolidSyslogAlloc.h"
 #include "SolidSyslogTimestamp.h"
+
+#include <stddef.h>
 
 EXTERN_C_BEGIN
 
@@ -17,8 +18,6 @@ EXTERN_C_BEGIN
     {
         struct SolidSyslogBuffer*          buffer;
         struct SolidSyslogSender*          sender;
-        SolidSyslogAllocFunction           alloc;
-        SolidSyslogFreeFunction            free;
         SolidSyslogClockFunction           clock;
         SolidSyslogStringFunction          getHostname;
         SolidSyslogStringFunction          getAppName;
@@ -27,8 +26,8 @@ EXTERN_C_BEGIN
         size_t                             sdCount;
     };
 
-    struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config);
-    void                SolidSyslog_Destroy(struct SolidSyslog * logger);
+    void SolidSyslog_Create(const struct SolidSyslogConfig* config);
+    void SolidSyslog_Destroy(void);
 
 EXTERN_C_END
 

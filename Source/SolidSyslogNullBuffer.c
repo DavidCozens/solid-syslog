@@ -2,8 +2,6 @@
 #include "SolidSyslogBufferDef.h"
 #include "SolidSyslogSender.h"
 
-#include <stdlib.h>
-
 static bool Read(struct SolidSyslogBuffer* self, void* data, size_t maxSize, size_t* bytesRead);
 static void Write(struct SolidSyslogBuffer* self, const void* data, size_t size);
 
@@ -13,18 +11,21 @@ struct SolidSyslogNullBuffer
     struct SolidSyslogSender* sender;
 };
 
+static struct SolidSyslogNullBuffer instance;
+
 struct SolidSyslogBuffer* SolidSyslogNullBuffer_Create(struct SolidSyslogSender* sender)
 {
-    struct SolidSyslogNullBuffer* self = malloc(sizeof(struct SolidSyslogNullBuffer));
-    self->base.Write                   = Write;
-    self->base.Read                    = Read;
-    self->sender                       = sender;
-    return &self->base;
+    instance.base.Write = Write;
+    instance.base.Read  = Read;
+    instance.sender     = sender;
+    return &instance.base;
 }
 
-void SolidSyslogNullBuffer_Destroy(struct SolidSyslogBuffer* buffer)
+void SolidSyslogNullBuffer_Destroy(void)
 {
-    free(buffer);
+    instance.base.Write = NULL;
+    instance.base.Read  = NULL;
+    instance.sender     = NULL;
 }
 
 static bool Read(struct SolidSyslogBuffer* self, void* data, size_t maxSize, size_t* bytesRead)

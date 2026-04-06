@@ -12,20 +12,19 @@ static size_t Format(struct SolidSyslogStructuredData* self, char* buffer, size_
 static size_t FormatBoolParam(char* buffer, size_t size, const char* name, bool value);
 static size_t FormatSyncAccuracy(char* buffer, size_t size, uint32_t value);
 
-struct SolidSyslogStructuredData* SolidSyslogTimeQualitySd_Create(SolidSyslogAllocFunction alloc, SolidSyslogTimeQualityFunction getTimeQuality)
+static struct SolidSyslogTimeQualitySd instance;
+
+struct SolidSyslogStructuredData* SolidSyslogTimeQualitySd_Create(SolidSyslogTimeQualityFunction getTimeQuality)
 {
-    struct SolidSyslogTimeQualitySd* instance = alloc(sizeof(struct SolidSyslogTimeQualitySd));
-    if (instance != NULL)
-    {
-        instance->base.Format    = Format;
-        instance->getTimeQuality = getTimeQuality;
-    }
-    return &instance->base;
+    instance.base.Format    = Format;
+    instance.getTimeQuality = getTimeQuality;
+    return &instance.base;
 }
 
-void SolidSyslogTimeQualitySd_Destroy(struct SolidSyslogStructuredData* sd, SolidSyslogFreeFunction dealloc)
+void SolidSyslogTimeQualitySd_Destroy(void)
 {
-    dealloc(sd);
+    instance.base.Format    = NULL;
+    instance.getTimeQuality = NULL;
 }
 
 static size_t Format(struct SolidSyslogStructuredData* self, char* buffer, size_t size)

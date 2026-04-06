@@ -2,15 +2,14 @@
 #define SOLIDSYSLOGTIMEQUALITYSD_H
 
 #include "ExternC.h"
-#include "SolidSyslogAlloc.h"
 #include "SolidSyslogTimeQuality.h"
 
 EXTERN_C_BEGIN
 
     struct SolidSyslogStructuredData;
 
-    struct SolidSyslogStructuredData* SolidSyslogTimeQualitySd_Create(SolidSyslogAllocFunction alloc, SolidSyslogTimeQualityFunction getTimeQuality);
-    void                              SolidSyslogTimeQualitySd_Destroy(struct SolidSyslogStructuredData * sd, SolidSyslogFreeFunction dealloc);
+    struct SolidSyslogStructuredData* SolidSyslogTimeQualitySd_Create(SolidSyslogTimeQualityFunction getTimeQuality);
+    void                              SolidSyslogTimeQualitySd_Destroy(void);
 
 EXTERN_C_END
 

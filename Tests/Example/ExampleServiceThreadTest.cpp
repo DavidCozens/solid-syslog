@@ -8,14 +8,11 @@
 #include "SocketSpy.h"
 #include "ClockFake.h"
 
-#include <cstdlib>
-
 // clang-format off
 TEST_GROUP(ExampleServiceThread)
 {
     struct SolidSyslogSender* sender = nullptr;
     struct SolidSyslogBuffer* buffer = nullptr;
-    struct SolidSyslog*       logger = nullptr;
     // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
     volatile bool             shutdown;
 
@@ -30,22 +27,21 @@ TEST_GROUP(ExampleServiceThread)
         sender = SolidSyslogUdpSender_Create(&udpConfig);
         buffer = SolidSyslogPosixMqBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
 
-        SolidSyslogConfig config = {buffer, sender, malloc, free, nullptr, nullptr, nullptr, nullptr, nullptr, 0};
-        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        logger = SolidSyslog_Create(&config);
+        SolidSyslogConfig config = {buffer, sender, nullptr, nullptr, nullptr, nullptr, nullptr, 0};
+        SolidSyslog_Create(&config);
     }
 
     void teardown() override
     {
-        SolidSyslog_Destroy(logger);
-        SolidSyslogPosixMqBuffer_Destroy(buffer);
-        SolidSyslogUdpSender_Destroy(sender);
+        SolidSyslog_Destroy();
+        SolidSyslogPosixMqBuffer_Destroy();
+        SolidSyslogUdpSender_Destroy();
     }
 
-    void Log() const
+    static void Log()
     {
         SolidSyslogMessage message = {SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO, nullptr, nullptr};
-        SolidSyslog_Log(logger, &message);
+        SolidSyslog_Log(&message);
     }
 };
 
@@ -53,14 +49,14 @@ TEST_GROUP(ExampleServiceThread)
 
 TEST(ExampleServiceThread, DoesNotSendWhenBufferEmpty)
 {
-    ExampleServiceThread_Run(logger, &shutdown);
+    ExampleServiceThread_Run(&shutdown);
     LONGS_EQUAL(0, SocketSpy_SendtoCallCount());
 }
 
 TEST(ExampleServiceThread, DrainsOneMessageAfterShutdown)
 {
     Log();
-    ExampleServiceThread_Run(logger, &shutdown);
+    ExampleServiceThread_Run(&shutdown);
     LONGS_EQUAL(1, SocketSpy_SendtoCallCount());
 }
 
@@ -69,6 +65,6 @@ TEST(ExampleServiceThread, DrainsMultipleMessagesAfterShutdown)
     Log();
     Log();
     Log();
-    ExampleServiceThread_Run(logger, &shutdown);
+    ExampleServiceThread_Run(&shutdown);
     LONGS_EQUAL(3, SocketSpy_SendtoCallCount());
 }

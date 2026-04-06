@@ -8,7 +8,7 @@
 EXTERN_C_BEGIN
 
     struct SolidSyslogBuffer* SolidSyslogPosixMqBuffer_Create(size_t maxMessageSize, long maxMessages);
-    void                      SolidSyslogPosixMqBuffer_Destroy(struct SolidSyslogBuffer * buffer);
+    void                      SolidSyslogPosixMqBuffer_Destroy(void);
 
 EXTERN_C_END
 

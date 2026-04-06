@@ -2,7 +2,6 @@
 #include "SolidSyslogOriginSd.h"
 #include "SolidSyslogStructuredData.h"
 
-#include <cstdlib>
 #include <cstring>
 
 // clang-format off
@@ -14,12 +13,12 @@ TEST_GROUP(SolidSyslogOriginSd)
 
     void setup() override
     {
-        sd = SolidSyslogOriginSd_Create(malloc, "TestSoftware", "9.8.7");
+        sd = SolidSyslogOriginSd_Create("TestSoftware", "9.8.7");
     }
 
     void teardown() override
     {
-        SolidSyslogOriginSd_Destroy(sd, free);
+        SolidSyslogOriginSd_Destroy();
     }
 
     size_t format()
@@ -61,8 +60,8 @@ TEST(SolidSyslogOriginSd, FormatReturnsLength)
 
 TEST(SolidSyslogOriginSd, DifferentValuesProduceDifferentOutput)
 {
-    SolidSyslogOriginSd_Destroy(sd, free);
-    sd = SolidSyslogOriginSd_Create(malloc, "OtherSoft", "1.2.3");
+    SolidSyslogOriginSd_Destroy();
+    sd = SolidSyslogOriginSd_Create("OtherSoft", "1.2.3");
 
     format();
     STRCMP_EQUAL("[origin software=\"OtherSoft\" swVersion=\"1.2.3\"]", buffer);
@@ -70,8 +69,8 @@ TEST(SolidSyslogOriginSd, DifferentValuesProduceDifferentOutput)
 
 TEST(SolidSyslogOriginSd, SoftwareAtMaxLength)
 {
-    SolidSyslogOriginSd_Destroy(sd, free);
-    sd = SolidSyslogOriginSd_Create(malloc, "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijkl", "1.0");
+    SolidSyslogOriginSd_Destroy();
+    sd = SolidSyslogOriginSd_Create("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijkl", "1.0");
 
     format();
     CHECK(strstr(buffer, "software=\"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijkl\"") != nullptr);
@@ -79,8 +78,8 @@ TEST(SolidSyslogOriginSd, SoftwareAtMaxLength)
 
 TEST(SolidSyslogOriginSd, SoftwareTruncatedBeyondMaxLength)
 {
-    SolidSyslogOriginSd_Destroy(sd, free);
-    sd = SolidSyslogOriginSd_Create(malloc, "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklX", "1.0");
+    SolidSyslogOriginSd_Destroy();
+    sd = SolidSyslogOriginSd_Create("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklX", "1.0");
 
     format();
     STRCMP_EQUAL("[origin software=\"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijkl\" swVersion=\"1.0\"]", buffer);
@@ -88,8 +87,8 @@ TEST(SolidSyslogOriginSd, SoftwareTruncatedBeyondMaxLength)
 
 TEST(SolidSyslogOriginSd, SwVersionAtMaxLength)
 {
-    SolidSyslogOriginSd_Destroy(sd, free);
-    sd = SolidSyslogOriginSd_Create(malloc, "S", "ABCDEFGHIJKLMNOPQRSTUVWXYZ012345");
+    SolidSyslogOriginSd_Destroy();
+    sd = SolidSyslogOriginSd_Create("S", "ABCDEFGHIJKLMNOPQRSTUVWXYZ012345");
 
     format();
     CHECK(strstr(buffer, "swVersion=\"ABCDEFGHIJKLMNOPQRSTUVWXYZ012345\"") != nullptr);
@@ -97,8 +96,8 @@ TEST(SolidSyslogOriginSd, SwVersionAtMaxLength)
 
 TEST(SolidSyslogOriginSd, SwVersionTruncatedBeyondMaxLength)
 {
-    SolidSyslogOriginSd_Destroy(sd, free);
-    sd = SolidSyslogOriginSd_Create(malloc, "S", "ABCDEFGHIJKLMNOPQRSTUVWXYZ012345X");
+    SolidSyslogOriginSd_Destroy();
+    sd = SolidSyslogOriginSd_Create("S", "ABCDEFGHIJKLMNOPQRSTUVWXYZ012345X");
 
     format();
     STRCMP_EQUAL("[origin software=\"S\" swVersion=\"ABCDEFGHIJKLMNOPQRSTUVWXYZ012345\"]", buffer);
@@ -106,8 +105,8 @@ TEST(SolidSyslogOriginSd, SwVersionTruncatedBeyondMaxLength)
 
 TEST(SolidSyslogOriginSd, EmptySoftwareString)
 {
-    SolidSyslogOriginSd_Destroy(sd, free);
-    sd = SolidSyslogOriginSd_Create(malloc, "", "1.0");
+    SolidSyslogOriginSd_Destroy();
+    sd = SolidSyslogOriginSd_Create("", "1.0");
 
     format();
     STRCMP_EQUAL("[origin software=\"\" swVersion=\"1.0\"]", buffer);
@@ -115,8 +114,8 @@ TEST(SolidSyslogOriginSd, EmptySoftwareString)
 
 TEST(SolidSyslogOriginSd, EmptySwVersionString)
 {
-    SolidSyslogOriginSd_Destroy(sd, free);
-    sd = SolidSyslogOriginSd_Create(malloc, "S", "");
+    SolidSyslogOriginSd_Destroy();
+    sd = SolidSyslogOriginSd_Create("S", "");
 
     format();
     STRCMP_EQUAL("[origin software=\"S\" swVersion=\"\"]", buffer);
@@ -124,16 +123,16 @@ TEST(SolidSyslogOriginSd, EmptySwVersionString)
 
 TEST(SolidSyslogOriginSd, NullSoftwareReturnsNull)
 {
-    SolidSyslogOriginSd_Destroy(sd, free);
-    sd = SolidSyslogOriginSd_Create(malloc, nullptr, "1.0");
+    SolidSyslogOriginSd_Destroy();
+    sd = SolidSyslogOriginSd_Create(nullptr, "1.0");
 
     CHECK(sd == nullptr);
 }
 
 TEST(SolidSyslogOriginSd, NullSwVersionReturnsNull)
 {
-    SolidSyslogOriginSd_Destroy(sd, free);
-    sd = SolidSyslogOriginSd_Create(malloc, "S", nullptr);
+    SolidSyslogOriginSd_Destroy();
+    sd = SolidSyslogOriginSd_Create("S", nullptr);
 
     CHECK(sd == nullptr);
 }

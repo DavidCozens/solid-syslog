@@ -4,7 +4,6 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
-#include <stdlib.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -20,26 +19,27 @@ struct SolidSyslogUdpSender
     struct sockaddr_in                addr;
 };
 
+static struct SolidSyslogUdpSender instance = {.fd = -1};
+
 struct SolidSyslogSender* SolidSyslogUdpSender_Create(const struct SolidSyslogUdpSenderConfig* config)
 {
-    struct SolidSyslogUdpSender* self = malloc(sizeof(struct SolidSyslogUdpSender));
-    // cppcheck-suppress nullPointerOutOfMemory -- malloc NULL check deferred to error handling phase
-    self->config = *config;
-    // cppcheck-suppress nullPointerOutOfMemory -- malloc NULL check deferred to error handling phase
-    self->base.Send = Send;
-    // cppcheck-suppress nullPointerOutOfMemory -- malloc NULL check deferred to error handling phase
-    self->fd = socket(AF_INET, SOCK_DGRAM, 0);
-    // cppcheck-suppress nullPointerOutOfMemory -- malloc NULL check deferred to error handling phase
-    self->addr = ResolveAddress(config);
+    instance.config    = *config;
+    instance.base.Send = Send;
+    instance.fd        = socket(AF_INET, SOCK_DGRAM, 0);
+    instance.addr      = ResolveAddress(config);
 
-    return &self->base;
+    return &instance.base;
 }
 
-void SolidSyslogUdpSender_Destroy(struct SolidSyslogSender* sender)
+void SolidSyslogUdpSender_Destroy(void)
 {
-    struct SolidSyslogUdpSender* self = (struct SolidSyslogUdpSender*) sender;
-    close(self->fd);
-    free(self);
+    if (instance.fd >= 0)
+    {
+        close(instance.fd);
+    }
+    instance.fd        = -1;
+    instance.base.Send = NULL;
+    instance.addr      = (struct sockaddr_in) {0};
 }
 
 static struct sockaddr_in ResolveAddress(const struct SolidSyslogUdpSenderConfig* config)
@@ -67,6 +67,6 @@ static struct sockaddr_in BuildAddress(const struct addrinfo* resolved, int port
 
 static void Send(struct SolidSyslogSender* self, const void* buffer, size_t size)
 {
-    struct SolidSyslogUdpSender* sender = (struct SolidSyslogUdpSender*) self;
-    sendto(sender->fd, buffer, size, 0, (struct sockaddr*) &sender->addr, sizeof(sender->addr));
+    struct SolidSyslogUdpSender* udpSender = (struct SolidSyslogUdpSender*) self;
+    sendto(udpSender->fd, buffer, size, 0, (struct sockaddr*) &udpSender->addr, sizeof(udpSender->addr));
 }
