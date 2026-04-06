@@ -19,7 +19,7 @@ struct SolidSyslogUdpSender
     struct sockaddr_in                addr;
 };
 
-static struct SolidSyslogUdpSender instance;
+static struct SolidSyslogUdpSender instance = {.fd = -1};
 
 struct SolidSyslogSender* SolidSyslogUdpSender_Create(const struct SolidSyslogUdpSenderConfig* config)
 {
@@ -34,7 +34,10 @@ struct SolidSyslogSender* SolidSyslogUdpSender_Create(const struct SolidSyslogUd
 void SolidSyslogUdpSender_Destroy(struct SolidSyslogSender* sender)
 {
     (void) sender;
-    close(instance.fd);
+    if (instance.fd >= 0)
+    {
+        close(instance.fd);
+    }
     instance.fd        = -1;
     instance.base.Send = NULL;
     instance.addr      = (struct sockaddr_in) {0};
