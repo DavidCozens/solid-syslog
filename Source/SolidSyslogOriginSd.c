@@ -2,11 +2,12 @@
 #include "SolidSyslogFormat.h"
 #include "SolidSyslogStructuredDataDef.h"
 
-#include <string.h>
-
-#define ORIGIN_SOFTWARE_MAX 48
-#define ORIGIN_SWVERSION_MAX 32
-#define ORIGIN_FORMATTED_MAX 115
+enum
+{
+    ORIGIN_SOFTWARE_MAX  = 48,
+    ORIGIN_SWVERSION_MAX = 32,
+    ORIGIN_FORMATTED_MAX = 115
+};
 
 struct SolidSyslogOriginSd
 {
@@ -16,17 +17,8 @@ struct SolidSyslogOriginSd
 };
 
 static size_t Format(struct SolidSyslogStructuredData* self, char* buffer, size_t size);
-
-static size_t Min(size_t a, size_t b)
-{
-    return (a < b) ? a : b;
-}
-
-static size_t FormatParam(char* buffer, const char* value, size_t remaining, size_t paramMax)
-{
-    size_t limit = Min(remaining, paramMax + 1);
-    return SolidSyslogFormat_BoundedString(buffer, value, limit);
-}
+static size_t FormatParam(char* buffer, const char* value, size_t remaining, size_t paramMax);
+static size_t Min(size_t a, size_t b);
 
 struct SolidSyslogStructuredData* SolidSyslogOriginSd_Create(SolidSyslogAllocFunction alloc, const char* software, const char* swVersion)
 {
@@ -53,6 +45,17 @@ struct SolidSyslogStructuredData* SolidSyslogOriginSd_Create(SolidSyslogAllocFun
 void SolidSyslogOriginSd_Destroy(struct SolidSyslogStructuredData* sd, SolidSyslogFreeFunction dealloc)
 {
     dealloc(sd);
+}
+
+static size_t FormatParam(char* buffer, const char* value, size_t remaining, size_t paramMax)
+{
+    size_t limit = Min(remaining, paramMax + 1);
+    return SolidSyslogFormat_BoundedString(buffer, value, limit);
+}
+
+static size_t Min(size_t a, size_t b)
+{
+    return (a < b) ? a : b;
 }
 
 static size_t Format(struct SolidSyslogStructuredData* self, char* buffer, size_t size)
