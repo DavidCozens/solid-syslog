@@ -252,3 +252,38 @@ The UUID issue is Windows/WSL-specific but there is no cost to running the comma
 
 ### Open questions
 - None
+
+## 2026-04-06 — S7.2 timeQuality structured data
+
+### Decisions
+- SD config generalised from single `SolidSyslogStructuredData*` to array pointer
+  (`SolidSyslogStructuredData**`) + count (`sdCount`). FormatStructuredData iterates
+  the array, skips zero-length results, falls back to NILVALUE when no SD-ELEMENTs
+  succeed — matching RFC 5424 ABNF.
+- TimeQualitySd uses a dynamic callback (`void (*)(SolidSyslogTimeQuality*)`) rather
+  than pre-formatting at Create time. Rationale: NTP failure can change `isSynced`
+  mid-flight; timezone can change on mobile platforms (e.g. oil tanker setting local
+  TZ at each port).
+- Callback takes pointer parameter, not return-by-value — clearer ownership, embedded
+  C idiom, opens the door for error returns. Existing `SolidSyslogClockFunction`
+  (return-by-value) flagged for refactoring to match.
+- `syncAccuracyMicroseconds` uses `SOLIDSYSLOG_SYNC_ACCURACY_OMIT` (enum, value 0)
+  as sentinel for "omit from output". Unit in variable name, not in a comment.
+- Interface Segregation: `SolidSyslogTimeQuality.h` (struct + callback typedef)
+  separate from `SolidSyslogTimeQualitySd.h` (Create/Destroy API).
+- BDD `@wip` tag mechanism added to CI: `--tags='not @wip'` in behave command
+  (`ci/docker-compose.bdd.yml`). Allows landing BDD scenarios before implementation.
+
+### Test counts
+- 212 library unit tests (SolidSyslogTests)
+- 17 example unit tests (ExampleTests)
+- 18 BDD scenarios (16 existing + 2 timeQuality)
+
+### Deferred
+- SD array ownership: defensive copy at Create boundary for MISRA robustness — E12 (#31)
+- Clock callback refactor: `SolidSyslogClockFunction` return-by-value → pointer
+  parameter — cleanup after S7.2, before next story
+- CodeRabbit suggestion to extract MetaSd test fixture — premature with Phase 2 changes
+
+### Open questions
+- None

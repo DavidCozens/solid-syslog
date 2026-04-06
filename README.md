@@ -33,6 +33,9 @@ Public headers are split by audience (Interface Segregation Principle):
 - **`SolidSyslogNullBuffer.h`** — direct-send buffer for single-task systems
 - **`SolidSyslogPosixMqBuffer.h`** — thread-safe POSIX message queue buffer
 - **`SolidSyslogUdpSender.h`** — UDP transport
+- **`SolidSyslogStructuredDataDef.h`** — extension point for custom structured data
+- **`SolidSyslogMetaSd.h`** — sequenceId structured data (RFC 5424 §7.3)
+- **`SolidSyslogTimeQualitySd.h`** — timeQuality structured data (RFC 5424 §7.1)
 - **`SolidSyslogPosixClock.h`** / **`PosixHostname.h`** / **`PosixProcId.h`** — POSIX helpers
 
 Two example programs demonstrate usage:
