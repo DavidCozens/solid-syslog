@@ -243,6 +243,30 @@ def step_check_sequence_id(context, value):
     )
 
 
+@then('the structured data contains tzKnown "{value}"')
+def step_check_tz_known(context, value):
+    sd = context.fields.get("STRUCTURED_DATA", "")
+    match = re.search(r'tzKnown="(\d+)"', sd)
+    assert match, (
+        f"No tzKnown found in structured data: {sd}"
+    )
+    assert match.group(1) == value, (
+        f"Expected tzKnown {value}, got {match.group(1)}"
+    )
+
+
+@then('the structured data contains isSynced "{value}"')
+def step_check_is_synced(context, value):
+    sd = context.fields.get("STRUCTURED_DATA", "")
+    match = re.search(r'isSynced="(\d+)"', sd)
+    assert match, (
+        f"No isSynced found in structured data: {sd}"
+    )
+    assert match.group(1) == value, (
+        f"Expected isSynced {value}, got {match.group(1)}"
+    )
+
+
 @then("syslog-ng receives {count:d} messages with sequential sequenceId values")
 def step_check_sequential_ids(context, count):
     assert context.message_count == count, (

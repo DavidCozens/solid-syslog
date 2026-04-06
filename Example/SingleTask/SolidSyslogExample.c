@@ -6,6 +6,7 @@
 #include "SolidSyslogAtomicCounter.h"
 #include "SolidSyslogConfig.h"
 #include "SolidSyslogMetaSd.h"
+#include "SolidSyslogTimeQualitySd.h"
 #include "SolidSyslogNullBuffer.h"
 #include "SolidSyslogPosixClock.h"
 #include "SolidSyslogPosixHostname.h"
@@ -13,6 +14,13 @@
 #include "SolidSyslogUdpSender.h"
 
 #include <stdlib.h>
+
+static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
+{
+    timeQuality->tzKnown                  = true;
+    timeQuality->isSynced                 = true;
+    timeQuality->syncAccuracyMicroseconds = SOLIDSYSLOG_SYNC_ACCURACY_OMIT;
+}
 
 int SolidSyslogExample_Run(int argc, char* argv[])
 {
@@ -28,10 +36,13 @@ int SolidSyslogExample_Run(int argc, char* argv[])
         .getPort = ExampleUdpConfig_GetPort,
         .getHost = ExampleUdpConfig_GetHost,
     };
-    struct SolidSyslogSender*         sender  = SolidSyslogUdpSender_Create(&udpConfig);
-    struct SolidSyslogBuffer*         buffer  = SolidSyslogNullBuffer_Create(sender);
-    struct SolidSyslogAtomicCounter*  counter = SolidSyslogAtomicCounter_Create(malloc);
-    struct SolidSyslogStructuredData* metaSd  = SolidSyslogMetaSd_Create(malloc, counter);
+    struct SolidSyslogSender*         sender      = SolidSyslogUdpSender_Create(&udpConfig);
+    struct SolidSyslogBuffer*         buffer      = SolidSyslogNullBuffer_Create(sender);
+    struct SolidSyslogAtomicCounter*  counter     = SolidSyslogAtomicCounter_Create(malloc);
+    struct SolidSyslogStructuredData* metaSd      = SolidSyslogMetaSd_Create(malloc, counter);
+    struct SolidSyslogStructuredData* timeQuality = SolidSyslogTimeQualitySd_Create(malloc, GetTimeQuality);
+
+    struct SolidSyslogStructuredData* sdList[] = {metaSd, timeQuality};
 
     struct SolidSyslogConfig config = {
         .buffer      = buffer,
@@ -42,7 +53,8 @@ int SolidSyslogExample_Run(int argc, char* argv[])
         .getHostname = SolidSyslogPosixHostname_Get,
         .getAppName  = ExampleAppName_Get,
         .getProcId   = SolidSyslogPosixProcId_Get,
-        .sd          = metaSd,
+        .sd          = sdList,
+        .sdCount     = sizeof(sdList) / sizeof(sdList[0]),
     };
     struct SolidSyslog* logger = SolidSyslog_Create(&config);
 
@@ -58,6 +70,7 @@ int SolidSyslogExample_Run(int argc, char* argv[])
     }
 
     SolidSyslog_Destroy(logger);
+    SolidSyslogTimeQualitySd_Destroy(timeQuality, free);
     SolidSyslogMetaSd_Destroy(metaSd, free);
     SolidSyslogAtomicCounter_Destroy(counter, free);
     SolidSyslogNullBuffer_Destroy(buffer);

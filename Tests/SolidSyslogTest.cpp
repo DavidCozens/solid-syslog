@@ -3,6 +3,7 @@
 #include "SolidSyslogAtomicCounter.h"
 #include "SolidSyslogConfig.h"
 #include "SolidSyslogMetaSd.h"
+#include "SolidSyslogTimeQualitySd.h"
 #include "SolidSyslogNullBuffer.h"
 #include "SolidSyslogStructuredDataDef.h"
 #include "BufferFake.h"
@@ -103,6 +104,28 @@ static size_t SdSpyFormat(struct SolidSyslogStructuredData* /* self */, char* bu
 
 static struct SolidSyslogStructuredData sdSpy = {SdSpyFormat};
 
+static size_t SdSpyFormat2(struct SolidSyslogStructuredData* /* self */, char* buffer, size_t /* size */)
+{
+    const char* text = "[spy2]";
+    size_t      len  = strlen(text);
+    memcpy(buffer, text, len + 1);
+    return len;
+}
+
+static struct SolidSyslogStructuredData sdSpy2 = {SdSpyFormat2};
+
+static size_t SdFailFormat(struct SolidSyslogStructuredData* /* self */, char* /* buffer */, size_t /* size */)
+{
+    return 0;
+}
+
+static struct SolidSyslogStructuredData sdFail = {SdFailFormat};
+
+static void IntegrationGetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
+{
+    *timeQuality = {true, true, SOLIDSYSLOG_SYNC_ACCURACY_OMIT};
+}
+
 static std::string::size_type SkipSdata(const std::string& s, std::string::size_type pos)
 {
     if (pos < s.size() && s[pos] == '[')
@@ -196,7 +219,7 @@ TEST_GROUP(SolidSyslog)
         SenderSpy_Reset();
         StringFake_Reset();
         buffer = SolidSyslogNullBuffer_Create(SenderSpy_GetSender());
-        config = {buffer, nullptr, malloc, free, nullptr, StringFake_GetHostname, StringFake_GetAppName, StringFake_GetProcId, nullptr};
+        config = {buffer, nullptr, malloc, free, nullptr, StringFake_GetHostname, StringFake_GetAppName, StringFake_GetProcId, nullptr, 0};
         logger = SolidSyslog_Create(&config);
         message = {SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO, nullptr, nullptr};
     }
@@ -245,7 +268,7 @@ TEST(SolidSyslog, TwoCreatesReturnDifferentHandles)
 TEST(SolidSyslog, EachLoggerSendsThroughItsOwnSender)
 {
     SolidSyslogBuffer* secondBuffer = SolidSyslogNullBuffer_Create(SenderSpy_GetSender());
-    SolidSyslogConfig  secondConfig = {secondBuffer, nullptr, malloc, free, nullptr, nullptr, nullptr, nullptr, nullptr};
+    SolidSyslogConfig  secondConfig = {secondBuffer, nullptr, malloc, free, nullptr, nullptr, nullptr, nullptr, nullptr, 0};
     SolidSyslog*       second       = SolidSyslog_Create(&secondConfig);
 
     SolidSyslog_Log(logger, &message);
@@ -459,7 +482,9 @@ TEST(SolidSyslog, StructuredDataIsNilValue)
 
 TEST(SolidSyslog, InjectedSdObjectFormatIsCalledDuringLog)
 {
-    config.sd = &sdSpy;
+    SolidSyslogStructuredData* sdList[] = {&sdSpy};
+    config.sd                           = sdList;
+    config.sdCount                      = 1;
     ReplaceLogger();
     Log();
     STRCMP_EQUAL("[spy]", SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
@@ -467,9 +492,11 @@ TEST(SolidSyslog, InjectedSdObjectFormatIsCalledDuringLog)
 
 TEST(SolidSyslog, MetaSdProducesSequenceIdInStructuredData)
 {
-    SolidSyslogAtomicCounter*  counter = SolidSyslogAtomicCounter_Create(malloc);
-    SolidSyslogStructuredData* metaSd  = SolidSyslogMetaSd_Create(malloc, counter);
-    config.sd                          = metaSd;
+    SolidSyslogAtomicCounter*  counter  = SolidSyslogAtomicCounter_Create(malloc);
+    SolidSyslogStructuredData* metaSd   = SolidSyslogMetaSd_Create(malloc, counter);
+    SolidSyslogStructuredData* sdList[] = {metaSd};
+    config.sd                           = sdList;
+    config.sdCount                      = 1;
     ReplaceLogger();
     Log();
     STRCMP_EQUAL("[meta sequenceId=\"1\"]", SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
@@ -479,9 +506,11 @@ TEST(SolidSyslog, MetaSdProducesSequenceIdInStructuredData)
 
 TEST(SolidSyslog, MetaSdSequenceIdIncrementsAcrossLogCalls)
 {
-    SolidSyslogAtomicCounter*  counter = SolidSyslogAtomicCounter_Create(malloc);
-    SolidSyslogStructuredData* metaSd  = SolidSyslogMetaSd_Create(malloc, counter);
-    config.sd                          = metaSd;
+    SolidSyslogAtomicCounter*  counter  = SolidSyslogAtomicCounter_Create(malloc);
+    SolidSyslogStructuredData* metaSd   = SolidSyslogMetaSd_Create(malloc, counter);
+    SolidSyslogStructuredData* sdList[] = {metaSd};
+    config.sd                           = sdList;
+    config.sdCount                      = 1;
     ReplaceLogger();
     Log();
     Log();
@@ -492,13 +521,71 @@ TEST(SolidSyslog, MetaSdSequenceIdIncrementsAcrossLogCalls)
 
 TEST(SolidSyslog, MsgFieldPreservedWithMetaSd)
 {
-    SolidSyslogAtomicCounter*  counter = SolidSyslogAtomicCounter_Create(malloc);
-    SolidSyslogStructuredData* metaSd  = SolidSyslogMetaSd_Create(malloc, counter);
-    config.sd                          = metaSd;
+    SolidSyslogAtomicCounter*  counter  = SolidSyslogAtomicCounter_Create(malloc);
+    SolidSyslogStructuredData* metaSd   = SolidSyslogMetaSd_Create(malloc, counter);
+    SolidSyslogStructuredData* sdList[] = {metaSd};
+    config.sd                           = sdList;
+    config.sdCount                      = 1;
     ReplaceLogger();
     message.msg = "hello world";
     Log();
     STRCMP_EQUAL("hello world", SyslogMsg(LastMessage()).c_str());
+    SolidSyslogMetaSd_Destroy(metaSd, free);
+    SolidSyslogAtomicCounter_Destroy(counter, free);
+}
+
+TEST(SolidSyslog, MultipleSdItemsAreConcatenated)
+{
+    SolidSyslogStructuredData* sdList[] = {&sdSpy, &sdSpy2};
+    config.sd                           = sdList;
+    config.sdCount                      = 2;
+    ReplaceLogger();
+    Log();
+    STRCMP_EQUAL("[spy][spy2]", SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
+}
+
+TEST(SolidSyslog, SingleSdReturningZeroBytesProducesNilvalue)
+{
+    SolidSyslogStructuredData* sdList[] = {&sdFail};
+    config.sd                           = sdList;
+    config.sdCount                      = 1;
+    ReplaceLogger();
+    Log();
+    STRCMP_EQUAL("-", SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
+}
+
+TEST(SolidSyslog, FailingSdIsSkippedWhenOtherSdSucceeds)
+{
+    SolidSyslogStructuredData* sdList[] = {&sdFail, &sdSpy};
+    config.sd                           = sdList;
+    config.sdCount                      = 2;
+    ReplaceLogger();
+    Log();
+    STRCMP_EQUAL("[spy]", SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
+}
+
+TEST(SolidSyslog, AllSdFailingProducesNilvalue)
+{
+    SolidSyslogStructuredData* sdList[] = {&sdFail, &sdFail};
+    config.sd                           = sdList;
+    config.sdCount                      = 2;
+    ReplaceLogger();
+    Log();
+    STRCMP_EQUAL("-", SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
+}
+
+TEST(SolidSyslog, MetaSdAndTimeQualitySdCoexistInSdArray)
+{
+    SolidSyslogAtomicCounter*  counter     = SolidSyslogAtomicCounter_Create(malloc);
+    SolidSyslogStructuredData* metaSd      = SolidSyslogMetaSd_Create(malloc, counter);
+    SolidSyslogStructuredData* timeQuality = SolidSyslogTimeQualitySd_Create(malloc, IntegrationGetTimeQuality);
+    SolidSyslogStructuredData* sdList[]    = {metaSd, timeQuality};
+    config.sd                              = sdList;
+    config.sdCount                         = 2;
+    ReplaceLogger();
+    Log();
+    STRCMP_EQUAL("[meta sequenceId=\"1\"][timeQuality tzKnown=\"1\" isSynced=\"1\"]", SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
+    SolidSyslogTimeQualitySd_Destroy(timeQuality, free);
     SolidSyslogMetaSd_Destroy(metaSd, free);
     SolidSyslogAtomicCounter_Destroy(counter, free);
 }
@@ -575,7 +662,7 @@ static void* AlwaysFailAlloc(size_t size)
 
 TEST(SolidSyslog, CreateReturnsNullWhenAllocFails)
 {
-    SolidSyslogConfig failConfig = {buffer, nullptr, AlwaysFailAlloc, free, nullptr, nullptr, nullptr, nullptr, nullptr};
+    SolidSyslogConfig failConfig = {buffer, nullptr, AlwaysFailAlloc, free, nullptr, nullptr, nullptr, nullptr, nullptr, 0};
     SolidSyslog*      result     = SolidSyslog_Create(&failConfig);
     POINTERS_EQUAL(nullptr, result);
 }
@@ -1017,7 +1104,7 @@ TEST(SolidSyslog, MultipleServiceCallsReturnNothingToSend)
 TEST(SolidSyslog, ServiceSendsMessageReadFromBuffer)
 {
     SolidSyslogBuffer* fakeBuffer    = BufferFake_Create();
-    SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderSpy_GetSender(), malloc, free, nullptr, nullptr, nullptr, nullptr, nullptr};
+    SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderSpy_GetSender(), malloc, free, nullptr, nullptr, nullptr, nullptr, nullptr, 0};
     SolidSyslog*       serviceLogger = SolidSyslog_Create(&serviceConfig);
 
     SolidSyslogBuffer_Write(fakeBuffer, "test", 4);

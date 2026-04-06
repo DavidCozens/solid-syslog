@@ -147,6 +147,8 @@ Headers in `Interface/` are split by audience — each user includes only what t
 | `SolidSyslogStructuredDataDef.h` | SD implementors (extension point) | `SolidSyslogStructuredData` vtable struct |
 | `SolidSyslogMetaSd.h` | System setup code using sequenceId SD | `SolidSyslogMetaSd_Create`, `_Destroy` |
 | `SolidSyslogAtomicCounter.h` | System setup code on platforms with C11 atomics | `SolidSyslogAtomicCounter_Create`, `_Destroy`, `_Increment` |
+| `SolidSyslogTimeQuality.h` | Any code providing time quality data | `SolidSyslogTimeQuality`, `SolidSyslogTimeQualityFunction`, `SOLIDSYSLOG_SYNC_ACCURACY_OMIT` |
+| `SolidSyslogTimeQualitySd.h` | System setup code using timeQuality SD | `SolidSyslogTimeQualitySd_Create`, `_Destroy` |
 
 Most application code only needs `SolidSyslog.h` — it never sees allocators, senders, buffers, or config structs.
 

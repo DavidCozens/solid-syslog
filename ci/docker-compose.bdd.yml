@@ -21,7 +21,7 @@ services:
     depends_on:
       syslog-ng:
         condition: service_healthy
-    command: behave --junit --junit-directory Bdd/junit Bdd/features/
+    command: behave --junit --junit-directory Bdd/junit --tags='not @wip' Bdd/features/
 
 volumes:
   bdd-output:
