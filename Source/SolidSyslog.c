@@ -215,7 +215,7 @@ static inline bool CaptureTimestamp(struct SolidSyslogTimestamp* ts, SolidSyslog
 
     if (clock != NULL)
     {
-        *ts      = clock();
+        clock(ts);
         captured = TimestampIsValid(ts);
     }
 

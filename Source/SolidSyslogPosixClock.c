@@ -6,18 +6,17 @@
 static inline bool GetBrokenDownTime(struct timespec* now, struct tm* breakdown);
 static inline void PopulateTimestamp(struct SolidSyslogTimestamp* timestamp, const struct timespec* now, const struct tm* breakdown);
 
-struct SolidSyslogTimestamp SolidSyslogPosixClock_GetTimestamp(void)
+void SolidSyslogPosixClock_GetTimestamp(struct SolidSyslogTimestamp* timestamp)
 {
-    struct SolidSyslogTimestamp timestamp = {0};
-    struct timespec             now;
-    struct tm                   breakdown;
+    struct timespec now;
+    struct tm       breakdown;
+
+    *timestamp = (struct SolidSyslogTimestamp) {0};
 
     if (GetBrokenDownTime(&now, &breakdown))
     {
-        PopulateTimestamp(&timestamp, &now, &breakdown);
+        PopulateTimestamp(timestamp, &now, &breakdown);
     }
-
-    return timestamp;
 }
 
 static inline bool GetBrokenDownTime(struct timespec* now, struct tm* breakdown)
