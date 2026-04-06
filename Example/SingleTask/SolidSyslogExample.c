@@ -72,8 +72,8 @@ int SolidSyslogExample_Run(int argc, char* argv[])
     SolidSyslogTimeQualitySd_Destroy();
     SolidSyslogMetaSd_Destroy();
     SolidSyslogAtomicCounter_Destroy();
-    SolidSyslogNullBuffer_Destroy(buffer);
-    SolidSyslogUdpSender_Destroy(sender);
+    SolidSyslogNullBuffer_Destroy();
+    SolidSyslogUdpSender_Destroy();
 
     return 0;
 }

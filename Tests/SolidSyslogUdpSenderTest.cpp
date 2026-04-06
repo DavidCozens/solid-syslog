@@ -63,7 +63,7 @@ TEST_GROUP(SolidSyslogUdpSender)
 
     void teardown() override
     {
-        SolidSyslogUdpSender_Destroy(sender);
+        SolidSyslogUdpSender_Destroy();
     }
 
     void Send() const
@@ -181,8 +181,8 @@ TEST_GROUP(SolidSyslogUdpSenderDestroy)
 
     void CreateAndDestroy() const
     {
-        struct SolidSyslogSender* sender = SolidSyslogUdpSender_Create(&config);
-        SolidSyslogUdpSender_Destroy(sender);
+        SolidSyslogUdpSender_Create(&config);
+        SolidSyslogUdpSender_Destroy();
     }
 };
 
@@ -204,7 +204,7 @@ TEST(SolidSyslogUdpSenderDestroy, SimpleScenario)
 {
     struct SolidSyslogSender* sender = SolidSyslogUdpSender_Create(&config);
     SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN);
-    SolidSyslogUdpSender_Destroy(sender);
+    SolidSyslogUdpSender_Destroy();
 
     LONGS_EQUAL(1, SocketSpy_SocketCallCount());
     LONGS_EQUAL(AF_INET, SocketSpy_SocketDomain());
@@ -233,7 +233,7 @@ TEST_GROUP(SolidSyslogUdpSenderConfig)
 
     void teardown() override
     {
-        SolidSyslogUdpSender_Destroy(sender);
+        SolidSyslogUdpSender_Destroy();
     }
 
     void CreateSender()

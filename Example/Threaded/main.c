@@ -91,8 +91,8 @@ int main(int argc, char* argv[])
     SolidSyslogTimeQualitySd_Destroy();
     SolidSyslogMetaSd_Destroy();
     SolidSyslogAtomicCounter_Destroy();
-    SolidSyslogPosixMqBuffer_Destroy(buffer);
-    SolidSyslogUdpSender_Destroy(sender);
+    SolidSyslogPosixMqBuffer_Destroy();
+    SolidSyslogUdpSender_Destroy();
 
     return 0;
 }

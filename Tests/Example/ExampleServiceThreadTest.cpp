@@ -34,8 +34,8 @@ TEST_GROUP(ExampleServiceThread)
     void teardown() override
     {
         SolidSyslog_Destroy();
-        SolidSyslogPosixMqBuffer_Destroy(buffer);
-        SolidSyslogUdpSender_Destroy(sender);
+        SolidSyslogPosixMqBuffer_Destroy();
+        SolidSyslogUdpSender_Destroy();
     }
 
     static void Log()

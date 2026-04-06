@@ -223,7 +223,7 @@ TEST_GROUP(SolidSyslog)
     void teardown() override
     {
         SolidSyslog_Destroy();
-        SolidSyslogNullBuffer_Destroy(buffer);
+        SolidSyslogNullBuffer_Destroy();
     }
 
     void Log() const
@@ -1084,7 +1084,7 @@ TEST(SolidSyslog, ServiceSendsMessageReadFromBuffer)
 
     SolidSyslog_Destroy();
     SolidSyslog_Create(&config);
-    BufferFake_Destroy(fakeBuffer);
+    BufferFake_Destroy();
 }
 
 TEST(SolidSyslog, LogAfterDestroyAndRecreateWithNullFunctionsProducesNilvalues)

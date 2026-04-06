@@ -31,9 +31,8 @@ struct SolidSyslogSender* SolidSyslogUdpSender_Create(const struct SolidSyslogUd
     return &instance.base;
 }
 
-void SolidSyslogUdpSender_Destroy(struct SolidSyslogSender* sender)
+void SolidSyslogUdpSender_Destroy(void)
 {
-    (void) sender;
     if (instance.fd >= 0)
     {
         close(instance.fd);

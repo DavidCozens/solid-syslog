@@ -41,9 +41,8 @@ struct SolidSyslogBuffer* SolidSyslogPosixMqBuffer_Create(size_t maxMessageSize,
     return &instance.base;
 }
 
-void SolidSyslogPosixMqBuffer_Destroy(struct SolidSyslogBuffer* buffer)
+void SolidSyslogPosixMqBuffer_Destroy(void)
 {
-    (void) buffer;
     mq_close(instance.mq);
     mq_unlink(instance.name);
     instance = (struct SolidSyslogPosixMqBuffer) {0};

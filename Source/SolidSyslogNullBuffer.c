@@ -21,9 +21,8 @@ struct SolidSyslogBuffer* SolidSyslogNullBuffer_Create(struct SolidSyslogSender*
     return &instance.base;
 }
 
-void SolidSyslogNullBuffer_Destroy(struct SolidSyslogBuffer* buffer)
+void SolidSyslogNullBuffer_Destroy(void)
 {
-    (void) buffer;
     instance.base.Write = NULL;
     instance.base.Read  = NULL;
     instance.sender     = NULL;

@@ -30,9 +30,8 @@ struct SolidSyslogBuffer* BufferFake_Create(void)
     return &instance.base;
 }
 
-void BufferFake_Destroy(struct SolidSyslogBuffer* buffer)
+void BufferFake_Destroy(void)
 {
-    (void) buffer;
     instance = (struct BufferFake) {0};
 }
 

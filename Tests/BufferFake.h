@@ -6,7 +6,7 @@
 EXTERN_C_BEGIN
 
     struct SolidSyslogBuffer* BufferFake_Create(void);
-    void                      BufferFake_Destroy(struct SolidSyslogBuffer * buffer);
+    void                      BufferFake_Destroy(void);
 
 EXTERN_C_END
 

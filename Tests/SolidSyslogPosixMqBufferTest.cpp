@@ -25,7 +25,7 @@ TEST_GROUP(SolidSyslogPosixMqBuffer)
 
     void teardown() override
     {
-        SolidSyslogPosixMqBuffer_Destroy(buffer);
+        SolidSyslogPosixMqBuffer_Destroy();
     }
 
     void Write() const
