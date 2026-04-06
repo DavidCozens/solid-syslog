@@ -267,6 +267,30 @@ def step_check_is_synced(context, value):
     )
 
 
+@then('the structured data contains software "{value}"')
+def step_check_software(context, value):
+    sd = context.fields.get("STRUCTURED_DATA", "")
+    match = re.search(r'software="([^"]*)"', sd)
+    assert match, (
+        f"No software found in structured data: {sd}"
+    )
+    assert match.group(1) == value, (
+        f"Expected software {value}, got {match.group(1)}"
+    )
+
+
+@then('the structured data contains swVersion "{value}"')
+def step_check_sw_version(context, value):
+    sd = context.fields.get("STRUCTURED_DATA", "")
+    match = re.search(r'swVersion="([^"]*)"', sd)
+    assert match, (
+        f"No swVersion found in structured data: {sd}"
+    )
+    assert match.group(1) == value, (
+        f"Expected swVersion {value}, got {match.group(1)}"
+    )
+
+
 @then("syslog-ng receives {count:d} messages with sequential sequenceId values")
 def step_check_sequential_ids(context, count):
     assert context.message_count == count, (
