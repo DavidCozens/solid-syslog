@@ -26,7 +26,7 @@ TEST_GROUP(SolidSyslogMetaSd)
         SolidSyslogAtomicCounter_Destroy(counter, free);
     }
 
-    size_t Format()
+    size_t format()
     {
         return SolidSyslogStructuredData_Format(sd, buffer, sizeof(buffer));
     }
@@ -41,28 +41,28 @@ TEST(SolidSyslogMetaSd, CreateReturnsNonNull)
 
 TEST(SolidSyslogMetaSd, FirstFormatProducesSequenceId1)
 {
-    Format();
+    format();
     STRCMP_EQUAL("[meta sequenceId=\"1\"]", buffer);
 }
 
 TEST(SolidSyslogMetaSd, SecondFormatProducesSequenceId2)
 {
-    Format();
-    Format();
+    format();
+    format();
     STRCMP_EQUAL("[meta sequenceId=\"2\"]", buffer);
 }
 
 TEST(SolidSyslogMetaSd, ThirdFormatProducesSequenceId3)
 {
-    Format();
-    Format();
-    Format();
+    format();
+    format();
+    format();
     STRCMP_EQUAL("[meta sequenceId=\"3\"]", buffer);
 }
 
 TEST(SolidSyslogMetaSd, FormatReturnsLengthOfFormattedString)
 {
-    size_t len = Format();
+    size_t len = format();
     LONGS_EQUAL(strlen(buffer), len);
 }
 

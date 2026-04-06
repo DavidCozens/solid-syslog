@@ -54,7 +54,7 @@ int SolidSyslogExample_Run(int argc, char* argv[])
         .getAppName  = ExampleAppName_Get,
         .getProcId   = SolidSyslogPosixProcId_Get,
         .sd          = sdList,
-        .sdCount     = 2,
+        .sdCount     = sizeof(sdList) / sizeof(sdList[0]),
     };
     struct SolidSyslog* logger = SolidSyslog_Create(&config);
 

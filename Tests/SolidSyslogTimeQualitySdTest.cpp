@@ -30,7 +30,7 @@ TEST_GROUP(SolidSyslogTimeQualitySd)
         SolidSyslogTimeQualitySd_Destroy(sd, free);
     }
 
-    size_t Format()
+    size_t format()
     {
         return SolidSyslogStructuredData_Format(sd, buffer, sizeof(buffer));
     }
@@ -45,7 +45,7 @@ TEST(SolidSyslogTimeQualitySd, CreateReturnsNonNull)
 
 TEST(SolidSyslogTimeQualitySd, FormatProducesTzKnownAndIsSynced)
 {
-    Format();
+    format();
     STRCMP_EQUAL("[timeQuality tzKnown=\"1\" isSynced=\"1\"]", buffer);
 }
 
@@ -53,58 +53,58 @@ TEST(SolidSyslogTimeQualitySd, FormatWithFalseValues)
 {
     stubTimeQuality.tzKnown  = false;
     stubTimeQuality.isSynced = false;
-    Format();
+    format();
     STRCMP_EQUAL("[timeQuality tzKnown=\"0\" isSynced=\"0\"]", buffer);
 }
 
 TEST(SolidSyslogTimeQualitySd, FormatIncludesSyncAccuracyWhenNonZero)
 {
     stubTimeQuality.syncAccuracyMicroseconds = 50;
-    Format();
+    format();
     STRCMP_EQUAL("[timeQuality tzKnown=\"1\" isSynced=\"1\" syncAccuracy=\"50\"]", buffer);
 }
 
 TEST(SolidSyslogTimeQualitySd, SyncAccuracyOfOneIsSmallestNonOmitValue)
 {
     stubTimeQuality.syncAccuracyMicroseconds = 1;
-    Format();
+    format();
     STRCMP_EQUAL("[timeQuality tzKnown=\"1\" isSynced=\"1\" syncAccuracy=\"1\"]", buffer);
 }
 
 TEST(SolidSyslogTimeQualitySd, SyncAccuracyAtMaxUint32)
 {
     stubTimeQuality.syncAccuracyMicroseconds = UINT32_MAX;
-    Format();
+    format();
     STRCMP_EQUAL("[timeQuality tzKnown=\"1\" isSynced=\"1\" syncAccuracy=\"4294967295\"]", buffer);
 }
 
 TEST(SolidSyslogTimeQualitySd, OmitSyncAccuracyUsesDefinedConstant)
 {
     stubTimeQuality.syncAccuracyMicroseconds = SOLIDSYSLOG_SYNC_ACCURACY_OMIT;
-    Format();
+    format();
     STRCMP_EQUAL("[timeQuality tzKnown=\"1\" isSynced=\"1\"]", buffer);
 }
 
 TEST(SolidSyslogTimeQualitySd, CallbackIsInvokedOnEachFormat)
 {
-    Format();
+    format();
     STRCMP_EQUAL("[timeQuality tzKnown=\"1\" isSynced=\"1\"]", buffer);
 
     stubTimeQuality.isSynced = false;
-    Format();
+    format();
     STRCMP_EQUAL("[timeQuality tzKnown=\"1\" isSynced=\"0\"]", buffer);
 }
 
 TEST(SolidSyslogTimeQualitySd, FormatReturnsLengthOfFormattedString)
 {
-    size_t len = Format();
+    size_t len = format();
     LONGS_EQUAL(strlen(buffer), len);
 }
 
 TEST(SolidSyslogTimeQualitySd, FormatReturnsLengthWithSyncAccuracy)
 {
     stubTimeQuality.syncAccuracyMicroseconds = 50;
-    size_t len                               = Format();
+    size_t len                               = format();
     LONGS_EQUAL(strlen(buffer), len);
 }
 
