@@ -33,6 +33,8 @@ int SolidSyslogExample_Run(int argc, char* argv[])
     struct SolidSyslogAtomicCounter*  counter = SolidSyslogAtomicCounter_Create(malloc);
     struct SolidSyslogStructuredData* metaSd  = SolidSyslogMetaSd_Create(malloc, counter);
 
+    struct SolidSyslogStructuredData* sdList[] = {metaSd};
+
     struct SolidSyslogConfig config = {
         .buffer      = buffer,
         .sender      = NULL,
@@ -42,7 +44,8 @@ int SolidSyslogExample_Run(int argc, char* argv[])
         .getHostname = SolidSyslogPosixHostname_Get,
         .getAppName  = ExampleAppName_Get,
         .getProcId   = SolidSyslogPosixProcId_Get,
-        .sd          = metaSd,
+        .sd          = sdList,
+        .sdCount     = 1,
     };
     struct SolidSyslog* logger = SolidSyslog_Create(&config);
 

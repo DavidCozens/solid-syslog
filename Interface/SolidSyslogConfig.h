@@ -15,15 +15,16 @@ EXTERN_C_BEGIN
 
     struct SolidSyslogConfig
     {
-        struct SolidSyslogBuffer*         buffer;
-        struct SolidSyslogSender*         sender;
-        SolidSyslogAllocFunction          alloc;
-        SolidSyslogFreeFunction           free;
-        SolidSyslogClockFunction          clock;
-        SolidSyslogStringFunction         getHostname;
-        SolidSyslogStringFunction         getAppName;
-        SolidSyslogStringFunction         getProcId;
-        struct SolidSyslogStructuredData* sd;
+        struct SolidSyslogBuffer*          buffer;
+        struct SolidSyslogSender*          sender;
+        SolidSyslogAllocFunction           alloc;
+        SolidSyslogFreeFunction            free;
+        SolidSyslogClockFunction           clock;
+        SolidSyslogStringFunction          getHostname;
+        SolidSyslogStringFunction          getAppName;
+        SolidSyslogStringFunction          getProcId;
+        struct SolidSyslogStructuredData** sd;
+        size_t                             sdCount;
     };
 
     struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config);
