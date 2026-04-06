@@ -13,8 +13,6 @@ EXTERN_C_BEGIN
         SOLIDSYSLOG_MAX_MESSAGE_SIZE = 512
     };
 
-    struct SolidSyslog;
-
     struct SolidSyslogMessage
     {
         enum SolidSyslog_Facility facility;
@@ -23,8 +21,8 @@ EXTERN_C_BEGIN
         const char*               msg;
     };
 
-    void SolidSyslog_Log(struct SolidSyslog * logger, const struct SolidSyslogMessage* message);
-    bool SolidSyslog_Service(struct SolidSyslog * logger);
+    void SolidSyslog_Log(const struct SolidSyslogMessage* message);
+    bool SolidSyslog_Service(void);
 
 EXTERN_C_END
 

@@ -26,16 +26,10 @@ static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
 
 static volatile bool shutdown_flag;
 
-struct ServiceThreadArgs
-{
-    struct SolidSyslog* logger;
-    volatile bool*      shutdown;
-};
-
 static void* ServiceThreadEntry(void* arg)
 {
-    struct ServiceThreadArgs* args = (struct ServiceThreadArgs*) arg;
-    ExampleServiceThread_Run(args->logger, args->shutdown);
+    volatile bool* shutdown = (volatile bool*) arg;
+    ExampleServiceThread_Run(shutdown);
     return NULL;
 }
 
@@ -65,8 +59,6 @@ int main(int argc, char* argv[])
     struct SolidSyslogConfig config = {
         .buffer      = buffer,
         .sender      = sender,
-        .alloc       = malloc,
-        .free        = free,
         .clock       = SolidSyslogPosixClock_GetTimestamp,
         .getHostname = SolidSyslogPosixHostname_Get,
         .getAppName  = ExampleAppName_Get,
@@ -74,13 +66,12 @@ int main(int argc, char* argv[])
         .sd          = sdList,
         .sdCount     = sizeof(sdList) / sizeof(sdList[0]),
     };
-    struct SolidSyslog* logger = SolidSyslog_Create(&config);
+    SolidSyslog_Create(&config);
 
     shutdown_flag = false;
 
-    struct ServiceThreadArgs threadArgs    = {logger, &shutdown_flag};
-    pthread_t                serviceThread = 0;
-    pthread_create(&serviceThread, NULL, ServiceThreadEntry, &threadArgs);
+    pthread_t serviceThread = 0;
+    pthread_create(&serviceThread, NULL, ServiceThreadEntry, (void*) &shutdown_flag);
 
     struct SolidSyslogMessage message = {
         .facility  = options.facility,
@@ -90,13 +81,13 @@ int main(int argc, char* argv[])
     };
     for (int i = 0; i < options.count; i++)
     {
-        SolidSyslog_Log(logger, &message);
+        SolidSyslog_Log(&message);
     }
 
     shutdown_flag = true;
     pthread_join(serviceThread, NULL);
 
-    SolidSyslog_Destroy(logger);
+    SolidSyslog_Destroy();
     SolidSyslogOriginSd_Destroy(originSd, free);
     SolidSyslogTimeQualitySd_Destroy(timeQuality, free);
     SolidSyslogMetaSd_Destroy(metaSd, free);

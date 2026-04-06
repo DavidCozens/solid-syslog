@@ -253,6 +253,33 @@ The UUID issue is Windows/WSL-specific but there is no cost to running the comma
 ### Open questions
 - None
 
+## 2026-04-06 — E12.1 Remove dynamic allocation from SolidSyslog core
+
+### Decisions
+- SolidSyslog adopts single-instance static model (Grenning pattern 2: module
+  with file-scope static state). `struct SolidSyslog` is `static` inside
+  `SolidSyslog.c` — still opaque, still encapsulated.
+- `SolidSyslog_Create(config)` returns `void`, copies config into static instance.
+  `SolidSyslog_Destroy()` takes no arguments, zeros the instance.
+- `SolidSyslog_Log(message)` and `SolidSyslog_Service()` lose the handle parameter.
+- `alloc` and `free` removed from `SolidSyslogConfig` — the logger itself has
+  zero dynamic allocation. SD objects still use `SolidSyslogAllocFunction`.
+- `ExampleServiceThread_Run` simplified — no longer takes logger handle.
+  `ServiceThreadArgs` struct eliminated from threaded example.
+
+### Test counts
+- 223 library unit tests (SolidSyslogTests) — 4 removed (multi-instance/allocation)
+- 17 example unit tests (ExampleTests)
+- 23 BDD scenarios (unchanged — behaviour identical)
+
+### Deferred
+- Allocation patterns for SD objects, buffers, senders — separate E12 stories
+- Error handling for invalid config — subsequent E12 story
+- Static allocation for SD objects (caller-provided storage) — E11 (#29)
+
+### Open questions
+- None
+
 ## 2026-04-06 — S7.3 origin structured data
 
 ### Decisions

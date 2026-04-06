@@ -49,8 +49,6 @@ int SolidSyslogExample_Run(int argc, char* argv[])
     struct SolidSyslogConfig config = {
         .buffer      = buffer,
         .sender      = NULL,
-        .alloc       = malloc,
-        .free        = free,
         .clock       = SolidSyslogPosixClock_GetTimestamp,
         .getHostname = SolidSyslogPosixHostname_Get,
         .getAppName  = ExampleAppName_Get,
@@ -58,7 +56,7 @@ int SolidSyslogExample_Run(int argc, char* argv[])
         .sd          = sdList,
         .sdCount     = sizeof(sdList) / sizeof(sdList[0]),
     };
-    struct SolidSyslog* logger = SolidSyslog_Create(&config);
+    SolidSyslog_Create(&config);
 
     struct SolidSyslogMessage message = {
         .facility  = options.facility,
@@ -68,10 +66,10 @@ int SolidSyslogExample_Run(int argc, char* argv[])
     };
     for (int i = 0; i < options.count; i++)
     {
-        SolidSyslog_Log(logger, &message);
+        SolidSyslog_Log(&message);
     }
 
-    SolidSyslog_Destroy(logger);
+    SolidSyslog_Destroy();
     SolidSyslogOriginSd_Destroy(originSd, free);
     SolidSyslogTimeQualitySd_Destroy(timeQuality, free);
     SolidSyslogMetaSd_Destroy(metaSd, free);

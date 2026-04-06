@@ -134,7 +134,7 @@ Headers in `Interface/` are split by audience — each user includes only what t
 | `SolidSyslogConfig.h` | System setup code | `SolidSyslogConfig`, `SolidSyslog_Create`, `SolidSyslog_Destroy` |
 | `SolidSyslogPrival.h` | Any code that needs facility/severity enums | `SolidSyslog_Facility`, `SolidSyslog_Severity` |
 | `SolidSyslogTimestamp.h` | Any code that needs the timestamp struct | `SolidSyslogTimestamp`, `SolidSyslogClockFunction` |
-| `SolidSyslogAlloc.h` | System setup code providing allocators | `SolidSyslogAllocFunction`, `SolidSyslogFreeFunction` |
+| `SolidSyslogAlloc.h` | SD and counter Create/Destroy functions | `SolidSyslogAllocFunction`, `SolidSyslogFreeFunction` |
 | `SolidSyslogSenderDef.h` | Sender implementors (extension point) | `SolidSyslogSender` vtable struct |
 | `SolidSyslogUdpSender.h` | System setup code using UDP transport | `SolidSyslogUdpSender_Create`, `_Destroy` |
 | `SolidSyslogBufferDef.h` | Buffer implementors (extension point) | `SolidSyslogBuffer` vtable struct |
