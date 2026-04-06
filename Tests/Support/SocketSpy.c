@@ -10,6 +10,7 @@ enum
     SOCKETSPY_MAX_BUFFER_SIZE = 2048
 };
 
+static bool               sendtoFails;
 static int                sendtoCallCount;
 static char               lastBufCopy[SOCKETSPY_MAX_BUFFER_SIZE];
 static size_t             lastLen;
@@ -35,6 +36,7 @@ static struct addrinfo    fakeAddrInfo;
 
 void SocketSpy_Reset(void)
 {
+    sendtoFails       = false;
     sendtoCallCount   = 0;
     lastBufCopy[0]    = '\0';
     lastLen           = 0;
@@ -58,6 +60,11 @@ void SocketSpy_Reset(void)
     fakeAddrInfo.ai_family      = AF_INET;
     fakeAddrInfo.ai_addr        = (struct sockaddr*) &fakeResolvedAddr;
     fakeAddrInfo.ai_addrlen     = sizeof(fakeResolvedAddr);
+}
+
+void SocketSpy_SetSendtoFails(bool fails)
+{
+    sendtoFails = fails;
 }
 
 /* sendto accessors */
@@ -187,7 +194,7 @@ ssize_t sendto(int sockfd, const void* buf, size_t len, int flags, const struct 
     lastFlags             = flags;
     lastAddr              = *(const struct sockaddr_in*) dest_addr;
     lastAddrLen           = addrlen;
-    return (ssize_t) len;
+    return sendtoFails ? (ssize_t) -1 : (ssize_t) len;
 }
 
 int close(int fd)

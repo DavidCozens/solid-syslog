@@ -56,6 +56,12 @@ TEST(SenderSpy, LastBufferCapturesLastSend)
     STRCMP_EQUAL("second", SenderSpy_LastBufferAsString());
 }
 
+TEST(SenderSpy, SendReturnsTrue)
+{
+    struct SolidSyslogSender* sender = SenderSpy_GetSender();
+    CHECK_TRUE(SolidSyslogSender_Send(sender, "a", 1));
+}
+
 TEST(SenderSpy, ResetClearsLastBuffer)
 {
     struct SolidSyslogSender* sender = SenderSpy_GetSender();

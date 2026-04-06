@@ -83,6 +83,17 @@ TEST(SolidSyslogUdpSender, CreateDestroyWorksWithoutCrashing)
 {
 }
 
+TEST(SolidSyslogUdpSender, SendReturnsTrueOnSuccess)
+{
+    CHECK_TRUE(SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN));
+}
+
+TEST(SolidSyslogUdpSender, SendReturnsFalseOnSendtoFailure)
+{
+    SocketSpy_SetSendtoFails(true);
+    CHECK_FALSE(SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN));
+}
+
 TEST(SolidSyslogUdpSender, SingleSendResultsInOneSendtoCall)
 {
     Send();

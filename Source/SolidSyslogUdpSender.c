@@ -9,7 +9,7 @@
 
 static struct sockaddr_in BuildAddress(const struct addrinfo* resolved, int port);
 static struct sockaddr_in ResolveAddress(const struct SolidSyslogUdpSenderConfig* config);
-static void               Send(struct SolidSyslogSender* self, const void* buffer, size_t size);
+static bool               Send(struct SolidSyslogSender* self, const void* buffer, size_t size);
 
 struct SolidSyslogUdpSender
 {
@@ -65,8 +65,8 @@ static struct sockaddr_in BuildAddress(const struct addrinfo* resolved, int port
     return addr;
 }
 
-static void Send(struct SolidSyslogSender* self, const void* buffer, size_t size)
+static bool Send(struct SolidSyslogSender* self, const void* buffer, size_t size)
 {
     struct SolidSyslogUdpSender* udpSender = (struct SolidSyslogUdpSender*) self;
-    sendto(udpSender->fd, buffer, size, 0, (struct sockaddr*) &udpSender->addr, sizeof(udpSender->addr));
+    return sendto(udpSender->fd, buffer, size, 0, (struct sockaddr*) &udpSender->addr, sizeof(udpSender->addr)) >= 0;
 }
