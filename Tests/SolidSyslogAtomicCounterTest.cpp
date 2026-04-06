@@ -1,8 +1,6 @@
 #include "CppUTest/TestHarness.h"
 #include "SolidSyslogAtomicCounter.h"
 
-#include <cstdlib>
-
 // clang-format off
 TEST_GROUP(SolidSyslogAtomicCounter)
 {
@@ -12,12 +10,12 @@ TEST_GROUP(SolidSyslogAtomicCounter)
     void setup() override
     {
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        counter = SolidSyslogAtomicCounter_Create(malloc);
+        counter = SolidSyslogAtomicCounter_Create();
     }
 
     void teardown() override
     {
-        SolidSyslogAtomicCounter_Destroy(counter, free);
+        SolidSyslogAtomicCounter_Destroy();
     }
 };
 

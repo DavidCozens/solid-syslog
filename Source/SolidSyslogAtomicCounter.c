@@ -7,19 +7,17 @@ struct SolidSyslogAtomicCounter
     atomic_uint_fast32_t value;
 };
 
-struct SolidSyslogAtomicCounter* SolidSyslogAtomicCounter_Create(SolidSyslogAllocFunction alloc)
+static struct SolidSyslogAtomicCounter instance;
+
+struct SolidSyslogAtomicCounter* SolidSyslogAtomicCounter_Create(void)
 {
-    struct SolidSyslogAtomicCounter* counter = alloc(sizeof(struct SolidSyslogAtomicCounter));
-    if (counter != NULL)
-    {
-        atomic_init(&counter->value, 0);
-    }
-    return counter;
+    atomic_init(&instance.value, 0);
+    return &instance;
 }
 
-void SolidSyslogAtomicCounter_Destroy(struct SolidSyslogAtomicCounter* counter, SolidSyslogFreeFunction dealloc)
+void SolidSyslogAtomicCounter_Destroy(void)
 {
-    dealloc(counter);
+    atomic_init(&instance.value, 0);
 }
 
 uint_fast32_t SolidSyslogAtomicCounter_Increment(struct SolidSyslogAtomicCounter* counter)

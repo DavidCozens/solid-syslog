@@ -3,8 +3,6 @@
 #include "SolidSyslogMetaSd.h"
 #include "SolidSyslogStructuredData.h"
 
-#include <cstdlib>
-
 // clang-format off
 TEST_GROUP(SolidSyslogMetaSd)
 {
@@ -16,14 +14,14 @@ TEST_GROUP(SolidSyslogMetaSd)
 
     void setup() override
     {
-        counter = SolidSyslogAtomicCounter_Create(malloc);
-        sd = SolidSyslogMetaSd_Create(malloc, counter);
+        counter = SolidSyslogAtomicCounter_Create();
+        sd = SolidSyslogMetaSd_Create(counter);
     }
 
     void teardown() override
     {
-        SolidSyslogMetaSd_Destroy(sd, free);
-        SolidSyslogAtomicCounter_Destroy(counter, free);
+        SolidSyslogMetaSd_Destroy();
+        SolidSyslogAtomicCounter_Destroy();
     }
 
     size_t format()

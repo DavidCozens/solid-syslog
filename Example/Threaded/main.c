@@ -15,7 +15,6 @@
 #include "SolidSyslogUdpSender.h"
 
 #include <pthread.h>
-#include <stdlib.h>
 
 static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
 {
@@ -49,10 +48,10 @@ int main(int argc, char* argv[])
     };
     struct SolidSyslogSender*         sender      = SolidSyslogUdpSender_Create(&udpConfig);
     struct SolidSyslogBuffer*         buffer      = SolidSyslogPosixMqBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
-    struct SolidSyslogAtomicCounter*  counter     = SolidSyslogAtomicCounter_Create(malloc);
-    struct SolidSyslogStructuredData* metaSd      = SolidSyslogMetaSd_Create(malloc, counter);
-    struct SolidSyslogStructuredData* timeQuality = SolidSyslogTimeQualitySd_Create(malloc, GetTimeQuality);
-    struct SolidSyslogStructuredData* originSd    = SolidSyslogOriginSd_Create(malloc, "SolidSyslogExample", "0.7.0");
+    struct SolidSyslogAtomicCounter*  counter     = SolidSyslogAtomicCounter_Create();
+    struct SolidSyslogStructuredData* metaSd      = SolidSyslogMetaSd_Create(counter);
+    struct SolidSyslogStructuredData* timeQuality = SolidSyslogTimeQualitySd_Create(GetTimeQuality);
+    struct SolidSyslogStructuredData* originSd    = SolidSyslogOriginSd_Create("SolidSyslogExample", "0.7.0");
 
     struct SolidSyslogStructuredData* sdList[] = {metaSd, timeQuality, originSd};
 
@@ -88,10 +87,10 @@ int main(int argc, char* argv[])
     pthread_join(serviceThread, NULL);
 
     SolidSyslog_Destroy();
-    SolidSyslogOriginSd_Destroy(originSd, free);
-    SolidSyslogTimeQualitySd_Destroy(timeQuality, free);
-    SolidSyslogMetaSd_Destroy(metaSd, free);
-    SolidSyslogAtomicCounter_Destroy(counter, free);
+    SolidSyslogOriginSd_Destroy();
+    SolidSyslogTimeQualitySd_Destroy();
+    SolidSyslogMetaSd_Destroy();
+    SolidSyslogAtomicCounter_Destroy();
     SolidSyslogPosixMqBuffer_Destroy(buffer);
     SolidSyslogUdpSender_Destroy(sender);
 

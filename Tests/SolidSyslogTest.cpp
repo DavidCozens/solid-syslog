@@ -9,7 +9,6 @@
 #include "BufferFake.h"
 #include "SenderSpy.h"
 #include "StringFake.h"
-#include <cstdlib>
 #include <cstring>
 #include <string>
 
@@ -461,8 +460,8 @@ TEST(SolidSyslog, InjectedSdObjectFormatIsCalledDuringLog)
 
 TEST(SolidSyslog, MetaSdProducesSequenceIdInStructuredData)
 {
-    SolidSyslogAtomicCounter*  counter  = SolidSyslogAtomicCounter_Create(malloc);
-    SolidSyslogStructuredData* metaSd   = SolidSyslogMetaSd_Create(malloc, counter);
+    SolidSyslogAtomicCounter*  counter  = SolidSyslogAtomicCounter_Create();
+    SolidSyslogStructuredData* metaSd   = SolidSyslogMetaSd_Create(counter);
     SolidSyslogStructuredData* sdList[] = {metaSd};
     config.sd                           = sdList;
     config.sdCount                      = 1;
@@ -470,14 +469,14 @@ TEST(SolidSyslog, MetaSdProducesSequenceIdInStructuredData)
     SolidSyslog_Create(&config);
     Log();
     STRCMP_EQUAL("[meta sequenceId=\"1\"]", SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
-    SolidSyslogMetaSd_Destroy(metaSd, free);
-    SolidSyslogAtomicCounter_Destroy(counter, free);
+    SolidSyslogMetaSd_Destroy();
+    SolidSyslogAtomicCounter_Destroy();
 }
 
 TEST(SolidSyslog, MetaSdSequenceIdIncrementsAcrossLogCalls)
 {
-    SolidSyslogAtomicCounter*  counter  = SolidSyslogAtomicCounter_Create(malloc);
-    SolidSyslogStructuredData* metaSd   = SolidSyslogMetaSd_Create(malloc, counter);
+    SolidSyslogAtomicCounter*  counter  = SolidSyslogAtomicCounter_Create();
+    SolidSyslogStructuredData* metaSd   = SolidSyslogMetaSd_Create(counter);
     SolidSyslogStructuredData* sdList[] = {metaSd};
     config.sd                           = sdList;
     config.sdCount                      = 1;
@@ -486,14 +485,14 @@ TEST(SolidSyslog, MetaSdSequenceIdIncrementsAcrossLogCalls)
     Log();
     Log();
     STRCMP_EQUAL("[meta sequenceId=\"2\"]", SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
-    SolidSyslogMetaSd_Destroy(metaSd, free);
-    SolidSyslogAtomicCounter_Destroy(counter, free);
+    SolidSyslogMetaSd_Destroy();
+    SolidSyslogAtomicCounter_Destroy();
 }
 
 TEST(SolidSyslog, MsgFieldPreservedWithMetaSd)
 {
-    SolidSyslogAtomicCounter*  counter  = SolidSyslogAtomicCounter_Create(malloc);
-    SolidSyslogStructuredData* metaSd   = SolidSyslogMetaSd_Create(malloc, counter);
+    SolidSyslogAtomicCounter*  counter  = SolidSyslogAtomicCounter_Create();
+    SolidSyslogStructuredData* metaSd   = SolidSyslogMetaSd_Create(counter);
     SolidSyslogStructuredData* sdList[] = {metaSd};
     config.sd                           = sdList;
     config.sdCount                      = 1;
@@ -502,8 +501,8 @@ TEST(SolidSyslog, MsgFieldPreservedWithMetaSd)
     message.msg = "hello world";
     Log();
     STRCMP_EQUAL("hello world", SyslogMsg(LastMessage()).c_str());
-    SolidSyslogMetaSd_Destroy(metaSd, free);
-    SolidSyslogAtomicCounter_Destroy(counter, free);
+    SolidSyslogMetaSd_Destroy();
+    SolidSyslogAtomicCounter_Destroy();
 }
 
 TEST(SolidSyslog, MultipleSdItemsAreConcatenated)
@@ -552,9 +551,9 @@ TEST(SolidSyslog, AllSdFailingProducesNilvalue)
 
 TEST(SolidSyslog, MetaSdAndTimeQualitySdCoexistInSdArray)
 {
-    SolidSyslogAtomicCounter*  counter     = SolidSyslogAtomicCounter_Create(malloc);
-    SolidSyslogStructuredData* metaSd      = SolidSyslogMetaSd_Create(malloc, counter);
-    SolidSyslogStructuredData* timeQuality = SolidSyslogTimeQualitySd_Create(malloc, IntegrationGetTimeQuality);
+    SolidSyslogAtomicCounter*  counter     = SolidSyslogAtomicCounter_Create();
+    SolidSyslogStructuredData* metaSd      = SolidSyslogMetaSd_Create(counter);
+    SolidSyslogStructuredData* timeQuality = SolidSyslogTimeQualitySd_Create(IntegrationGetTimeQuality);
     SolidSyslogStructuredData* sdList[]    = {metaSd, timeQuality};
     config.sd                              = sdList;
     config.sdCount                         = 2;
@@ -562,9 +561,9 @@ TEST(SolidSyslog, MetaSdAndTimeQualitySdCoexistInSdArray)
     SolidSyslog_Create(&config);
     Log();
     STRCMP_EQUAL("[meta sequenceId=\"1\"][timeQuality tzKnown=\"1\" isSynced=\"1\"]", SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
-    SolidSyslogTimeQualitySd_Destroy(timeQuality, free);
-    SolidSyslogMetaSd_Destroy(metaSd, free);
-    SolidSyslogAtomicCounter_Destroy(counter, free);
+    SolidSyslogTimeQualitySd_Destroy();
+    SolidSyslogMetaSd_Destroy();
+    SolidSyslogAtomicCounter_Destroy();
 }
 
 TEST(SolidSyslog, NullMessageOmitsMsgField)

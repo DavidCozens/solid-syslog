@@ -268,7 +268,7 @@ The UUID issue is Windows/WSL-specific but there is no cost to running the comma
   formatting hot path — function pointers are always callable.
 - `SolidSyslog_Log(message)` and `SolidSyslog_Service()` lose the handle parameter.
 - `alloc` and `free` removed from `SolidSyslogConfig` — the logger itself has
-  zero dynamic allocation. SD objects still use `SolidSyslogAllocFunction`.
+  zero dynamic allocation.
 - `ExampleServiceThread_Run` simplified — no longer takes logger handle.
   `ServiceThreadArgs` struct eliminated from threaded example.
 

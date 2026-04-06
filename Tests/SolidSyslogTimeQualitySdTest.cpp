@@ -2,7 +2,6 @@
 #include "SolidSyslogTimeQualitySd.h"
 #include "SolidSyslogStructuredData.h"
 
-#include <cstdlib>
 #include <cstring>
 
 static struct SolidSyslogTimeQuality stubTimeQuality;
@@ -22,12 +21,12 @@ TEST_GROUP(SolidSyslogTimeQualitySd)
     void setup() override
     {
         stubTimeQuality = {true, true, SOLIDSYSLOG_SYNC_ACCURACY_OMIT};
-        sd = SolidSyslogTimeQualitySd_Create(malloc, StubGetTimeQuality);
+        sd = SolidSyslogTimeQualitySd_Create(StubGetTimeQuality);
     }
 
     void teardown() override
     {
-        SolidSyslogTimeQualitySd_Destroy(sd, free);
+        SolidSyslogTimeQualitySd_Destroy();
     }
 
     size_t format()
