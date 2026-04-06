@@ -7,7 +7,7 @@ static const time_t TEST_EPOCH = 1743552000;
 
 // clang-format off
 // NOLINTBEGIN(cppcoreguidelines-macro-usage) -- macros preserve __FILE__/__LINE__ in test failure output
-#define GET_TIMESTAMP()              SolidSyslogPosixClock_GetTimestamp()
+#define GET_TIMESTAMP()              getTimestamp()
 #define CHECK_YEAR(expected)         LONGS_EQUAL(expected, GET_TIMESTAMP().year)
 #define CHECK_MONTH(expected)        LONGS_EQUAL(expected, GET_TIMESTAMP().month)
 #define CHECK_DAY(expected)          LONGS_EQUAL(expected, GET_TIMESTAMP().day)
@@ -27,6 +27,13 @@ TEST_GROUP(SolidSyslogPosixClock)
     {
         ClockFake_Reset();
         ClockFake_SetTime(TEST_EPOCH, 0);
+    }
+
+    static struct SolidSyslogTimestamp getTimestamp()
+    {
+        struct SolidSyslogTimestamp ts = {};
+        SolidSyslogPosixClock_GetTimestamp(&ts);
+        return ts;
     }
 };
 
@@ -163,7 +170,7 @@ TEST(SolidSyslogPosixClock, NoY2038LimitOnThisPlatform)
 
 TEST(SolidSyslogPosixClock, AllFieldsInValidRanges)
 {
-    struct SolidSyslogTimestamp ts = SolidSyslogPosixClock_GetTimestamp();
+    struct SolidSyslogTimestamp ts = getTimestamp();
     CHECK(ts.year > 0);
     CHECK((ts.month >= 1) && (ts.month <= 12));
     CHECK((ts.day >= 1) && (ts.day <= 31));

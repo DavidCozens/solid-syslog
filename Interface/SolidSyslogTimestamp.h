@@ -19,8 +19,7 @@ EXTERN_C_BEGIN
         int16_t  utcOffsetMinutes;
     };
 
-    typedef struct SolidSyslogTimestamp (*SolidSyslogClockFunction)(
-        void); // NOLINT(modernize-redundant-void-arg) -- C idiom; void is required in C to mean "no parameters"
+    typedef void (*SolidSyslogClockFunction)(struct SolidSyslogTimestamp* timestamp);
 
 EXTERN_C_END
 

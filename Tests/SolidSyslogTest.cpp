@@ -680,10 +680,9 @@ static const int16_t  TEST_UTC_OFFSET  = 0;
 
 static struct SolidSyslogTimestamp stubTimestamp;
 
-// NOLINTNEXTLINE(modernize-redundant-void-arg) -- C linkage function matching SolidSyslogClockFunction signature
-static struct SolidSyslogTimestamp StubClock(void)
+static void StubClock(struct SolidSyslogTimestamp* timestamp)
 {
-    return stubTimestamp;
+    *timestamp = stubTimestamp;
 }
 
 // clang-format off

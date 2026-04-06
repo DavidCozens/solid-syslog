@@ -5,7 +5,7 @@
 
 EXTERN_C_BEGIN
 
-    struct SolidSyslogTimestamp SolidSyslogPosixClock_GetTimestamp(void);
+    void SolidSyslogPosixClock_GetTimestamp(struct SolidSyslogTimestamp * timestamp);
 
 EXTERN_C_END
 
