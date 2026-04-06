@@ -17,17 +17,33 @@ struct SolidSyslogOriginSd
 
 static size_t Format(struct SolidSyslogStructuredData* self, char* buffer, size_t size);
 
+static size_t Min(size_t a, size_t b)
+{
+    return (a < b) ? a : b;
+}
+
+static size_t FormatParam(char* buffer, const char* value, size_t remaining, size_t paramMax)
+{
+    size_t limit = Min(remaining, paramMax + 1);
+    return SolidSyslogFormat_BoundedString(buffer, value, limit);
+}
+
 struct SolidSyslogStructuredData* SolidSyslogOriginSd_Create(SolidSyslogAllocFunction alloc, const char* software, const char* swVersion)
 {
+    if ((software == NULL) || (swVersion == NULL))
+    {
+        return NULL;
+    }
+
     struct SolidSyslogOriginSd* instance = alloc(sizeof(struct SolidSyslogOriginSd));
     if (instance != NULL)
     {
         instance->base.Format = Format;
         size_t len            = 0;
         len += SolidSyslogFormat_BoundedString(instance->formatted + len, "[origin software=\"", ORIGIN_FORMATTED_MAX - len);
-        len += SolidSyslogFormat_BoundedString(instance->formatted + len, software, ORIGIN_FORMATTED_MAX - len);
+        len += FormatParam(instance->formatted + len, software, ORIGIN_FORMATTED_MAX - len, ORIGIN_SOFTWARE_MAX);
         len += SolidSyslogFormat_BoundedString(instance->formatted + len, "\" swVersion=\"", ORIGIN_FORMATTED_MAX - len);
-        len += SolidSyslogFormat_BoundedString(instance->formatted + len, swVersion, ORIGIN_FORMATTED_MAX - len);
+        len += FormatParam(instance->formatted + len, swVersion, ORIGIN_FORMATTED_MAX - len, ORIGIN_SWVERSION_MAX);
         len += SolidSyslogFormat_BoundedString(instance->formatted + len, "\"]", ORIGIN_FORMATTED_MAX - len);
         instance->formattedLength = len;
     }

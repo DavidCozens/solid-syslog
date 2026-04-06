@@ -66,3 +66,78 @@ TEST(SolidSyslogOriginSd, DifferentValuesProduceDifferentOutput)
     format();
     STRCMP_EQUAL("[origin software=\"OtherSoft\" swVersion=\"1.2.3\"]", buffer);
 }
+
+TEST(SolidSyslogOriginSd, SoftwareAtMaxLength)
+{
+    SolidSyslogOriginSd_Destroy(sd, free);
+    sd = SolidSyslogOriginSd_Create(malloc, "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijkl", "1.0");
+
+    format();
+    CHECK(strstr(buffer, "software=\"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijkl\"") != nullptr);
+}
+
+TEST(SolidSyslogOriginSd, SoftwareTruncatedBeyondMaxLength)
+{
+    SolidSyslogOriginSd_Destroy(sd, free);
+    sd = SolidSyslogOriginSd_Create(malloc, "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklX", "1.0");
+
+    format();
+    STRCMP_EQUAL("[origin software=\"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijkl\" swVersion=\"1.0\"]", buffer);
+}
+
+TEST(SolidSyslogOriginSd, SwVersionAtMaxLength)
+{
+    SolidSyslogOriginSd_Destroy(sd, free);
+    sd = SolidSyslogOriginSd_Create(malloc, "S", "ABCDEFGHIJKLMNOPQRSTUVWXYZ012345");
+
+    format();
+    CHECK(strstr(buffer, "swVersion=\"ABCDEFGHIJKLMNOPQRSTUVWXYZ012345\"") != nullptr);
+}
+
+TEST(SolidSyslogOriginSd, SwVersionTruncatedBeyondMaxLength)
+{
+    SolidSyslogOriginSd_Destroy(sd, free);
+    sd = SolidSyslogOriginSd_Create(malloc, "S", "ABCDEFGHIJKLMNOPQRSTUVWXYZ012345X");
+
+    format();
+    STRCMP_EQUAL("[origin software=\"S\" swVersion=\"ABCDEFGHIJKLMNOPQRSTUVWXYZ012345\"]", buffer);
+}
+
+TEST(SolidSyslogOriginSd, EmptySoftwareString)
+{
+    SolidSyslogOriginSd_Destroy(sd, free);
+    sd = SolidSyslogOriginSd_Create(malloc, "", "1.0");
+
+    format();
+    STRCMP_EQUAL("[origin software=\"\" swVersion=\"1.0\"]", buffer);
+}
+
+TEST(SolidSyslogOriginSd, EmptySwVersionString)
+{
+    SolidSyslogOriginSd_Destroy(sd, free);
+    sd = SolidSyslogOriginSd_Create(malloc, "S", "");
+
+    format();
+    STRCMP_EQUAL("[origin software=\"S\" swVersion=\"\"]", buffer);
+}
+
+TEST(SolidSyslogOriginSd, NullSoftwareReturnsNull)
+{
+    SolidSyslogOriginSd_Destroy(sd, free);
+    sd = SolidSyslogOriginSd_Create(malloc, nullptr, "1.0");
+
+    CHECK(sd == nullptr);
+}
+
+TEST(SolidSyslogOriginSd, NullSwVersionReturnsNull)
+{
+    SolidSyslogOriginSd_Destroy(sd, free);
+    sd = SolidSyslogOriginSd_Create(malloc, "S", nullptr);
+
+    CHECK(sd == nullptr);
+}
+
+TEST(SolidSyslogOriginSd, DestroyDoesNotCrash)
+{
+    // Covered by teardown — this test documents the intent
+}
