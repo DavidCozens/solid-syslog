@@ -3,6 +3,7 @@
 #include "SolidSyslogAtomicCounter.h"
 #include "SolidSyslogConfig.h"
 #include "SolidSyslogMetaSd.h"
+#include "SolidSyslogTimeQualitySd.h"
 #include "SolidSyslogNullBuffer.h"
 #include "SolidSyslogStructuredDataDef.h"
 #include "BufferFake.h"
@@ -119,6 +120,11 @@ static size_t SdFailFormat(struct SolidSyslogStructuredData* /* self */, char* /
 }
 
 static struct SolidSyslogStructuredData sdFail = {SdFailFormat};
+
+static void IntegrationGetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
+{
+    *timeQuality = {true, true, SOLIDSYSLOG_SYNC_ACCURACY_OMIT};
+}
 
 static std::string::size_type SkipSdata(const std::string& s, std::string::size_type pos)
 {
@@ -566,6 +572,22 @@ TEST(SolidSyslog, AllSdFailingProducesNilvalue)
     ReplaceLogger();
     Log();
     STRCMP_EQUAL("-", SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
+}
+
+TEST(SolidSyslog, MetaSdAndTimeQualitySdCoexistInSdArray)
+{
+    SolidSyslogAtomicCounter*  counter     = SolidSyslogAtomicCounter_Create(malloc);
+    SolidSyslogStructuredData* metaSd      = SolidSyslogMetaSd_Create(malloc, counter);
+    SolidSyslogStructuredData* timeQuality = SolidSyslogTimeQualitySd_Create(malloc, IntegrationGetTimeQuality);
+    SolidSyslogStructuredData* sdList[]    = {metaSd, timeQuality};
+    config.sd                              = sdList;
+    config.sdCount                         = 2;
+    ReplaceLogger();
+    Log();
+    STRCMP_EQUAL("[meta sequenceId=\"1\"][timeQuality tzKnown=\"1\" isSynced=\"1\"]", SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
+    SolidSyslogTimeQualitySd_Destroy(timeQuality, free);
+    SolidSyslogMetaSd_Destroy(metaSd, free);
+    SolidSyslogAtomicCounter_Destroy(counter, free);
 }
 
 TEST(SolidSyslog, NullMessageOmitsMsgField)
