@@ -17,3 +17,4 @@ Feature: Structured data — origin
     Then the structured data contains sequenceId "1"
     And the structured data contains tzKnown "1"
     And the structured data contains software "SolidSyslogExample"
+    And the structured data contains swVersion "0.7.0"
