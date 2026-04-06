@@ -260,7 +260,12 @@ The UUID issue is Windows/WSL-specific but there is no cost to running the comma
   with file-scope static state). `struct SolidSyslog` is `static` inside
   `SolidSyslog.c` — still opaque, still encapsulated.
 - `SolidSyslog_Create(config)` returns `void`, copies config into static instance.
-  `SolidSyslog_Destroy()` takes no arguments, zeros the instance.
+  `SolidSyslog_Destroy()` takes no arguments, restores nil functions.
+- Null Object pattern for function pointers: `NilClock` and `NilStringFunction`
+  are static functions inside `SolidSyslog.c`. The instance is initialised with
+  nil functions at file scope. Create only overwrites non-NULL config values.
+  Destroy restores nil functions. This eliminates all NULL checks from the
+  formatting hot path — function pointers are always callable.
 - `SolidSyslog_Log(message)` and `SolidSyslog_Service()` lose the handle parameter.
 - `alloc` and `free` removed from `SolidSyslogConfig` — the logger itself has
   zero dynamic allocation. SD objects still use `SolidSyslogAllocFunction`.

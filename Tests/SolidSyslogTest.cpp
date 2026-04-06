@@ -1088,13 +1088,22 @@ TEST(SolidSyslog, ServiceSendsMessageReadFromBuffer)
     BufferFake_Destroy(fakeBuffer);
 }
 
+TEST(SolidSyslog, LogAfterDestroyAndRecreateWithNullFunctionsProducesNilvalues)
+{
+    SolidSyslog_Destroy();
+    SolidSyslogConfig nilConfig = {buffer, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, 0};
+    SolidSyslog_Create(&nilConfig);
+    Log();
+    CHECK_TIMESTAMP_IS_NILVALUE();
+    CHECK_HOSTNAME("-");
+    CHECK_APP_NAME("-");
+    CHECK_PROCID("-");
+}
+
 IGNORE_TEST(SolidSyslog, HappyPathOnly)
 {
     // Error handling not yet implemented — see Epic #31
-    //   SolidSyslog_Create with a NULL config returns NULL
-    //   SolidSyslog_Destroy with a NULL handle does not crash
-    //   SolidSyslog_Log on NULL handle does nothing, does not crash
-    //   SolidSyslog_Service on NULL handle does nothing, does not crash
+    //   SolidSyslog_Create with a NULL config does not crash
     //
     // Optional header fields not yet driven in — see Epic #8
     //   MSG is preceded by UTF-8 BOM
