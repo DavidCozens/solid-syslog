@@ -21,6 +21,7 @@ struct StoreFake
     size_t                  storedSize;
     bool                    unsent;
     bool                    failNextWrite;
+    bool                    failNextRead;
 };
 
 static struct StoreFake instance;
@@ -43,6 +44,11 @@ void StoreFake_Destroy(void)
 void StoreFake_FailNextWrite(void)
 {
     instance.failNextWrite = true;
+}
+
+void StoreFake_FailNextRead(void)
+{
+    instance.failNextRead = true;
 }
 
 static bool Write(struct SolidSyslogStore* self, const void* data, size_t size)
@@ -68,8 +74,16 @@ static bool Write(struct SolidSyslogStore* self, const void* data, size_t size)
 
 static bool ReadNextUnsent(struct SolidSyslogStore* self, void* data, size_t maxSize, size_t* bytesRead)
 {
-    struct StoreFake* fake    = (struct StoreFake*) self;
-    bool              success = fake->unsent;
+    struct StoreFake* fake = (struct StoreFake*) self;
+
+    if (fake->failNextRead)
+    {
+        fake->failNextRead = false;
+        *bytesRead         = 0;
+        return false;
+    }
+
+    bool success = fake->unsent;
 
     if (success)
     {

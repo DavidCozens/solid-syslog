@@ -81,3 +81,10 @@ TEST(StoreFake, FailedWriteDoesNotSetUnsent)
     SolidSyslogStore_Write(store, TEST_MESSAGE, TEST_MESSAGE_LEN);
     CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
 }
+
+TEST(StoreFake, ReadCanBeConfiguredToFail)
+{
+    Write();
+    StoreFake_FailNextRead();
+    CHECK_FALSE(ReadNextUnsent());
+}

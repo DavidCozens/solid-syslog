@@ -97,7 +97,7 @@ TEST(SolidSyslogPosixMqBuffer, ServiceSendsMessageWrittenViaLog)
 
     SolidSyslogMessage message = {SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO, nullptr, nullptr};
     SolidSyslog_Log(&message);
-    CHECK_TRUE(SolidSyslog_Service());
+    SolidSyslog_Service();
     LONGS_EQUAL(1, SenderSpy_CallCount());
 
     SolidSyslog_Destroy();

@@ -4,8 +4,6 @@
 #include "ExternC.h"
 #include "SolidSyslogPrival.h"
 
-#include <stdbool.h>
-
 EXTERN_C_BEGIN
 
     enum
@@ -22,7 +20,7 @@ EXTERN_C_BEGIN
     };
 
     void SolidSyslog_Log(const struct SolidSyslogMessage* message);
-    bool SolidSyslog_Service(void);
+    void SolidSyslog_Service(void);
 
 EXTERN_C_END
 

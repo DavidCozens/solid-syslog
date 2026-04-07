@@ -110,11 +110,10 @@ void SolidSyslog_Destroy(void)
     instance.sdCount     = 0;
 }
 
-bool SolidSyslog_Service(void)
+void SolidSyslog_Service(void)
 {
     char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
-    size_t len    = 0;
-    bool   result = false;
+    size_t len = 0;
 
     bool haveMessage = SolidSyslogBuffer_Read(instance.buffer, buf, sizeof(buf), &len);
 
@@ -123,10 +122,10 @@ bool SolidSyslog_Service(void)
         SolidSyslogStore_Write(instance.store, buf, len);
     }
 
-    bool fromStore = SolidSyslogStore_HasUnsent(instance.store);
-    if (fromStore)
+    bool fromStore = false;
+    if (SolidSyslogStore_HasUnsent(instance.store))
     {
-        SolidSyslogStore_ReadNextUnsent(instance.store, buf, sizeof(buf), &len);
+        fromStore = SolidSyslogStore_ReadNextUnsent(instance.store, buf, sizeof(buf), &len);
     }
 
     if (fromStore || haveMessage)
@@ -135,10 +134,7 @@ bool SolidSyslog_Service(void)
         {
             SolidSyslogStore_MarkSent(instance.store);
         }
-        result = true;
     }
-
-    return result;
 }
 
 void SolidSyslog_Log(const struct SolidSyslogMessage* message)

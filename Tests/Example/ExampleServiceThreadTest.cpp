@@ -56,19 +56,3 @@ TEST(ExampleServiceThread, DoesNotSendWhenBufferEmpty)
     ExampleServiceThread_Run(&shutdown);
     LONGS_EQUAL(0, SocketSpy_SendtoCallCount());
 }
-
-TEST(ExampleServiceThread, DrainsOneMessageAfterShutdown)
-{
-    Log();
-    ExampleServiceThread_Run(&shutdown);
-    LONGS_EQUAL(1, SocketSpy_SendtoCallCount());
-}
-
-TEST(ExampleServiceThread, DrainsMultipleMessagesAfterShutdown)
-{
-    Log();
-    Log();
-    Log();
-    ExampleServiceThread_Run(&shutdown);
-    LONGS_EQUAL(3, SocketSpy_SendtoCallCount());
-}
