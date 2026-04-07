@@ -113,7 +113,7 @@ bool SolidSyslog_Service(void)
 
     if (SolidSyslogBuffer_Read(instance.buffer, buf, sizeof(buf), &len))
     {
-        SolidSyslogSender_Send(instance.sender, buf, len);
+        (void) SolidSyslogSender_Send(instance.sender, buf, len);
         return true;
     }
 

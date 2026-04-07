@@ -1,6 +1,8 @@
 #ifndef SOLIDSYSLOGMACROS_H
 #define SOLIDSYSLOGMACROS_H
 
+#include <stddef.h>
+
 /* Deviation from MISRA Dir 4.9: type-generic NULL guard cannot be expressed
    as an inline function without void* casts (Rule 11.5). Macro is preferred
    over repeated if-blocks or type-unsafe alternatives. */
