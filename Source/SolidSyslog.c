@@ -110,29 +110,44 @@ void SolidSyslog_Destroy(void)
     instance.sdCount     = 0;
 }
 
+static inline bool ReceiveFromBufferIntoStore(char* buf, size_t maxSize, size_t* len)
+{
+    bool received = SolidSyslogBuffer_Read(instance.buffer, buf, maxSize, len);
+
+    if (received)
+    {
+        SolidSyslogStore_Write(instance.store, buf, *len);
+    }
+
+    return received;
+}
+
+static inline bool FetchFromStore(char* buf, size_t maxSize, size_t* len)
+{
+    if (SolidSyslogStore_HasUnsent(instance.store))
+    {
+        return SolidSyslogStore_ReadNextUnsent(instance.store, buf, maxSize, len);
+    }
+
+    return false;
+}
+
 void SolidSyslog_Service(void)
 {
     char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
     size_t len = 0;
 
-    bool haveMessage = SolidSyslogBuffer_Read(instance.buffer, buf, sizeof(buf), &len);
-
-    if (haveMessage)
-    {
-        SolidSyslogStore_Write(instance.store, buf, len);
-    }
-
-    bool fromStore = false;
-    if (SolidSyslogStore_HasUnsent(instance.store))
-    {
-        fromStore = SolidSyslogStore_ReadNextUnsent(instance.store, buf, sizeof(buf), &len);
-    }
+    bool haveMessage = ReceiveFromBufferIntoStore(buf, sizeof(buf), &len);
+    bool fromStore   = FetchFromStore(buf, sizeof(buf), &len);
 
     if (fromStore || haveMessage)
     {
-        if (SolidSyslogSender_Send(instance.sender, buf, len) && fromStore)
+        if (SolidSyslogSender_Send(instance.sender, buf, len))
         {
-            SolidSyslogStore_MarkSent(instance.store);
+            if (fromStore)
+            {
+                SolidSyslogStore_MarkSent(instance.store);
+            }
         }
     }
 }
