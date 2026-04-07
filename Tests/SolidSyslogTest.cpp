@@ -211,6 +211,7 @@ TEST_GROUP(SolidSyslog)
     SolidSyslogMessage message;
     // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
     SolidSyslogBuffer *buffer;
+    // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
     SolidSyslogStore  *store;
 
     void setup() override
@@ -1081,8 +1082,8 @@ TEST(SolidSyslog, ServiceSendsMessageReadFromBuffer)
 
 TEST(SolidSyslog, ServiceSendsBufferedMessageWithNullStore)
 {
-    SolidSyslogBuffer* fakeBuffer = BufferFake_Create();
-    SolidSyslogStore*  nullStore  = SolidSyslogNullStore_Create();
+    SolidSyslogBuffer* fakeBuffer    = BufferFake_Create();
+    SolidSyslogStore*  nullStore     = SolidSyslogNullStore_Create();
     SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderSpy_GetSender(), nullptr, nullptr, nullptr, nullptr, nullStore, nullptr, 0};
 
     SolidSyslog_Destroy();
@@ -1103,8 +1104,8 @@ TEST(SolidSyslog, ServiceSendsBufferedMessageWithNullStore)
 
 TEST(SolidSyslog, ServiceSendsFromStoreWhenHasUnsent)
 {
-    SolidSyslogBuffer* fakeBuffer = BufferFake_Create();
-    SolidSyslogStore*  fakeStore  = StoreFake_Create();
+    SolidSyslogBuffer* fakeBuffer    = BufferFake_Create();
+    SolidSyslogStore*  fakeStore     = StoreFake_Create();
     SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderSpy_GetSender(), nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
 
     SolidSyslog_Destroy();
@@ -1125,8 +1126,8 @@ TEST(SolidSyslog, ServiceSendsFromStoreWhenHasUnsent)
 
 TEST(SolidSyslog, ServiceMarksSentAfterSuccessfulSend)
 {
-    SolidSyslogBuffer* fakeBuffer = BufferFake_Create();
-    SolidSyslogStore*  fakeStore  = StoreFake_Create();
+    SolidSyslogBuffer* fakeBuffer    = BufferFake_Create();
+    SolidSyslogStore*  fakeStore     = StoreFake_Create();
     SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderSpy_GetSender(), nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
 
     SolidSyslog_Destroy();
@@ -1145,8 +1146,8 @@ TEST(SolidSyslog, ServiceMarksSentAfterSuccessfulSend)
 
 TEST(SolidSyslog, ServiceDoesNotMarkSentOnSendFailure)
 {
-    SolidSyslogBuffer* fakeBuffer = BufferFake_Create();
-    SolidSyslogStore*  fakeStore  = StoreFake_Create();
+    SolidSyslogBuffer* fakeBuffer    = BufferFake_Create();
+    SolidSyslogStore*  fakeStore     = StoreFake_Create();
     SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderSpy_GetSender(), nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
 
     SolidSyslog_Destroy();
@@ -1166,8 +1167,8 @@ TEST(SolidSyslog, ServiceDoesNotMarkSentOnSendFailure)
 
 TEST(SolidSyslog, ServiceWritesBufferMessageToStore)
 {
-    SolidSyslogBuffer* fakeBuffer = BufferFake_Create();
-    SolidSyslogStore*  fakeStore  = StoreFake_Create();
+    SolidSyslogBuffer* fakeBuffer    = BufferFake_Create();
+    SolidSyslogStore*  fakeStore     = StoreFake_Create();
     SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderSpy_GetSender(), nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
 
     SolidSyslog_Destroy();
@@ -1191,8 +1192,8 @@ TEST(SolidSyslog, ServiceWritesBufferMessageToStore)
 
 TEST(SolidSyslog, ServiceSendsStoreMessageNotBufferMessage)
 {
-    SolidSyslogBuffer* fakeBuffer = BufferFake_Create();
-    SolidSyslogStore*  fakeStore  = StoreFake_Create();
+    SolidSyslogBuffer* fakeBuffer    = BufferFake_Create();
+    SolidSyslogStore*  fakeStore     = StoreFake_Create();
     SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderSpy_GetSender(), nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
 
     SolidSyslog_Destroy();
@@ -1213,8 +1214,8 @@ TEST(SolidSyslog, ServiceSendsStoreMessageNotBufferMessage)
 
 TEST(SolidSyslog, ServiceSendsDirectlyWhenStoreWriteFails)
 {
-    SolidSyslogBuffer* fakeBuffer = BufferFake_Create();
-    SolidSyslogStore*  fakeStore  = StoreFake_Create();
+    SolidSyslogBuffer* fakeBuffer    = BufferFake_Create();
+    SolidSyslogStore*  fakeStore     = StoreFake_Create();
     SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderSpy_GetSender(), nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
 
     SolidSyslog_Destroy();
@@ -1236,8 +1237,8 @@ TEST(SolidSyslog, ServiceSendsDirectlyWhenStoreWriteFails)
 
 TEST(SolidSyslog, ServiceDoesNotSendWhenStoreReadFails)
 {
-    SolidSyslogBuffer* fakeBuffer = BufferFake_Create();
-    SolidSyslogStore*  fakeStore  = StoreFake_Create();
+    SolidSyslogBuffer* fakeBuffer    = BufferFake_Create();
+    SolidSyslogStore*  fakeStore     = StoreFake_Create();
     SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderSpy_GetSender(), nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
 
     SolidSyslog_Destroy();
@@ -1258,8 +1259,8 @@ TEST(SolidSyslog, ServiceDoesNotSendWhenStoreReadFails)
 
 TEST(SolidSyslog, ServiceDoesNotMarkSentWhenSendingFromBuffer)
 {
-    SolidSyslogBuffer* fakeBuffer = BufferFake_Create();
-    SolidSyslogStore*  fakeStore  = StoreFake_Create();
+    SolidSyslogBuffer* fakeBuffer    = BufferFake_Create();
+    SolidSyslogStore*  fakeStore     = StoreFake_Create();
     SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderSpy_GetSender(), nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
 
     SolidSyslog_Destroy();

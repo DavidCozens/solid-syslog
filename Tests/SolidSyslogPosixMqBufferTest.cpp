@@ -92,7 +92,7 @@ TEST(SolidSyslogPosixMqBuffer, ServiceSendsMessageWrittenViaLog)
 {
     SenderSpy_Reset();
     SolidSyslogStore* nullStore = SolidSyslogNullStore_Create();
-    SolidSyslogConfig config = {buffer, SenderSpy_GetSender(), nullptr, nullptr, nullptr, nullptr, nullStore, nullptr, 0};
+    SolidSyslogConfig config    = {buffer, SenderSpy_GetSender(), nullptr, nullptr, nullptr, nullptr, nullStore, nullptr, 0};
     SolidSyslog_Create(&config);
 
     SolidSyslogMessage message = {SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO, nullptr, nullptr};

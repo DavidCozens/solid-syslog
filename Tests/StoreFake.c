@@ -28,11 +28,11 @@ static struct StoreFake instance;
 
 struct SolidSyslogStore* StoreFake_Create(void)
 {
-    instance                      = (struct StoreFake) {0};
-    instance.base.Write           = Write;
-    instance.base.ReadNextUnsent  = ReadNextUnsent;
-    instance.base.MarkSent        = MarkSent;
-    instance.base.HasUnsent       = HasUnsent;
+    instance                     = (struct StoreFake) {0};
+    instance.base.Write          = Write;
+    instance.base.ReadNextUnsent = ReadNextUnsent;
+    instance.base.MarkSent       = MarkSent;
+    instance.base.HasUnsent      = HasUnsent;
     return &instance.base;
 }
 

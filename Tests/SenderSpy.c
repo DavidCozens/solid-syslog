@@ -35,10 +35,10 @@ static bool Send(struct SolidSyslogSender* self, const void* buffer, size_t size
 
 void SenderSpy_Reset(void)
 {
-    callCount    = 0;
+    callCount     = 0;
     lastBuffer[0] = '\0';
-    lastSize     = 0;
-    failNextSend = false;
+    lastSize      = 0;
+    failNextSend  = false;
 }
 
 void SenderSpy_FailNextSend(void)

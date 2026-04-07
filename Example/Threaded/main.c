@@ -16,6 +16,7 @@
 #include "SolidSyslogUdpSender.h"
 
 #include <pthread.h>
+#include <unistd.h>
 
 static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
 {
@@ -86,6 +87,7 @@ int main(int argc, char* argv[])
         SolidSyslog_Log(&message);
     }
 
+    usleep(100000);
     shutdown_flag = true;
     pthread_join(serviceThread, NULL);
 
