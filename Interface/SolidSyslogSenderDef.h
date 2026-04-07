@@ -7,7 +7,7 @@ EXTERN_C_BEGIN
 
     struct SolidSyslogSender
     {
-        void (*Send)(struct SolidSyslogSender* sender, const void* buffer, size_t size);
+        bool (*Send)(struct SolidSyslogSender* sender, const void* buffer, size_t size);
     };
 
 EXTERN_C_END

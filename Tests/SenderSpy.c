@@ -14,7 +14,7 @@ static char                     lastBuffer[SENDERSPY_MAX_BUFFER_SIZE];
 static size_t                   lastSize;
 static struct SolidSyslogSender sender;
 
-static void Send(struct SolidSyslogSender* self, const void* buffer, size_t size)
+static bool Send(struct SolidSyslogSender* self, const void* buffer, size_t size)
 {
     (void) self;
     size_t copySize = SolidSyslogFormat_MinSize(size, sizeof(lastBuffer) - 1);
@@ -23,6 +23,7 @@ static void Send(struct SolidSyslogSender* self, const void* buffer, size_t size
     lastBuffer[copySize] = '\0';
     lastSize             = size;
     callCount++;
+    return true;
 }
 
 void SenderSpy_Reset(void)

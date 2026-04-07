@@ -2,12 +2,16 @@
 #define SOCKETSPY_H
 
 #include "ExternC.h"
+#include <stdbool.h>
 #include <stddef.h>
 #include <sys/socket.h>
 
 EXTERN_C_BEGIN
 
     void SocketSpy_Reset(void);
+
+    /* sendto configuration */
+    void SocketSpy_SetSendtoFails(bool fails);
 
     /* sendto accessors */
     int         SocketSpy_SendtoCallCount(void);
