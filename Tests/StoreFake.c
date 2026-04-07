@@ -55,11 +55,14 @@ static bool Write(struct SolidSyslogStore* self, const void* data, size_t size)
         return false;
     }
 
-    size_t copySize = SolidSyslogFormat_MinSize(size, sizeof(fake->stored));
-    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memcpy with bounded copySize; memcpy_s is not portable
-    memcpy(fake->stored, data, copySize);
-    fake->storedSize = copySize;
-    fake->unsent     = true;
+    if (!fake->unsent)
+    {
+        size_t copySize = SolidSyslogFormat_MinSize(size, sizeof(fake->stored));
+        // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memcpy with bounded copySize; memcpy_s is not portable
+        memcpy(fake->stored, data, copySize);
+        fake->storedSize = copySize;
+        fake->unsent     = true;
+    }
     return true;
 }
 

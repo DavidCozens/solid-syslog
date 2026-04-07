@@ -1,6 +1,7 @@
 #include "SolidSyslog.h"
 #include "SolidSyslogBuffer.h"
 #include "SolidSyslogConfig.h"
+#include "SolidSyslogStore.h"
 #include "SolidSyslogFormat.h"
 #include "SolidSyslogMacros.h"
 #include "SolidSyslogSender.h"
@@ -112,15 +113,32 @@ void SolidSyslog_Destroy(void)
 bool SolidSyslog_Service(void)
 {
     char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
-    size_t len = 0;
+    size_t len    = 0;
+    bool   result = false;
 
-    if (SolidSyslogBuffer_Read(instance.buffer, buf, sizeof(buf), &len))
+    bool haveMessage = SolidSyslogBuffer_Read(instance.buffer, buf, sizeof(buf), &len);
+
+    if (haveMessage)
     {
-        (void) SolidSyslogSender_Send(instance.sender, buf, len);
-        return true;
+        SolidSyslogStore_Write(instance.store, buf, len);
     }
 
-    return false;
+    bool fromStore = SolidSyslogStore_HasUnsent(instance.store);
+    if (fromStore)
+    {
+        SolidSyslogStore_ReadNextUnsent(instance.store, buf, sizeof(buf), &len);
+    }
+
+    if (fromStore || haveMessage)
+    {
+        if (SolidSyslogSender_Send(instance.sender, buf, len) && fromStore)
+        {
+            SolidSyslogStore_MarkSent(instance.store);
+        }
+        result = true;
+    }
+
+    return result;
 }
 
 void SolidSyslog_Log(const struct SolidSyslogMessage* message)

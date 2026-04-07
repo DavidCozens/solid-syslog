@@ -10,6 +10,7 @@
 #include "SolidSyslogTimeQualitySd.h"
 #include "SolidSyslogPosixClock.h"
 #include "SolidSyslogPosixHostname.h"
+#include "SolidSyslogNullStore.h"
 #include "SolidSyslogPosixMqBuffer.h"
 #include "SolidSyslogPosixProcId.h"
 #include "SolidSyslogUdpSender.h"
@@ -48,6 +49,7 @@ int main(int argc, char* argv[])
     };
     struct SolidSyslogSender*         sender      = SolidSyslogUdpSender_Create(&udpConfig);
     struct SolidSyslogBuffer*         buffer      = SolidSyslogPosixMqBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
+    struct SolidSyslogStore*          store       = SolidSyslogNullStore_Create();
     struct SolidSyslogAtomicCounter*  counter     = SolidSyslogAtomicCounter_Create();
     struct SolidSyslogStructuredData* metaSd      = SolidSyslogMetaSd_Create(counter);
     struct SolidSyslogStructuredData* timeQuality = SolidSyslogTimeQualitySd_Create(GetTimeQuality);
@@ -62,6 +64,7 @@ int main(int argc, char* argv[])
         .getHostname = SolidSyslogPosixHostname_Get,
         .getAppName  = ExampleAppName_Get,
         .getProcId   = SolidSyslogPosixProcId_Get,
+        .store       = store,
         .sd          = sdList,
         .sdCount     = sizeof(sdList) / sizeof(sdList[0]),
     };
@@ -91,6 +94,7 @@ int main(int argc, char* argv[])
     SolidSyslogTimeQualitySd_Destroy();
     SolidSyslogMetaSd_Destroy();
     SolidSyslogAtomicCounter_Destroy();
+    SolidSyslogNullStore_Destroy();
     SolidSyslogPosixMqBuffer_Destroy();
     SolidSyslogUdpSender_Destroy();
 
