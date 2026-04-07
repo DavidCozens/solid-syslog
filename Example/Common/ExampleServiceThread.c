@@ -9,8 +9,4 @@ void ExampleServiceThread_Run(volatile bool* shutdown)
     {
         SolidSyslog_Service();
     }
-
-    while (SolidSyslog_Service())
-    {
-    }
 }

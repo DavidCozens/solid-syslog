@@ -9,9 +9,12 @@ set(TEST_SOURCES
     SolidSyslogTimeQualitySdTest.cpp
     SolidSyslogOriginSdTest.cpp
     SolidSyslogNullBufferTest.cpp
+    SolidSyslogNullStoreTest.cpp
     SolidSyslogPrivalTest.cpp
     BufferFakeTest.cpp
     BufferFake.c
+    StoreFakeTest.cpp
+    StoreFake.c
     SenderSpyTest.cpp
     SenderSpy.c
     StringFakeTest.cpp

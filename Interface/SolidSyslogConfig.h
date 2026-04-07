@@ -10,6 +10,7 @@ EXTERN_C_BEGIN
 
     struct SolidSyslogBuffer;
     struct SolidSyslogSender;
+    struct SolidSyslogStore;
     struct SolidSyslogStructuredData;
 
     typedef size_t (*SolidSyslogStringFunction)(char* buffer, size_t size);
@@ -22,6 +23,7 @@ EXTERN_C_BEGIN
         SolidSyslogStringFunction          getHostname;
         SolidSyslogStringFunction          getAppName;
         SolidSyslogStringFunction          getProcId;
+        struct SolidSyslogStore*           store;
         struct SolidSyslogStructuredData** sd;
         size_t                             sdCount;
     };

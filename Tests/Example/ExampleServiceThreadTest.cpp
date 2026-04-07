@@ -5,6 +5,7 @@
 #include "SolidSyslogConfig.h"
 #include "SolidSyslogPosixMqBuffer.h"
 #include "SolidSyslogUdpSender.h"
+#include "SolidSyslogNullStore.h"
 #include "SocketSpy.h"
 #include "ClockFake.h"
 
@@ -13,6 +14,7 @@ TEST_GROUP(ExampleServiceThread)
 {
     struct SolidSyslogSender* sender = nullptr;
     struct SolidSyslogBuffer* buffer = nullptr;
+    struct SolidSyslogStore*  store  = nullptr;
     // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
     volatile bool             shutdown;
 
@@ -26,14 +28,16 @@ TEST_GROUP(ExampleServiceThread)
         SolidSyslogUdpSenderConfig udpConfig = {ExampleUdpConfig_GetPort, ExampleUdpConfig_GetHost};
         sender = SolidSyslogUdpSender_Create(&udpConfig);
         buffer = SolidSyslogPosixMqBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
+        store  = SolidSyslogNullStore_Create();
 
-        SolidSyslogConfig config = {buffer, sender, nullptr, nullptr, nullptr, nullptr, nullptr, 0};
+        SolidSyslogConfig config = {buffer, sender, nullptr, nullptr, nullptr, nullptr, store, nullptr, 0};
         SolidSyslog_Create(&config);
     }
 
     void teardown() override
     {
         SolidSyslog_Destroy();
+        SolidSyslogNullStore_Destroy();
         SolidSyslogPosixMqBuffer_Destroy();
         SolidSyslogUdpSender_Destroy();
     }
@@ -51,20 +55,4 @@ TEST(ExampleServiceThread, DoesNotSendWhenBufferEmpty)
 {
     ExampleServiceThread_Run(&shutdown);
     LONGS_EQUAL(0, SocketSpy_SendtoCallCount());
-}
-
-TEST(ExampleServiceThread, DrainsOneMessageAfterShutdown)
-{
-    Log();
-    ExampleServiceThread_Run(&shutdown);
-    LONGS_EQUAL(1, SocketSpy_SendtoCallCount());
-}
-
-TEST(ExampleServiceThread, DrainsMultipleMessagesAfterShutdown)
-{
-    Log();
-    Log();
-    Log();
-    ExampleServiceThread_Run(&shutdown);
-    LONGS_EQUAL(3, SocketSpy_SendtoCallCount());
 }

@@ -2,6 +2,7 @@
 #include "SolidSyslogPosixMqBuffer.h"
 #include "SolidSyslog.h"
 #include "SolidSyslogConfig.h"
+#include "SolidSyslogNullStore.h"
 #include "SenderSpy.h"
 #include <cstdlib>
 
@@ -90,15 +91,17 @@ TEST(SolidSyslogPosixMqBuffer, SecondReadAfterSingleWriteReturnsFalse)
 TEST(SolidSyslogPosixMqBuffer, ServiceSendsMessageWrittenViaLog)
 {
     SenderSpy_Reset();
-    SolidSyslogConfig config = {buffer, SenderSpy_GetSender(), nullptr, nullptr, nullptr, nullptr, nullptr, 0};
+    SolidSyslogStore* nullStore = SolidSyslogNullStore_Create();
+    SolidSyslogConfig config    = {buffer, SenderSpy_GetSender(), nullptr, nullptr, nullptr, nullptr, nullStore, nullptr, 0};
     SolidSyslog_Create(&config);
 
     SolidSyslogMessage message = {SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO, nullptr, nullptr};
     SolidSyslog_Log(&message);
-    CHECK_TRUE(SolidSyslog_Service());
+    SolidSyslog_Service();
     LONGS_EQUAL(1, SenderSpy_CallCount());
 
     SolidSyslog_Destroy();
+    SolidSyslogNullStore_Destroy();
 }
 
 IGNORE_TEST(SolidSyslogPosixMqBuffer, HappyPathOnly)

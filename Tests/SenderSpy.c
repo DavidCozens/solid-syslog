@@ -12,6 +12,7 @@ enum
 static int                      callCount;
 static char                     lastBuffer[SENDERSPY_MAX_BUFFER_SIZE];
 static size_t                   lastSize;
+static bool                     failNextSend;
 static struct SolidSyslogSender sender;
 
 static bool Send(struct SolidSyslogSender* self, const void* buffer, size_t size)
@@ -23,6 +24,12 @@ static bool Send(struct SolidSyslogSender* self, const void* buffer, size_t size
     lastBuffer[copySize] = '\0';
     lastSize             = size;
     callCount++;
+
+    if (failNextSend)
+    {
+        failNextSend = false;
+        return false;
+    }
     return true;
 }
 
@@ -31,6 +38,12 @@ void SenderSpy_Reset(void)
     callCount     = 0;
     lastBuffer[0] = '\0';
     lastSize      = 0;
+    failNextSend  = false;
+}
+
+void SenderSpy_FailNextSend(void)
+{
+    failNextSend = true;
 }
 
 const char* SenderSpy_LastBufferAsString(void)
