@@ -1,0 +1,18 @@
+#ifndef SOLIDSYSLOGSTOREDEF_H
+#define SOLIDSYSLOGSTOREDEF_H
+
+#include "SolidSyslogStore.h"
+
+EXTERN_C_BEGIN
+
+    struct SolidSyslogStore
+    {
+        bool (*Write)(struct SolidSyslogStore* self, const void* data, size_t size);
+        bool (*ReadNextUnsent)(struct SolidSyslogStore* self, void* data, size_t maxSize, size_t* bytesRead);
+        void (*MarkSent)(struct SolidSyslogStore* self);
+        bool (*HasUnsent)(struct SolidSyslogStore* self);
+    };
+
+EXTERN_C_END
+
+#endif /* SOLIDSYSLOGSTOREDEF_H */

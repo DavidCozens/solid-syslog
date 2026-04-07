@@ -215,7 +215,7 @@ TEST_GROUP(SolidSyslog)
         SenderSpy_Reset();
         StringFake_Reset();
         buffer = SolidSyslogNullBuffer_Create(SenderSpy_GetSender());
-        config = {buffer, nullptr, nullptr, StringFake_GetHostname, StringFake_GetAppName, StringFake_GetProcId, nullptr, 0};
+        config = {buffer, nullptr, nullptr, StringFake_GetHostname, StringFake_GetAppName, StringFake_GetProcId, nullptr, nullptr, 0};
         SolidSyslog_Create(&config);
         message = {SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO, nullptr, nullptr};
     }
@@ -1069,7 +1069,7 @@ TEST(SolidSyslog, MultipleServiceCallsReturnNothingToSend)
 TEST(SolidSyslog, ServiceSendsMessageReadFromBuffer)
 {
     SolidSyslogBuffer* fakeBuffer    = BufferFake_Create();
-    SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderSpy_GetSender(), nullptr, nullptr, nullptr, nullptr, nullptr, 0};
+    SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderSpy_GetSender(), nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, 0};
 
     SolidSyslog_Destroy();
     SolidSyslog_Create(&serviceConfig);
@@ -1090,7 +1090,7 @@ TEST(SolidSyslog, ServiceSendsMessageReadFromBuffer)
 TEST(SolidSyslog, LogAfterDestroyAndRecreateWithNullFunctionsProducesNilvalues)
 {
     SolidSyslog_Destroy();
-    SolidSyslogConfig nilConfig = {buffer, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, 0};
+    SolidSyslogConfig nilConfig = {buffer, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, 0};
     SolidSyslog_Create(&nilConfig);
     Log();
     CHECK_TIMESTAMP_IS_NILVALUE();

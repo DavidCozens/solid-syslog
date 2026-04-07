@@ -58,6 +58,7 @@ struct SolidSyslog
     SolidSyslogStringFunction          getHostname;
     SolidSyslogStringFunction          getAppName;
     SolidSyslogStringFunction          getProcId;
+    struct SolidSyslogStore*           store;
     struct SolidSyslogStructuredData** sd;
     size_t                             sdCount;
 };
@@ -90,6 +91,7 @@ void SolidSyslog_Create(const struct SolidSyslogConfig* config)
     ASSIGN_IF_NON_NULL(instance.getHostname, config->getHostname);
     ASSIGN_IF_NON_NULL(instance.getAppName, config->getAppName);
     ASSIGN_IF_NON_NULL(instance.getProcId, config->getProcId);
+    instance.store   = config->store;
     instance.sd      = config->sd;
     instance.sdCount = config->sdCount;
 }
@@ -102,6 +104,7 @@ void SolidSyslog_Destroy(void)
     instance.getHostname = NilStringFunction;
     instance.getAppName  = NilStringFunction;
     instance.getProcId   = NilStringFunction;
+    instance.store       = NULL;
     instance.sd          = NULL;
     instance.sdCount     = 0;
 }

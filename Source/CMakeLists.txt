@@ -5,6 +5,8 @@ set(SOURCES
     SolidSyslogMetaSd.c
     SolidSyslogNullBuffer.c
     SolidSyslogSender.c
+    SolidSyslogStore.c
+    SolidSyslogNullStore.c
     SolidSyslogStructuredData.c
     SolidSyslogTimeQualitySd.c
     SolidSyslogOriginSd.c

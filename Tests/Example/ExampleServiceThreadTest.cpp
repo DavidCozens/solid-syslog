@@ -27,7 +27,7 @@ TEST_GROUP(ExampleServiceThread)
         sender = SolidSyslogUdpSender_Create(&udpConfig);
         buffer = SolidSyslogPosixMqBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
 
-        SolidSyslogConfig config = {buffer, sender, nullptr, nullptr, nullptr, nullptr, nullptr, 0};
+        SolidSyslogConfig config = {buffer, sender, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, 0};
         SolidSyslog_Create(&config);
     }
 
