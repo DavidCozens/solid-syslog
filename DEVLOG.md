@@ -345,3 +345,66 @@ The UUID issue is Windows/WSL-specific but there is no cost to running the comma
 
 ### Open questions
 - None
+
+## 2026-04-08 — Formatter extraction design
+
+### Context
+
+SolidSyslog.c is 482 lines. ~320 lines (66%) are RFC 5424 formatting functions —
+a separate responsibility that should be extracted. Additionally, 16 of 24 format
+functions receive no buffer size information, writing through raw `char*` pointers
+with no overflow protection (MISRA C:2012 concern).
+
+### Design decisions
+
+**Formatter struct** — stack-allocated by `SolidSyslog_Log`, passed to all format
+functions:
+```c
+struct SolidSyslogFormatter
+{
+    char*  buffer;
+    size_t size;
+    size_t position;
+};
+```
+
+**Single write chokepoint** — all writes funnel through `FormatCharacter`, giving one
+consolidation point for future overflow protection. Today it writes blindly (behaviour-
+preserving); the subsequent story adds the bounds check.
+
+**File structure:**
+- `Source/SolidSyslogFormatter.h` — internal header (not in Interface/)
+- `Source/SolidSyslogFormatter.c` — all 24 format functions extracted from SolidSyslog.c
+- `Source/SolidSyslogFormat.h/.c` — slimmed to shared utilities (MinSize, DigitToChar)
+- BoundedString and Uint32 move to Formatter or are updated to use Formatter*
+
+**SD vtable signature change** — `Format(sd, char*, size_t)` becomes
+`Format(sd, struct SolidSyslogFormatter*)`. Breaking change for SD implementors, but
+no external implementations exist yet. Right time to do it.
+
+**What stays in SolidSyslog.c:**
+- Create, Destroy, Service, Log, instance, nil functions (~60 lines)
+- Log creates the Formatter and calls `SolidSyslogFormatter_FormatMessage()`
+
+**What moves to SolidSyslogFormatter.c:**
+- FormatMessage and all 23 subsidiary format functions
+- MakePrival, CaptureTimestamp, TimestampIsValid, and other helpers
+
+### Open questions
+
+1. **String callbacks** (getHostname, getAppName, getProcessId) — currently write
+   directly into buffer. Options: (a) change callback signature to receive Formatter*,
+   (b) keep temp buffer and copy, (c) callbacks write at formatter->buffer + position
+   using raw pointer. Option (c) is simplest but leaks the Formatter's internals.
+
+2. **BoundedString via FormatCharacter** — should BoundedString funnel each char
+   through FormatCharacter (consistent, one overflow check point) or use a bounded
+   loop with a single check (more efficient for embedded)? Leaning toward bounded loop
+   with single remaining-size check — FormatCharacter is for structural characters,
+   BoundedString is for bulk data.
+
+3. **Story sizing** — the extraction is large (~320 lines moving) but mechanical. One
+   story for the pure refactor, one for TDD-driven overflow protection. The refactor
+   could potentially split further (extract timestamp functions first, then field
+   formatters, then wire up Formatter struct) but this risks intermediate states where
+   the code is half-extracted.
