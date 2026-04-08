@@ -3,10 +3,10 @@
 #include "ExampleUdpConfig.h"
 #include "SolidSyslog.h"
 #include "SolidSyslogConfig.h"
-#include "SolidSyslogPosixMqBuffer.h"
+#include "SolidSyslogPosixMessageQueueBuffer.h"
 #include "SolidSyslogUdpSender.h"
 #include "SolidSyslogNullStore.h"
-#include "SocketSpy.h"
+#include "SocketFake.h"
 #include "ClockFake.h"
 
 // clang-format off
@@ -20,14 +20,14 @@ TEST_GROUP(ExampleServiceThread)
 
     void setup() override
     {
-        SocketSpy_Reset();
+        SocketFake_Reset();
         ClockFake_Reset();
         ClockFake_SetTime(1743768600, 0);
         shutdown = true;
 
         SolidSyslogUdpSenderConfig udpConfig = {ExampleUdpConfig_GetPort, ExampleUdpConfig_GetHost};
         sender = SolidSyslogUdpSender_Create(&udpConfig);
-        buffer = SolidSyslogPosixMqBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
+        buffer = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
         store  = SolidSyslogNullStore_Create();
 
         SolidSyslogConfig config = {buffer, sender, nullptr, nullptr, nullptr, nullptr, store, nullptr, 0};
@@ -38,7 +38,7 @@ TEST_GROUP(ExampleServiceThread)
     {
         SolidSyslog_Destroy();
         SolidSyslogNullStore_Destroy();
-        SolidSyslogPosixMqBuffer_Destroy();
+        SolidSyslogPosixMessageQueueBuffer_Destroy();
         SolidSyslogUdpSender_Destroy();
     }
 
@@ -54,5 +54,5 @@ TEST_GROUP(ExampleServiceThread)
 TEST(ExampleServiceThread, DoesNotSendWhenBufferEmpty)
 {
     ExampleServiceThread_Run(&shutdown);
-    LONGS_EQUAL(0, SocketSpy_SendtoCallCount());
+    LONGS_EQUAL(0, SocketFake_SendtoCallCount());
 }

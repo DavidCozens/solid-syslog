@@ -1,6 +1,6 @@
 set(POSIX_FAKES_SOURCES
     ClockFake.c
-    SocketSpy.c
+    SocketFake.c
 )
 
 add_library(PosixFakes STATIC ${POSIX_FAKES_SOURCES})

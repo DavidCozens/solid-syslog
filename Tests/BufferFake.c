@@ -1,5 +1,5 @@
 #include "BufferFake.h"
-#include "SolidSyslogBufferDef.h"
+#include "SolidSyslogBufferDefinition.h"
 #include "SolidSyslogFormat.h"
 
 #include <string.h>

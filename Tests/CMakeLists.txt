@@ -15,8 +15,8 @@ set(TEST_SOURCES
     BufferFake.c
     StoreFakeTest.cpp
     StoreFake.c
-    SenderSpyTest.cpp
-    SenderSpy.c
+    SenderFakeTest.cpp
+    SenderFake.c
     StringFakeTest.cpp
     StringFake.c
     main.cpp
@@ -31,7 +31,7 @@ endif()
 if(SOLIDSYSLOG_POSIX)
     list(APPEND TEST_SOURCES
         SolidSyslogPosixClockTest.cpp
-        SolidSyslogPosixMqBufferTest.cpp
+        SolidSyslogPosixMessageQueueBufferTest.cpp
         ClockFakeTest.cpp
         SolidSyslogUdpSenderTest.cpp
     )

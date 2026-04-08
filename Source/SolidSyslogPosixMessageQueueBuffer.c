@@ -1,7 +1,7 @@
-#include "SolidSyslogPosixMqBuffer.h"
-#include "SolidSyslogBufferDef.h"
+#include "SolidSyslogPosixMessageQueueBuffer.h"
+#include "SolidSyslogBufferDefinition.h"
 #include "SolidSyslogFormat.h"
-#include "SolidSyslogPosixProcId.h"
+#include "SolidSyslogPosixProcessId.h"
 
 #include <mqueue.h>
 #include <time.h>
@@ -9,7 +9,7 @@
 static bool Read(struct SolidSyslogBuffer* self, void* data, size_t maxSize, size_t* bytesRead);
 static void Write(struct SolidSyslogBuffer* self, const void* data, size_t size);
 
-struct SolidSyslogPosixMqBuffer
+struct SolidSyslogPosixMessageQueueBuffer
 {
     struct SolidSyslogBuffer base;
     mqd_t                    mq;
@@ -17,16 +17,16 @@ struct SolidSyslogPosixMqBuffer
     size_t                   maxMessageSize;
 };
 
-static struct SolidSyslogPosixMqBuffer instance;
+static struct SolidSyslogPosixMessageQueueBuffer instance;
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- distinct semantic meaning; struct wrapper would over-engineer
-struct SolidSyslogBuffer* SolidSyslogPosixMqBuffer_Create(size_t maxMessageSize, long maxMessages)
+struct SolidSyslogBuffer* SolidSyslogPosixMessageQueueBuffer_Create(size_t maxMessageSize, long maxMessages)
 {
-    instance = (struct SolidSyslogPosixMqBuffer) {0};
+    instance = (struct SolidSyslogPosixMessageQueueBuffer) {0};
 
     size_t nameLen = 0;
     nameLen += SolidSyslogFormat_BoundedString(instance.name + nameLen, "/solidsyslog_", sizeof(instance.name) - nameLen);
-    nameLen += SolidSyslogPosixProcId_Get(instance.name + nameLen, sizeof(instance.name) - nameLen);
+    nameLen += SolidSyslogPosixProcessId_Get(instance.name + nameLen, sizeof(instance.name) - nameLen);
     (void) nameLen;
 
     struct mq_attr attr = {0};
@@ -41,18 +41,18 @@ struct SolidSyslogBuffer* SolidSyslogPosixMqBuffer_Create(size_t maxMessageSize,
     return &instance.base;
 }
 
-void SolidSyslogPosixMqBuffer_Destroy(void)
+void SolidSyslogPosixMessageQueueBuffer_Destroy(void)
 {
     mq_close(instance.mq);
     mq_unlink(instance.name);
-    instance = (struct SolidSyslogPosixMqBuffer) {0};
+    instance = (struct SolidSyslogPosixMessageQueueBuffer) {0};
 }
 
 static bool Read(struct SolidSyslogBuffer* self, void* data, size_t maxSize, size_t* bytesRead)
 {
-    struct SolidSyslogPosixMqBuffer* mqBuffer = (struct SolidSyslogPosixMqBuffer*) self;
-    ssize_t                          received = mq_receive(mqBuffer->mq, data, maxSize, NULL);
-    bool                             success  = received >= 0;
+    struct SolidSyslogPosixMessageQueueBuffer* mqBuffer = (struct SolidSyslogPosixMessageQueueBuffer*) self;
+    ssize_t                                    received = mq_receive(mqBuffer->mq, data, maxSize, NULL);
+    bool                                       success  = received >= 0;
 
     *bytesRead = success ? (size_t) received : 0;
 
@@ -61,6 +61,6 @@ static bool Read(struct SolidSyslogBuffer* self, void* data, size_t maxSize, siz
 
 static void Write(struct SolidSyslogBuffer* self, const void* data, size_t size)
 {
-    struct SolidSyslogPosixMqBuffer* mqBuffer = (struct SolidSyslogPosixMqBuffer*) self;
+    struct SolidSyslogPosixMessageQueueBuffer* mqBuffer = (struct SolidSyslogPosixMessageQueueBuffer*) self;
     mq_send(mqBuffer->mq, data, size, 0);
 }

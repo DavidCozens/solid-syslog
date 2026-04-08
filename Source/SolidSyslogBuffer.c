@@ -1,4 +1,4 @@
-#include "SolidSyslogBufferDef.h"
+#include "SolidSyslogBufferDefinition.h"
 
 void SolidSyslogBuffer_Write(struct SolidSyslogBuffer* buffer, const void* data, size_t size)
 {

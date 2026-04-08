@@ -12,11 +12,11 @@
 
 enum
 {
-    SOLIDSYSLOG_MAX_APP_NAME_SIZE  = 49,
-    SOLIDSYSLOG_MAX_HOSTNAME_SIZE  = 256,
-    SOLIDSYSLOG_MAX_MSGID_SIZE     = 33,
-    SOLIDSYSLOG_MAX_PROCID_SIZE    = 129,
-    SOLIDSYSLOG_MAX_TIMESTAMP_SIZE = 33
+    SOLIDSYSLOG_MAX_APP_NAME_SIZE   = 49,
+    SOLIDSYSLOG_MAX_HOSTNAME_SIZE   = 256,
+    SOLIDSYSLOG_MAX_MSGID_SIZE      = 33,
+    SOLIDSYSLOG_MAX_PROCESS_ID_SIZE = 129,
+    SOLIDSYSLOG_MAX_TIMESTAMP_SIZE  = 33
 };
 
 static inline int16_t AbsoluteInt16(int16_t value);
@@ -34,7 +34,7 @@ static inline size_t  FormatMsg(char* buffer, const char* msg, size_t remaining)
 static inline size_t  FormatMsgId(char* buffer, const char* messageId);
 static inline size_t  FormatNonZeroUtcOffset(char* buffer, int16_t offsetMinutes);
 static inline size_t  FormatPrival(char* buffer, uint8_t prival);
-static inline size_t  FormatProcId(char* buffer, SolidSyslogStringFunction getProcId);
+static inline size_t  FormatProcessId(char* buffer, SolidSyslogStringFunction getProcessId);
 static inline size_t  FormatSign(char* buffer, int16_t value);
 static inline size_t  FormatSpace(char* buffer);
 static inline size_t  FormatStructuredData(char* buffer, size_t size, struct SolidSyslogStructuredData** sd, size_t sdCount);
@@ -58,17 +58,17 @@ struct SolidSyslog
     SolidSyslogClockFunction           clock;
     SolidSyslogStringFunction          getHostname;
     SolidSyslogStringFunction          getAppName;
-    SolidSyslogStringFunction          getProcId;
+    SolidSyslogStringFunction          getProcessId;
     struct SolidSyslogStore*           store;
     struct SolidSyslogStructuredData** sd;
     size_t                             sdCount;
 };
 
 static struct SolidSyslog instance = {
-    .clock       = NilClock,
-    .getHostname = NilStringFunction,
-    .getAppName  = NilStringFunction,
-    .getProcId   = NilStringFunction,
+    .clock        = NilClock,
+    .getHostname  = NilStringFunction,
+    .getAppName   = NilStringFunction,
+    .getProcessId = NilStringFunction,
 };
 
 static void NilClock(struct SolidSyslogTimestamp* ts)
@@ -91,7 +91,7 @@ void SolidSyslog_Create(const struct SolidSyslogConfig* config)
     ASSIGN_IF_NON_NULL(instance.clock, config->clock);
     ASSIGN_IF_NON_NULL(instance.getHostname, config->getHostname);
     ASSIGN_IF_NON_NULL(instance.getAppName, config->getAppName);
-    ASSIGN_IF_NON_NULL(instance.getProcId, config->getProcId);
+    ASSIGN_IF_NON_NULL(instance.getProcessId, config->getProcessId);
     instance.store   = config->store;
     instance.sd      = config->sd;
     instance.sdCount = config->sdCount;
@@ -99,15 +99,15 @@ void SolidSyslog_Create(const struct SolidSyslogConfig* config)
 
 void SolidSyslog_Destroy(void)
 {
-    instance.buffer      = NULL;
-    instance.sender      = NULL;
-    instance.clock       = NilClock;
-    instance.getHostname = NilStringFunction;
-    instance.getAppName  = NilStringFunction;
-    instance.getProcId   = NilStringFunction;
-    instance.store       = NULL;
-    instance.sd          = NULL;
-    instance.sdCount     = 0;
+    instance.buffer       = NULL;
+    instance.sender       = NULL;
+    instance.clock        = NilClock;
+    instance.getHostname  = NilStringFunction;
+    instance.getAppName   = NilStringFunction;
+    instance.getProcessId = NilStringFunction;
+    instance.store        = NULL;
+    instance.sd           = NULL;
+    instance.sdCount      = 0;
 }
 
 static inline bool ReceiveFromBufferIntoStore(char* buf, size_t maxSize, size_t* len)
@@ -172,7 +172,7 @@ static inline size_t FormatMessage(char* buffer, size_t size, const struct Solid
     len += FormatSpace(buffer + len);
     len += FormatAppName(buffer + len, instance.getAppName);
     len += FormatSpace(buffer + len);
-    len += FormatProcId(buffer + len, instance.getProcId);
+    len += FormatProcessId(buffer + len, instance.getProcessId);
     len += FormatSpace(buffer + len);
     len += FormatMsgId(buffer + len, message->messageId);
     len += FormatSpace(buffer + len);
@@ -417,9 +417,9 @@ static inline size_t FormatAppName(char* buffer, SolidSyslogStringFunction getAp
     return len;
 }
 
-static inline size_t FormatProcId(char* buffer, SolidSyslogStringFunction getProcId)
+static inline size_t FormatProcessId(char* buffer, SolidSyslogStringFunction getProcessId)
 {
-    size_t len = getProcId(buffer, SOLIDSYSLOG_MAX_PROCID_SIZE);
+    size_t len = getProcessId(buffer, SOLIDSYSLOG_MAX_PROCESS_ID_SIZE);
 
     if (len == 0)
     {

@@ -1,5 +1,5 @@
 #include "StoreFake.h"
-#include "SolidSyslogStoreDef.h"
+#include "SolidSyslogStoreDefinition.h"
 #include "SolidSyslogFormat.h"
 
 #include <string.h>

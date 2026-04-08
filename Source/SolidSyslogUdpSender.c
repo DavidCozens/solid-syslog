@@ -1,5 +1,5 @@
 #include "SolidSyslogUdpSender.h"
-#include "SolidSyslogSenderDef.h"
+#include "SolidSyslogSenderDefinition.h"
 
 #include <arpa/inet.h>
 #include <netdb.h>

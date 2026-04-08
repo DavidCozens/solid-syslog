@@ -1,4 +1,4 @@
-#include "SocketSpy.h"
+#include "SocketFake.h"
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -7,12 +7,12 @@
 
 enum
 {
-    SOCKETSPY_MAX_BUFFER_SIZE = 2048
+    SOCKETFAKE_MAX_BUFFER_SIZE = 2048
 };
 
 static bool               sendtoFails;
 static int                sendtoCallCount;
-static char               lastBufCopy[SOCKETSPY_MAX_BUFFER_SIZE];
+static char               lastBufCopy[SOCKETFAKE_MAX_BUFFER_SIZE];
 static size_t             lastLen;
 static int                lastFlags;
 static struct sockaddr_in lastAddr;
@@ -34,7 +34,7 @@ static char               lastGetAddrInfoHostname[256];
 static struct sockaddr_in fakeResolvedAddr;
 static struct addrinfo    fakeAddrInfo;
 
-void SocketSpy_Reset(void)
+void SocketFake_Reset(void)
 {
     sendtoFails       = false;
     sendtoCallCount   = 0;
@@ -62,106 +62,106 @@ void SocketSpy_Reset(void)
     fakeAddrInfo.ai_addrlen     = sizeof(fakeResolvedAddr);
 }
 
-void SocketSpy_SetSendtoFails(bool fails)
+void SocketFake_SetSendtoFails(bool fails)
 {
     sendtoFails = fails;
 }
 
 /* sendto accessors */
 
-int SocketSpy_SendtoCallCount(void)
+int SocketFake_SendtoCallCount(void)
 {
     return sendtoCallCount;
 }
 
-const void* SocketSpy_LastBuf(void)
+const void* SocketFake_LastBuf(void)
 {
     return lastBufCopy;
 }
 
-const char* SocketSpy_LastBufAsString(void)
+const char* SocketFake_LastBufAsString(void)
 {
     return lastBufCopy;
 }
 
-size_t SocketSpy_LastLen(void)
+size_t SocketFake_LastLen(void)
 {
     return lastLen;
 }
 
-int SocketSpy_LastFlags(void)
+int SocketFake_LastFlags(void)
 {
     return lastFlags;
 }
 
-int SocketSpy_LastAddrFamily(void)
+int SocketFake_LastAddrFamily(void)
 {
     return lastAddr.sin_family;
 }
 
-int SocketSpy_LastPort(void)
+int SocketFake_LastPort(void)
 {
     return ntohs(lastAddr.sin_port);
 }
 
-const char* SocketSpy_LastAddrAsString(void)
+const char* SocketFake_LastAddrAsString(void)
 {
     inet_ntop(AF_INET, &lastAddr.sin_addr, lastAddrString, sizeof(lastAddrString));
     return lastAddrString;
 }
 
-socklen_t SocketSpy_LastAddrLen(void)
+socklen_t SocketFake_LastAddrLen(void)
 {
     return lastAddrLen;
 }
 
-int SocketSpy_LastSendtoFd(void)
+int SocketFake_LastSendtoFd(void)
 {
     return lastSendtoFd;
 }
 
 /* socket accessors */
 
-int SocketSpy_SocketCallCount(void)
+int SocketFake_SocketCallCount(void)
 {
     return socketCallCount;
 }
 
-int SocketSpy_SocketFd(void)
+int SocketFake_SocketFd(void)
 {
     return socketFd;
 }
 
-int SocketSpy_SocketDomain(void)
+int SocketFake_SocketDomain(void)
 {
     return lastSocketDomain;
 }
 
-int SocketSpy_SocketType(void)
+int SocketFake_SocketType(void)
 {
     return lastSocketType;
 }
 
 /* close accessors */
 
-int SocketSpy_CloseCallCount(void)
+int SocketFake_CloseCallCount(void)
 {
     return closeCallCount;
 }
 
-int SocketSpy_LastClosedFd(void)
+int SocketFake_LastClosedFd(void)
 {
     return lastClosedFd;
 }
 
 /* getaddrinfo accessors */
 
-int SocketSpy_GetAddrInfoCallCount(void)
+int SocketFake_GetAddrInfoCallCount(void)
 {
     return getAddrInfoCallCount;
 }
 
-const char* SocketSpy_LastGetAddrInfoHostname(void)
+const char* SocketFake_LastGetAddrInfoHostname(void)
 {
     return lastGetAddrInfoHostname;
 }

@@ -1,6 +1,6 @@
 #include "SolidSyslogTimeQualitySd.h"
 #include "SolidSyslogFormat.h"
-#include "SolidSyslogStructuredDataDef.h"
+#include "SolidSyslogStructuredDataDefinition.h"
 
 struct SolidSyslogTimeQualitySd
 {

@@ -22,7 +22,7 @@ EXTERN_C_BEGIN
         SolidSyslogClockFunction           clock;
         SolidSyslogStringFunction          getHostname;
         SolidSyslogStringFunction          getAppName;
-        SolidSyslogStringFunction          getProcId;
+        SolidSyslogStringFunction          getProcessId;
         struct SolidSyslogStore*           store;
         struct SolidSyslogStructuredData** sd;
         size_t                             sdCount;

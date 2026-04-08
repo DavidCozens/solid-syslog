@@ -22,8 +22,8 @@ if(SOLIDSYSLOG_POSIX)
     list(APPEND SOURCES
         SolidSyslogPosixClock.c
         SolidSyslogPosixHostname.c
-        SolidSyslogPosixMqBuffer.c
-        SolidSyslogPosixProcId.c
+        SolidSyslogPosixMessageQueueBuffer.c
+        SolidSyslogPosixProcessId.c
         SolidSyslogUdpSender.c
     )
 endif()

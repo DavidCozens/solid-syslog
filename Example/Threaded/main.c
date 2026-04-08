@@ -11,8 +11,8 @@
 #include "SolidSyslogPosixClock.h"
 #include "SolidSyslogPosixHostname.h"
 #include "SolidSyslogNullStore.h"
-#include "SolidSyslogPosixMqBuffer.h"
-#include "SolidSyslogPosixProcId.h"
+#include "SolidSyslogPosixMessageQueueBuffer.h"
+#include "SolidSyslogPosixProcessId.h"
 #include "SolidSyslogUdpSender.h"
 
 #include <pthread.h>
@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
         .getHost = ExampleUdpConfig_GetHost,
     };
     struct SolidSyslogSender*         sender      = SolidSyslogUdpSender_Create(&udpConfig);
-    struct SolidSyslogBuffer*         buffer      = SolidSyslogPosixMqBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
+    struct SolidSyslogBuffer*         buffer      = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
     struct SolidSyslogStore*          store       = SolidSyslogNullStore_Create();
     struct SolidSyslogAtomicCounter*  counter     = SolidSyslogAtomicCounter_Create();
     struct SolidSyslogStructuredData* metaSd      = SolidSyslogMetaSd_Create(counter);
@@ -59,15 +59,15 @@ int main(int argc, char* argv[])
     struct SolidSyslogStructuredData* sdList[] = {metaSd, timeQuality, originSd};
 
     struct SolidSyslogConfig config = {
-        .buffer      = buffer,
-        .sender      = sender,
-        .clock       = SolidSyslogPosixClock_GetTimestamp,
-        .getHostname = SolidSyslogPosixHostname_Get,
-        .getAppName  = ExampleAppName_Get,
-        .getProcId   = SolidSyslogPosixProcId_Get,
-        .store       = store,
-        .sd          = sdList,
-        .sdCount     = sizeof(sdList) / sizeof(sdList[0]),
+        .buffer       = buffer,
+        .sender       = sender,
+        .clock        = SolidSyslogPosixClock_GetTimestamp,
+        .getHostname  = SolidSyslogPosixHostname_Get,
+        .getAppName   = ExampleAppName_Get,
+        .getProcessId = SolidSyslogPosixProcessId_Get,
+        .store        = store,
+        .sd           = sdList,
+        .sdCount      = sizeof(sdList) / sizeof(sdList[0]),
     };
     SolidSyslog_Create(&config);
 
@@ -97,7 +97,7 @@ int main(int argc, char* argv[])
     SolidSyslogMetaSd_Destroy();
     SolidSyslogAtomicCounter_Destroy();
     SolidSyslogNullStore_Destroy();
-    SolidSyslogPosixMqBuffer_Destroy();
+    SolidSyslogPosixMessageQueueBuffer_Destroy();
     SolidSyslogUdpSender_Destroy();
 
     return 0;

@@ -29,19 +29,19 @@ no conditional compilation directives in the library source.
 Public headers are split by audience (Interface Segregation Principle):
 - **`SolidSyslog.h`** — application code that logs events (`Log`, `Service`)
 - **`SolidSyslogConfig.h`** — system setup code that creates and destroys loggers
-- **`SolidSyslogSenderDef.h`** / **`SolidSyslogBufferDef.h`** — extension points for custom senders and buffers
+- **`SolidSyslogSenderDefinition.h`** / **`SolidSyslogBufferDefinition.h`** — extension points for custom senders and buffers
 - **`SolidSyslogNullBuffer.h`** — direct-send buffer for single-task systems
-- **`SolidSyslogPosixMqBuffer.h`** — thread-safe POSIX message queue buffer
+- **`SolidSyslogPosixMessageQueueBuffer.h`** — thread-safe POSIX message queue buffer
 - **`SolidSyslogUdpSender.h`** — UDP transport
-- **`SolidSyslogStructuredDataDef.h`** — extension point for custom structured data
+- **`SolidSyslogStructuredDataDefinition.h`** — extension point for custom structured data
 - **`SolidSyslogMetaSd.h`** — sequenceId structured data (RFC 5424 §7.3)
 - **`SolidSyslogTimeQualitySd.h`** — timeQuality structured data (RFC 5424 §7.1)
 - **`SolidSyslogOriginSd.h`** — origin structured data (RFC 5424 §7.2)
-- **`SolidSyslogPosixClock.h`** / **`PosixHostname.h`** / **`PosixProcId.h`** — POSIX helpers
+- **`SolidSyslogPosixClock.h`** / **`SolidSyslogPosixHostname.h`** / **`SolidSyslogPosixProcessId.h`** — POSIX helpers
 
 Two example programs demonstrate usage:
 - **`Example/SingleTask/`** — NullBuffer, single-task bare-metal model
-- **`Example/Threaded/`** — PosixMqBuffer, two pthreads (logger + service)
+- **`Example/Threaded/`** — PosixMessageQueueBuffer, two pthreads (logger + service)
 
 ## CI pipeline
 

@@ -1,6 +1,6 @@
 #include "SolidSyslogOriginSd.h"
 #include "SolidSyslogFormat.h"
-#include "SolidSyslogStructuredDataDef.h"
+#include "SolidSyslogStructuredDataDefinition.h"
 
 enum
 {

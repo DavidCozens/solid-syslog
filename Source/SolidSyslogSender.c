@@ -1,4 +1,4 @@
-#include "SolidSyslogSenderDef.h"
+#include "SolidSyslogSenderDefinition.h"
 
 bool SolidSyslogSender_Send(struct SolidSyslogSender* sender, const void* buffer, size_t size)
 {

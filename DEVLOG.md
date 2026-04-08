@@ -41,7 +41,7 @@
 - E1.1: Walking skeleton — single Log call produces a valid RFC 5424 message
 - E1.2: PRIVAL encoding — facility and severity on the Log call
 - E1.3: Timestamp — raise-time capture via injected clock function
-- E1.4: Hostname, AppName, ProcId — injected via config function pointers
+- E1.4: Hostname, AppName, ProcessId — injected via config function pointers
 - E1.5: MessageId and Message — driven onto the Log call
 - `story` label created (#0075ca) to distinguish stories from epics on the project board
 - All stories added to SolidSyslog project board under Epic #3; Epic #3 added to board
@@ -101,7 +101,7 @@ The UUID issue is Windows/WSL-specific but there is no cost to running the comma
 - E2.3: CMake platform detection — PosixUdpSender included conditionally
 - E2.4: BDD walking skeleton — end-to-end UDP message
 - PosixUdpSender.c included in build via CMake platform detection only — no #ifdef in source
-- POSIX socket calls tested with hand-rolled SocketSpy (strong-symbol fakes for socket/sendto/close) — no real network in unit tests; fff considered but rejected as an unnecessary dependency for three functions
+- POSIX socket calls tested with hand-rolled SocketFake (strong-symbol fakes for socket/sendto/close) — no real network in unit tests; fff considered but rejected as an unnecessary dependency for three functions
 - BDD harness deferred from E0 now lands in E2.4 as planned
 - RTOS-specific sender implementations and non-POSIX build testing explicitly deferred to E8
 
@@ -134,7 +134,7 @@ The UUID issue is Windows/WSL-specific but there is no cost to running the comma
   sends one message via SolidSyslog+PosixUdpSender, exits. Behave invokes as subprocess.
   Lives under `Example/` as a user-facing reference, doubling as the BDD sender.
 - CI: `docker compose up -d syslog-ng` before BDD step; same docker-compose.yml as devcontainer.
-- SenderSpy renamed from SpySender throughout — subject-first naming more idiomatic.
+- SenderFake renamed from SpySender throughout — subject-first naming more idiomatic.
 - E2, S2.2, S2.3, S2.4 GitHub issues updated with infrastructure design notes.
 
 ### Deferred
@@ -216,7 +216,7 @@ The UUID issue is Windows/WSL-specific but there is no cost to running the comma
   `SolidSyslogSender`. One message per Service call — caller controls the loop.
 - NullBuffer: Write sends immediately via injected sender. Service returns false. Current
   single-task behaviour preserved as a special case.
-- PosixMqBuffer: `mq_send`/`mq_receive` with O_NONBLOCK. Thread-safe with zero
+- PosixMessageQueueBuffer: `mq_send`/`mq_receive` with O_NONBLOCK. Thread-safe with zero
   application-level synchronization. Kernel manages the queue.
 - `SolidSyslogConfig` holds both `buffer` and `sender`. NullBuffer owns its own sender
   internally; real buffers use the sender on SolidSyslog for the Service path.
@@ -229,13 +229,13 @@ The UUID issue is Windows/WSL-specific but there is no cost to running the comma
 
 ### Architecture — example restructure
 - Example split into `SingleTask/` (NullBuffer, bare-metal model) and `Threaded/`
-  (PosixMqBuffer, two pthreads). Shared code in `Example/Common/`: command line parsing,
+  (PosixMessageQueueBuffer, two pthreads). Shared code in `Example/Common/`: command line parsing,
   app name, UDP config, service thread loop.
 - Example code tested via separate `ExampleTests` executable using PosixFakes link-seam:
-  real SolidSyslog library, real UdpSender, real PosixMqBuffer — only POSIX system calls
+  real SolidSyslog library, real UdpSender, real PosixMessageQueueBuffer — only POSIX system calls
   (socket, sendto, clock_gettime etc.) intercepted by strong-symbol fakes.
-- Test fakes split: PosixFakes static lib (SocketSpy, ClockFake) shared across test
-  executables; SolidSyslog-level fakes (SenderSpy, BufferFake, StringFake) compiled
+- Test fakes split: PosixFakes static lib (SocketFake, ClockFake) shared across test
+  executables; SolidSyslog-level fakes (SenderFake, BufferFake, StringFake) compiled
   directly into library tests only.
 
 ### Test counts
@@ -345,3 +345,66 @@ The UUID issue is Windows/WSL-specific but there is no cost to running the comma
 
 ### Open questions
 - None
+
+## 2026-04-08 — Formatter extraction design
+
+### Context
+
+SolidSyslog.c is 482 lines. ~320 lines (66%) are RFC 5424 formatting functions —
+a separate responsibility that should be extracted. Additionally, 16 of 24 format
+functions receive no buffer size information, writing through raw `char*` pointers
+with no overflow protection (MISRA C:2012 concern).
+
+### Design decisions
+
+**Formatter struct** — stack-allocated by `SolidSyslog_Log`, passed to all format
+functions:
+```c
+struct SolidSyslogFormatter
+{
+    char*  buffer;
+    size_t size;
+    size_t position;
+};
+```
+
+**Single write chokepoint** — all writes funnel through `FormatCharacter`, giving one
+consolidation point for future overflow protection. Today it writes blindly (behaviour-
+preserving); the subsequent story adds the bounds check.
+
+**File structure:**
+- `Source/SolidSyslogFormatter.h` — internal header (not in Interface/)
+- `Source/SolidSyslogFormatter.c` — all 24 format functions extracted from SolidSyslog.c
+- `Source/SolidSyslogFormat.h/.c` — slimmed to shared utilities (MinSize, DigitToChar)
+- BoundedString and Uint32 move to Formatter or are updated to use Formatter*
+
+**SD vtable signature change** — `Format(sd, char*, size_t)` becomes
+`Format(sd, struct SolidSyslogFormatter*)`. Breaking change for SD implementers, but
+no external implementations exist yet. Right time to do it.
+
+**What stays in SolidSyslog.c:**
+- Create, Destroy, Service, Log, instance, nil functions (~60 lines)
+- Log creates the Formatter and calls `SolidSyslogFormatter_FormatMessage()`
+
+**What moves to SolidSyslogFormatter.c:**
+- FormatMessage and all 23 subsidiary format functions
+- MakePrival, CaptureTimestamp, TimestampIsValid, and other helpers
+
+### Open questions
+
+1. **String callbacks** (getHostname, getAppName, getProcessId) — currently write
+   directly into buffer. Options: (a) change callback signature to receive Formatter*,
+   (b) keep temp buffer and copy, (c) callbacks write at formatter->buffer + position
+   using raw pointer. Option (c) is simplest but leaks the Formatter's internals.
+
+2. **BoundedString via FormatCharacter** — should BoundedString funnel each char
+   through FormatCharacter (consistent, one overflow check point) or use a bounded
+   loop with a single check (more efficient for embedded)? Leaning toward bounded loop
+   with single remaining-size check — FormatCharacter is for structural characters,
+   BoundedString is for bulk data.
+
+3. **Story sizing** — the extraction is large (~320 lines moving) but mechanical. One
+   story for the pure refactor, one for TDD-driven overflow protection. The refactor
+   could potentially split further (extract timestamp functions first, then field
+   formatters, then wire up Formatter struct) but this risks intermediate states where
+   the code is half-extracted.
