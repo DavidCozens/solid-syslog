@@ -69,7 +69,7 @@ Test progression follows ZOMBIES order.
 - Dependency injection for transport, buffering, clock, hostname, allocator
 - Buffer abstraction decouples formatting from sending: `SolidSyslog_Log` writes to buffer,
   `SolidSyslog_Service` reads from buffer and sends. Implementations: NullBuffer (direct send,
-  single-task), PosixMqBuffer (thread-safe POSIX message queue), CircularBuffer (planned,
+  single-task), PosixMessageQueueBuffer (thread-safe POSIX message queue), CircularBuffer (planned,
   bare-metal with mutex injection)
 - Null object pattern throughout (NullBuffer is the buffer null object)
 - All fields use uniform field object pattern with format function pointer

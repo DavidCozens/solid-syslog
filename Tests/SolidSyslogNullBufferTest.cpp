@@ -1,6 +1,6 @@
 #include "CppUTest/TestHarness.h"
 #include "SolidSyslogNullBuffer.h"
-#include "SenderSpy.h"
+#include "SenderFake.h"
 
 static const char* const TEST_MESSAGE     = "hello";
 static const size_t      TEST_MESSAGE_LEN = 5;
@@ -12,9 +12,9 @@ TEST_GROUP(SolidSyslogNullBuffer)
 
     void setup() override
     {
-        SenderSpy_Reset();
+        SenderFake_Reset();
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        buffer = SolidSyslogNullBuffer_Create(SenderSpy_GetSender());
+        buffer = SolidSyslogNullBuffer_Create(SenderFake_GetSender());
     }
 
     void teardown() override
@@ -37,31 +37,31 @@ TEST(SolidSyslogNullBuffer, CreateDestroyWorksWithoutCrashing)
 TEST(SolidSyslogNullBuffer, WriteForwardsBufferToSender)
 {
     Write();
-    STRCMP_EQUAL(TEST_MESSAGE, SenderSpy_LastBufferAsString());
+    STRCMP_EQUAL(TEST_MESSAGE, SenderFake_LastBufferAsString());
 }
 
 TEST(SolidSyslogNullBuffer, WriteForwardsSizeToSender)
 {
     Write();
-    LONGS_EQUAL(TEST_MESSAGE_LEN, SenderSpy_LastSize());
+    LONGS_EQUAL(TEST_MESSAGE_LEN, SenderFake_LastSize());
 }
 
 TEST(SolidSyslogNullBuffer, WriteResultsInOneSend)
 {
     Write();
-    LONGS_EQUAL(1, SenderSpy_CallCount());
+    LONGS_EQUAL(1, SenderFake_CallCount());
 }
 
 TEST(SolidSyslogNullBuffer, TwoWritesResultInTwoSends)
 {
     Write();
     Write();
-    LONGS_EQUAL(2, SenderSpy_CallCount());
+    LONGS_EQUAL(2, SenderFake_CallCount());
 }
 
 TEST(SolidSyslogNullBuffer, NoWritesResultInNoSends)
 {
-    LONGS_EQUAL(0, SenderSpy_CallCount());
+    LONGS_EQUAL(0, SenderFake_CallCount());
 }
 
 TEST(SolidSyslogNullBuffer, ReadReturnsNothingToSend)

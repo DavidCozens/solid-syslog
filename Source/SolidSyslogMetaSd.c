@@ -1,7 +1,7 @@
 #include "SolidSyslogMetaSd.h"
 #include "SolidSyslogAtomicCounter.h"
 #include "SolidSyslogFormat.h"
-#include "SolidSyslogStructuredDataDef.h"
+#include "SolidSyslogStructuredDataDefinition.h"
 
 #include <stdint.h>
 

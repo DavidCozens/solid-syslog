@@ -1,16 +1,16 @@
 #include "CppUTest/TestHarness.h"
-#include "SolidSyslogPosixMqBuffer.h"
+#include "SolidSyslogPosixMessageQueueBuffer.h"
 #include "SolidSyslog.h"
 #include "SolidSyslogConfig.h"
 #include "SolidSyslogNullStore.h"
-#include "SenderSpy.h"
+#include "SenderFake.h"
 #include <cstdlib>
 
 static const char* const TEST_MESSAGE     = "hello";
 static const size_t      TEST_MESSAGE_LEN = 5;
 
 // clang-format off
-TEST_GROUP(SolidSyslogPosixMqBuffer)
+TEST_GROUP(SolidSyslogPosixMessageQueueBuffer)
 {
     struct SolidSyslogBuffer* buffer = nullptr;
     char   readData[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
@@ -20,13 +20,13 @@ TEST_GROUP(SolidSyslogPosixMqBuffer)
     void setup() override
     {
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        buffer = SolidSyslogPosixMqBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
+        buffer = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
         readSize = 0;
     }
 
     void teardown() override
     {
-        SolidSyslogPosixMqBuffer_Destroy();
+        SolidSyslogPosixMessageQueueBuffer_Destroy();
     }
 
     void Write() const
@@ -42,36 +42,36 @@ TEST_GROUP(SolidSyslogPosixMqBuffer)
 
 // clang-format on
 
-TEST(SolidSyslogPosixMqBuffer, CreateDestroyWorksWithoutCrashing)
+TEST(SolidSyslogPosixMessageQueueBuffer, CreateDestroyWorksWithoutCrashing)
 {
 }
 
-TEST(SolidSyslogPosixMqBuffer, WriteAndReadReturnsTrue)
+TEST(SolidSyslogPosixMessageQueueBuffer, WriteAndReadReturnsTrue)
 {
     Write();
     CHECK_TRUE(Read());
 }
 
-TEST(SolidSyslogPosixMqBuffer, ReadReturnsWrittenData)
+TEST(SolidSyslogPosixMessageQueueBuffer, ReadReturnsWrittenData)
 {
     Write();
     Read();
     MEMCMP_EQUAL(TEST_MESSAGE, readData, TEST_MESSAGE_LEN);
 }
 
-TEST(SolidSyslogPosixMqBuffer, ReadReturnsWrittenSize)
+TEST(SolidSyslogPosixMessageQueueBuffer, ReadReturnsWrittenSize)
 {
     Write();
     Read();
     LONGS_EQUAL(TEST_MESSAGE_LEN, readSize);
 }
 
-TEST(SolidSyslogPosixMqBuffer, ReadFromEmptyReturnsFalse)
+TEST(SolidSyslogPosixMessageQueueBuffer, ReadFromEmptyReturnsFalse)
 {
     CHECK_FALSE(Read());
 }
 
-TEST(SolidSyslogPosixMqBuffer, MultipleWritesReadInOrder)
+TEST(SolidSyslogPosixMessageQueueBuffer, MultipleWritesReadInOrder)
 {
     SolidSyslogBuffer_Write(buffer, "first", 5);
     SolidSyslogBuffer_Write(buffer, "second", 6);
@@ -81,30 +81,30 @@ TEST(SolidSyslogPosixMqBuffer, MultipleWritesReadInOrder)
     MEMCMP_EQUAL("second", readData, 6);
 }
 
-TEST(SolidSyslogPosixMqBuffer, SecondReadAfterSingleWriteReturnsFalse)
+TEST(SolidSyslogPosixMessageQueueBuffer, SecondReadAfterSingleWriteReturnsFalse)
 {
     Write();
     Read();
     CHECK_FALSE(Read());
 }
 
-TEST(SolidSyslogPosixMqBuffer, ServiceSendsMessageWrittenViaLog)
+TEST(SolidSyslogPosixMessageQueueBuffer, ServiceSendsMessageWrittenViaLog)
 {
-    SenderSpy_Reset();
+    SenderFake_Reset();
     SolidSyslogStore* nullStore = SolidSyslogNullStore_Create();
-    SolidSyslogConfig config    = {buffer, SenderSpy_GetSender(), nullptr, nullptr, nullptr, nullptr, nullStore, nullptr, 0};
+    SolidSyslogConfig config    = {buffer, SenderFake_GetSender(), nullptr, nullptr, nullptr, nullptr, nullStore, nullptr, 0};
     SolidSyslog_Create(&config);
 
     SolidSyslogMessage message = {SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO, nullptr, nullptr};
     SolidSyslog_Log(&message);
     SolidSyslog_Service();
-    LONGS_EQUAL(1, SenderSpy_CallCount());
+    LONGS_EQUAL(1, SenderFake_CallCount());
 
     SolidSyslog_Destroy();
     SolidSyslogNullStore_Destroy();
 }
 
-IGNORE_TEST(SolidSyslogPosixMqBuffer, HappyPathOnly)
+IGNORE_TEST(SolidSyslogPosixMessageQueueBuffer, HappyPathOnly)
 {
     // Error handling not yet implemented — see Epic #31
     //   Create with zero maxMessageSize or maxMessages

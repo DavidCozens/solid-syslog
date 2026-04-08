@@ -112,11 +112,11 @@ Coverage report: `cmake --preset coverage && cmake --build --preset coverage --t
 Interface/        — Public headers only. No implementation. This is the API boundary.
 Source/           — Implementation. Compiled into a static library.
 Tests/            — CppUTest unit tests. Never link production code directly; always via the library.
-Tests/Support/    — PosixFakes static lib (SocketSpy, ClockFake) — shared across test executables.
+Tests/Support/    — PosixFakes static lib (SocketFake, ClockFake) — shared across test executables.
 Tests/Example/    — Example code unit tests (ExampleTests executable).
 Example/Common/   — Shared example code (CLI parsing, app name, UDP config, service thread).
 Example/SingleTask/ — Single-task example (NullBuffer, bare-metal model). BDD sender.
-Example/Threaded/ — Threaded example (PosixMqBuffer, two pthreads). BDD sender.
+Example/Threaded/ — Threaded example (PosixMessageQueueBuffer, two pthreads). BDD sender.
 Bdd/              — BDD test infrastructure: Gherkin features, step definitions, syslog-ng config.
 ci/               — CI-specific files (e.g. docker-compose.bdd.yml).
 ```
@@ -134,16 +134,18 @@ Headers in `Interface/` are split by audience — each user includes only what t
 | `SolidSyslogConfig.h` | System setup code | `SolidSyslogConfig`, `SolidSyslog_Create`, `SolidSyslog_Destroy` |
 | `SolidSyslogPrival.h` | Any code that needs facility/severity enums | `SolidSyslog_Facility`, `SolidSyslog_Severity` |
 | `SolidSyslogTimestamp.h` | Any code that needs the timestamp struct | `SolidSyslogTimestamp`, `SolidSyslogClockFunction` |
-| `SolidSyslogSenderDef.h` | Sender implementors (extension point) | `SolidSyslogSender` vtable struct |
+| `SolidSyslogSenderDefinition.h` | Sender implementors (extension point) | `SolidSyslogSender` vtable struct |
 | `SolidSyslogUdpSender.h` | System setup code using UDP transport | `SolidSyslogUdpSender_Create`, `_Destroy` |
-| `SolidSyslogBufferDef.h` | Buffer implementors (extension point) | `SolidSyslogBuffer` vtable struct |
+| `SolidSyslogBufferDefinition.h` | Buffer implementors (extension point) | `SolidSyslogBuffer` vtable struct |
 | `SolidSyslogNullBuffer.h` | System setup code (single-task, no buffering) | `SolidSyslogNullBuffer_Create`, `_Destroy` |
-| `SolidSyslogPosixMqBuffer.h` | System setup code using POSIX message queue buffer | `SolidSyslogPosixMqBuffer_Create`, `_Destroy` |
+| `SolidSyslogPosixMessageQueueBuffer.h` | System setup code using POSIX message queue buffer | `SolidSyslogPosixMessageQueueBuffer_Create`, `_Destroy` |
+| `SolidSyslogStoreDefinition.h` | Store implementors (extension point) | `SolidSyslogStore` vtable struct |
+| `SolidSyslogNullStore.h` | System setup code (no store-and-forward) | `SolidSyslogNullStore_Create`, `_Destroy` |
 | `SolidSyslogPosixClock.h` | System setup code using POSIX clock | `SolidSyslogPosixClock_GetTimestamp` |
 | `SolidSyslogPosixHostname.h` | System setup code using POSIX hostname | `SolidSyslogPosixHostname_Get` |
-| `SolidSyslogPosixProcId.h` | System setup code using POSIX process ID | `SolidSyslogPosixProcId_Get` |
+| `SolidSyslogPosixProcessId.h` | System setup code using POSIX process ID | `SolidSyslogPosixProcessId_Get` |
 | `SolidSyslogStructuredData.h` | Library internals (SD dispatch) | `SolidSyslogStructuredData_Format` |
-| `SolidSyslogStructuredDataDef.h` | SD implementors (extension point) | `SolidSyslogStructuredData` vtable struct |
+| `SolidSyslogStructuredDataDefinition.h` | SD implementors (extension point) | `SolidSyslogStructuredData` vtable struct |
 | `SolidSyslogMetaSd.h` | System setup code using sequenceId SD | `SolidSyslogMetaSd_Create`, `_Destroy` |
 | `SolidSyslogAtomicCounter.h` | System setup code on platforms with C11 atomics | `SolidSyslogAtomicCounter_Create`, `_Destroy`, `_Increment` |
 | `SolidSyslogTimeQuality.h` | Any code providing time quality data | `SolidSyslogTimeQuality`, `SolidSyslogTimeQualityFunction`, `SOLIDSYSLOG_SYNC_ACCURACY_OMIT` |

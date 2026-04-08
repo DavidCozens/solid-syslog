@@ -1,5 +1,5 @@
 #include "SolidSyslogNullStore.h"
-#include "SolidSyslogStoreDef.h"
+#include "SolidSyslogStoreDefinition.h"
 
 static bool Write(struct SolidSyslogStore* self, const void* data, size_t size);
 static bool ReadNextUnsent(struct SolidSyslogStore* self, void* data, size_t maxSize, size_t* bytesRead);

@@ -41,7 +41,7 @@
 - E1.1: Walking skeleton — single Log call produces a valid RFC 5424 message
 - E1.2: PRIVAL encoding — facility and severity on the Log call
 - E1.3: Timestamp — raise-time capture via injected clock function
-- E1.4: Hostname, AppName, ProcId — injected via config function pointers
+- E1.4: Hostname, AppName, ProcessId — injected via config function pointers
 - E1.5: MessageId and Message — driven onto the Log call
 - `story` label created (#0075ca) to distinguish stories from epics on the project board
 - All stories added to SolidSyslog project board under Epic #3; Epic #3 added to board
@@ -101,7 +101,7 @@ The UUID issue is Windows/WSL-specific but there is no cost to running the comma
 - E2.3: CMake platform detection — PosixUdpSender included conditionally
 - E2.4: BDD walking skeleton — end-to-end UDP message
 - PosixUdpSender.c included in build via CMake platform detection only — no #ifdef in source
-- POSIX socket calls tested with hand-rolled SocketSpy (strong-symbol fakes for socket/sendto/close) — no real network in unit tests; fff considered but rejected as an unnecessary dependency for three functions
+- POSIX socket calls tested with hand-rolled SocketFake (strong-symbol fakes for socket/sendto/close) — no real network in unit tests; fff considered but rejected as an unnecessary dependency for three functions
 - BDD harness deferred from E0 now lands in E2.4 as planned
 - RTOS-specific sender implementations and non-POSIX build testing explicitly deferred to E8
 
@@ -134,7 +134,7 @@ The UUID issue is Windows/WSL-specific but there is no cost to running the comma
   sends one message via SolidSyslog+PosixUdpSender, exits. Behave invokes as subprocess.
   Lives under `Example/` as a user-facing reference, doubling as the BDD sender.
 - CI: `docker compose up -d syslog-ng` before BDD step; same docker-compose.yml as devcontainer.
-- SenderSpy renamed from SpySender throughout — subject-first naming more idiomatic.
+- SenderFake renamed from SpySender throughout — subject-first naming more idiomatic.
 - E2, S2.2, S2.3, S2.4 GitHub issues updated with infrastructure design notes.
 
 ### Deferred
@@ -216,7 +216,7 @@ The UUID issue is Windows/WSL-specific but there is no cost to running the comma
   `SolidSyslogSender`. One message per Service call — caller controls the loop.
 - NullBuffer: Write sends immediately via injected sender. Service returns false. Current
   single-task behaviour preserved as a special case.
-- PosixMqBuffer: `mq_send`/`mq_receive` with O_NONBLOCK. Thread-safe with zero
+- PosixMessageQueueBuffer: `mq_send`/`mq_receive` with O_NONBLOCK. Thread-safe with zero
   application-level synchronization. Kernel manages the queue.
 - `SolidSyslogConfig` holds both `buffer` and `sender`. NullBuffer owns its own sender
   internally; real buffers use the sender on SolidSyslog for the Service path.
@@ -229,13 +229,13 @@ The UUID issue is Windows/WSL-specific but there is no cost to running the comma
 
 ### Architecture — example restructure
 - Example split into `SingleTask/` (NullBuffer, bare-metal model) and `Threaded/`
-  (PosixMqBuffer, two pthreads). Shared code in `Example/Common/`: command line parsing,
+  (PosixMessageQueueBuffer, two pthreads). Shared code in `Example/Common/`: command line parsing,
   app name, UDP config, service thread loop.
 - Example code tested via separate `ExampleTests` executable using PosixFakes link-seam:
-  real SolidSyslog library, real UdpSender, real PosixMqBuffer — only POSIX system calls
+  real SolidSyslog library, real UdpSender, real PosixMessageQueueBuffer — only POSIX system calls
   (socket, sendto, clock_gettime etc.) intercepted by strong-symbol fakes.
-- Test fakes split: PosixFakes static lib (SocketSpy, ClockFake) shared across test
-  executables; SolidSyslog-level fakes (SenderSpy, BufferFake, StringFake) compiled
+- Test fakes split: PosixFakes static lib (SocketFake, ClockFake) shared across test
+  executables; SolidSyslog-level fakes (SenderFake, BufferFake, StringFake) compiled
   directly into library tests only.
 
 ### Test counts

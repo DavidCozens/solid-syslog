@@ -1,16 +1,16 @@
-#include "SenderSpy.h"
+#include "SenderFake.h"
 #include "SolidSyslogFormat.h"
-#include "SolidSyslogSenderDef.h"
+#include "SolidSyslogSenderDefinition.h"
 
 #include <string.h>
 
 enum
 {
-    SENDERSPY_MAX_BUFFER_SIZE = 1024
+    SENDERFAKE_MAX_BUFFER_SIZE = 1024
 };
 
 static int                      callCount;
-static char                     lastBuffer[SENDERSPY_MAX_BUFFER_SIZE];
+static char                     lastBuffer[SENDERFAKE_MAX_BUFFER_SIZE];
 static size_t                   lastSize;
 static bool                     failNextSend;
 static struct SolidSyslogSender sender;
@@ -33,7 +33,7 @@ static bool Send(struct SolidSyslogSender* self, const void* buffer, size_t size
     return true;
 }
 
-void SenderSpy_Reset(void)
+void SenderFake_Reset(void)
 {
     callCount     = 0;
     lastBuffer[0] = '\0';
@@ -41,28 +41,28 @@ void SenderSpy_Reset(void)
     failNextSend  = false;
 }
 
-void SenderSpy_FailNextSend(void)
+void SenderFake_FailNextSend(void)
 {
     failNextSend = true;
 }
 
-const char* SenderSpy_LastBufferAsString(void)
+const char* SenderFake_LastBufferAsString(void)
 {
     return lastBuffer;
 }
 
-struct SolidSyslogSender* SenderSpy_GetSender(void)
+struct SolidSyslogSender* SenderFake_GetSender(void)
 {
     sender.Send = Send;
     return &sender;
 }
 
-int SenderSpy_CallCount(void)
+int SenderFake_CallCount(void)
 {
     return callCount;
 }
 
-size_t SenderSpy_LastSize(void)
+size_t SenderFake_LastSize(void)
 {
     return lastSize;
 }

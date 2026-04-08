@@ -5,16 +5,16 @@
 
 static const char* fakeHostname;
 static const char* fakeAppName;
-static const char* fakeProcId;
+static const char* fakeProcessId;
 
 static size_t ClampToBufferSize(size_t length, size_t bufferSize);
 static size_t CopyBounded(char* buffer, size_t size, const char* source);
 
 void StringFake_Reset(void)
 {
-    fakeHostname = "";
-    fakeAppName  = "";
-    fakeProcId   = "";
+    fakeHostname  = "";
+    fakeAppName   = "";
+    fakeProcessId = "";
 }
 
 void StringFake_SetHostname(const char* hostname)
@@ -37,14 +37,14 @@ size_t StringFake_GetAppName(char* buffer, size_t size)
     return CopyBounded(buffer, size, fakeAppName);
 }
 
-void StringFake_SetProcId(const char* procId)
+void StringFake_SetProcessId(const char* procId)
 {
-    fakeProcId = procId;
+    fakeProcessId = procId;
 }
 
-size_t StringFake_GetProcId(char* buffer, size_t size)
+size_t StringFake_GetProcessId(char* buffer, size_t size)
 {
-    return CopyBounded(buffer, size, fakeProcId);
+    return CopyBounded(buffer, size, fakeProcessId);
 }
 
 static size_t CopyBounded(char* buffer, size_t size, const char* source)

@@ -12,7 +12,7 @@
 #include "SolidSyslogNullStore.h"
 #include "SolidSyslogPosixClock.h"
 #include "SolidSyslogPosixHostname.h"
-#include "SolidSyslogPosixProcId.h"
+#include "SolidSyslogPosixProcessId.h"
 #include "SolidSyslogUdpSender.h"
 
 static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
@@ -47,15 +47,15 @@ int SolidSyslogExample_Run(int argc, char* argv[])
     struct SolidSyslogStructuredData* sdList[] = {metaSd, timeQuality, originSd};
 
     struct SolidSyslogConfig config = {
-        .buffer      = buffer,
-        .sender      = NULL,
-        .clock       = SolidSyslogPosixClock_GetTimestamp,
-        .getHostname = SolidSyslogPosixHostname_Get,
-        .getAppName  = ExampleAppName_Get,
-        .getProcId   = SolidSyslogPosixProcId_Get,
-        .store       = store,
-        .sd          = sdList,
-        .sdCount     = sizeof(sdList) / sizeof(sdList[0]),
+        .buffer       = buffer,
+        .sender       = NULL,
+        .clock        = SolidSyslogPosixClock_GetTimestamp,
+        .getHostname  = SolidSyslogPosixHostname_Get,
+        .getAppName   = ExampleAppName_Get,
+        .getProcessId = SolidSyslogPosixProcessId_Get,
+        .store        = store,
+        .sd           = sdList,
+        .sdCount      = sizeof(sdList) / sizeof(sdList[0]),
     };
     SolidSyslog_Create(&config);
 

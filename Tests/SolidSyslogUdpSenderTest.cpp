@@ -1,7 +1,7 @@
 #include "CppUTest/TestHarness.h"
 #include "SolidSyslogUdpSender.h"
 #include "SolidSyslogSender.h"
-#include "SocketSpy.h"
+#include "SocketFake.h"
 #include <array>
 #include <cstring>
 #include <netinet/in.h>
@@ -56,7 +56,7 @@ TEST_GROUP(SolidSyslogUdpSender)
 
     void setup() override
     {
-        SocketSpy_Reset();
+        SocketFake_Reset();
         // cppcheck-suppress unreadVariable -- read by teardown and tests; cppcheck does not model CppUTest lifecycle
         sender = SolidSyslogUdpSender_Create(&config);
     }
@@ -90,26 +90,26 @@ TEST(SolidSyslogUdpSender, SendReturnsTrueOnSuccess)
 
 TEST(SolidSyslogUdpSender, SendReturnsFalseOnSendtoFailure)
 {
-    SocketSpy_SetSendtoFails(true);
+    SocketFake_SetSendtoFails(true);
     CHECK_FALSE(SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN));
 }
 
 TEST(SolidSyslogUdpSender, SingleSendResultsInOneSendtoCall)
 {
     Send();
-    LONGS_EQUAL(1, SocketSpy_SendtoCallCount());
+    LONGS_EQUAL(1, SocketFake_SendtoCallCount());
 }
 
 TEST(SolidSyslogUdpSender, SendtoReceivesBuffer)
 {
     Send();
-    STRCMP_EQUAL(TEST_MESSAGE, SocketSpy_LastBufAsString());
+    STRCMP_EQUAL(TEST_MESSAGE, SocketFake_LastBufAsString());
 }
 
 TEST(SolidSyslogUdpSender, SendtoCalledWithDefaultPort)
 {
     Send();
-    LONGS_EQUAL(TEST_DEFAULT_PORT, SocketSpy_LastPort());
+    LONGS_EQUAL(TEST_DEFAULT_PORT, SocketFake_LastPort());
 }
 
 TEST(SolidSyslogUdpSender, MaxMessageSizeTransmittedWithoutTruncation)
@@ -117,53 +117,53 @@ TEST(SolidSyslogUdpSender, MaxMessageSizeTransmittedWithoutTruncation)
     std::array<char, TEST_MAX_MESSAGE_SIZE> buffer{};
     buffer.fill('A');
     Send(buffer.data(), buffer.size());
-    LONGS_EQUAL(TEST_MAX_MESSAGE_SIZE, SocketSpy_LastLen());
-    MEMCMP_EQUAL(buffer.data(), SocketSpy_LastBuf(), TEST_MAX_MESSAGE_SIZE);
+    LONGS_EQUAL(TEST_MAX_MESSAGE_SIZE, SocketFake_LastLen());
+    MEMCMP_EQUAL(buffer.data(), SocketFake_LastBuf(), TEST_MAX_MESSAGE_SIZE);
 }
 
 TEST(SolidSyslogUdpSender, SendtoCalledWithFlagsZero)
 {
     Send();
-    LONGS_EQUAL(0, SocketSpy_LastFlags());
+    LONGS_EQUAL(0, SocketFake_LastFlags());
 }
 
 TEST(SolidSyslogUdpSender, SendtoCalledWithAddressFamilyAF_INET)
 {
     Send();
-    LONGS_EQUAL(AF_INET, SocketSpy_LastAddrFamily());
+    LONGS_EQUAL(AF_INET, SocketFake_LastAddrFamily());
 }
 
 TEST(SolidSyslogUdpSender, SendtoCalledWithDefaultHost)
 {
     Send();
-    STRCMP_EQUAL(TEST_DEFAULT_HOST, SocketSpy_LastAddrAsString());
+    STRCMP_EQUAL(TEST_DEFAULT_HOST, SocketFake_LastAddrAsString());
 }
 
 TEST(SolidSyslogUdpSender, SendtoCalledWithAddrlenOfSockaddrIn)
 {
     Send();
-    LONGS_EQUAL(sizeof(struct sockaddr_in), SocketSpy_LastAddrLen());
+    LONGS_EQUAL(sizeof(struct sockaddr_in), SocketFake_LastAddrLen());
 }
 
 TEST(SolidSyslogUdpSender, SocketCalledOnCreate)
 {
-    LONGS_EQUAL(1, SocketSpy_SocketCallCount());
+    LONGS_EQUAL(1, SocketFake_SocketCallCount());
 }
 
 TEST(SolidSyslogUdpSender, SocketCalledWithAF_INET)
 {
-    LONGS_EQUAL(AF_INET, SocketSpy_SocketDomain());
+    LONGS_EQUAL(AF_INET, SocketFake_SocketDomain());
 }
 
 TEST(SolidSyslogUdpSender, SocketCalledWithSOCK_DGRAM)
 {
-    LONGS_EQUAL(SOCK_DGRAM, SocketSpy_SocketType());
+    LONGS_EQUAL(SOCK_DGRAM, SocketFake_SocketType());
 }
 
 TEST(SolidSyslogUdpSender, SendtoCalledWithSocketFd)
 {
     Send();
-    LONGS_EQUAL(SocketSpy_SocketFd(), SocketSpy_LastSendtoFd());
+    LONGS_EQUAL(SocketFake_SocketFd(), SocketFake_LastSendtoFd());
 }
 
 IGNORE_TEST(SolidSyslogUdpSender, HappyPathOnly)
@@ -187,7 +187,7 @@ TEST_GROUP(SolidSyslogUdpSenderDestroy)
     // cppcheck-suppress unreadVariable -- used in test bodies; cppcheck does not model CppUTest macros
     struct SolidSyslogUdpSenderConfig config = {GetDefaultPort, GetDefaultHost};
 
-    void setup() override { SocketSpy_Reset(); }
+    void setup() override { SocketFake_Reset(); }
     void teardown() override {}
 
     void CreateAndDestroy() const
@@ -202,13 +202,13 @@ TEST_GROUP(SolidSyslogUdpSenderDestroy)
 TEST(SolidSyslogUdpSenderDestroy, CloseCalledOnDestroy)
 {
     CreateAndDestroy();
-    LONGS_EQUAL(1, SocketSpy_CloseCallCount());
+    LONGS_EQUAL(1, SocketFake_CloseCallCount());
 }
 
 TEST(SolidSyslogUdpSenderDestroy, CloseCalledWithSocketFd)
 {
     CreateAndDestroy();
-    LONGS_EQUAL(SocketSpy_SocketFd(), SocketSpy_LastClosedFd());
+    LONGS_EQUAL(SocketFake_SocketFd(), SocketFake_LastClosedFd());
 }
 
 TEST(SolidSyslogUdpSenderDestroy, SimpleScenario)
@@ -217,13 +217,13 @@ TEST(SolidSyslogUdpSenderDestroy, SimpleScenario)
     SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN);
     SolidSyslogUdpSender_Destroy();
 
-    LONGS_EQUAL(1, SocketSpy_SocketCallCount());
-    LONGS_EQUAL(AF_INET, SocketSpy_SocketDomain());
-    LONGS_EQUAL(SOCK_DGRAM, SocketSpy_SocketType());
-    LONGS_EQUAL(1, SocketSpy_SendtoCallCount());
-    LONGS_EQUAL(AF_INET, SocketSpy_LastAddrFamily());
-    LONGS_EQUAL(TEST_DEFAULT_PORT, SocketSpy_LastPort());
-    LONGS_EQUAL(1, SocketSpy_CloseCallCount());
+    LONGS_EQUAL(1, SocketFake_SocketCallCount());
+    LONGS_EQUAL(AF_INET, SocketFake_SocketDomain());
+    LONGS_EQUAL(SOCK_DGRAM, SocketFake_SocketType());
+    LONGS_EQUAL(1, SocketFake_SendtoCallCount());
+    LONGS_EQUAL(AF_INET, SocketFake_LastAddrFamily());
+    LONGS_EQUAL(TEST_DEFAULT_PORT, SocketFake_LastPort());
+    LONGS_EQUAL(1, SocketFake_CloseCallCount());
 }
 
 // clang-format off
@@ -237,7 +237,7 @@ TEST_GROUP(SolidSyslogUdpSenderConfig)
 
     void setup() override
     {
-        SocketSpy_Reset();
+        SocketFake_Reset();
         getPortCallCount = 0;
         getHostCallCount = 0;
     }
@@ -274,7 +274,7 @@ TEST(SolidSyslogUdpSenderConfig, SendtoCalledWithConfiguredPort)
     config.getPort = GetAlternatePort;
     CreateSender();
     Send();
-    LONGS_EQUAL(TEST_ALTERNATE_PORT, SocketSpy_LastPort());
+    LONGS_EQUAL(TEST_ALTERNATE_PORT, SocketFake_LastPort());
 }
 
 TEST(SolidSyslogUdpSenderConfig, GetHostCalledOnCreate)
@@ -290,13 +290,13 @@ TEST(SolidSyslogUdpSenderConfig, GetAddrInfoCalledWithHostnameFromGetHost)
 {
     config.getHost = SpyGetHost;
     CreateSender();
-    LONGS_EQUAL(1, SocketSpy_GetAddrInfoCallCount());
-    STRCMP_EQUAL(TEST_DEFAULT_HOST, SocketSpy_LastGetAddrInfoHostname());
+    LONGS_EQUAL(1, SocketFake_GetAddrInfoCallCount());
+    STRCMP_EQUAL(TEST_DEFAULT_HOST, SocketFake_LastGetAddrInfoHostname());
 }
 
 TEST(SolidSyslogUdpSenderConfig, SendtoCalledWithResolvedAddress)
 {
     CreateSender();
     Send();
-    STRCMP_EQUAL(TEST_DEFAULT_HOST, SocketSpy_LastAddrAsString());
+    STRCMP_EQUAL(TEST_DEFAULT_HOST, SocketFake_LastAddrAsString());
 }
