@@ -37,7 +37,7 @@ Public headers are split by audience (Interface Segregation Principle):
 - **`SolidSyslogMetaSd.h`** — sequenceId structured data (RFC 5424 §7.3)
 - **`SolidSyslogTimeQualitySd.h`** — timeQuality structured data (RFC 5424 §7.1)
 - **`SolidSyslogOriginSd.h`** — origin structured data (RFC 5424 §7.2)
-- **`SolidSyslogPosixClock.h`** / **`PosixHostname.h`** / **`PosixProcessId.h`** — POSIX helpers
+- **`SolidSyslogPosixClock.h`** / **`SolidSyslogPosixHostname.h`** / **`SolidSyslogPosixProcessId.h`** — POSIX helpers
 
 Two example programs demonstrate usage:
 - **`Example/SingleTask/`** — NullBuffer, single-task bare-metal model

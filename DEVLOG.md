@@ -379,7 +379,7 @@ preserving); the subsequent story adds the bounds check.
 - BoundedString and Uint32 move to Formatter or are updated to use Formatter*
 
 **SD vtable signature change** — `Format(sd, char*, size_t)` becomes
-`Format(sd, struct SolidSyslogFormatter*)`. Breaking change for SD implementors, but
+`Format(sd, struct SolidSyslogFormatter*)`. Breaking change for SD implementers, but
 no external implementations exist yet. Right time to do it.
 
 **What stays in SolidSyslog.c:**

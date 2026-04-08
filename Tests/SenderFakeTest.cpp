@@ -69,3 +69,26 @@ TEST(SenderFake, ResetClearsLastBuffer)
     SenderFake_Reset();
     STRCMP_EQUAL("", SenderFake_LastBufferAsString());
 }
+
+TEST(SenderFake, FailNextSendReturnsFalse)
+{
+    struct SolidSyslogSender* sender = SenderFake_GetSender();
+    SenderFake_FailNextSend();
+    CHECK_FALSE(SolidSyslogSender_Send(sender, "a", 1));
+}
+
+TEST(SenderFake, FailNextSendStillCapturesBuffer)
+{
+    struct SolidSyslogSender* sender = SenderFake_GetSender();
+    SenderFake_FailNextSend();
+    SolidSyslogSender_Send(sender, "hello", 5);
+    STRCMP_EQUAL("hello", SenderFake_LastBufferAsString());
+}
+
+TEST(SenderFake, FailNextSendOnlyAffectsOneSend)
+{
+    struct SolidSyslogSender* sender = SenderFake_GetSender();
+    SenderFake_FailNextSend();
+    SolidSyslogSender_Send(sender, "a", 1);
+    CHECK_TRUE(SolidSyslogSender_Send(sender, "b", 1));
+}
