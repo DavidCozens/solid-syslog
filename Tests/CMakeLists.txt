@@ -34,6 +34,7 @@ if(SOLIDSYSLOG_POSIX)
         SolidSyslogPosixMessageQueueBufferTest.cpp
         ClockFakeTest.cpp
         SolidSyslogUdpSenderTest.cpp
+        SolidSyslogTcpSenderTest.cpp
     )
 endif()
 

@@ -3,6 +3,11 @@
 
 #include "SolidSyslogSender.h"
 
+enum
+{
+    SOLIDSYSLOG_UDP_DEFAULT_PORT = 514 /* RFC 5426 */
+};
+
 EXTERN_C_BEGIN
 
     struct SolidSyslogUdpSenderConfig

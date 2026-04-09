@@ -114,9 +114,9 @@ Source/           — Implementation. Compiled into a static library.
 Tests/            — CppUTest unit tests. Never link production code directly; always via the library.
 Tests/Support/    — PosixFakes static lib (SocketFake, ClockFake) — shared across test executables.
 Tests/Example/    — Example code unit tests (ExampleTests executable).
-Example/Common/   — Shared example code (CLI parsing, app name, UDP config, service thread).
+Example/Common/   — Shared example code (CLI parsing, app name, UDP/TCP config, service thread).
 Example/SingleTask/ — Single-task example (NullBuffer, bare-metal model). BDD sender.
-Example/Threaded/ — Threaded example (PosixMessageQueueBuffer, two pthreads). BDD sender.
+Example/Threaded/ — Threaded example (PosixMessageQueueBuffer, two pthreads, --transport udp|tcp). BDD sender.
 Bdd/              — BDD test infrastructure: Gherkin features, step definitions, syslog-ng config.
 ci/               — CI-specific files (e.g. docker-compose.bdd.yml).
 ```
@@ -135,7 +135,8 @@ Headers in `Interface/` are split by audience — each user includes only what t
 | `SolidSyslogPrival.h` | Any code that needs facility/severity enums | `SolidSyslog_Facility`, `SolidSyslog_Severity` |
 | `SolidSyslogTimestamp.h` | Any code that needs the timestamp struct | `SolidSyslogTimestamp`, `SolidSyslogClockFunction` |
 | `SolidSyslogSenderDefinition.h` | Sender implementors (extension point) | `SolidSyslogSender` vtable struct |
-| `SolidSyslogUdpSender.h` | System setup code using UDP transport | `SolidSyslogUdpSender_Create`, `_Destroy` |
+| `SolidSyslogUdpSender.h` | System setup code using UDP transport | `SolidSyslogUdpSender_Create`, `_Destroy`, `SOLIDSYSLOG_UDP_DEFAULT_PORT` |
+| `SolidSyslogTcpSender.h` | System setup code using TCP transport (RFC 6587) | `SolidSyslogTcpSender_Create`, `_Destroy`, `SOLIDSYSLOG_TCP_DEFAULT_PORT` |
 | `SolidSyslogBufferDefinition.h` | Buffer implementors (extension point) | `SolidSyslogBuffer` vtable struct |
 | `SolidSyslogNullBuffer.h` | System setup code (single-task, no buffering) | `SolidSyslogNullBuffer_Create`, `_Destroy` |
 | `SolidSyslogPosixMessageQueueBuffer.h` | System setup code using POSIX message queue buffer | `SolidSyslogPosixMessageQueueBuffer_Create`, `_Destroy` |

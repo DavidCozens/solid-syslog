@@ -13,6 +13,7 @@ EXTERN_C_BEGIN
         const char*               messageId;
         const char*               msg;
         int                       count;
+        const char*               transport;
     };
 
     int ExampleCommandLine_Parse(int argc, char* argv[], struct ExampleOptions* options);

@@ -3,6 +3,7 @@ set(COMMON_SOURCES
     Common/ExampleCommandLine.c
     Common/ExampleServiceThread.c
     Common/ExampleUdpConfig.c
+    Common/ExampleTcpConfig.c
 )
 
 # Single-task example: NullBuffer, direct send, bare-metal model
