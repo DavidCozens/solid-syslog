@@ -5,10 +5,14 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 
-static const char* const TEST_HOST        = "127.0.0.1";
-static const int         TEST_PORT        = 514;
-static const char* const TEST_MESSAGE     = "hello";
-static const size_t      TEST_MESSAGE_LEN = 5;
+// clang-format off
+static const char* const TEST_HOST           = "127.0.0.1";
+static const int         TEST_PORT           = 514;
+static const char* const TEST_ALTERNATE_HOST = "192.168.1.1";
+static const int         TEST_ALTERNATE_PORT = 9999;
+static const char* const TEST_MESSAGE        = "hello";
+static const size_t      TEST_MESSAGE_LEN    = 5;
+// clang-format on
 
 static int GetPort()
 {
@@ -17,6 +21,32 @@ static int GetPort()
 
 static const char* GetHost()
 {
+    return TEST_HOST;
+}
+
+static int GetAlternatePort()
+{
+    return TEST_ALTERNATE_PORT;
+}
+
+static const char* GetAlternateHost()
+{
+    return TEST_ALTERNATE_HOST;
+}
+
+static int getPortCallCount;
+
+static int SpyGetPort()
+{
+    getPortCallCount++;
+    return TEST_PORT;
+}
+
+static int getHostCallCount;
+
+static const char* SpyGetHost()
+{
+    getHostCallCount++;
     return TEST_HOST;
 }
 
@@ -155,4 +185,99 @@ TEST(SolidSyslogTcpSender, SendUsesSocketFd)
 TEST(SolidSyslogTcpSender, SendReturnsTrueOnSuccess)
 {
     CHECK_TRUE(SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN));
+}
+
+// clang-format off
+TEST_GROUP(SolidSyslogTcpSenderConfig)
+{
+    // cppcheck-suppress unreadVariable -- assigned in CreateSender; cppcheck does not model CppUTest macros
+    struct SolidSyslogTcpSenderConfig config = {GetPort, GetHost};
+    // cppcheck-suppress constVariablePointer -- Send requires non-const self; false positive from macro expansion
+    // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+    struct SolidSyslogSender* sender = nullptr;
+
+    void setup() override
+    {
+        SocketFake_Reset();
+        getPortCallCount = 0;
+        getHostCallCount = 0;
+    }
+
+    void teardown() override
+    {
+        SolidSyslogTcpSender_Destroy();
+    }
+
+    void CreateSender()
+    {
+        // cppcheck-suppress unreadVariable -- read by teardown and tests; cppcheck does not model CppUTest lifecycle
+        sender = SolidSyslogTcpSender_Create(&config);
+    }
+
+    void Send() const
+    {
+        SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN);
+    }
+};
+
+// clang-format on
+
+TEST(SolidSyslogTcpSenderConfig, GetPortCalledOnFirstSend)
+{
+    config.getPort = SpyGetPort;
+    CreateSender();
+    LONGS_EQUAL(0, getPortCallCount);
+    Send();
+    LONGS_EQUAL(1, getPortCallCount);
+}
+
+TEST(SolidSyslogTcpSenderConfig, GetPortNotCalledOnSecondSend)
+{
+    config.getPort = SpyGetPort;
+    CreateSender();
+    Send();
+    Send();
+    LONGS_EQUAL(1, getPortCallCount);
+}
+
+TEST(SolidSyslogTcpSenderConfig, ConnectsWithAlternatePort)
+{
+    config.getPort = GetAlternatePort;
+    CreateSender();
+    Send();
+    LONGS_EQUAL(TEST_ALTERNATE_PORT, SocketFake_LastConnectPort());
+}
+
+TEST(SolidSyslogTcpSenderConfig, GetHostCalledOnFirstSend)
+{
+    config.getHost = SpyGetHost;
+    CreateSender();
+    LONGS_EQUAL(0, getHostCallCount);
+    Send();
+    LONGS_EQUAL(1, getHostCallCount);
+}
+
+TEST(SolidSyslogTcpSenderConfig, GetHostNotCalledOnSecondSend)
+{
+    config.getHost = SpyGetHost;
+    CreateSender();
+    Send();
+    Send();
+    LONGS_EQUAL(1, getHostCallCount);
+}
+
+TEST(SolidSyslogTcpSenderConfig, ConnectsWithAlternateHost)
+{
+    config.getHost = GetAlternateHost;
+    CreateSender();
+    Send();
+    STRCMP_EQUAL(TEST_ALTERNATE_HOST, SocketFake_LastConnectAddrAsString());
+}
+
+TEST(SolidSyslogTcpSenderConfig, GetAddrInfoCalledWithHostname)
+{
+    config.getHost = SpyGetHost;
+    CreateSender();
+    Send();
+    STRCMP_EQUAL(TEST_HOST, SocketFake_LastGetAddrInfoHostname());
 }
