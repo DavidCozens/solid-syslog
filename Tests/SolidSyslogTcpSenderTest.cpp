@@ -6,7 +6,7 @@
 #include <netinet/tcp.h>
 
 static const char* const TEST_HOST        = "127.0.0.1";
-static const int         TEST_PORT        = 6514;
+static const int         TEST_PORT        = 514;
 static const char* const TEST_MESSAGE     = "hello";
 static const size_t      TEST_MESSAGE_LEN = 5;
 

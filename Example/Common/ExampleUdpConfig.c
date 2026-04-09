@@ -1,5 +1,6 @@
 #include "ExampleUdpConfig.h"
 
+/* Unprivileged mirror of SOLIDSYSLOG_UDP_DEFAULT_PORT (514) for BDD containers */
 enum
 {
     EXAMPLE_UDP_PORT = 5514

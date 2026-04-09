@@ -7,7 +7,7 @@ struct SolidSyslogSender;
 
 enum
 {
-    SOLIDSYSLOG_TCP_DEFAULT_PORT = 6514
+    SOLIDSYSLOG_TCP_DEFAULT_PORT = 514 /* RFC 6587 convention — same as UDP; no IANA assignment for plain TCP syslog */
 };
 
 struct SolidSyslogTcpSenderConfig

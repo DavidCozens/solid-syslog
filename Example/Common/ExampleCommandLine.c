@@ -2,6 +2,7 @@
 
 #include <getopt.h>
 #include <stdlib.h>
+#include <string.h>
 
 int ExampleCommandLine_Parse(int argc, char* argv[], struct ExampleOptions* options)
 {
@@ -43,6 +44,10 @@ int ExampleCommandLine_Parse(int argc, char* argv[], struct ExampleOptions* opti
                 options->count = atoi(optarg);
                 break;
             case 't':
+                if ((strcmp(optarg, "udp") != 0) && (strcmp(optarg, "tcp") != 0))
+                {
+                    return 1;
+                }
                 options->transport = optarg;
                 break;
             default:
