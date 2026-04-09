@@ -1,11 +1,12 @@
 # SolidSyslog
 
 A structured syslog client library for embedded and industrial systems, implementing
-RFC 5424 (structured syslog), RFC 5426 (UDP transport), and RFC 5425 (TLS transport).
+RFC 5424 (structured syslog), RFC 5426 (UDP transport), RFC 6587 (TCP transport),
+and RFC 5425 (TLS transport).
 
 Designed for resource-constrained environments:
 - C99, no dynamic memory allocation required — allocator is caller-injected
-- Transport-agnostic — UDP, TLS, or bring your own
+- Transport-agnostic — UDP, TCP, TLS, or bring your own
 - Buffer-agnostic — NullBuffer (direct send), POSIX message queue, or bring your own
 - No `#ifdef` feature flags — optional features composed at link time
 - MISRA C:2012 informed
@@ -32,7 +33,10 @@ Public headers are split by audience (Interface Segregation Principle):
 - **`SolidSyslogSenderDefinition.h`** / **`SolidSyslogBufferDefinition.h`** — extension points for custom senders and buffers
 - **`SolidSyslogNullBuffer.h`** — direct-send buffer for single-task systems
 - **`SolidSyslogPosixMessageQueueBuffer.h`** — thread-safe POSIX message queue buffer
-- **`SolidSyslogUdpSender.h`** — UDP transport
+- **`SolidSyslogUdpSender.h`** — UDP transport (RFC 5426)
+- **`SolidSyslogTcpSender.h`** — TCP transport with RFC 6587 octet-counting framing. Note: RFC 6587
+  is a Historic RFC — the IESG recommends TLS (RFC 5425) over plain TCP for new deployments.
+  TCP is provided for interoperability with existing infrastructure
 - **`SolidSyslogStructuredDataDefinition.h`** — extension point for custom structured data
 - **`SolidSyslogMetaSd.h`** — sequenceId structured data (RFC 5424 §7.3)
 - **`SolidSyslogTimeQualitySd.h`** — timeQuality structured data (RFC 5424 §7.1)
@@ -41,7 +45,7 @@ Public headers are split by audience (Interface Segregation Principle):
 
 Two example programs demonstrate usage:
 - **`Example/SingleTask/`** — NullBuffer, single-task bare-metal model
-- **`Example/Threaded/`** — PosixMessageQueueBuffer, two pthreads (logger + service)
+- **`Example/Threaded/`** — PosixMessageQueueBuffer, two pthreads (logger + service), `--transport udp|tcp`
 
 ## CI pipeline
 

@@ -24,6 +24,27 @@ static int socketFd;
 static int lastSocketDomain;
 static int lastSocketType;
 
+enum
+{
+    SOCKETFAKE_MAX_SEND_CALLS = 8
+};
+
+static bool   sendFails;
+static int    sendCallCount;
+static char   sendBufCopy[SOCKETFAKE_MAX_SEND_CALLS][SOCKETFAKE_MAX_BUFFER_SIZE];
+static size_t sendLenCopy[SOCKETFAKE_MAX_SEND_CALLS];
+static int    lastSendFd;
+
+static bool               connectFails;
+static int                connectCallCount;
+static int                lastConnectFd;
+static struct sockaddr_in lastConnectAddr;
+static char               lastConnectAddrString[INET_ADDRSTRLEN];
+
+static int setSockOptCallCount;
+static int lastSetSockOptLevel;
+static int lastSetSockOptOptname;
+
 static int closeCallCount;
 static int lastClosedFd;
 
@@ -36,21 +57,37 @@ static struct addrinfo    fakeAddrInfo;
 
 void SocketFake_Reset(void)
 {
-    sendtoFails       = false;
-    sendtoCallCount   = 0;
-    lastBufCopy[0]    = '\0';
-    lastLen           = 0;
-    lastFlags         = 0;
-    lastAddr          = (struct sockaddr_in) {0};
-    lastAddrLen       = 0;
-    lastSendtoFd      = -1;
-    socketCallCount   = 0;
-    socketFd          = -1;
-    lastSocketDomain  = 0;
-    lastSocketType    = 0;
-    closeCallCount    = 0;
-    lastClosedFd      = -1;
-    lastAddrString[0] = '\0';
+    sendtoFails     = false;
+    sendtoCallCount = 0;
+    lastBufCopy[0]  = '\0';
+    lastLen         = 0;
+    lastFlags       = 0;
+    lastAddr        = (struct sockaddr_in) {0};
+    lastAddrLen     = 0;
+    lastSendtoFd    = -1;
+    sendFails       = false;
+    sendCallCount   = 0;
+    for (int i = 0; i < SOCKETFAKE_MAX_SEND_CALLS; i++)
+    {
+        sendBufCopy[i][0] = '\0';
+        sendLenCopy[i]    = 0;
+    }
+    lastSendFd               = -1;
+    connectFails             = false;
+    connectCallCount         = 0;
+    lastConnectFd            = -1;
+    lastConnectAddr          = (struct sockaddr_in) {0};
+    lastConnectAddrString[0] = '\0';
+    setSockOptCallCount      = 0;
+    lastSetSockOptLevel      = 0;
+    lastSetSockOptOptname    = 0;
+    socketCallCount          = 0;
+    socketFd                 = -1;
+    lastSocketDomain         = 0;
+    lastSocketType           = 0;
+    closeCallCount           = 0;
+    lastClosedFd             = -1;
+    lastAddrString[0]        = '\0';
 
     getAddrInfoCallCount        = 0;
     lastGetAddrInfoHostname[0]  = '\0';
@@ -142,6 +179,90 @@ int SocketFake_SocketType(void)
     return lastSocketType;
 }
 
+/* send configuration */
+
+void SocketFake_SetSendFails(bool fails)
+{
+    sendFails = fails;
+}
+
+/* send accessors */
+
+int SocketFake_SendCallCount(void)
+{
+    return sendCallCount;
+}
+
+const char* SocketFake_SendBufAsString(int callIndex)
+{
+    if (callIndex < 0 || callIndex >= SOCKETFAKE_MAX_SEND_CALLS)
+    {
+        return "";
+    }
+    return sendBufCopy[callIndex];
+}
+
+size_t SocketFake_SendLen(int callIndex)
+{
+    if (callIndex < 0 || callIndex >= SOCKETFAKE_MAX_SEND_CALLS)
+    {
+        return 0;
+    }
+    return sendLenCopy[callIndex];
+}
+
+int SocketFake_LastSendFd(void)
+{
+    return lastSendFd;
+}
+
+/* connect configuration */
+
+void SocketFake_SetConnectFails(bool fails)
+{
+    connectFails = fails;
+}
+
+/* connect accessors */
+
+int SocketFake_ConnectCallCount(void)
+{
+    return connectCallCount;
+}
+
+int SocketFake_LastConnectFd(void)
+{
+    return lastConnectFd;
+}
+
+int SocketFake_LastConnectPort(void)
+{
+    return ntohs(lastConnectAddr.sin_port);
+}
+
+const char* SocketFake_LastConnectAddrAsString(void)
+{
+    inet_ntop(AF_INET, &lastConnectAddr.sin_addr, lastConnectAddrString, sizeof(lastConnectAddrString));
+    return lastConnectAddrString;
+}
+
+/* setsockopt accessors */
+
+int SocketFake_SetSockOptCallCount(void)
+{
+    return setSockOptCallCount;
+}
+
+int SocketFake_LastSetSockOptLevel(void)
+{
+    return lastSetSockOptLevel;
+}
+
+int SocketFake_LastSetSockOptOptname(void)
+{
+    return lastSetSockOptOptname;
+}
+
 /* close accessors */
 
 int SocketFake_CloseCallCount(void)
@@ -195,6 +316,49 @@ ssize_t sendto(int sockfd, const void* buf, size_t len, int flags, const struct 
     lastAddr              = *(const struct sockaddr_in*) dest_addr;
     lastAddrLen           = addrlen;
     return sendtoFails ? (ssize_t) -1 : (ssize_t) len;
+}
+
+// clang-format off
+// NOLINTNEXTLINE(readability-inconsistent-declaration-parameter-name,bugprone-easily-swappable-parameters) -- POSIX API; parameter names differ from glibc internal names
+ssize_t send(int sockfd, const void* buf, size_t len, int flags)
+// clang-format on
+{
+    (void) flags;
+    lastSendFd = sockfd;
+    if (sendCallCount < SOCKETFAKE_MAX_SEND_CALLS)
+    {
+        size_t copySize = len < sizeof(sendBufCopy[0]) - 1 ? len : sizeof(sendBufCopy[0]) - 1;
+        // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memcpy with bounded copySize
+        memcpy(sendBufCopy[sendCallCount], buf, copySize);
+        sendBufCopy[sendCallCount][copySize] = '\0';
+        sendLenCopy[sendCallCount]           = len;
+    }
+    sendCallCount++;
+    return sendFails ? (ssize_t) -1 : (ssize_t) len;
+}
+
+// NOLINTNEXTLINE(readability-inconsistent-declaration-parameter-name) -- POSIX API; parameter names differ from glibc internal names
+int connect(int sockfd, const struct sockaddr* addr, socklen_t addrlen)
+{
+    (void) addrlen;
+    connectCallCount++;
+    lastConnectFd   = sockfd;
+    lastConnectAddr = *(const struct sockaddr_in*) addr;
+    return connectFails ? -1 : 0;
+}
+
+// clang-format off
+// NOLINTNEXTLINE(readability-inconsistent-declaration-parameter-name,bugprone-easily-swappable-parameters) -- POSIX API; parameter names differ from glibc internal names
+int setsockopt(int sockfd, int level, int optname, const void* optval, socklen_t optlen)
+// clang-format on
+{
+    (void) sockfd;
+    (void) optval;
+    (void) optlen;
+    setSockOptCallCount++;
+    lastSetSockOptLevel   = level;
+    lastSetSockOptOptname = optname;
+    return 0;
 }
 
 int close(int fd)

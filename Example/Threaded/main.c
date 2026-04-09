@@ -1,6 +1,7 @@
 #include "ExampleAppName.h"
 #include "ExampleCommandLine.h"
 #include "ExampleServiceThread.h"
+#include "ExampleTcpConfig.h"
 #include "ExampleUdpConfig.h"
 #include "SolidSyslog.h"
 #include "SolidSyslogAtomicCounter.h"
@@ -8,14 +9,16 @@
 #include "SolidSyslogMetaSd.h"
 #include "SolidSyslogOriginSd.h"
 #include "SolidSyslogTimeQualitySd.h"
+#include "SolidSyslogNullStore.h"
 #include "SolidSyslogPosixClock.h"
 #include "SolidSyslogPosixHostname.h"
-#include "SolidSyslogNullStore.h"
 #include "SolidSyslogPosixMessageQueueBuffer.h"
 #include "SolidSyslogPosixProcessId.h"
+#include "SolidSyslogTcpSender.h"
 #include "SolidSyslogUdpSender.h"
 
 #include <pthread.h>
+#include <string.h>
 #include <unistd.h>
 
 static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
@@ -44,11 +47,29 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+    bool useTcp = (strcmp(options.transport, "tcp") == 0);
+
+    struct SolidSyslogSender* sender = NULL;
+
     struct SolidSyslogUdpSenderConfig udpConfig = {
         .getPort = ExampleUdpConfig_GetPort,
         .getHost = ExampleUdpConfig_GetHost,
     };
-    struct SolidSyslogSender*         sender      = SolidSyslogUdpSender_Create(&udpConfig);
+
+    struct SolidSyslogTcpSenderConfig tcpConfig = {
+        .getPort = ExampleTcpConfig_GetPort,
+        .getHost = ExampleTcpConfig_GetHost,
+    };
+
+    if (useTcp)
+    {
+        sender = SolidSyslogTcpSender_Create(&tcpConfig);
+    }
+    else
+    {
+        sender = SolidSyslogUdpSender_Create(&udpConfig);
+    }
+
     struct SolidSyslogBuffer*         buffer      = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
     struct SolidSyslogStore*          store       = SolidSyslogNullStore_Create();
     struct SolidSyslogAtomicCounter*  counter     = SolidSyslogAtomicCounter_Create();
@@ -98,7 +119,15 @@ int main(int argc, char* argv[])
     SolidSyslogAtomicCounter_Destroy();
     SolidSyslogNullStore_Destroy();
     SolidSyslogPosixMessageQueueBuffer_Destroy();
-    SolidSyslogUdpSender_Destroy();
+
+    if (useTcp)
+    {
+        SolidSyslogTcpSender_Destroy();
+    }
+    else
+    {
+        SolidSyslogUdpSender_Destroy();
+    }
 
     return 0;
 }

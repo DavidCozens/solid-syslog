@@ -118,6 +118,11 @@ def step_threaded_sends_message(context):
     run_example(context, binary=THREADED_BINARY)
 
 
+@when("the threaded example sends a syslog message with transport {transport}")
+def step_threaded_sends_with_transport(context, transport):
+    run_example(context, ["--transport", transport], binary=THREADED_BINARY)
+
+
 @when("the threaded example sends {count:d} syslog messages")
 def step_threaded_sends_multiple(context, count):
     run_example(context, ["--count", str(count)], binary=THREADED_BINARY, expected_messages=count)

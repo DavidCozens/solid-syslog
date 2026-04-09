@@ -27,6 +27,7 @@ services:
       - syslog-ng-ctl:/var/lib/syslog-ng
     ports:
       - "5514:5514/udp"
+      - "6514:6514/tcp"
     working_dir: /workspaces/SolidSyslog
 
   behave:

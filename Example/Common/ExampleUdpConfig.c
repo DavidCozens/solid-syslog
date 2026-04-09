@@ -1,5 +1,10 @@
 #include "ExampleUdpConfig.h"
 
+enum
+{
+    EXAMPLE_UDP_PORT = 5514
+};
+
 const char* ExampleUdpConfig_GetHost(void)
 {
     return "syslog-ng";
@@ -7,5 +12,5 @@ const char* ExampleUdpConfig_GetHost(void)
 
 int ExampleUdpConfig_GetPort(void)
 {
-    return 5514;
+    return EXAMPLE_UDP_PORT;
 }

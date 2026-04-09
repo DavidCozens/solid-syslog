@@ -31,6 +31,29 @@ EXTERN_C_BEGIN
     int SocketFake_SocketDomain(void);
     int SocketFake_SocketType(void);
 
+    /* send configuration */
+    void SocketFake_SetSendFails(bool fails);
+
+    /* send accessors */
+    int         SocketFake_SendCallCount(void);
+    const char* SocketFake_SendBufAsString(int callIndex);
+    size_t      SocketFake_SendLen(int callIndex);
+    int         SocketFake_LastSendFd(void);
+
+    /* connect configuration */
+    void SocketFake_SetConnectFails(bool fails);
+
+    /* connect accessors */
+    int         SocketFake_ConnectCallCount(void);
+    int         SocketFake_LastConnectFd(void);
+    int         SocketFake_LastConnectPort(void);
+    const char* SocketFake_LastConnectAddrAsString(void);
+
+    /* setsockopt accessors */
+    int SocketFake_SetSockOptCallCount(void);
+    int SocketFake_LastSetSockOptLevel(void);
+    int SocketFake_LastSetSockOptOptname(void);
+
     /* close accessors */
     int SocketFake_CloseCallCount(void);
     int SocketFake_LastClosedFd(void);

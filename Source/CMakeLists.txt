@@ -25,6 +25,7 @@ if(SOLIDSYSLOG_POSIX)
         SolidSyslogPosixMessageQueueBuffer.c
         SolidSyslogPosixProcessId.c
         SolidSyslogUdpSender.c
+        SolidSyslogTcpSender.c
     )
 endif()
 
