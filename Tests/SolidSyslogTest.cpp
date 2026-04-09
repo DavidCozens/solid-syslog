@@ -16,9 +16,6 @@
 
 // clang-format off
 static const char * const TEST_PRIVAL    = "<134>";
-static const char * const TEST_HOSTNAME  = "TestHost";
-static const char * const TEST_APP_NAME  = "TestApp";
-static const char * const TEST_PROCID    = "42";
 static const char * const TEST_MSGID     = "54";
 static const char * const TEST_SDATA     = "-";
 static const char * const TEST_MSG       = "hello world";
@@ -350,11 +347,14 @@ TEST(SolidSyslog, HostnameFromGetHostnameAppearsInMessage)
     CHECK_HOSTNAME("MyHost");
 }
 
-TEST(SolidSyslog, HostnameIsNotHardCoded)
+TEST(SolidSyslog, HostnameCallbackIsInvokedPerLogCall)
 {
-    StringFake_SetHostname(TEST_HOSTNAME);
+    StringFake_SetHostname("FirstHost");
     Log();
-    CHECK_HOSTNAME(TEST_HOSTNAME);
+    CHECK_HOSTNAME("FirstHost");
+    StringFake_SetHostname("SecondHost");
+    Log();
+    CHECK_HOSTNAME("SecondHost");
 }
 
 TEST(SolidSyslog, NullGetAppNameProducesNilvalue)
@@ -373,11 +373,14 @@ TEST(SolidSyslog, AppNameFromGetAppNameAppearsInMessage)
     CHECK_APP_NAME("MyApp");
 }
 
-TEST(SolidSyslog, AppNameIsNotHardCoded)
+TEST(SolidSyslog, AppNameCallbackIsInvokedPerLogCall)
 {
-    StringFake_SetAppName(TEST_APP_NAME);
+    StringFake_SetAppName("FirstApp");
     Log();
-    CHECK_APP_NAME(TEST_APP_NAME);
+    CHECK_APP_NAME("FirstApp");
+    StringFake_SetAppName("SecondApp");
+    Log();
+    CHECK_APP_NAME("SecondApp");
 }
 
 TEST(SolidSyslog, NullGetProcessIdProducesNilvalue)
@@ -396,11 +399,14 @@ TEST(SolidSyslog, ProcessIdFromGetProcessIdAppearsInMessage)
     CHECK_PROCID("9999");
 }
 
-TEST(SolidSyslog, ProcessIdIsNotHardCoded)
+TEST(SolidSyslog, ProcessIdCallbackIsInvokedPerLogCall)
 {
-    StringFake_SetProcessId(TEST_PROCID);
+    StringFake_SetProcessId("1111");
     Log();
-    CHECK_PROCID(TEST_PROCID);
+    CHECK_PROCID("1111");
+    StringFake_SetProcessId("2222");
+    Log();
+    CHECK_PROCID("2222");
 }
 
 TEST(SolidSyslog, NullMessageIdProducesNilvalue)
