@@ -33,6 +33,7 @@ EXTERN_C_BEGIN
 
     /* send configuration */
     void SocketFake_SetSendFails(bool fails);
+    void SocketFake_FailSendOnCall(int callNumber);
 
     /* send accessors */
     int         SocketFake_SendCallCount(void);

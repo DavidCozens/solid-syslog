@@ -10,8 +10,6 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-static bool Send(struct SolidSyslogSender* self, const void* buffer, size_t size);
-
 struct SolidSyslogTcpSender
 {
     struct SolidSyslogSender          base;
@@ -21,6 +19,11 @@ struct SolidSyslogTcpSender
 };
 
 static struct SolidSyslogTcpSender instance = {.fd = -1};
+
+static bool Connect(struct SolidSyslogTcpSender* tcp);
+static void CreateSocket(struct SolidSyslogTcpSender* tcp);
+static void Disconnect(struct SolidSyslogTcpSender* tcp);
+static bool Send(struct SolidSyslogSender* self, const void* buffer, size_t size);
 
 static struct sockaddr_in ResolveAddress(const struct SolidSyslogTcpSenderConfig* config)
 {
@@ -39,14 +42,41 @@ static struct sockaddr_in ResolveAddress(const struct SolidSyslogTcpSenderConfig
     return addr;
 }
 
+static void CreateSocket(struct SolidSyslogTcpSender* tcp)
+{
+    tcp->fd    = socket(AF_INET, SOCK_STREAM, 0);
+    int enable = 1;
+    setsockopt(tcp->fd, IPPROTO_TCP, TCP_NODELAY, &enable, sizeof(enable));
+}
+
+static void Disconnect(struct SolidSyslogTcpSender* tcp)
+{
+    close(tcp->fd);
+    tcp->fd        = -1;
+    tcp->connected = false;
+}
+
+static bool Connect(struct SolidSyslogTcpSender* tcp)
+{
+    CreateSocket(tcp);
+
+    struct sockaddr_in addr = ResolveAddress(&tcp->config);
+    // NOLINTNEXTLINE(clang-analyzer-unix.StdCLibraryFunctions) -- socket() failure handling deferred to error handling epic
+    if (connect(tcp->fd, (struct sockaddr*) &addr, sizeof(addr)) != 0)
+    {
+        return false;
+    }
+
+    tcp->connected = true;
+    return true;
+}
+
 struct SolidSyslogSender* SolidSyslogTcpSender_Create(const struct SolidSyslogTcpSenderConfig* config)
 {
     instance.config    = *config;
     instance.base.Send = Send;
     instance.connected = false;
-    instance.fd        = socket(AF_INET, SOCK_STREAM, 0);
-    int enable         = 1;
-    setsockopt(instance.fd, IPPROTO_TCP, TCP_NODELAY, &enable, sizeof(enable));
+    instance.fd        = -1;
     return &instance.base;
 }
 
@@ -56,17 +86,27 @@ static bool Send(struct SolidSyslogSender* self, const void* buffer, size_t size
 
     if (!tcp->connected)
     {
-        struct sockaddr_in addr = ResolveAddress(&tcp->config);
-        // NOLINTNEXTLINE(bugprone-unused-return-value) -- error handling deferred to S15.2
-        connect(tcp->fd, (struct sockaddr*) &addr, sizeof(addr));
-        tcp->connected = true;
+        if (!Connect(tcp))
+        {
+            return false;
+        }
     }
 
     char   prefix[12];
     size_t prefixLen = SolidSyslogFormat_Uint32(prefix, (uint32_t) size);
     prefixLen += SolidSyslogFormat_Character(prefix + prefixLen, ' ');
-    send(tcp->fd, prefix, prefixLen, MSG_NOSIGNAL);
-    send(tcp->fd, buffer, size, MSG_NOSIGNAL);
+
+    if (send(tcp->fd, prefix, prefixLen, MSG_NOSIGNAL) < 0)
+    {
+        Disconnect(tcp);
+        return false;
+    }
+
+    if (send(tcp->fd, buffer, size, MSG_NOSIGNAL) < 0)
+    {
+        Disconnect(tcp);
+        return false;
+    }
 
     return true;
 }

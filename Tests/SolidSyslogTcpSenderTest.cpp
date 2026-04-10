@@ -83,15 +83,22 @@ TEST(SolidSyslogTcpSender, CreateReturnsNonNull)
     CHECK_TRUE(sender != nullptr);
 }
 
-TEST(SolidSyslogTcpSender, CreateOpensStreamSocket)
+TEST(SolidSyslogTcpSender, CreateDoesNotOpenSocket)
 {
+    LONGS_EQUAL(0, SocketFake_SocketCallCount());
+}
+
+TEST(SolidSyslogTcpSender, FirstSendOpensStreamSocket)
+{
+    Send();
     LONGS_EQUAL(1, SocketFake_SocketCallCount());
     LONGS_EQUAL(AF_INET, SocketFake_SocketDomain());
     LONGS_EQUAL(SOCK_STREAM, SocketFake_SocketType());
 }
 
-TEST(SolidSyslogTcpSender, CreateSetsTcpNoDelay)
+TEST(SolidSyslogTcpSender, FirstSendSetsTcpNoDelay)
 {
+    Send();
     LONGS_EQUAL(1, SocketFake_SetSockOptCallCount());
     LONGS_EQUAL(IPPROTO_TCP, SocketFake_LastSetSockOptLevel());
     LONGS_EQUAL(TCP_NODELAY, SocketFake_LastSetSockOptOptname());
@@ -115,15 +122,18 @@ TEST_GROUP(SolidSyslogTcpSenderDestroy)
 
 // clang-format on
 
-TEST(SolidSyslogTcpSenderDestroy, CloseCalledOnDestroy)
+TEST(SolidSyslogTcpSenderDestroy, DestroyWithoutSendDoesNotClose)
 {
     CreateAndDestroy();
-    LONGS_EQUAL(1, SocketFake_CloseCallCount());
+    LONGS_EQUAL(0, SocketFake_CloseCallCount());
 }
 
-TEST(SolidSyslogTcpSenderDestroy, CloseCalledWithSocketFd)
+TEST(SolidSyslogTcpSenderDestroy, DestroyAfterSendClosesSocket)
 {
-    CreateAndDestroy();
+    struct SolidSyslogSender* sender = SolidSyslogTcpSender_Create(&config);
+    SolidSyslogSender_Send(sender, "x", 1);
+    SolidSyslogTcpSender_Destroy();
+    LONGS_EQUAL(1, SocketFake_CloseCallCount());
     LONGS_EQUAL(SocketFake_SocketFd(), SocketFake_LastClosedFd());
 }
 
@@ -280,4 +290,135 @@ TEST(SolidSyslogTcpSenderConfig, GetAddrInfoCalledWithHostname)
     CreateSender();
     Send();
     STRCMP_EQUAL(TEST_HOST, SocketFake_LastGetAddrInfoHostname());
+}
+
+// clang-format off
+TEST_GROUP(SolidSyslogTcpSenderFailure)
+{
+    struct SolidSyslogTcpSenderConfig config = {GetPort, GetHost};
+    // cppcheck-suppress constVariablePointer -- Send requires non-const self; false positive from macro expansion
+    // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+    struct SolidSyslogSender* sender = nullptr;
+
+    void setup() override
+    {
+        SocketFake_Reset();
+        // cppcheck-suppress unreadVariable -- read by teardown and tests; cppcheck does not model CppUTest lifecycle
+        sender = SolidSyslogTcpSender_Create(&config);
+    }
+
+    void teardown() override
+    {
+        SolidSyslogTcpSender_Destroy();
+    }
+
+    // NOLINTNEXTLINE(modernize-use-nodiscard) -- test helper; return value intentionally ignored in some tests
+    bool Send() const
+    {
+        return SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN);
+    }
+};
+
+// clang-format on
+
+TEST(SolidSyslogTcpSenderFailure, SendReturnsFalseWhenConnectFails)
+{
+    SocketFake_SetConnectFails(true);
+    CHECK_FALSE(Send());
+}
+
+TEST(SolidSyslogTcpSenderFailure, SendReturnsFalseWhenSendFails)
+{
+    SocketFake_SetSendFails(true);
+    CHECK_FALSE(Send());
+}
+
+TEST(SolidSyslogTcpSenderFailure, SendFailureClosesSocket)
+{
+    SocketFake_SetSendFails(true);
+    Send();
+    LONGS_EQUAL(1, SocketFake_CloseCallCount());
+}
+
+TEST(SolidSyslogTcpSenderFailure, SendFailureMarksDisconnected)
+{
+    Send();
+    LONGS_EQUAL(1, SocketFake_ConnectCallCount());
+    SocketFake_SetSendFails(true);
+    Send();
+    SocketFake_SetSendFails(false);
+    Send();
+    LONGS_EQUAL(2, SocketFake_ConnectCallCount());
+}
+
+TEST(SolidSyslogTcpSenderFailure, ReconnectCreatesNewSocket)
+{
+    Send();
+    int firstSocketCallCount = SocketFake_SocketCallCount();
+    SocketFake_SetSendFails(true);
+    Send();
+    SocketFake_SetSendFails(false);
+    Send();
+    LONGS_EQUAL(firstSocketCallCount + 1, SocketFake_SocketCallCount());
+}
+
+TEST(SolidSyslogTcpSenderFailure, ReconnectSetsTcpNoDelay)
+{
+    Send();
+    SocketFake_SetSendFails(true);
+    Send();
+    SocketFake_SetSendFails(false);
+    Send();
+    LONGS_EQUAL(2, SocketFake_SetSockOptCallCount());
+    LONGS_EQUAL(IPPROTO_TCP, SocketFake_LastSetSockOptLevel());
+    LONGS_EQUAL(TCP_NODELAY, SocketFake_LastSetSockOptOptname());
+}
+
+TEST(SolidSyslogTcpSenderFailure, ReconnectResolvesDns)
+{
+    Send();
+    SocketFake_SetSendFails(true);
+    Send();
+    SocketFake_SetSendFails(false);
+    Send();
+    LONGS_EQUAL(2, SocketFake_GetAddrInfoCallCount());
+}
+
+TEST(SolidSyslogTcpSenderFailure, ReconnectConnectsWithNewFd)
+{
+    Send();
+    SocketFake_SetSendFails(true);
+    Send();
+    SocketFake_SetSendFails(false);
+    Send();
+    LONGS_EQUAL(SocketFake_SocketFd(), SocketFake_LastConnectFd());
+}
+
+TEST(SolidSyslogTcpSenderFailure, SuccessfulSendAfterReconnect)
+{
+    Send();
+    SocketFake_SetSendFails(true);
+    Send();
+    SocketFake_SetSendFails(false);
+    CHECK_TRUE(Send());
+}
+
+TEST(SolidSyslogTcpSenderFailure, SendUsesMsgNoSignal)
+{
+    Send();
+    LONGS_EQUAL(MSG_NOSIGNAL, SocketFake_SendFlags(0));
+    LONGS_EQUAL(MSG_NOSIGNAL, SocketFake_SendFlags(1));
+}
+
+TEST(SolidSyslogTcpSenderFailure, SendReturnsFalseWhenBodySendFails)
+{
+    SocketFake_FailSendOnCall(1);
+    CHECK_FALSE(Send());
+}
+
+TEST(SolidSyslogTcpSenderFailure, BodySendFailureClosesSocket)
+{
+    SocketFake_FailSendOnCall(1);
+    Send();
+    LONGS_EQUAL(1, SocketFake_CloseCallCount());
 }

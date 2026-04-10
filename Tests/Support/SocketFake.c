@@ -30,6 +30,7 @@ enum
 };
 
 static bool   sendFails;
+static int    sendFailOnCall;
 static int    sendCallCount;
 static char   sendBufCopy[SOCKETFAKE_MAX_SEND_CALLS][SOCKETFAKE_MAX_BUFFER_SIZE];
 static size_t sendLenCopy[SOCKETFAKE_MAX_SEND_CALLS];
@@ -67,12 +68,13 @@ void SocketFake_Reset(void)
     lastAddrLen     = 0;
     lastSendtoFd    = -1;
     sendFails       = false;
+    sendFailOnCall  = -1;
     sendCallCount   = 0;
     for (int i = 0; i < SOCKETFAKE_MAX_SEND_CALLS; i++)
     {
-        sendBufCopy[i][0]  = '\0';
-        sendLenCopy[i]     = 0;
-        sendFlagsCopy[i]   = 0;
+        sendBufCopy[i][0] = '\0';
+        sendLenCopy[i]    = 0;
+        sendFlagsCopy[i]  = 0;
     }
     lastSendFd               = -1;
     connectFails             = false;
@@ -186,6 +188,11 @@ int SocketFake_SocketType(void)
 void SocketFake_SetSendFails(bool fails)
 {
     sendFails = fails;
+}
+
+void SocketFake_FailSendOnCall(int callNumber)
+{
+    sendFailOnCall = callNumber;
 }
 
 /* send accessors */
@@ -344,8 +351,9 @@ ssize_t send(int sockfd, const void* buf, size_t len, int flags)
         sendLenCopy[sendCallCount]           = len;
         sendFlagsCopy[sendCallCount]         = flags;
     }
+    bool failThisCall = sendFails || (sendFailOnCall == sendCallCount);
     sendCallCount++;
-    return sendFails ? (ssize_t) -1 : (ssize_t) len;
+    return failThisCall ? (ssize_t) -1 : (ssize_t) len;
 }
 
 // NOLINTNEXTLINE(readability-inconsistent-declaration-parameter-name) -- POSIX API; parameter names differ from glibc internal names

@@ -3,7 +3,6 @@ Feature: TCP reconnection after server outage
   server recovers. Messages sent during the outage are lost (store
   and forward is a separate feature).
 
-  @wip
   Scenario: Message delivered after server recovery
     Given syslog-ng is running
     And the threaded example is running with transport tcp

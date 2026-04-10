@@ -7,19 +7,24 @@
 #include <cstring>
 #include <getopt.h>
 
-static const char* const STDIN_SEND_ONE = "/tmp/solidsyslog_test_send1.txt";
+static const char* const STDIN_SEND_ONE   = "/tmp/solidsyslog_test_send1.txt";
 static const char* const STDIN_SEND_THREE = "/tmp/solidsyslog_test_send3.txt";
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- path and content are semantically distinct
 static void CreateInputFile(const char* path, const char* content)
 {
+    // NOLINTNEXTLINE(cppcoreguidelines-owning-memory) -- fopen/fclose is POSIX C; no owning memory concern
     FILE* f = std::fopen(path, "w");
+    // NOLINTNEXTLINE(clang-analyzer-unix.Stream) -- test helper; fopen failure is a test infrastructure error
     std::fputs(content, f);
+    // NOLINTNEXTLINE(cppcoreguidelines-owning-memory) -- fclose is POSIX C; no owning memory concern
     std::fclose(f);
 }
 
 static void RedirectStdin(const char* path)
 {
     // NOLINTNEXTLINE(cppcoreguidelines-owning-memory) -- freopen is POSIX; no owning memory concern
+    // cppcheck-suppress ignoredReturnValue -- test helper; freopen failure is a test infrastructure error
     std::freopen(path, "r", stdin);
 }
 
