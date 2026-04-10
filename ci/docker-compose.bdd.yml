@@ -2,13 +2,12 @@ services:
   syslog-ng:
     image: balabit/syslog-ng:latest
     volumes:
-      - ../Bdd/syslog-ng/syslog-ng.conf:/etc/syslog-ng/syslog-ng.conf
+      - ../Bdd/syslog-ng:/etc/syslog-ng
       - bdd-output:/var/log/syslog-ng
       - syslog-ng-ctl:/var/lib/syslog-ng
     entrypoint: ["bash", "-c"]
     command:
       - |
-        chmod 0666 /etc/syslog-ng/syslog-ng.conf
         syslog-ng -F &
         while [ ! -S /var/lib/syslog-ng/syslog-ng.ctl ]; do sleep 0.1; done
         chmod 0777 /var/lib/syslog-ng/syslog-ng.ctl

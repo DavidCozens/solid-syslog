@@ -25,8 +25,7 @@ enum
     UINT32_MAX_DECIMAL_DIGITS      = 10,
     OCTET_COUNTING_SEPARATOR       = 1,
     OCTET_COUNTING_NULL_TERMINATOR = 1,
-    OCTET_COUNTING_PREFIX_CAPACITY =
-        UINT32_MAX_DECIMAL_DIGITS + OCTET_COUNTING_SEPARATOR + OCTET_COUNTING_NULL_TERMINATOR
+    OCTET_COUNTING_PREFIX_CAPACITY = UINT32_MAX_DECIMAL_DIGITS + OCTET_COUNTING_SEPARATOR + OCTET_COUNTING_NULL_TERMINATOR
 };
 
 static bool               Connect(struct SolidSyslogTcpSender* tcp);
@@ -62,7 +61,7 @@ void SolidSyslogTcpSender_Destroy(void)
 
 static bool Send(struct SolidSyslogSender* self, const void* buffer, size_t size)
 {
-    struct SolidSyslogTcpSender* tcp = (struct SolidSyslogTcpSender*) self;
+    struct SolidSyslogTcpSender* tcp    = (struct SolidSyslogTcpSender*) self;
     bool                         result = EnsureConnected(tcp);
 
     if (result)
