@@ -180,12 +180,23 @@ def step_syslog_ng_is_running(context):
 
 @given("the threaded example is running with transport {transport}")
 def step_threaded_running_with_transport(context, transport):
+    start_threaded_example(context, transport)
+
+
+@given("the threaded example is running with transport {transport} and store {store}")
+def step_threaded_running_with_transport_and_store(context, transport, store):
+    start_threaded_example(context, transport, store=store)
+
+
+def start_threaded_example(context, transport, store=None):
     binary = THREADED_BINARY
     assert os.path.exists(binary), (
         f"Threaded binary not found at {binary} — build with cmake first"
     )
 
     cmd = [os.path.join(".", binary), "--transport", transport]
+    if store:
+        cmd.extend(["--store", store])
 
     context.interactive_process = subprocess.Popen(
         cmd,
@@ -423,4 +434,29 @@ def step_check_sequential_ids(context, count):
         )
         assert match.group(1) == str(i), (
             f"Message {i}: expected sequenceId {i}, got {match.group(1)}"
+        )
+
+
+@when("the client sends {count:d} messages")
+def step_client_sends_n_messages(context, count):
+    send_command(context.interactive_process, f"send {count}")
+    # Allow time for the service thread to drain the buffer
+    time.sleep(0.5)
+
+
+@then("the messages have contiguous sequenceIds")
+def step_check_contiguous_sequence_ids(context):
+    ids = []
+    for line in context.all_lines:
+        fields = parse_syslog_line(line)
+        sd = fields.get("STRUCTURED_DATA", "")
+        match = re.search(r'sequenceId="(\d+)"', sd)
+        assert match, (
+            f"No sequenceId in structured data: {sd}"
+        )
+        ids.append(int(match.group(1)))
+    # Check that IDs form a contiguous ascending sequence
+    for i in range(1, len(ids)):
+        assert ids[i] == ids[i - 1] + 1, (
+            f"Non-contiguous sequenceIds: {ids[i - 1]} followed by {ids[i]}"
         )
