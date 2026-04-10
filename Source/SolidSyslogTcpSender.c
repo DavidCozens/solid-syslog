@@ -61,30 +61,30 @@ void SolidSyslogTcpSender_Destroy(void)
 
 static bool Send(struct SolidSyslogSender* self, const void* buffer, size_t size)
 {
-    struct SolidSyslogTcpSender* tcp    = (struct SolidSyslogTcpSender*) self;
-    bool                         result = EnsureConnected(tcp);
+    struct SolidSyslogTcpSender* tcp  = (struct SolidSyslogTcpSender*) self;
+    bool                         sent = false;
 
-    if (result)
+    if (EnsureConnected(tcp))
     {
         char   prefix[OCTET_COUNTING_PREFIX_CAPACITY];
         size_t prefixLen = FormatOctetCountingPrefix(prefix, size);
 
-        result = SendData(tcp, prefix, prefixLen) && SendData(tcp, buffer, size);
+        sent = SendData(tcp, prefix, prefixLen) && SendData(tcp, buffer, size);
     }
 
-    return result;
+    return sent;
 }
 
 static bool EnsureConnected(struct SolidSyslogTcpSender* tcp)
 {
-    bool ready = tcp->connected;
+    bool connected = tcp->connected;
 
-    if (!ready)
+    if (!connected)
     {
-        ready = Connect(tcp);
+        connected = Connect(tcp);
     }
 
-    return ready;
+    return connected;
 }
 
 static bool Connect(struct SolidSyslogTcpSender* tcp)

@@ -28,6 +28,7 @@ def after_scenario(context, scenario):
                 process.wait(timeout=5)
             except Exception:
                 process.kill()
+                process.wait()
         del context.interactive_process
 
     # Restore syslog-ng config if it was changed during the scenario
