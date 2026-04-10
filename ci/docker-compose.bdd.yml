@@ -8,6 +8,7 @@ services:
     entrypoint: ["bash", "-c"]
     command:
       - |
+        chmod 0666 /etc/syslog-ng/syslog-ng.conf
         syslog-ng -F &
         while [ ! -S /var/lib/syslog-ng/syslog-ng.ctl ]; do sleep 0.1; done
         chmod 0777 /var/lib/syslog-ng/syslog-ng.ctl

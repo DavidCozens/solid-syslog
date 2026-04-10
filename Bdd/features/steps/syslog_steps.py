@@ -62,10 +62,21 @@ def parse_syslog_line(line):
     return fields
 
 
-def wait_for_prompt(process):
+def wait_for_prompt(process, timeout=30):
     """Read stdout until we see 'SolidSyslog> ', confirming the command completed."""
+    import select
+
     output = ""
+    deadline = time.monotonic() + timeout
     while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError(
+                f"Timed out waiting for prompt after {timeout}s. Output so far: {output}"
+            )
+        ready, _, _ = select.select([process.stdout], [], [], min(remaining, 0.5))
+        if not ready:
+            continue
         char = process.stdout.read(1)
         if char == "":
             break
@@ -89,7 +100,7 @@ def wait_for_messages(context, expected_messages):
     while line_count(RECEIVED_LOG) < expected_total:
         if time.monotonic() > deadline:
             actual = line_count(RECEIVED_LOG) - context.lines_before
-            assert False, (
+            raise AssertionError(
                 f"syslog-ng received {actual} of {expected_messages} "
                 f"messages within 5 seconds"
             )
@@ -140,11 +151,10 @@ def run_example(context, extra_args=None, binary=None, expected_messages=1):
 
 def syslog_ng_reload():
     """Send RELOAD to syslog-ng via its Unix control socket."""
-    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    sock.connect(SYSLOG_NG_CTL)
-    sock.sendall(b"RELOAD\n")
-    response = sock.recv(1024)
-    sock.close()
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+        sock.connect(SYSLOG_NG_CTL)
+        sock.sendall(b"RELOAD\n")
+        response = sock.recv(1024)
     assert b"OK" in response, f"syslog-ng reload failed: {response}"
     # Allow time for syslog-ng to complete the reload
     time.sleep(0.5)
@@ -326,6 +336,7 @@ def step_check_msg(context, msg):
     )
 
 
+@then("syslog-ng receives {count:d} message")
 @then("syslog-ng receives {count:d} messages")
 def step_check_message_count(context, count):
     # For interactive processes, refresh the line count

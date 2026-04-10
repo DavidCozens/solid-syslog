@@ -59,7 +59,7 @@ void ExampleInteractive_Run(const struct SolidSyslogMessage* message, FILE* inpu
             break;
         }
 
-        if (strncmp(line, "send", 4) == 0)
+        if (strncmp(line, "send", 4) == 0 && (line[4] == ' ' || line[4] == '\0'))
         {
             const char* args = line + 4;
             if (*args == ' ')

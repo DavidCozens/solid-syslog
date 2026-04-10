@@ -19,8 +19,11 @@ def after_scenario(context, scenario):
     if hasattr(context, "interactive_process"):
         process = context.interactive_process
         if process.poll() is None:
-            process.stdin.write("quit\n")
-            process.stdin.flush()
+            try:
+                process.stdin.write("quit\n")
+                process.stdin.flush()
+            except (BrokenPipeError, OSError):
+                pass
             try:
                 process.wait(timeout=5)
             except Exception:
@@ -31,11 +34,10 @@ def after_scenario(context, scenario):
     if hasattr(context, "syslog_ng_config_changed") and context.syslog_ng_config_changed:
         shutil.copy(SYSLOG_NG_FULL_CONF, SYSLOG_NG_CONF)
         try:
-            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            sock.connect(SYSLOG_NG_CTL)
-            sock.sendall(b"RELOAD\n")
-            sock.recv(1024)
-            sock.close()
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+                sock.connect(SYSLOG_NG_CTL)
+                sock.sendall(b"RELOAD\n")
+                sock.recv(1024)
             time.sleep(0.5)
         except Exception:
             pass

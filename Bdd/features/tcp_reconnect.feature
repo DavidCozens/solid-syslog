@@ -7,7 +7,7 @@ Feature: TCP reconnection after server outage
     Given syslog-ng is running
     And the threaded example is running with transport tcp
     When the client sends a message
-    Then syslog-ng receives 1 messages
+    Then syslog-ng receives 1 message
     When the syslog server stops accepting TCP connections
     And the client sends a message
     And the syslog server resumes accepting TCP connections
