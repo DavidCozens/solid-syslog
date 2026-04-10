@@ -143,7 +143,7 @@ Headers in `Interface/` are split by audience — each user includes only what t
 | `SolidSyslogStoreDefinition.h` | Store implementors (extension point) | `SolidSyslogStore` vtable struct |
 | `SolidSyslogNullStore.h` | System setup code (no store-and-forward) | `SolidSyslogNullStore_Create`, `_Destroy` |
 | `SolidSyslogFileApiDefinition.h` | FileApi implementors (extension point) | `SolidSyslogFileApi` vtable struct |
-| `SolidSyslogFileApi.h` | Any code using the file abstraction | `SolidSyslogFileApi_Open`, `_Close`, `_Read`, `_Write`, `_SeekTo`, `_Size`, `_Truncate` |
+| `SolidSyslogFileApi.h` | Any code using the file abstraction | `SolidSyslogFileApi_Open`, `_Close`, `_IsOpen`, `_Read`, `_Write`, `_SeekTo`, `_Size`, `_Truncate` |
 | `SolidSyslogFileStore.h` | System setup code using file-based store | `SolidSyslogFileStore_Create`, `_Destroy` |
 | `SolidSyslogPosixFileApi.h` | System setup code using POSIX file I/O | `SolidSyslogPosixFileApi_Create`, `_Destroy` |
 | `SolidSyslogPosixClock.h` | System setup code using POSIX clock | `SolidSyslogPosixClock_GetTimestamp` |

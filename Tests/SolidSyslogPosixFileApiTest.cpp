@@ -24,6 +24,11 @@ TEST_GROUP(SolidSyslogPosixFileApi)
         SolidSyslogPosixFileApi_Destroy();
         remove(TEST_PATH);
     }
+
+    void OpenTestFile() const
+    {
+        CHECK_TRUE(SolidSyslogFileApi_Open(api, TEST_PATH));
+    }
 };
 
 // clang-format on
@@ -40,25 +45,25 @@ TEST(SolidSyslogPosixFileApi, IsOpenReturnsFalseBeforeOpen)
 
 TEST(SolidSyslogPosixFileApi, OpenReturnsTrue)
 {
-    CHECK_TRUE(SolidSyslogFileApi_Open(api, TEST_PATH));
+    OpenTestFile();
 }
 
 TEST(SolidSyslogPosixFileApi, OpenSetsIsOpen)
 {
-    SolidSyslogFileApi_Open(api, TEST_PATH);
+    OpenTestFile();
     CHECK_TRUE(SolidSyslogFileApi_IsOpen(api));
 }
 
 TEST(SolidSyslogPosixFileApi, CloseResetsIsOpen)
 {
-    SolidSyslogFileApi_Open(api, TEST_PATH);
+    OpenTestFile();
     SolidSyslogFileApi_Close(api);
     CHECK_FALSE(SolidSyslogFileApi_IsOpen(api));
 }
 
 TEST(SolidSyslogPosixFileApi, WriteAndReadRoundTrip)
 {
-    SolidSyslogFileApi_Open(api, TEST_PATH);
+    OpenTestFile();
     CHECK_TRUE(SolidSyslogFileApi_Write(api, "hello", 5));
     SolidSyslogFileApi_SeekTo(api, 0);
 
@@ -69,16 +74,16 @@ TEST(SolidSyslogPosixFileApi, WriteAndReadRoundTrip)
 
 TEST(SolidSyslogPosixFileApi, SizeReturnsFileSize)
 {
-    SolidSyslogFileApi_Open(api, TEST_PATH);
+    OpenTestFile();
     LONGS_EQUAL(0, SolidSyslogFileApi_Size(api));
-    SolidSyslogFileApi_Write(api, "hello", 5);
+    CHECK_TRUE(SolidSyslogFileApi_Write(api, "hello", 5));
     LONGS_EQUAL(5, SolidSyslogFileApi_Size(api));
 }
 
 TEST(SolidSyslogPosixFileApi, TruncateClearsFile)
 {
-    SolidSyslogFileApi_Open(api, TEST_PATH);
-    SolidSyslogFileApi_Write(api, "hello", 5);
+    OpenTestFile();
+    CHECK_TRUE(SolidSyslogFileApi_Write(api, "hello", 5));
     SolidSyslogFileApi_Truncate(api);
     LONGS_EQUAL(0, SolidSyslogFileApi_Size(api));
 }

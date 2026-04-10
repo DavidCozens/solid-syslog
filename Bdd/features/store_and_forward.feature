@@ -1,4 +1,3 @@
-@wip
 Feature: Store and forward during sender outage
   When the syslog server goes down, messages accumulate in the
   file-based store. Once the server recovers, the service loop

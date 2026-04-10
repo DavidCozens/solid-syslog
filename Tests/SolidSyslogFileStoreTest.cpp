@@ -451,3 +451,18 @@ TEST(SolidSyslogFileStoreErrors, HasUnsentReturnsFalseWhenNotOpen)
     store = SolidSyslogFileStore_Create(fileApi, TEST_PATH);
     CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
 }
+
+TEST(SolidSyslogFileStoreErrors, MarkSentDoesNotAdvanceWhenWriteFails)
+{
+    store = SolidSyslogFileStore_Create(fileApi, TEST_PATH);
+    SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
+
+    char   buf[TEST_BUF_SIZE];
+    size_t bytesRead = 0;
+    SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
+
+    FileFake_FailNextWrite();
+    SolidSyslogStore_MarkSent(store);
+
+    CHECK_TRUE(SolidSyslogStore_HasUnsent(store));
+}

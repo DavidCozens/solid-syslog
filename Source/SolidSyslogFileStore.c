@@ -59,7 +59,7 @@ static inline size_t DataOffset(size_t recordStart);
 static inline size_t BoundedSize(uint32_t length, size_t maxSize);
 
 /* MarkSent helpers */
-static inline void WriteSentFlag(void);
+static inline bool WriteSentFlag(void);
 static inline void AdvanceReadCursor(void);
 
 struct SolidSyslogFileStore
@@ -390,20 +390,19 @@ static void MarkSent(struct SolidSyslogStore* self)
 {
     (void) self;
 
-    if (instance.hasReadRecord)
+    if (instance.hasReadRecord && WriteSentFlag())
     {
-        WriteSentFlag();
         AdvanceReadCursor();
         TruncateIfAllSent();
     }
 }
 
-static inline void WriteSentFlag(void)
+static inline bool WriteSentFlag(void)
 {
     uint8_t flag = SENT_FLAG_SENT;
 
     SolidSyslogFileApi_SeekTo(instance.fileApi, instance.lastSentFlagOffset);
-    WriteExact(&flag, SENT_FLAG_SIZE);
+    return WriteExact(&flag, SENT_FLAG_SIZE);
 }
 
 static inline void AdvanceReadCursor(void)
