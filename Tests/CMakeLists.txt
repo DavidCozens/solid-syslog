@@ -19,6 +19,9 @@ set(TEST_SOURCES
     SenderFake.c
     StringFakeTest.cpp
     StringFake.c
+    FileFakeTest.cpp
+    FileFake.c
+    SolidSyslogFileStoreTest.cpp
     main.cpp
 )
 
@@ -35,6 +38,7 @@ if(SOLIDSYSLOG_POSIX)
         ClockFakeTest.cpp
         SolidSyslogUdpSenderTest.cpp
         SolidSyslogTcpSenderTest.cpp
+        SolidSyslogPosixFileApiTest.cpp
     )
 endif()
 

@@ -10,6 +10,8 @@ set(SOURCES
     SolidSyslogStructuredData.c
     SolidSyslogTimeQualitySd.c
     SolidSyslogOriginSd.c
+    SolidSyslogFileApi.c
+    SolidSyslogFileStore.c
 )
 
 if(HAVE_STDATOMIC_H)
@@ -26,6 +28,7 @@ if(SOLIDSYSLOG_POSIX)
         SolidSyslogPosixProcessId.c
         SolidSyslogUdpSender.c
         SolidSyslogTcpSender.c
+        SolidSyslogPosixFileApi.c
     )
 endif()
 
