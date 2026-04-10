@@ -66,24 +66,26 @@ def wait_for_prompt(process, timeout=30):
     """Read stdout until we see 'SolidSyslog> ', confirming the command completed."""
     import select
 
-    output = ""
+    fd = process.stdout.fileno()
+    output = b""
     deadline = time.monotonic() + timeout
     while True:
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             raise TimeoutError(
-                f"Timed out waiting for prompt after {timeout}s. Output so far: {output}"
+                f"Timed out waiting for prompt after {timeout}s. "
+                f"Output so far: {output.decode(errors='replace')}"
             )
-        ready, _, _ = select.select([process.stdout], [], [], min(remaining, 0.5))
+        ready, _, _ = select.select([fd], [], [], min(remaining, 0.5))
         if not ready:
             continue
-        char = process.stdout.read(1)
-        if char == "":
+        data = os.read(fd, 1)
+        if not data:
             break
-        output += char
-        if output.endswith("SolidSyslog> "):
-            return output
-    return output
+        output += data
+        if output.endswith(b"SolidSyslog> "):
+            return output.decode()
+    return output.decode()
 
 
 def send_command(process, command):
