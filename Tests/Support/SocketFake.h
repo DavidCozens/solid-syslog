@@ -33,12 +33,14 @@ EXTERN_C_BEGIN
 
     /* send configuration */
     void SocketFake_SetSendFails(bool fails);
+    void SocketFake_FailSendOnCall(int callNumber);
 
     /* send accessors */
     int         SocketFake_SendCallCount(void);
     const char* SocketFake_SendBufAsString(int callIndex);
     size_t      SocketFake_SendLen(int callIndex);
     int         SocketFake_LastSendFd(void);
+    int         SocketFake_SendFlags(int callIndex);
 
     /* connect configuration */
     void SocketFake_SetConnectFails(bool fails);

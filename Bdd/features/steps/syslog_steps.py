@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 import socket
 import subprocess
 import time
@@ -11,6 +12,9 @@ RECEIVED_LOG = "Bdd/output/received.log"
 EXAMPLE_BINARY = "build/debug/Example/SolidSyslogExample"
 THREADED_BINARY = "build/debug/Example/SolidSyslogThreadedExample"
 SYSLOG_NG_CTL = "/var/lib/syslog-ng/syslog-ng.ctl"
+SYSLOG_NG_CONF = "Bdd/syslog-ng/syslog-ng.conf"
+SYSLOG_NG_FULL_CONF = "Bdd/syslog-ng/syslog-ng-full.conf"
+SYSLOG_NG_UDP_ONLY_CONF = "Bdd/syslog-ng/syslog-ng-udp-only.conf"
 
 
 def line_count(path):
@@ -58,18 +62,59 @@ def parse_syslog_line(line):
     return fields
 
 
-@given("syslog-ng is running")
-def step_syslog_ng_is_running(context):
-    assert os.path.exists(SYSLOG_NG_CTL), (
-        f"syslog-ng control socket not found at {SYSLOG_NG_CTL}"
-    )
+def wait_for_prompt(process, timeout=30):
+    """Read stdout until we see 'SolidSyslog> ', confirming the command completed."""
+    import select
 
-    # Record current line count so we can detect the new message
-    context.lines_before = line_count(RECEIVED_LOG)
+    fd = process.stdout.fileno()
+    output = b""
+    deadline = time.monotonic() + timeout
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError(
+                f"Timed out waiting for prompt after {timeout}s. "
+                f"Output so far: {output.decode(errors='replace')}"
+            )
+        ready, _, _ = select.select([fd], [], [], min(remaining, 0.5))
+        if not ready:
+            continue
+        data = os.read(fd, 1)
+        if not data:
+            break
+        output += data
+        if output.endswith(b"SolidSyslog> "):
+            return output.decode()
+    return output.decode()
+
+
+def send_command(process, command):
+    """Send a command to the interactive process and wait for the prompt."""
+    process.stdin.write(command + "\n")
+    process.stdin.flush()
+    return wait_for_prompt(process)
+
+
+def wait_for_messages(context, expected_messages):
+    """Wait for syslog-ng to flush the expected number of new lines."""
+    expected_total = context.lines_before + expected_messages
+    deadline = time.monotonic() + 5
+    while line_count(RECEIVED_LOG) < expected_total:
+        if time.monotonic() > deadline:
+            actual = line_count(RECEIVED_LOG) - context.lines_before
+            raise AssertionError(
+                f"syslog-ng received {actual} of {expected_messages} "
+                f"messages within 5 seconds"
+            )
+        time.sleep(0.1)
+
+    context.all_lines = read_new_lines(RECEIVED_LOG, context.lines_before)
+    context.fields = parse_syslog_line(context.all_lines[-1])
+    context.message_count = len(context.all_lines)
 
 
 def run_example(context, extra_args=None, binary=None, expected_messages=1):
-    """Run an example binary and wait for syslog-ng to flush the message(s)."""
+    """Run an example binary, send messages via stdin, wait for delivery."""
     binary = binary or EXAMPLE_BINARY
     assert os.path.exists(binary), (
         f"Example binary not found at {binary} — build with cmake first"
@@ -81,31 +126,95 @@ def run_example(context, extra_args=None, binary=None, expected_messages=1):
 
     process = subprocess.Popen(
         cmd,
+        stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
     )
     context.example_pid = process.pid
-    stdout, stderr = process.communicate(timeout=10)
+
+    # Wait for initial prompt
+    wait_for_prompt(process)
+
+    # Send messages and wait for confirmation
+    send_command(process, f"send {expected_messages}")
+
+    # Wait for syslog-ng to receive the messages before quitting
+    wait_for_messages(context, expected_messages)
+
+    # Clean shutdown — write quit, don't wait for prompt (process exits)
+    process.stdin.write("quit\n")
+    process.stdin.flush()
+    process.wait(timeout=10)
     assert process.returncode == 0, (
-        f"Example binary failed: {stderr}"
+        f"Example binary failed with exit code {process.returncode}"
     )
 
-    # Wait for syslog-ng to flush the expected number of new lines
-    expected_total = context.lines_before + expected_messages
-    deadline = time.monotonic() + 5
-    while line_count(RECEIVED_LOG) < expected_total:
-        if time.monotonic() > deadline:
-            actual = line_count(RECEIVED_LOG) - context.lines_before
-            assert False, (
-                f"syslog-ng received {actual} of {expected_messages} "
-                f"messages within 5 seconds"
-            )
-        time.sleep(0.1)
 
-    context.all_lines = read_new_lines(RECEIVED_LOG, context.lines_before)
-    context.fields = parse_syslog_line(context.all_lines[-1])
-    context.message_count = len(context.all_lines)
+def syslog_ng_reload():
+    """Send RELOAD to syslog-ng via its Unix control socket."""
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+        sock.connect(SYSLOG_NG_CTL)
+        sock.sendall(b"RELOAD\n")
+        response = sock.recv(1024)
+    assert b"OK" in response, f"syslog-ng reload failed: {response}"
+    # Allow time for syslog-ng to complete the reload
+    time.sleep(0.5)
+
+
+def syslog_ng_swap_config(config_path):
+    """Replace the active syslog-ng config and reload."""
+    shutil.copy(config_path, SYSLOG_NG_CONF)
+    syslog_ng_reload()
+
+
+@given("syslog-ng is running")
+def step_syslog_ng_is_running(context):
+    assert os.path.exists(SYSLOG_NG_CTL), (
+        f"syslog-ng control socket not found at {SYSLOG_NG_CTL}"
+    )
+
+    # Record current line count so we can detect the new message
+    context.lines_before = line_count(RECEIVED_LOG)
+
+
+@given("the threaded example is running with transport {transport}")
+def step_threaded_running_with_transport(context, transport):
+    binary = THREADED_BINARY
+    assert os.path.exists(binary), (
+        f"Threaded binary not found at {binary} — build with cmake first"
+    )
+
+    cmd = [os.path.join(".", binary), "--transport", transport]
+
+    context.interactive_process = subprocess.Popen(
+        cmd,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    context.example_pid = context.interactive_process.pid
+    # Wait for the initial prompt
+    wait_for_prompt(context.interactive_process)
+
+
+@when("the client sends a message")
+def step_client_sends_message(context):
+    send_command(context.interactive_process, "send")
+    # Allow time for the service thread to drain the buffer and send
+    time.sleep(0.2)
+
+
+@when("the syslog server stops accepting TCP connections")
+def step_syslog_server_stops_tcp(context):
+    syslog_ng_swap_config(SYSLOG_NG_UDP_ONLY_CONF)
+    context.syslog_ng_config_changed = True
+
+
+@when("the syslog server resumes accepting TCP connections")
+def step_syslog_server_resumes_tcp(context):
+    syslog_ng_swap_config(SYSLOG_NG_FULL_CONF)
 
 
 @when("the example program sends a syslog message")
@@ -125,7 +234,7 @@ def step_threaded_sends_with_transport(context, transport):
 
 @when("the threaded example sends {count:d} syslog messages")
 def step_threaded_sends_multiple(context, count):
-    run_example(context, ["--count", str(count)], binary=THREADED_BINARY, expected_messages=count)
+    run_example(context, binary=THREADED_BINARY, expected_messages=count)
 
 
 @when("the example program sends a message with facility {facility:d} and severity {severity:d}")
@@ -146,6 +255,11 @@ def step_example_sends_with_body(context, body):
 @when('the example program sends a complete message with message ID "{msgid}" and body "{body}"')
 def step_example_sends_with_msgid_and_body(context, msgid, body):
     run_example(context, ["--msgid", msgid, "--message", body])
+
+
+@when("the example program sends {count:d} syslog messages")
+def step_example_sends_multiple(context, count):
+    run_example(context, expected_messages=count)
 
 
 @then('syslog-ng receives a message with priority "{priority}"')
@@ -224,13 +338,12 @@ def step_check_msg(context, msg):
     )
 
 
-@when("the example program sends {count:d} syslog messages")
-def step_example_sends_multiple(context, count):
-    run_example(context, ["--count", str(count)], expected_messages=count)
-
-
+@then("syslog-ng receives {count:d} message")
 @then("syslog-ng receives {count:d} messages")
 def step_check_message_count(context, count):
+    # For interactive processes, refresh the line count
+    if hasattr(context, "interactive_process"):
+        wait_for_messages(context, count)
     assert context.message_count == count, (
         f"Expected {count} messages, got {context.message_count}"
     )

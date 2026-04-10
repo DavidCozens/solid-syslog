@@ -30,9 +30,11 @@ enum
 };
 
 static bool   sendFails;
+static int    sendFailOnCall;
 static int    sendCallCount;
 static char   sendBufCopy[SOCKETFAKE_MAX_SEND_CALLS][SOCKETFAKE_MAX_BUFFER_SIZE];
 static size_t sendLenCopy[SOCKETFAKE_MAX_SEND_CALLS];
+static int    sendFlagsCopy[SOCKETFAKE_MAX_SEND_CALLS];
 static int    lastSendFd;
 
 static bool               connectFails;
@@ -66,11 +68,13 @@ void SocketFake_Reset(void)
     lastAddrLen     = 0;
     lastSendtoFd    = -1;
     sendFails       = false;
+    sendFailOnCall  = -1;
     sendCallCount   = 0;
     for (int i = 0; i < SOCKETFAKE_MAX_SEND_CALLS; i++)
     {
         sendBufCopy[i][0] = '\0';
         sendLenCopy[i]    = 0;
+        sendFlagsCopy[i]  = 0;
     }
     lastSendFd               = -1;
     connectFails             = false;
@@ -186,6 +190,11 @@ void SocketFake_SetSendFails(bool fails)
     sendFails = fails;
 }
 
+void SocketFake_FailSendOnCall(int callNumber)
+{
+    sendFailOnCall = callNumber;
+}
+
 /* send accessors */
 
 int SocketFake_SendCallCount(void)
@@ -214,6 +223,15 @@ size_t SocketFake_SendLen(int callIndex)
 int SocketFake_LastSendFd(void)
 {
     return lastSendFd;
+}
+
+int SocketFake_SendFlags(int callIndex)
+{
+    if (callIndex < 0 || callIndex >= SOCKETFAKE_MAX_SEND_CALLS)
+    {
+        return 0;
+    }
+    return sendFlagsCopy[callIndex];
 }
 
 /* connect configuration */
@@ -323,7 +341,6 @@ ssize_t sendto(int sockfd, const void* buf, size_t len, int flags, const struct 
 ssize_t send(int sockfd, const void* buf, size_t len, int flags)
 // clang-format on
 {
-    (void) flags;
     lastSendFd = sockfd;
     if (sendCallCount < SOCKETFAKE_MAX_SEND_CALLS)
     {
@@ -332,9 +349,11 @@ ssize_t send(int sockfd, const void* buf, size_t len, int flags)
         memcpy(sendBufCopy[sendCallCount], buf, copySize);
         sendBufCopy[sendCallCount][copySize] = '\0';
         sendLenCopy[sendCallCount]           = len;
+        sendFlagsCopy[sendCallCount]         = flags;
     }
+    bool failThisCall = sendFails || (sendFailOnCall == sendCallCount);
     sendCallCount++;
-    return sendFails ? (ssize_t) -1 : (ssize_t) len;
+    return failThisCall ? (ssize_t) -1 : (ssize_t) len;
 }
 
 // NOLINTNEXTLINE(readability-inconsistent-declaration-parameter-name) -- POSIX API; parameter names differ from glibc internal names

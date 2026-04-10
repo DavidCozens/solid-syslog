@@ -1,5 +1,6 @@
 #include "ExampleAppName.h"
 #include "ExampleCommandLine.h"
+#include "ExampleInteractive.h"
 #include "ExampleServiceThread.h"
 #include "ExampleTcpConfig.h"
 #include "ExampleUdpConfig.h"
@@ -103,12 +104,9 @@ int main(int argc, char* argv[])
         .messageId = options.messageId,
         .msg       = options.msg,
     };
-    for (int i = 0; i < options.count; i++)
-    {
-        SolidSyslog_Log(&message);
-    }
 
-    usleep(100000);
+    ExampleInteractive_Run(&message, stdin);
+
     shutdown_flag = true;
     pthread_join(serviceThread, NULL);
 

@@ -10,8 +10,6 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-static bool Send(struct SolidSyslogSender* self, const void* buffer, size_t size);
-
 struct SolidSyslogTcpSender
 {
     struct SolidSyslogSender          base;
@@ -22,53 +20,32 @@ struct SolidSyslogTcpSender
 
 static struct SolidSyslogTcpSender instance = {.fd = -1};
 
-static struct sockaddr_in ResolveAddress(const struct SolidSyslogTcpSenderConfig* config)
+enum
 {
-    struct addrinfo  hints  = {0};
-    struct addrinfo* result = NULL;
-    hints.ai_family         = AF_INET;
-    hints.ai_socktype       = SOCK_STREAM;
+    UINT32_MAX_DECIMAL_DIGITS      = 10,
+    OCTET_COUNTING_SEPARATOR       = 1,
+    OCTET_COUNTING_NULL_TERMINATOR = 1,
+    OCTET_COUNTING_PREFIX_CAPACITY = UINT32_MAX_DECIMAL_DIGITS + OCTET_COUNTING_SEPARATOR + OCTET_COUNTING_NULL_TERMINATOR
+};
 
-    // NOLINTNEXTLINE(bugprone-unused-return-value) -- error handling deferred to error handling phase
-    getaddrinfo(config->getHost(), NULL, &hints, &result);
-
-    struct sockaddr_in addr = *(struct sockaddr_in*) result->ai_addr;
-    addr.sin_port           = htons((uint16_t) config->getPort());
-    freeaddrinfo(result);
-
-    return addr;
-}
+static bool               Connect(struct SolidSyslogTcpSender* tcp);
+static void               CreateSocket(struct SolidSyslogTcpSender* tcp);
+static void               Disconnect(struct SolidSyslogTcpSender* tcp);
+static bool               EnsureConnected(struct SolidSyslogTcpSender* tcp);
+static size_t             FormatOctetCountingPrefix(char* prefix, size_t messageSize);
+static bool               Send(struct SolidSyslogSender* self, const void* buffer, size_t size);
+static bool               SendData(struct SolidSyslogTcpSender* tcp, const void* data, size_t len);
+static struct sockaddr_in BuildAddress(const struct addrinfo* resolved, int port);
+static struct sockaddr_in ResolveAddress(const struct SolidSyslogTcpSenderConfig* config);
+static void               EnableTcpNoDelay(int fd);
 
 struct SolidSyslogSender* SolidSyslogTcpSender_Create(const struct SolidSyslogTcpSenderConfig* config)
 {
     instance.config    = *config;
     instance.base.Send = Send;
     instance.connected = false;
-    instance.fd        = socket(AF_INET, SOCK_STREAM, 0);
-    int enable         = 1;
-    setsockopt(instance.fd, IPPROTO_TCP, TCP_NODELAY, &enable, sizeof(enable));
+    instance.fd        = -1;
     return &instance.base;
-}
-
-static bool Send(struct SolidSyslogSender* self, const void* buffer, size_t size)
-{
-    struct SolidSyslogTcpSender* tcp = (struct SolidSyslogTcpSender*) self;
-
-    if (!tcp->connected)
-    {
-        struct sockaddr_in addr = ResolveAddress(&tcp->config);
-        // NOLINTNEXTLINE(bugprone-unused-return-value) -- error handling deferred to S15.2
-        connect(tcp->fd, (struct sockaddr*) &addr, sizeof(addr));
-        tcp->connected = true;
-    }
-
-    char   prefix[12];
-    size_t prefixLen = SolidSyslogFormat_Uint32(prefix, (uint32_t) size);
-    prefixLen += SolidSyslogFormat_Character(prefix + prefixLen, ' ');
-    send(tcp->fd, prefix, prefixLen, 0);
-    send(tcp->fd, buffer, size, 0);
-
-    return true;
 }
 
 void SolidSyslogTcpSender_Destroy(void)
@@ -80,4 +57,113 @@ void SolidSyslogTcpSender_Destroy(void)
     instance.fd        = -1;
     instance.base.Send = NULL;
     instance.connected = false;
+}
+
+static bool Send(struct SolidSyslogSender* self, const void* buffer, size_t size)
+{
+    struct SolidSyslogTcpSender* tcp  = (struct SolidSyslogTcpSender*) self;
+    bool                         sent = false;
+
+    if (EnsureConnected(tcp))
+    {
+        char   prefix[OCTET_COUNTING_PREFIX_CAPACITY];
+        size_t prefixLen = FormatOctetCountingPrefix(prefix, size);
+
+        sent = SendData(tcp, prefix, prefixLen) && SendData(tcp, buffer, size);
+    }
+
+    return sent;
+}
+
+static bool EnsureConnected(struct SolidSyslogTcpSender* tcp)
+{
+    bool connected = tcp->connected;
+
+    if (!connected)
+    {
+        connected = Connect(tcp);
+    }
+
+    return connected;
+}
+
+static bool Connect(struct SolidSyslogTcpSender* tcp)
+{
+    CreateSocket(tcp);
+
+    struct sockaddr_in addr = ResolveAddress(&tcp->config);
+    // NOLINTNEXTLINE(clang-analyzer-unix.StdCLibraryFunctions) -- socket() failure handling deferred to error handling epic
+    bool connected = connect(tcp->fd, (struct sockaddr*) &addr, sizeof(addr)) == 0;
+
+    if (connected)
+    {
+        tcp->connected = true;
+    }
+    else
+    {
+        Disconnect(tcp);
+    }
+
+    return connected;
+}
+
+static void CreateSocket(struct SolidSyslogTcpSender* tcp)
+{
+    tcp->fd = socket(AF_INET, SOCK_STREAM, 0);
+    EnableTcpNoDelay(tcp->fd);
+}
+
+static void EnableTcpNoDelay(int fd)
+{
+    int enable = 1;
+    setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &enable, sizeof(enable));
+}
+
+static struct sockaddr_in ResolveAddress(const struct SolidSyslogTcpSenderConfig* config)
+{
+    struct addrinfo  hints  = {0};
+    struct addrinfo* result = NULL;
+    hints.ai_family         = AF_INET;
+    hints.ai_socktype       = SOCK_STREAM;
+
+    // NOLINTNEXTLINE(bugprone-unused-return-value) -- error handling deferred to error handling phase
+    getaddrinfo(config->getHost(), NULL, &hints, &result);
+
+    struct sockaddr_in addr = BuildAddress(result, config->getPort());
+    freeaddrinfo(result);
+
+    return addr;
+}
+
+static struct sockaddr_in BuildAddress(const struct addrinfo* resolved, int port)
+{
+    struct sockaddr_in addr = *(struct sockaddr_in*) resolved->ai_addr;
+    addr.sin_port           = htons((uint16_t) port);
+    return addr;
+}
+
+static void Disconnect(struct SolidSyslogTcpSender* tcp)
+{
+    close(tcp->fd);
+    tcp->fd        = -1;
+    tcp->connected = false;
+}
+
+static size_t FormatOctetCountingPrefix(char* prefix, size_t messageSize)
+{
+    size_t len = SolidSyslogFormat_Uint32(prefix, (uint32_t) messageSize);
+    len += SolidSyslogFormat_Character(prefix + len, ' ');
+    return len;
+}
+
+static bool SendData(struct SolidSyslogTcpSender* tcp, const void* data, size_t len)
+{
+    bool sent = send(tcp->fd, data, len, MSG_NOSIGNAL) >= 0;
+
+    if (!sent)
+    {
+        Disconnect(tcp);
+    }
+
+    return sent;
 }

@@ -4,6 +4,7 @@ set(COMMON_SOURCES
     Common/ExampleServiceThread.c
     Common/ExampleUdpConfig.c
     Common/ExampleTcpConfig.c
+    Common/ExampleInteractive.c
 )
 
 # Single-task example: NullBuffer, direct send, bare-metal model
