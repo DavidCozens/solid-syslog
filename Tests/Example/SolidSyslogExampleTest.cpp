@@ -23,8 +23,8 @@ static void CreateInputFile(const char* path, const char* content)
 
 static void RedirectStdin(const char* path)
 {
-    // NOLINTNEXTLINE(cppcoreguidelines-owning-memory) -- freopen is POSIX; no owning memory concern
     // cppcheck-suppress ignoredReturnValue -- test helper; freopen failure is a test infrastructure error
+    // NOLINTNEXTLINE(cppcoreguidelines-owning-memory) -- freopen redirects stdin for test; no ownership transfer
     std::freopen(path, "r", stdin);
 }
 
