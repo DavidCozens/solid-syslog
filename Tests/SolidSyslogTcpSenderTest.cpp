@@ -327,6 +327,13 @@ TEST(SolidSyslogTcpSenderFailure, SendReturnsFalseWhenConnectFails)
     CHECK_FALSE(Send());
 }
 
+TEST(SolidSyslogTcpSenderFailure, ConnectFailureClosesSocket)
+{
+    SocketFake_SetConnectFails(true);
+    Send();
+    LONGS_EQUAL(1, SocketFake_CloseCallCount());
+}
+
 TEST(SolidSyslogTcpSenderFailure, SendReturnsFalseWhenSendFails)
 {
     SocketFake_SetSendFails(true);
@@ -337,6 +344,14 @@ TEST(SolidSyslogTcpSenderFailure, SendFailureClosesSocket)
 {
     SocketFake_SetSendFails(true);
     Send();
+    LONGS_EQUAL(1, SocketFake_CloseCallCount());
+}
+
+TEST(SolidSyslogTcpSenderFailure, DestroyAfterSendFailureDoesNotDoubleClose)
+{
+    SocketFake_SetSendFails(true);
+    Send();
+    SolidSyslogTcpSender_Destroy();
     LONGS_EQUAL(1, SocketFake_CloseCallCount());
 }
 

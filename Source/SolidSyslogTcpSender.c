@@ -64,6 +64,8 @@ static bool Connect(struct SolidSyslogTcpSender* tcp)
     // NOLINTNEXTLINE(clang-analyzer-unix.StdCLibraryFunctions) -- socket() failure handling deferred to error handling epic
     if (connect(tcp->fd, (struct sockaddr*) &addr, sizeof(addr)) != 0)
     {
+        close(tcp->fd);
+        tcp->fd = -1;
         return false;
     }
 
