@@ -6,7 +6,7 @@
 
 EXTERN_C_BEGIN
 
-    struct SolidSyslogStore* SolidSyslogFileStore_Create(struct SolidSyslogFileApi* fileApi, const char* path);
+    struct SolidSyslogStore* SolidSyslogFileStore_Create(struct SolidSyslogFileApi * fileApi, const char* path);
     void                     SolidSyslogFileStore_Destroy(void);
 
 EXTERN_C_END

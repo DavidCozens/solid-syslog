@@ -180,23 +180,14 @@ def step_syslog_ng_is_running(context):
 
 @given("the threaded example is running with transport {transport}")
 def step_threaded_running_with_transport(context, transport):
-    start_threaded_example(context, transport)
-
-
-@given("the threaded example is running with transport {transport} and store {store}")
-def step_threaded_running_with_transport_and_store(context, transport, store):
-    start_threaded_example(context, transport, store=store)
-
-
-def start_threaded_example(context, transport, store=None):
     binary = THREADED_BINARY
     assert os.path.exists(binary), (
         f"Threaded binary not found at {binary} — build with cmake first"
     )
 
     cmd = [os.path.join(".", binary), "--transport", transport]
-    if store:
-        cmd.extend(["--store", store])
+    if getattr(context, "store_type", None):
+        cmd.extend(["--store", context.store_type])
 
     context.interactive_process = subprocess.Popen(
         cmd,
@@ -208,6 +199,11 @@ def start_threaded_example(context, transport, store=None):
     context.example_pid = context.interactive_process.pid
     # Wait for the initial prompt
     wait_for_prompt(context.interactive_process)
+
+
+@given("the file store is enabled")
+def step_file_store_enabled(context):
+    context.store_type = "file"
 
 
 @when("the client sends a message")
