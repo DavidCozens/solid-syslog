@@ -1,5 +1,39 @@
 # Changelog
 
+## [1.2.0](https://github.com/DavidCozens/solid-syslog/compare/v1.1.0...v1.2.0) (2026-04-10)
+
+
+### Features
+
+* generalise SD config from single pointer to array (S7.2) ([#73](https://github.com/DavidCozens/solid-syslog/issues/73)) ([4808be8](https://github.com/DavidCozens/solid-syslog/commit/4808be858fd05a26f0b3b1766779371a064dbfc1))
+* origin structured data — software and swVersion (S7.3) ([#76](https://github.com/DavidCozens/solid-syslog/issues/76)) ([7f7834b](https://github.com/DavidCozens/solid-syslog/commit/7f7834b61750e8187e530346d78b0884829e875e))
+* S15.1 TCP sender with RFC 6587 octet-counting framing ([#91](https://github.com/DavidCozens/solid-syslog/issues/91)) ([1d77d3d](https://github.com/DavidCozens/solid-syslog/commit/1d77d3d4740b0695c250f93ffac0846cf8457cc5))
+* S15.2 Connection failure detection and reconnection ([#93](https://github.com/DavidCozens/solid-syslog/issues/93)) ([07768dd](https://github.com/DavidCozens/solid-syslog/commit/07768dda4880582510f94268d65ec459dd6e1175))
+* S4.1 buffer abstraction and NullBuffer ([#57](https://github.com/DavidCozens/solid-syslog/issues/57)) ([32237ce](https://github.com/DavidCozens/solid-syslog/commit/32237cee3ef4c1e84b65f2886076bb9724c0a88d))
+* S4.2 SolidSyslog_Service API and Buffer Read ([#58](https://github.com/DavidCozens/solid-syslog/issues/58)) ([5293a1d](https://github.com/DavidCozens/solid-syslog/commit/5293a1dcb5509caf0694ef7095fc93e097d9d867))
+* S4.3 PosixMqBuffer — POSIX message queue buffer ([#59](https://github.com/DavidCozens/solid-syslog/issues/59)) ([35228e5](https://github.com/DavidCozens/solid-syslog/commit/35228e5ba8ce5d817aad5798570251f77d62f07e))
+* S4.4 BDD — buffered message delivery through syslog-ng ([#62](https://github.com/DavidCozens/solid-syslog/issues/62)) ([7bb2254](https://github.com/DavidCozens/solid-syslog/commit/7bb22542e00839404b9d95319fbe821112d7c1bc))
+* S4.4 example restructure — shared code, threaded example, test harness ([#61](https://github.com/DavidCozens/solid-syslog/issues/61)) ([ed8b559](https://github.com/DavidCozens/solid-syslog/commit/ed8b559cfc954f47f268a55609d93524afdad8d9))
+* S5.2 Store abstraction, NullStore, and Service algorithm ([#84](https://github.com/DavidCozens/solid-syslog/issues/84)) ([621ada7](https://github.com/DavidCozens/solid-syslog/commit/621ada7b5d96ee068997e9573273973121df75a4))
+* S5.3 File-based store with sender outage BDD ([#98](https://github.com/DavidCozens/solid-syslog/issues/98)) ([51ac3e1](https://github.com/DavidCozens/solid-syslog/commit/51ac3e1c9cdaf53785302da63f8ad021092de5e2))
+* structured data with sequenceId (S7.1) ([#72](https://github.com/DavidCozens/solid-syslog/issues/72)) ([8b96405](https://github.com/DavidCozens/solid-syslog/commit/8b96405ccf0c6dc2936642b952ab22d26dbff547)), closes [#65](https://github.com/DavidCozens/solid-syslog/issues/65)
+
+
+### CI / Build
+
+* add missing needs dependencies and resilient artifact downloads ([#71](https://github.com/DavidCozens/solid-syslog/issues/71)) ([37e8718](https://github.com/DavidCozens/solid-syslog/commit/37e87181e9fee3d779d983793509c8cf40caf2b2))
+* harden BDD infrastructure robustness ([#94](https://github.com/DavidCozens/solid-syslog/issues/94)) ([51d4c96](https://github.com/DavidCozens/solid-syslog/commit/51d4c966e02fc9fb9f48c9d1510ca61abc1f4ea0))
+* unified quality dashboard with Quality Monitor ([#63](https://github.com/DavidCozens/solid-syslog/issues/63)) ([fb8c0a1](https://github.com/DavidCozens/solid-syslog/commit/fb8c0a1d71ca036c0ebd3cee0249e2a85c889bab))
+
+
+### Refactoring
+
+* align function ordering and test style with conventions ([#49](https://github.com/DavidCozens/solid-syslog/issues/49)) ([b11ea91](https://github.com/DavidCozens/solid-syslog/commit/b11ea9199fd6b7ca4476b54b7cc4e3c9ec000d69))
+* change SolidSyslogClockFunction to pointer parameter ([#74](https://github.com/DavidCozens/solid-syslog/issues/74)) ([f66bec3](https://github.com/DavidCozens/solid-syslog/commit/f66bec3620a17371723b5769ad61a61981cf2d3d))
+* expand abbreviated names and correct test double taxonomy ([#85](https://github.com/DavidCozens/solid-syslog/issues/85)) ([bfc243d](https://github.com/DavidCozens/solid-syslog/commit/bfc243d883423852dcbe973d9678e13623ff0a7c))
+* S5.1 Sender.Send returns bool for send success/failure ([#83](https://github.com/DavidCozens/solid-syslog/issues/83)) ([355d169](https://github.com/DavidCozens/solid-syslog/commit/355d1697b48fae0e56526f6fd30b9a7196b82c90))
+* single-instance SolidSyslog with Null Object pattern (S12.1) ([#78](https://github.com/DavidCozens/solid-syslog/issues/78)) ([ee7c7b0](https://github.com/DavidCozens/solid-syslog/commit/ee7c7b0a9ecef44effad5b16873a4bed822a99b9))
+
 ## [1.1.0](https://github.com/DavidCozens/solid-syslog/compare/v1.0.0...v1.1.0) (2026-04-03)
 
 
