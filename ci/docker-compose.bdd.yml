@@ -20,6 +20,7 @@ services:
 
   behave:
     image: ghcr.io/davidcozens/behave:sha-b871b1c
+    user: "0"
     volumes:
       - ..:/workspaces/SolidSyslog
       - bdd-output:/workspaces/SolidSyslog/Bdd/output
