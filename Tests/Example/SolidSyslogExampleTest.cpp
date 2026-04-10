@@ -3,8 +3,25 @@
 #include "ClockFake.h"
 #include "SocketFake.h"
 
+#include <cstdio>
 #include <cstring>
 #include <getopt.h>
+
+static const char* const STDIN_SEND_ONE = "/tmp/solidsyslog_test_send1.txt";
+static const char* const STDIN_SEND_THREE = "/tmp/solidsyslog_test_send3.txt";
+
+static void CreateInputFile(const char* path, const char* content)
+{
+    FILE* f = std::fopen(path, "w");
+    std::fputs(content, f);
+    std::fclose(f);
+}
+
+static void RedirectStdin(const char* path)
+{
+    // NOLINTNEXTLINE(cppcoreguidelines-owning-memory) -- freopen is POSIX; no owning memory concern
+    std::freopen(path, "r", stdin);
+}
 
 // clang-format off
 TEST_GROUP(SolidSyslogExample)
@@ -15,6 +32,8 @@ TEST_GROUP(SolidSyslogExample)
         ClockFake_Reset();
         ClockFake_SetTime(1743768600, 0);
         optind = 1;
+        CreateInputFile(STDIN_SEND_ONE, "send\nquit\n");
+        CreateInputFile(STDIN_SEND_THREE, "send 3\nquit\n");
     }
 
     // NOLINTNEXTLINE(readability-convert-member-functions-to-static) -- CppUTest TEST_GROUP method
@@ -25,6 +44,7 @@ TEST_GROUP(SolidSyslogExample)
 
     int RunWithNoArgs()
     {
+        RedirectStdin(STDIN_SEND_ONE);
         char  arg0[] = "SolidSyslogExample";
         char* argv[] = {arg0, nullptr};
         return Run(1, argv);
@@ -60,6 +80,7 @@ TEST(SolidSyslogExample, DefaultMessageContainsLocal0InfoPrival)
 
 TEST(SolidSyslogExample, FacilityFlagAppearsInPrival)
 {
+    RedirectStdin(STDIN_SEND_ONE);
     char  arg0[] = "SolidSyslogExample";
     char  arg1[] = "--facility";
     char  arg2[] = "0";
@@ -70,6 +91,7 @@ TEST(SolidSyslogExample, FacilityFlagAppearsInPrival)
 
 TEST(SolidSyslogExample, SeverityFlagAppearsInPrival)
 {
+    RedirectStdin(STDIN_SEND_ONE);
     char  arg0[] = "SolidSyslogExample";
     char  arg1[] = "--severity";
     char  arg2[] = "0";
@@ -92,6 +114,7 @@ TEST(SolidSyslogExample, SendsToConfiguredPort)
 
 TEST(SolidSyslogExample, AppNameDerivedFromArgv0)
 {
+    RedirectStdin(STDIN_SEND_ONE);
     char  arg0[] = "/usr/bin/MyApp";
     char* argv[] = {arg0, nullptr};
     Run(1, argv);
@@ -114,6 +137,7 @@ TEST(SolidSyslogExample, SocketClosedAfterRun)
 
 TEST(SolidSyslogExample, MsgIdFlagAppearsInMessage)
 {
+    RedirectStdin(STDIN_SEND_ONE);
     char  arg0[] = "SolidSyslogExample";
     char  arg1[] = "--msgid";
     char  arg2[] = "ID47";
@@ -122,18 +146,18 @@ TEST(SolidSyslogExample, MsgIdFlagAppearsInMessage)
     CHECK(std::strstr(SocketFake_LastBufAsString(), "ID47") != nullptr);
 }
 
-TEST(SolidSyslogExample, CountFlagSendsMultipleMessages)
+TEST(SolidSyslogExample, SendCommandSendsMultipleMessages)
 {
+    RedirectStdin(STDIN_SEND_THREE);
     char  arg0[] = "SolidSyslogExample";
-    char  arg1[] = "--count";
-    char  arg2[] = "3";
-    char* argv[] = {arg0, arg1, arg2, nullptr};
-    Run(3, argv);
+    char* argv[] = {arg0, nullptr};
+    Run(1, argv);
     LONGS_EQUAL(3, SocketFake_SendtoCallCount());
 }
 
 TEST(SolidSyslogExample, MessageFlagAppearsInMessage)
 {
+    RedirectStdin(STDIN_SEND_ONE);
     char  arg0[] = "SolidSyslogExample";
     char  arg1[] = "--message";
     char  arg2[] = "system started";

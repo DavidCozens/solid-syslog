@@ -22,13 +22,20 @@ services:
   syslog-ng:
     image: balabit/syslog-ng:latest
     volumes:
-      - ../Bdd/syslog-ng/syslog-ng.conf:/etc/syslog-ng/syslog-ng.conf:ro
+      - ../Bdd/syslog-ng/syslog-ng.conf:/etc/syslog-ng/syslog-ng.conf
       - ../Bdd/output:/var/log/syslog-ng
       - syslog-ng-ctl:/var/lib/syslog-ng
     ports:
       - "5514:5514/udp"
       - "5514:5514/tcp"
     working_dir: /workspaces/SolidSyslog
+    entrypoint: ["bash", "-c"]
+    command:
+      - |
+        syslog-ng -F &
+        while [ ! -S /var/lib/syslog-ng/syslog-ng.ctl ]; do sleep 0.1; done
+        chmod 0777 /var/lib/syslog-ng/syslog-ng.ctl
+        wait
 
   behave:
     image: ghcr.io/davidcozens/behave:sha-b871b1c

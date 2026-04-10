@@ -19,4 +19,5 @@ target_sources(ExampleTests PRIVATE
     ${CMAKE_SOURCE_DIR}/Example/Common/ExampleCommandLine.c
     ${CMAKE_SOURCE_DIR}/Example/Common/ExampleServiceThread.c
     ${CMAKE_SOURCE_DIR}/Example/Common/ExampleUdpConfig.c
+    ${CMAKE_SOURCE_DIR}/Example/Common/ExampleInteractive.c
 )

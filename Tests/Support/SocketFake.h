@@ -39,6 +39,7 @@ EXTERN_C_BEGIN
     const char* SocketFake_SendBufAsString(int callIndex);
     size_t      SocketFake_SendLen(int callIndex);
     int         SocketFake_LastSendFd(void);
+    int         SocketFake_SendFlags(int callIndex);
 
     /* connect configuration */
     void SocketFake_SetConnectFails(bool fails);

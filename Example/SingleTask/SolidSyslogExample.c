@@ -1,6 +1,7 @@
 #include "SolidSyslogExample.h"
 #include "ExampleAppName.h"
 #include "ExampleCommandLine.h"
+#include "ExampleInteractive.h"
 #include "ExampleUdpConfig.h"
 #include "SolidSyslog.h"
 #include "SolidSyslogAtomicCounter.h"
@@ -65,10 +66,8 @@ int SolidSyslogExample_Run(int argc, char* argv[])
         .messageId = options.messageId,
         .msg       = options.msg,
     };
-    for (int i = 0; i < options.count; i++)
-    {
-        SolidSyslog_Log(&message);
-    }
+
+    ExampleInteractive_Run(&message, stdin);
 
     SolidSyslog_Destroy();
     SolidSyslogOriginSd_Destroy();

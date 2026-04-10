@@ -12,7 +12,6 @@ EXTERN_C_BEGIN
         enum SolidSyslog_Severity severity;
         const char*               messageId;
         const char*               msg;
-        int                       count;
         const char*               transport;
     };
 

@@ -65,8 +65,8 @@ static bool Send(struct SolidSyslogSender* self, const void* buffer, size_t size
     char   prefix[12];
     size_t prefixLen = SolidSyslogFormat_Uint32(prefix, (uint32_t) size);
     prefixLen += SolidSyslogFormat_Character(prefix + prefixLen, ' ');
-    send(tcp->fd, prefix, prefixLen, 0);
-    send(tcp->fd, buffer, size, 0);
+    send(tcp->fd, prefix, prefixLen, MSG_NOSIGNAL);
+    send(tcp->fd, buffer, size, MSG_NOSIGNAL);
 
     return true;
 }

@@ -10,7 +10,6 @@ int ExampleCommandLine_Parse(int argc, char* argv[], struct ExampleOptions* opti
     options->severity  = SOLIDSYSLOG_SEVERITY_INFO;
     options->messageId = NULL;
     options->msg       = NULL;
-    options->count     = 1;
     options->transport = "udp";
 
     static struct option longOptions[] = {
@@ -18,13 +17,12 @@ int ExampleCommandLine_Parse(int argc, char* argv[], struct ExampleOptions* opti
         {"severity", required_argument, NULL, 's'},
         {"msgid", required_argument, NULL, 'i'},
         {"message", required_argument, NULL, 'm'},
-        {"count", required_argument, NULL, 'c'},
         {"transport", required_argument, NULL, 't'},
         {NULL, 0, NULL, 0},
     };
 
     int opt = 0;
-    while ((opt = getopt_long(argc, argv, "f:s:i:m:c:t:", longOptions, NULL)) != -1)
+    while ((opt = getopt_long(argc, argv, "f:s:i:m:t:", longOptions, NULL)) != -1)
     {
         switch (opt)
         {
@@ -39,9 +37,6 @@ int ExampleCommandLine_Parse(int argc, char* argv[], struct ExampleOptions* opti
                 break;
             case 'm':
                 options->msg = optarg;
-                break;
-            case 'c':
-                options->count = atoi(optarg);
                 break;
             case 't':
                 if ((strcmp(optarg, "udp") != 0) && (strcmp(optarg, "tcp") != 0))
