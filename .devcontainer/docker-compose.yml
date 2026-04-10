@@ -33,7 +33,13 @@ services:
     command:
       - |
         syslog-ng -F &
-        while [ ! -S /var/lib/syslog-ng/syslog-ng.ctl ]; do sleep 0.1; done
+        pid=$$!
+        deadline=$$((SECONDS + 30))
+        while [ ! -S /var/lib/syslog-ng/syslog-ng.ctl ]; do
+          kill -0 "$$pid" 2>/dev/null || { echo "syslog-ng exited unexpectedly"; exit 1; }
+          [ "$$SECONDS" -ge "$$deadline" ] && { echo "Timed out waiting for syslog-ng control socket"; kill "$$pid" 2>/dev/null; exit 1; }
+          sleep 0.1
+        done
         chmod 0777 /var/lib/syslog-ng/syslog-ng.ctl
         wait
 
