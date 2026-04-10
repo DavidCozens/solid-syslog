@@ -1,7 +1,10 @@
+import logging
 import os
 import shutil
 import socket
 import time
+
+logger = logging.getLogger("behave.environment")
 
 SYSLOG_NG_CONF = "Bdd/syslog-ng/syslog-ng.conf"
 SYSLOG_NG_FULL_CONF = "Bdd/syslog-ng/syslog-ng-full.conf"
@@ -40,6 +43,6 @@ def after_scenario(context, scenario):
                 sock.sendall(b"RELOAD\n")
                 sock.recv(1024)
             time.sleep(0.5)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to restore syslog-ng config in teardown: %s", exc)
         context.syslog_ng_config_changed = False
