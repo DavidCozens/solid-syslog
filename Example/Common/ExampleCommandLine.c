@@ -11,14 +11,20 @@ int ExampleCommandLine_Parse(int argc, char* argv[], struct ExampleOptions* opti
     options->messageId = NULL;
     options->msg       = NULL;
     options->transport = "udp";
+    options->store     = "null";
 
     static struct option longOptions[] = {
-        {"facility", required_argument, NULL, 'f'}, {"severity", required_argument, NULL, 's'},  {"msgid", required_argument, NULL, 'i'},
-        {"message", required_argument, NULL, 'm'},  {"transport", required_argument, NULL, 't'}, {NULL, 0, NULL, 0},
+        {"facility", required_argument, NULL, 'f'},
+        {"severity", required_argument, NULL, 's'},
+        {"msgid", required_argument, NULL, 'i'},
+        {"message", required_argument, NULL, 'm'},
+        {"transport", required_argument, NULL, 't'},
+        {"store", required_argument, NULL, 'o'},
+        {NULL, 0, NULL, 0},
     };
 
     int opt = 0;
-    while ((opt = getopt_long(argc, argv, "f:s:i:m:t:", longOptions, NULL)) != -1)
+    while ((opt = getopt_long(argc, argv, "f:s:i:m:t:o:", longOptions, NULL)) != -1)
     {
         switch (opt)
         {
@@ -40,6 +46,13 @@ int ExampleCommandLine_Parse(int argc, char* argv[], struct ExampleOptions* opti
                     return 1;
                 }
                 options->transport = optarg;
+                break;
+            case 'o':
+                if ((strcmp(optarg, "null") != 0) && (strcmp(optarg, "file") != 0))
+                {
+                    return 1;
+                }
+                options->store = optarg;
                 break;
             default:
                 return 1;

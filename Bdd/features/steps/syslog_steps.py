@@ -186,6 +186,8 @@ def step_threaded_running_with_transport(context, transport):
     )
 
     cmd = [os.path.join(".", binary), "--transport", transport]
+    if getattr(context, "store_type", None):
+        cmd.extend(["--store", context.store_type])
 
     context.interactive_process = subprocess.Popen(
         cmd,
@@ -197,6 +199,11 @@ def step_threaded_running_with_transport(context, transport):
     context.example_pid = context.interactive_process.pid
     # Wait for the initial prompt
     wait_for_prompt(context.interactive_process)
+
+
+@given("the file store is enabled")
+def step_file_store_enabled(context):
+    context.store_type = "file"
 
 
 @when("the client sends a message")
@@ -423,4 +430,29 @@ def step_check_sequential_ids(context, count):
         )
         assert match.group(1) == str(i), (
             f"Message {i}: expected sequenceId {i}, got {match.group(1)}"
+        )
+
+
+@when("the client sends {count:d} messages")
+def step_client_sends_n_messages(context, count):
+    send_command(context.interactive_process, f"send {count}")
+    # Allow time for the service thread to drain the buffer
+    time.sleep(0.5)
+
+
+@then("the messages have contiguous sequenceIds")
+def step_check_contiguous_sequence_ids(context):
+    ids = []
+    for line in context.all_lines:
+        fields = parse_syslog_line(line)
+        sd = fields.get("STRUCTURED_DATA", "")
+        match = re.search(r'sequenceId="(\d+)"', sd)
+        assert match, (
+            f"No sequenceId in structured data: {sd}"
+        )
+        ids.append(int(match.group(1)))
+    # Check that IDs form a contiguous ascending sequence
+    for i in range(1, len(ids)):
+        assert ids[i] == ids[i - 1] + 1, (
+            f"Non-contiguous sequenceIds: {ids[i - 1]} followed by {ids[i]}"
         )

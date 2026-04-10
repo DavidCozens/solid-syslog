@@ -66,6 +66,15 @@ TEST(SolidSyslogExample, InvalidOptionReturnsOne)
     LONGS_EQUAL(1, Run(2, argv));
 }
 
+TEST(SolidSyslogExample, InvalidStoreReturnsOne)
+{
+    char  arg0[] = "SolidSyslogExample";
+    char  arg1[] = "--store";
+    char  arg2[] = "invalid";
+    char* argv[] = {arg0, arg1, arg2, nullptr};
+    LONGS_EQUAL(1, Run(3, argv));
+}
+
 TEST(SolidSyslogExample, RunWithNoArgsReturnsZero)
 {
     LONGS_EQUAL(0, RunWithNoArgs());

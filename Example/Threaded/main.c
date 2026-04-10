@@ -7,11 +7,13 @@
 #include "SolidSyslog.h"
 #include "SolidSyslogAtomicCounter.h"
 #include "SolidSyslogConfig.h"
+#include "SolidSyslogFileStore.h"
 #include "SolidSyslogMetaSd.h"
 #include "SolidSyslogOriginSd.h"
 #include "SolidSyslogTimeQualitySd.h"
 #include "SolidSyslogNullStore.h"
 #include "SolidSyslogPosixClock.h"
+#include "SolidSyslogPosixFileApi.h"
 #include "SolidSyslogPosixHostname.h"
 #include "SolidSyslogPosixMessageQueueBuffer.h"
 #include "SolidSyslogPosixProcessId.h"
@@ -21,6 +23,8 @@
 #include <pthread.h>
 #include <string.h>
 #include <unistd.h>
+
+static const char* const STORE_FILE_PATH = "/tmp/solidsyslog_store.dat";
 
 static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
 {
@@ -38,6 +42,66 @@ static void* ServiceThreadEntry(void* arg)
     return NULL;
 }
 
+static struct SolidSyslogSender* CreateSender(const struct ExampleOptions* options)
+{
+    bool useTcp = (strcmp(options->transport, "tcp") == 0);
+
+    if (useTcp)
+    {
+        static struct SolidSyslogTcpSenderConfig tcpConfig = {0};
+        tcpConfig.getPort                                  = ExampleTcpConfig_GetPort;
+        tcpConfig.getHost                                  = ExampleTcpConfig_GetHost;
+        return SolidSyslogTcpSender_Create(&tcpConfig);
+    }
+
+    static struct SolidSyslogUdpSenderConfig udpConfig = {0};
+    udpConfig.getPort                                  = ExampleUdpConfig_GetPort;
+    udpConfig.getHost                                  = ExampleUdpConfig_GetHost;
+    return SolidSyslogUdpSender_Create(&udpConfig);
+}
+
+static struct SolidSyslogStore* CreateStore(const struct ExampleOptions* options)
+{
+    bool useFile = (strcmp(options->store, "file") == 0);
+
+    if (useFile)
+    {
+        struct SolidSyslogFileApi* fileApi = SolidSyslogPosixFileApi_Create();
+        return SolidSyslogFileStore_Create(fileApi, STORE_FILE_PATH);
+    }
+
+    return SolidSyslogNullStore_Create();
+}
+
+static void DestroySender(const struct ExampleOptions* options)
+{
+    bool useTcp = (strcmp(options->transport, "tcp") == 0);
+
+    if (useTcp)
+    {
+        SolidSyslogTcpSender_Destroy();
+    }
+    else
+    {
+        SolidSyslogUdpSender_Destroy();
+    }
+}
+
+static void DestroyStore(const struct ExampleOptions* options)
+{
+    bool useFile = (strcmp(options->store, "file") == 0);
+
+    if (useFile)
+    {
+        SolidSyslogFileStore_Destroy();
+        SolidSyslogPosixFileApi_Destroy();
+    }
+    else
+    {
+        SolidSyslogNullStore_Destroy();
+    }
+}
+
 int main(int argc, char* argv[])
 {
     ExampleAppName_Set(argv[0]);
@@ -48,31 +112,10 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    bool useTcp = (strcmp(options.transport, "tcp") == 0);
-
-    struct SolidSyslogSender* sender = NULL;
-
-    struct SolidSyslogUdpSenderConfig udpConfig = {
-        .getPort = ExampleUdpConfig_GetPort,
-        .getHost = ExampleUdpConfig_GetHost,
-    };
-
-    struct SolidSyslogTcpSenderConfig tcpConfig = {
-        .getPort = ExampleTcpConfig_GetPort,
-        .getHost = ExampleTcpConfig_GetHost,
-    };
-
-    if (useTcp)
-    {
-        sender = SolidSyslogTcpSender_Create(&tcpConfig);
-    }
-    else
-    {
-        sender = SolidSyslogUdpSender_Create(&udpConfig);
-    }
+    struct SolidSyslogSender* sender = CreateSender(&options);
+    struct SolidSyslogStore*  store  = CreateStore(&options);
 
     struct SolidSyslogBuffer*         buffer      = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
-    struct SolidSyslogStore*          store       = SolidSyslogNullStore_Create();
     struct SolidSyslogAtomicCounter*  counter     = SolidSyslogAtomicCounter_Create();
     struct SolidSyslogStructuredData* metaSd      = SolidSyslogMetaSd_Create(counter);
     struct SolidSyslogStructuredData* timeQuality = SolidSyslogTimeQualitySd_Create(GetTimeQuality);
@@ -115,17 +158,9 @@ int main(int argc, char* argv[])
     SolidSyslogTimeQualitySd_Destroy();
     SolidSyslogMetaSd_Destroy();
     SolidSyslogAtomicCounter_Destroy();
-    SolidSyslogNullStore_Destroy();
+    DestroyStore(&options);
     SolidSyslogPosixMessageQueueBuffer_Destroy();
-
-    if (useTcp)
-    {
-        SolidSyslogTcpSender_Destroy();
-    }
-    else
-    {
-        SolidSyslogUdpSender_Destroy();
-    }
+    DestroySender(&options);
 
     return 0;
 }
