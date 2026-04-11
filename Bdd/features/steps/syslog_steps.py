@@ -8,6 +8,7 @@ import time
 from datetime import datetime, timezone
 
 from behave import given, when, then
+from environment import STORE_FILE_PATH
 
 RECEIVED_LOG = "Bdd/output/received.log"
 EXAMPLE_BINARY = "build/debug/Example/SolidSyslogExample"
@@ -16,7 +17,6 @@ SYSLOG_NG_CTL = "/var/lib/syslog-ng/syslog-ng.ctl"
 SYSLOG_NG_CONF = "Bdd/syslog-ng/syslog-ng.conf"
 SYSLOG_NG_FULL_CONF = "Bdd/syslog-ng/syslog-ng-full.conf"
 SYSLOG_NG_UDP_ONLY_CONF = "Bdd/syslog-ng/syslog-ng-udp-only.conf"
-STORE_FILE_PATH = "/tmp/solidsyslog_store.dat"
 
 
 def line_count(path):
@@ -447,7 +447,7 @@ def step_client_sends_n_messages(context, count):
 @when("the client is killed")
 def step_client_is_killed(context):
     context.interactive_process.send_signal(signal.SIGKILL)
-    context.interactive_process.wait()
+    context.interactive_process.wait(timeout=5)
     del context.interactive_process
 
 
@@ -472,6 +472,10 @@ def step_check_contiguous_sequence_ids(context):
 @then("the replayed messages have sequenceIds {id_list}")
 def step_check_replayed_sequence_ids(context, id_list):
     expected = [int(x.strip()) for x in id_list.split(",")]
+    assert len(context.all_lines) >= len(expected), (
+        f"Expected at least {len(expected)} messages, "
+        f"got {len(context.all_lines)}"
+    )
     # Replayed messages are the most recent batch excluding the first message
     # from the previous session (already verified)
     replayed = context.all_lines[-len(expected):]

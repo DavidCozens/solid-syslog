@@ -49,5 +49,7 @@ def after_scenario(context, scenario):
         context.syslog_ng_config_changed = False
 
     # Clean up store file to prevent cross-scenario contamination
-    if os.path.exists(STORE_FILE_PATH):
+    try:
         os.remove(STORE_FILE_PATH)
+    except FileNotFoundError:
+        pass
