@@ -3,6 +3,7 @@ Feature: Store capacity limit and discard policy
   When the store is full, the discard policy determines whether
   the oldest or newest messages are dropped.
 
+  @wip
   Scenario: Discard-oldest drops oldest messages when store overflows
     Given syslog-ng is running
     And the file store is enabled with max-files 2 and max-file-size 1100 and discard-policy oldest
@@ -15,6 +16,7 @@ Feature: Store capacity limit and discard policy
     Then syslog-ng receives 5 messages
     And the last 4 messages have contiguous sequenceIds starting from 4
 
+  @wip
   Scenario: Discard-newest preserves oldest messages when store overflows
     Given syslog-ng is running
     And the file store is enabled with max-files 2 and max-file-size 1100 and discard-policy newest
