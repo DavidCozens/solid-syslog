@@ -520,10 +520,13 @@ TEST(SolidSyslogFileStoreConfig, FilenameExactlyAtMaxPath)
 
 TEST(SolidSyslogFileStoreConfig, FilenameTruncatedWhenPrefixTooLong)
 {
-    /* Prefix longer than max — filename is truncated but store still works */
-    char prefix[140];
-    memset(prefix, 'B', 139);
-    prefix[139] = '\0';
+    /* MAX_PATH_SIZE=128. A 127-char prefix leaves 1 byte for digits and
+       suffix. FormatFilename must not write past the buffer — prior to
+       the fix, SolidSyslogFormat_Character wrote 2 bytes unconditionally
+       (char + null), overflowing filename[128]. ASan detects this. */
+    char prefix[128];
+    memset(prefix, 'B', 127);
+    prefix[127] = '\0';
 
     CreateWithPathPrefix(prefix);
     VerifyWriteAndReadBack();
