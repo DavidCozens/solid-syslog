@@ -957,8 +957,8 @@ TEST(SolidSyslogFileStoreRotation, ContinuousDiscardWithoutReadingSurvivorsCorre
     char msgs[5][SOLIDSYSLOG_MAX_MESSAGE_SIZE];
     for (int i = 0; i < 5; i++)
     {
-        memset(msgs[i], 'A' + i, sizeof(msgs[i]));                    // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
-        SolidSyslogStore_Write(store, msgs[i], sizeof(msgs[i]));      // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
+        memset(msgs[i], 'A' + i, sizeof(msgs[i]));               // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
+        SolidSyslogStore_Write(store, msgs[i], sizeof(msgs[i])); // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
     }
 
     /* Only files 03 and 04 should survive */
