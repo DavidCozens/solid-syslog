@@ -201,3 +201,28 @@ TEST(FileFake, ExistsReturnsTrueForClosedFile)
     SolidSyslogFileApi_Close(api);
     CHECK_TRUE(SolidSyslogFileApi_Exists(api, "test.dat"));
 }
+
+TEST(FileFake, CanOpenTwoFilesByName)
+{
+    SolidSyslogFileApi_Open(api, "a.log");
+    SolidSyslogFileApi_Write(api, "aaa", 3);
+    SolidSyslogFileApi_Close(api);
+
+    SolidSyslogFileApi_Open(api, "b.log");
+    SolidSyslogFileApi_Write(api, "bbb", 3);
+    SolidSyslogFileApi_Close(api);
+
+    SolidSyslogFileApi_Open(api, "a.log");
+    char buf[16] = {};
+    SolidSyslogFileApi_Read(api, buf, 3);
+    MEMCMP_EQUAL("aaa", buf, 3);
+}
+
+TEST(FileFake, ExistsDistinguishesFilesByName)
+{
+    SolidSyslogFileApi_Open(api, "a.log");
+    SolidSyslogFileApi_Close(api);
+
+    CHECK_TRUE(SolidSyslogFileApi_Exists(api, "a.log"));
+    CHECK_FALSE(SolidSyslogFileApi_Exists(api, "b.log"));
+}
