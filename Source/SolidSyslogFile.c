@@ -44,3 +44,8 @@ bool SolidSyslogFile_Exists(struct SolidSyslogFile* file, const char* path)
 {
     return file->Exists(file, path);
 }
+
+bool SolidSyslogFile_Delete(struct SolidSyslogFile* file, const char* path)
+{
+    return file->Delete(file, path);
+}

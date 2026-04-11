@@ -9,6 +9,7 @@ static const char* const TEST_PATH = "/tmp/test_posix_file.dat";
 // clang-format off
 TEST_GROUP(SolidSyslogPosixFile)
 {
+    struct SolidSyslogPosixFileStorage storage = {};
     struct SolidSyslogFile* file = nullptr;
 
     void setup() override
@@ -16,12 +17,12 @@ TEST_GROUP(SolidSyslogPosixFile)
         SocketFake_Reset();
         remove(TEST_PATH);
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        file = SolidSyslogPosixFile_Create();
+        file = SolidSyslogPosixFile_Create(&storage);
     }
 
     void teardown() override
     {
-        SolidSyslogPosixFile_Destroy();
+        SolidSyslogPosixFile_Destroy(file);
         remove(TEST_PATH);
     }
 
@@ -91,4 +92,17 @@ TEST(SolidSyslogPosixFile, TruncateClearsFile)
 TEST(SolidSyslogPosixFile, OpenWithInvalidPathReturnsFalse)
 {
     CHECK_FALSE(SolidSyslogFile_Open(file, "/nonexistent/dir/file.dat"));
+}
+
+TEST(SolidSyslogPosixFile, DeleteRemovesFile)
+{
+    OpenTestFile();
+    SolidSyslogFile_Close(file);
+    CHECK_TRUE(SolidSyslogFile_Delete(file, TEST_PATH));
+    CHECK_FALSE(SolidSyslogFile_Exists(file, TEST_PATH));
+}
+
+TEST(SolidSyslogPosixFile, DeleteReturnsFalseForNonexistentFile)
+{
+    CHECK_FALSE(SolidSyslogFile_Delete(file, "/tmp/nonexistent_posix_file.dat"));
 }

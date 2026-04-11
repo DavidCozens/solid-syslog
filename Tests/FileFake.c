@@ -20,6 +20,7 @@ static void   FileFake_SeekTo(struct SolidSyslogFile* self, size_t offset);
 static size_t FileFake_Size(struct SolidSyslogFile* self);
 static void   FileFake_Truncate(struct SolidSyslogFile* self);
 static bool   FileFake_Exists(struct SolidSyslogFile* self, const char* path);
+static bool   FileFake_Delete(struct SolidSyslogFile* self, const char* path);
 
 /* poisoned vtable — installed by Destroy to catch use-after-destroy */
 static bool   FileFake_DestroyedOpen(struct SolidSyslogFile* self, const char* path);
@@ -31,6 +32,7 @@ static void   FileFake_DestroyedSeekTo(struct SolidSyslogFile* self, size_t offs
 static size_t FileFake_DestroyedSize(struct SolidSyslogFile* self);
 static void   FileFake_DestroyedTruncate(struct SolidSyslogFile* self);
 static bool   FileFake_DestroyedExists(struct SolidSyslogFile* self, const char* path);
+static bool   FileFake_DestroyedDelete(struct SolidSyslogFile* self, const char* path);
 
 struct FileEntry
 {
@@ -43,7 +45,6 @@ struct FileEntry
 struct FileFake
 {
     struct SolidSyslogFile base;
-    struct FileEntry       files[FILEFAKE_MAX_FILES];
     struct FileEntry*      active;
     size_t                 position;
     bool                   open;
@@ -51,6 +52,14 @@ struct FileFake
     bool                   failNextWrite;
     bool                   failNextRead;
 };
+
+_Static_assert(sizeof(struct FileFake) == sizeof(struct FileFakeStorage), "FileFakeStorage size does not match struct FileFake");
+
+/* shared in-memory filesystem */
+static struct FileEntry filesystem[FILEFAKE_MAX_FILES];
+
+/* pointer to most recently created instance — used by FailNext* and inspection helpers */
+static struct FileFake* lastCreated;
 
 /* helpers */
 static inline struct FileFake* AsFake(struct SolidSyslogFile* self);
@@ -67,39 +76,50 @@ static inline void             CopyToFile(struct FileFake* fake, const void* buf
 static inline void             AdvancePosition(struct FileFake* fake, size_t count);
 static inline void             ExtendFileSize(struct FileFake* fake);
 static inline void             ResetActiveFile(struct FileFake* fake);
-static struct FileEntry*       FindEntry(struct FileFake* fake, const char* path);
-static struct FileEntry*       FindOrCreateEntry(struct FileFake* fake, const char* path);
-static struct FileEntry*       FindFreeSlot(struct FileFake* fake);
+static struct FileEntry*       FindEntry(const char* path);
+static struct FileEntry*       FindOrCreateEntry(const char* path);
+static struct FileEntry*       FindFreeSlot(void);
 static inline bool             IsSlotFree(const struct FileEntry* entry);
 static inline bool             EntryMatchesPath(const struct FileEntry* entry, const char* path);
 static inline void             InitialiseEntry(struct FileEntry* entry, const char* path);
+static inline void             ClearEntry(struct FileEntry* entry);
 
 static const struct SolidSyslogFile LIVE_VTABLE = {
-    FileFake_Open, FileFake_Close, FileFake_IsOpen, FileFake_Read, FileFake_Write, FileFake_SeekTo, FileFake_Size, FileFake_Truncate, FileFake_Exists,
+    FileFake_Open,   FileFake_Close, FileFake_IsOpen,   FileFake_Read,   FileFake_Write,
+    FileFake_SeekTo, FileFake_Size,  FileFake_Truncate, FileFake_Exists, FileFake_Delete,
 };
 
 static const struct SolidSyslogFile POISONED_VTABLE = {
     FileFake_DestroyedOpen,   FileFake_DestroyedClose, FileFake_DestroyedIsOpen,   FileFake_DestroyedRead,   FileFake_DestroyedWrite,
-    FileFake_DestroyedSeekTo, FileFake_DestroyedSize,  FileFake_DestroyedTruncate, FileFake_DestroyedExists,
+    FileFake_DestroyedSeekTo, FileFake_DestroyedSize,  FileFake_DestroyedTruncate, FileFake_DestroyedExists, FileFake_DestroyedDelete,
 };
-
-static struct FileFake instance;
 
 /* ------------------------------------------------------------------
  * Create / Destroy
  * ----------------------------------------------------------------*/
 
-struct SolidSyslogFile* FileFake_Create(void)
+struct SolidSyslogFile* FileFake_Create(struct FileFakeStorage* storage)
 {
-    instance      = (struct FileFake) {0};
-    instance.base = LIVE_VTABLE;
-    return &instance.base;
+    struct FileFake* fake = (struct FileFake*) storage;
+    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memset with bounded size; memset_s is not portable
+    memset(fake, 0, sizeof(*fake));
+    fake->base  = LIVE_VTABLE;
+    lastCreated = fake;
+    return &fake->base;
 }
 
 void FileFake_Destroy(void)
 {
-    instance      = (struct FileFake) {0};
-    instance.base = POISONED_VTABLE;
+    if (lastCreated != NULL)
+    {
+        // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memset with bounded size; memset_s is not portable
+        memset(lastCreated, 0, sizeof(*lastCreated));
+        lastCreated->base = POISONED_VTABLE;
+        lastCreated       = NULL;
+    }
+
+    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memset with bounded size; memset_s is not portable
+    memset(filesystem, 0, sizeof(filesystem));
 }
 
 /* ------------------------------------------------------------------
@@ -108,17 +128,17 @@ void FileFake_Destroy(void)
 
 void FileFake_FailNextOpen(void)
 {
-    instance.failNextOpen = true;
+    lastCreated->failNextOpen = true;
 }
 
 void FileFake_FailNextWrite(void)
 {
-    instance.failNextWrite = true;
+    lastCreated->failNextWrite = true;
 }
 
 void FileFake_FailNextRead(void)
 {
-    instance.failNextRead = true;
+    lastCreated->failNextRead = true;
 }
 
 /* ------------------------------------------------------------------
@@ -127,12 +147,12 @@ void FileFake_FailNextRead(void)
 
 const void* FileFake_FileContent(void)
 {
-    return HasActiveFile(&instance) ? instance.active->content : NULL;
+    return HasActiveFile(lastCreated) ? lastCreated->active->content : NULL;
 }
 
 size_t FileFake_FileSize(void)
 {
-    return HasActiveFile(&instance) ? instance.active->fileSize : 0;
+    return HasActiveFile(lastCreated) ? lastCreated->active->fileSize : 0;
 }
 
 static inline bool HasActiveFile(const struct FileFake* fake)
@@ -153,7 +173,7 @@ static bool FileFake_Open(struct SolidSyslogFile* self, const char* path)
         return false;
     }
 
-    struct FileEntry* entry = FindOrCreateEntry(fake, path);
+    struct FileEntry* entry = FindOrCreateEntry(path);
 
     if (FoundEntry(entry))
     {
@@ -187,13 +207,13 @@ static inline void ActivateEntry(struct FileFake* fake, struct FileEntry* entry)
     fake->position = 0;
 }
 
-static struct FileEntry* FindOrCreateEntry(struct FileFake* fake, const char* path)
+static struct FileEntry* FindOrCreateEntry(const char* path)
 {
-    struct FileEntry* entry = FindEntry(fake, path);
+    struct FileEntry* entry = FindEntry(path);
 
     if (entry == NULL)
     {
-        entry = FindFreeSlot(fake);
+        entry = FindFreeSlot();
 
         if (FoundEntry(entry))
         {
@@ -204,15 +224,15 @@ static struct FileEntry* FindOrCreateEntry(struct FileFake* fake, const char* pa
     return entry;
 }
 
-static struct FileEntry* FindEntry(struct FileFake* fake, const char* path)
+static struct FileEntry* FindEntry(const char* path)
 {
     struct FileEntry* result = NULL;
 
     for (size_t i = 0; i < FILEFAKE_MAX_FILES; i++)
     {
-        if (EntryMatchesPath(&fake->files[i], path))
+        if (EntryMatchesPath(&filesystem[i], path))
         {
-            result = &fake->files[i];
+            result = &filesystem[i];
             break;
         }
     }
@@ -225,15 +245,15 @@ static inline bool EntryMatchesPath(const struct FileEntry* entry, const char* p
     return entry->inUse && (strcmp(entry->path, path) == 0);
 }
 
-static struct FileEntry* FindFreeSlot(struct FileFake* fake)
+static struct FileEntry* FindFreeSlot(void)
 {
     struct FileEntry* result = NULL;
 
     for (size_t i = 0; i < FILEFAKE_MAX_FILES; i++)
     {
-        if (IsSlotFree(&fake->files[i]))
+        if (IsSlotFree(&filesystem[i]))
         {
-            result = &fake->files[i];
+            result = &filesystem[i];
             break;
         }
     }
@@ -408,8 +428,28 @@ static inline void ResetActiveFile(struct FileFake* fake)
 
 static bool FileFake_Exists(struct SolidSyslogFile* self, const char* path)
 {
-    struct FileFake* fake = AsFake(self);
-    return FoundEntry(FindEntry(fake, path));
+    (void) self;
+    return FoundEntry(FindEntry(path));
+}
+
+static bool FileFake_Delete(struct SolidSyslogFile* self, const char* path)
+{
+    (void) self;
+    struct FileEntry* entry = FindEntry(path);
+    bool              found = FoundEntry(entry);
+
+    if (found)
+    {
+        ClearEntry(entry);
+    }
+
+    return found;
+}
+
+static inline void ClearEntry(struct FileEntry* entry)
+{
+    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memset with bounded size; memset_s is not portable
+    memset(entry, 0, sizeof(*entry));
 }
 
 /* ------------------------------------------------------------------
@@ -480,5 +520,13 @@ static bool FileFake_DestroyedExists(struct SolidSyslogFile* self, const char* p
     (void) self;
     (void) path;
     TestAssert_Fail("Exists called after FileFake_Destroy");
+    return false;
+}
+
+static bool FileFake_DestroyedDelete(struct SolidSyslogFile* self, const char* path)
+{
+    (void) self;
+    (void) path;
+    TestAssert_Fail("Delete called after FileFake_Destroy");
     return false;
 }

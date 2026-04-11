@@ -35,13 +35,14 @@ static struct SolidSyslogFileStoreConfig MakeConfig(struct SolidSyslogFile* file
 // clang-format off
 TEST_GROUP(SolidSyslogFileStore)
 {
+    struct FileFakeStorage storage = {};
     struct SolidSyslogFile* file = nullptr;
     struct SolidSyslogStore*   store   = nullptr;
 
     void setup() override
     {
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        file = FileFake_Create();
+        file = FileFake_Create(&storage);
         struct SolidSyslogFileStoreConfig config = MakeConfig(file);
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
         store = SolidSyslogFileStore_Create(&config);
@@ -255,12 +256,13 @@ TEST(SolidSyslogFileStore, FiveWritesDrainAllInOrder)
 // clang-format off
 TEST_GROUP(SolidSyslogFileStoreResume)
 {
+    struct FileFakeStorage storage = {};
     struct SolidSyslogFile* file = nullptr;
     struct SolidSyslogStore*   store   = nullptr;
 
     void setup() override
     {
-        file = FileFake_Create();
+        file = FileFake_Create(&storage);
     }
 
     void teardown() override
@@ -376,12 +378,13 @@ TEST(SolidSyslogFileStoreResume, CanWriteNewMessagesAfterResume)
 // clang-format off
 TEST_GROUP(SolidSyslogFileStoreDestroy)
 {
+    struct FileFakeStorage storage = {};
     struct SolidSyslogFile* file = nullptr;
 
     void setup() override
     {
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        file = FileFake_Create();
+        file = FileFake_Create(&storage);
     }
 
     void teardown() override
@@ -416,13 +419,14 @@ TEST(SolidSyslogFileStoreDestroy, DoubleDestroyDoesNotCrash)
 // clang-format off
 TEST_GROUP(SolidSyslogFileStoreConfig)
 {
+    struct FileFakeStorage storage = {};
     struct SolidSyslogFile* file = nullptr;
     struct SolidSyslogStore*   store   = nullptr;
 
     void setup() override
     {
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        file = FileFake_Create();
+        file = FileFake_Create(&storage);
     }
 
     void teardown() override
@@ -531,6 +535,7 @@ TEST(SolidSyslogFileStoreConfig, FilenameTruncatedWhenPrefixTooLong)
 // clang-format off
 TEST_GROUP(SolidSyslogFileStoreErrors)
 {
+    struct FileFakeStorage storage = {};
     struct SolidSyslogFile* file = nullptr;
     // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
     struct SolidSyslogStore*   store   = nullptr;
@@ -538,7 +543,7 @@ TEST_GROUP(SolidSyslogFileStoreErrors)
     void setup() override
     {
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        file = FileFake_Create();
+        file = FileFake_Create(&storage);
     }
 
     void teardown() override

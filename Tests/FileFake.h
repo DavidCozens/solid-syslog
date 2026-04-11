@@ -3,9 +3,21 @@
 
 #include "SolidSyslogFile.h"
 
+#include <stdint.h>
+
 EXTERN_C_BEGIN
 
-    struct SolidSyslogFile* FileFake_Create(void);
+    enum
+    {
+        FILEFAKE_STORAGE_SLOTS = 13
+    };
+
+    struct FileFakeStorage
+    {
+        uint8_t opaque[FILEFAKE_STORAGE_SLOTS * sizeof(void*)];
+    };
+
+    struct SolidSyslogFile* FileFake_Create(struct FileFakeStorage * storage);
     void                    FileFake_Destroy(void);
     void                    FileFake_FailNextOpen(void);
     void                    FileFake_FailNextWrite(void);

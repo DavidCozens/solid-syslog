@@ -18,6 +18,7 @@ EXTERN_C_BEGIN
     size_t SolidSyslogFile_Size(struct SolidSyslogFile * file);
     void   SolidSyslogFile_Truncate(struct SolidSyslogFile * file);
     bool   SolidSyslogFile_Exists(struct SolidSyslogFile * file, const char* path);
+    bool   SolidSyslogFile_Delete(struct SolidSyslogFile * file, const char* path);
 
 EXTERN_C_END
 

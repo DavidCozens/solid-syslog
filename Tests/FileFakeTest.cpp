@@ -7,12 +7,13 @@
 // clang-format off
 TEST_GROUP(FileFake)
 {
+    struct FileFakeStorage storage = {};
     struct SolidSyslogFile* api = nullptr;
 
     void setup() override
     {
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        api = FileFake_Create();
+        api = FileFake_Create(&storage);
     }
 
     void teardown() override
@@ -228,6 +229,41 @@ TEST(FileFake, ExistsDistinguishesFilesByName)
     CHECK_FALSE(SolidSyslogFile_Exists(api, "b.log"));
 }
 
+TEST(FileFake, DeleteRemovesOnlyNamedFile)
+{
+    SolidSyslogFile_Open(api, "a.log");
+    SolidSyslogFile_Close(api);
+    SolidSyslogFile_Open(api, "b.log");
+    SolidSyslogFile_Close(api);
+
+    CHECK_TRUE(SolidSyslogFile_Delete(api, "a.log"));
+    CHECK_FALSE(SolidSyslogFile_Exists(api, "a.log"));
+    CHECK_TRUE(SolidSyslogFile_Exists(api, "b.log"));
+}
+
+TEST(FileFake, DeleteReturnsFalseForUnknownFile)
+{
+    CHECK_FALSE(SolidSyslogFile_Delete(api, "nonexistent.dat"));
+}
+
+/* ------------------------------------------------------------------
+ * Two independent instances
+ * ----------------------------------------------------------------*/
+
+TEST(FileFake, TwoInstancesShareFilesystem)
+{
+    SolidSyslogFile_Open(api, "shared.dat");
+    SolidSyslogFile_Write(api, "hello", 5);
+
+    struct FileFakeStorage  storage2 = {};
+    struct SolidSyslogFile* reader   = FileFake_Create(&storage2);
+
+    SolidSyslogFile_Open(reader, "shared.dat");
+    char buf[16] = {};
+    SolidSyslogFile_Read(reader, buf, 5);
+    MEMCMP_EQUAL("hello", buf, 5);
+}
+
 /* ------------------------------------------------------------------
  * Operations on closed file
  * ----------------------------------------------------------------*/
@@ -270,12 +306,13 @@ TEST(FileFake, TruncateWithNoFileOpenThrows)
 // clang-format off
 TEST_GROUP(FileFakeAfterDestroy)
 {
+    struct FileFakeStorage storage = {};
     struct SolidSyslogFile* api = nullptr;
 
     void setup() override
     {
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        api = FileFake_Create();
+        api = FileFake_Create(&storage);
         FileFake_Destroy();
     }
 
@@ -330,4 +367,9 @@ TEST(FileFakeAfterDestroy, TruncateThrows)
 TEST(FileFakeAfterDestroy, ExistsThrows)
 {
     CHECK_THROWS(std::runtime_error, SolidSyslogFile_Exists(api, "test.dat"));
+}
+
+TEST(FileFakeAfterDestroy, DeleteThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_Delete(api, "test.dat"));
 }

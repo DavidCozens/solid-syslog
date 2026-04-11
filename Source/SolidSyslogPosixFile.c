@@ -22,6 +22,7 @@ static void   SeekTo(struct SolidSyslogFile* self, size_t offset);
 static size_t Size(struct SolidSyslogFile* self);
 static void   Truncate(struct SolidSyslogFile* self);
 static bool   Exists(struct SolidSyslogFile* self, const char* path);
+static bool   Delete(struct SolidSyslogFile* self, const char* path);
 
 struct SolidSyslogPosixFile
 {
@@ -29,40 +30,36 @@ struct SolidSyslogPosixFile
     int                    fd;
 };
 
-static struct SolidSyslogPosixFile instance;
+_Static_assert(sizeof(struct SolidSyslogPosixFile) == sizeof(struct SolidSyslogPosixFileStorage),
+               "SolidSyslogPosixFileStorage size does not match struct SolidSyslogPosixFile");
 
-struct SolidSyslogFile* SolidSyslogPosixFile_Create(void)
+static const struct SolidSyslogPosixFile DEFAULT_INSTANCE = {
+    {Open, Close, IsOpen, Read, Write, SeekTo, Size, Truncate, Exists, Delete},
+    INVALID_FD,
+};
+
+static const struct SolidSyslogPosixFile DESTROYED_INSTANCE = {
+    {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL},
+    INVALID_FD,
+};
+
+struct SolidSyslogFile* SolidSyslogPosixFile_Create(struct SolidSyslogPosixFileStorage* storage)
 {
-    instance.base.Open     = Open;
-    instance.base.Close    = Close;
-    instance.base.IsOpen   = IsOpen;
-    instance.base.Read     = Read;
-    instance.base.Write    = Write;
-    instance.base.SeekTo   = SeekTo;
-    instance.base.Size     = Size;
-    instance.base.Truncate = Truncate;
-    instance.base.Exists   = Exists;
-    instance.fd            = INVALID_FD;
-    return &instance.base;
+    struct SolidSyslogPosixFile* posix = (struct SolidSyslogPosixFile*) storage;
+    *posix                             = DEFAULT_INSTANCE;
+    return &posix->base;
 }
 
-void SolidSyslogPosixFile_Destroy(void)
+void SolidSyslogPosixFile_Destroy(struct SolidSyslogFile* file)
 {
-    if (instance.fd != INVALID_FD)
+    struct SolidSyslogPosixFile* posix = (struct SolidSyslogPosixFile*) file;
+
+    if (posix->fd != INVALID_FD)
     {
-        close(instance.fd);
+        close(posix->fd);
     }
 
-    instance.fd            = INVALID_FD;
-    instance.base.Open     = NULL;
-    instance.base.Close    = NULL;
-    instance.base.IsOpen   = NULL;
-    instance.base.Read     = NULL;
-    instance.base.Write    = NULL;
-    instance.base.SeekTo   = NULL;
-    instance.base.Size     = NULL;
-    instance.base.Truncate = NULL;
-    instance.base.Exists   = NULL;
+    *posix = DESTROYED_INSTANCE;
 }
 
 static bool Open(struct SolidSyslogFile* self, const char* path)
@@ -124,4 +121,10 @@ static bool Exists(struct SolidSyslogFile* self, const char* path)
 {
     (void) self;
     return access(path, F_OK) == 0;
+}
+
+static bool Delete(struct SolidSyslogFile* self, const char* path)
+{
+    (void) self;
+    return unlink(path) == 0;
 }
