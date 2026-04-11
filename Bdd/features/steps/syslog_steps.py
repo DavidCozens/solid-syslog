@@ -17,7 +17,6 @@ SYSLOG_NG_CTL = "/var/lib/syslog-ng/syslog-ng.ctl"
 SYSLOG_NG_CONF = "Bdd/syslog-ng/syslog-ng.conf"
 SYSLOG_NG_FULL_CONF = "Bdd/syslog-ng/syslog-ng-full.conf"
 SYSLOG_NG_UDP_ONLY_CONF = "Bdd/syslog-ng/syslog-ng-udp-only.conf"
-STORE_FILE_PATH = "/tmp/solidsyslog_store.dat"
 
 
 def line_count(path):
