@@ -16,15 +16,20 @@ enum
     TEST_MAX_FILES       = 2
 };
 
+static const struct SolidSyslogFileStoreConfig DEFAULT_CONFIG = {
+    nullptr,
+    nullptr,
+    TEST_PATH_PREFIX,
+    TEST_MAX_FILE_SIZE,
+    TEST_MAX_FILES,
+    SOLIDSYSLOG_DISCARD_OLDEST,
+};
+
 static struct SolidSyslogFileStoreConfig MakeConfig(struct SolidSyslogFileApi* fileApi)
 {
-    struct SolidSyslogFileStoreConfig config;
-    config.readFileApi   = fileApi;
-    config.writeFileApi  = fileApi;
-    config.pathPrefix    = TEST_PATH_PREFIX;
-    config.maxFileSize   = TEST_MAX_FILE_SIZE;
-    config.maxFiles      = TEST_MAX_FILES;
-    config.discardPolicy = SOLIDSYSLOG_DISCARD_OLDEST;
+    struct SolidSyslogFileStoreConfig config = DEFAULT_CONFIG;
+    config.readFileApi  = fileApi;
+    config.writeFileApi = fileApi;
     return config;
 }
 
@@ -59,6 +64,11 @@ TEST_GROUP(SolidSyslogFileStore)
 TEST(SolidSyslogFileStore, CreateReturnsNonNull)
 {
     CHECK_TRUE(store != nullptr);
+}
+
+TEST(SolidSyslogFileStore, CreatesFileWithSequence00)
+{
+    CHECK_TRUE(SolidSyslogFileApi_Exists(fileApi, "/tmp/test_store00.log"));
 }
 
 TEST(SolidSyslogFileStore, HasUnsentReturnsFalseOnEmpty)
@@ -442,7 +452,15 @@ TEST_GROUP(SolidSyslogFileStoreConfig)
         store = SolidSyslogFileStore_Create(&config);
     }
 
-    void VerifyWriteAndReadBack()
+    void CreateWithPathPrefix(const char* prefix)
+    {
+        struct SolidSyslogFileStoreConfig config = MakeConfig(fileApi);
+        config.pathPrefix = prefix;
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+        store = SolidSyslogFileStore_Create(&config);
+    }
+
+    void VerifyWriteAndReadBack() const
     {
         CHECK_TRUE(SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN));
         char   buf[TEST_BUF_SIZE] = {};
@@ -481,6 +499,33 @@ TEST(SolidSyslogFileStoreConfig, MaxFileSizeZeroClampedToMinimum)
 TEST(SolidSyslogFileStoreConfig, MaxFileSizeOneClampedToMinimum)
 {
     CreateWithMaxFileSize(1);
+    VerifyWriteAndReadBack();
+}
+
+TEST(SolidSyslogFileStoreConfig, FilenameExactlyAtMaxPath)
+{
+    /* MAX_PATH_SIZE=128, suffix "00.log"=6, null=1, so max prefix=121 chars */
+    char prefix[122];
+    memset(prefix, 'A', 121);
+    prefix[121] = '\0';
+
+    CreateWithPathPrefix(prefix);
+
+    char expected[129];
+    memset(expected, 'A', 121);
+    memcpy(expected + 121, "00.log", 7);
+
+    CHECK_TRUE(SolidSyslogFileApi_Exists(fileApi, expected));
+}
+
+TEST(SolidSyslogFileStoreConfig, FilenameTruncatedWhenPrefixTooLong)
+{
+    /* Prefix longer than max — filename is truncated but store still works */
+    char prefix[140];
+    memset(prefix, 'B', 139);
+    prefix[139] = '\0';
+
+    CreateWithPathPrefix(prefix);
     VerifyWriteAndReadBack();
 }
 

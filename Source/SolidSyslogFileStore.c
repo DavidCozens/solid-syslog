@@ -1,20 +1,22 @@
 #include "SolidSyslogFileStore.h"
 #include "SolidSyslog.h"
 #include "SolidSyslogFileApi.h"
+#include "SolidSyslogFormat.h"
 #include "SolidSyslogStoreDefinition.h"
 
 #include <stdint.h>
 
 enum
 {
-    RECORD_LENGTH_SIZE = 4,
-    SENT_FLAG_SIZE     = 1,
-    RECORD_OVERHEAD    = RECORD_LENGTH_SIZE + SENT_FLAG_SIZE,
-    SENT_FLAG_UNSENT   = 0,
-    SENT_FLAG_SENT     = 1,
-    MIN_MAX_FILES      = 2,
-    MAX_MAX_FILES      = 99,
-    MIN_MAX_FILE_SIZE  = SOLIDSYSLOG_MAX_MESSAGE_SIZE + RECORD_OVERHEAD
+    RECORD_LENGTH_SIZE   = 4,
+    SENT_FLAG_SIZE       = 1,
+    RECORD_OVERHEAD      = RECORD_LENGTH_SIZE + SENT_FLAG_SIZE,
+    SENT_FLAG_UNSENT     = 0,
+    SENT_FLAG_SENT       = 1,
+    MIN_MAX_FILES        = 2,
+    MAX_MAX_FILES        = 99,
+    MIN_MAX_FILE_SIZE = SOLIDSYSLOG_MAX_MESSAGE_SIZE + RECORD_OVERHEAD,
+    MAX_PATH_SIZE     = 128
 };
 
 /* vtable */
@@ -26,6 +28,7 @@ static bool HasUnsent(struct SolidSyslogStore* self);
 /* Create helpers */
 static inline void   ValidateConfig(const struct SolidSyslogFileStoreConfig* config);
 static inline size_t ClampToRange(size_t value, size_t min, size_t max);
+static inline void   FormatFilename(uint8_t sequence);
 static inline void   InitialiseVtable(void);
 static inline bool   OpenFile(const char* path);
 static inline bool   IsOpen(void);
@@ -73,9 +76,12 @@ struct SolidSyslogFileStore
 {
     struct SolidSyslogStore           base;
     struct SolidSyslogFileApi*        fileApi;
+    const char*                       pathPrefix;
+    char                              filename[MAX_PATH_SIZE];
     size_t                            maxFileSize;
     size_t                            maxFiles;
     enum SolidSyslogDiscardPolicy     discardPolicy;
+    uint8_t                           writeSequence;
     size_t                            readCursor;
     size_t                            writePosition;
     size_t                            lastSentFlagOffset;
@@ -91,12 +97,15 @@ static struct SolidSyslogFileStore       instance;
 
 struct SolidSyslogStore* SolidSyslogFileStore_Create(const struct SolidSyslogFileStoreConfig* config)
 {
-    instance         = DEFAULT_INSTANCE;
-    instance.fileApi = config->writeFileApi;
+    instance            = DEFAULT_INSTANCE;
+    instance.fileApi    = config->writeFileApi;
+    instance.pathPrefix = config->pathPrefix;
     ValidateConfig(config);
     InitialiseVtable();
 
-    if (OpenFile(config->pathPrefix))
+    FormatFilename(instance.writeSequence);
+
+    if (OpenFile(instance.filename))
     {
         ResumeFromExistingFile();
     }
@@ -111,6 +120,22 @@ static inline void ValidateConfig(const struct SolidSyslogFileStoreConfig* confi
     instance.discardPolicy = config->discardPolicy;
 }
 
+static inline void FormatFilename(uint8_t sequence)
+{
+    enum
+    {
+        TENS_DIVISOR = 10
+    };
+
+    size_t len = 0;
+    len += SolidSyslogFormat_BoundedString(instance.filename + len, instance.pathPrefix, MAX_PATH_SIZE - len);
+    len += SolidSyslogFormat_Character(instance.filename + len, SolidSyslogFormat_DigitToChar(sequence / TENS_DIVISOR));
+    len += SolidSyslogFormat_Character(instance.filename + len, SolidSyslogFormat_DigitToChar(sequence % TENS_DIVISOR));
+    len += SolidSyslogFormat_BoundedString(instance.filename + len, ".log", MAX_PATH_SIZE - len);
+    instance.filename[len] = '\0';
+}
+
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- value, min, max have distinct semantics
 static inline size_t ClampToRange(size_t value, size_t min, size_t max)
 {
     size_t result = value;
