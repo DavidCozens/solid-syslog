@@ -388,7 +388,9 @@ TEST_GROUP(FileFakeStaleHandle)
 
     void setup() override
     {
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
         handleA = FileFake_Create(&storageA);
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
         handleB = FileFake_Create(&storageB);
     }
 
@@ -417,8 +419,8 @@ TEST(FileFakeStaleHandle, ReadFailsOnStaleHandleAfterDeleteAndSlotReuse)
 
     /* handleA still points at the old slot — read must fail, not return new file's data */
     SolidSyslogFile_SeekTo(handleA, 0);
-    char   buf[16] = {};
-    bool   success = SolidSyslogFile_Read(handleA, buf, sizeof(data));
+    char buf[16] = {};
+    bool success = SolidSyslogFile_Read(handleA, buf, sizeof(data));
 
     CHECK_FALSE(success);
 }

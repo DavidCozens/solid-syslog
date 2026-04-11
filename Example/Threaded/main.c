@@ -24,7 +24,7 @@
 #include <string.h>
 #include <unistd.h>
 
-static const char* const STORE_PATH_PREFIX = "/tmp/STORE";
+static const char* const       STORE_PATH_PREFIX = "/tmp/STORE";
 static struct SolidSyslogFile* storeFile;
 
 enum
@@ -74,16 +74,16 @@ static struct SolidSyslogStore* CreateStore(const struct ExampleOptions* options
     if (useFile)
     {
         static struct SolidSyslogPosixFileStorage fileStorage;
-        storeFile = SolidSyslogPosixFile_Create(&fileStorage);
+        storeFile                    = SolidSyslogPosixFile_Create(&fileStorage);
         struct SolidSyslogFile* file = storeFile;
 
         static struct SolidSyslogFileStoreConfig storeConfig = {0};
-        storeConfig.readFile      = file;
-        storeConfig.writeFile     = file;
-        storeConfig.pathPrefix    = STORE_PATH_PREFIX;
-        storeConfig.maxFileSize   = DEFAULT_MAX_FILE_SIZE;
-        storeConfig.maxFiles      = DEFAULT_MAX_FILES;
-        storeConfig.discardPolicy = SOLIDSYSLOG_DISCARD_OLDEST;
+        storeConfig.readFile                                 = file;
+        storeConfig.writeFile                                = file;
+        storeConfig.pathPrefix                               = STORE_PATH_PREFIX;
+        storeConfig.maxFileSize                              = DEFAULT_MAX_FILE_SIZE;
+        storeConfig.maxFiles                                 = DEFAULT_MAX_FILES;
+        storeConfig.discardPolicy                            = SOLIDSYSLOG_DISCARD_OLDEST;
         return SolidSyslogFileStore_Create(&storeConfig);
     }
 

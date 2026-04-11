@@ -180,20 +180,20 @@ static void ScanForExistingFiles(void)
 
     bool foundFirst = false;
 
-    for (uint8_t seq = 0; seq < MAX_SEQUENCE; seq++)
+    for (int seq = 0; seq < MAX_SEQUENCE; seq++)
     {
-        FormatFilename(seq);
+        FormatFilename((uint8_t) seq);
 
         if (SolidSyslogFile_Exists(instance.writeFile, instance.filename))
         {
             if (!foundFirst)
             {
-                instance.oldestSequence = seq;
-                instance.readSequence   = seq;
+                instance.oldestSequence = (uint8_t) seq;
+                instance.readSequence   = (uint8_t) seq;
                 foundFirst              = true;
             }
 
-            instance.writeSequence = seq;
+            instance.writeSequence = (uint8_t) seq;
         }
     }
 }
@@ -407,12 +407,12 @@ static void RotateToNextFile(void)
 
 static inline uint8_t NextSequence(uint8_t current)
 {
-    return (uint8_t)((current + 1) % SEQUENCE_MODULUS);
+    return (uint8_t) ((current + 1) % SEQUENCE_MODULUS);
 }
 
 static inline size_t FileCount(void)
 {
-    return (size_t)((instance.writeSequence - instance.oldestSequence + SEQUENCE_MODULUS) % SEQUENCE_MODULUS) + 1;
+    return (size_t) ((instance.writeSequence - instance.oldestSequence + SEQUENCE_MODULUS) % SEQUENCE_MODULUS) + 1;
 }
 
 static void DiscardOldestFile(void)
