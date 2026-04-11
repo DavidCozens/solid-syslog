@@ -15,6 +15,7 @@ enum
     SENT_FLAG_SENT     = 1,
     MIN_MAX_FILES      = 2,
     MAX_MAX_FILES      = 99,
+    SEQUENCE_MODULUS   = 100,
     MIN_MAX_FILE_SIZE  = SOLIDSYSLOG_MAX_MESSAGE_SIZE + RECORD_OVERHEAD,
     MAX_PATH_SIZE      = 128
 };
@@ -29,9 +30,12 @@ static bool HasUnsent(struct SolidSyslogStore* self);
 static inline void   ValidateConfig(const struct SolidSyslogFileStoreConfig* config);
 static inline size_t ClampToRange(size_t value, size_t min, size_t max);
 static inline void   FormatFilename(uint8_t sequence);
+static void          ScanForExistingFiles(void);
 static inline void   InitialiseVtable(void);
-static inline bool   OpenFile(const char* path);
-static inline bool   IsOpen(void);
+static inline bool   OpenWriteFile(const char* path);
+static inline bool   OpenReadFile(const char* path);
+static inline bool   IsWriteFileOpen(void);
+static inline bool   IsReadFileOpen(void);
 static void          ResumeFromExistingFile(void);
 static inline void   MeasureFileSize(void);
 static inline void   FindFirstUnsentRecord(void);
@@ -48,6 +52,15 @@ static inline void   SkipToEndOfValidData(size_t* cursor, size_t fileSize);
 static void          TruncateIfAllSent(void);
 static inline bool   AllRecordsSent(void);
 static inline void   ResetFile(void);
+
+/* File rotation helpers */
+static inline bool    StoreIsFull(void);
+static inline bool    FileIsFull(size_t dataSize);
+static inline size_t  FileCount(void);
+static inline bool    ReadingOlderFile(void);
+static inline uint8_t NextSequence(uint8_t current);
+static void           RotateToNextFile(void);
+static void           DiscardOldestFile(void);
 
 /* Write helpers */
 static bool        WriteRecordToFile(const void* data, size_t size);
@@ -75,12 +88,14 @@ static inline void AdvanceReadCursor(void);
 struct SolidSyslogFileStore
 {
     struct SolidSyslogStore       base;
-    struct SolidSyslogFile*       file;
+    struct SolidSyslogFile*       readFile;
+    struct SolidSyslogFile*       writeFile;
     const char*                   pathPrefix;
     char                          filename[MAX_PATH_SIZE];
     size_t                        maxFileSize;
     size_t                        maxFiles;
     enum SolidSyslogDiscardPolicy discardPolicy;
+    uint8_t                       readSequence;
     uint8_t                       writeSequence;
     size_t                        readCursor;
     size_t                        writePosition;
@@ -98,15 +113,20 @@ static struct SolidSyslogFileStore       instance;
 struct SolidSyslogStore* SolidSyslogFileStore_Create(const struct SolidSyslogFileStoreConfig* config)
 {
     instance            = DEFAULT_INSTANCE;
-    instance.file       = config->writeFile;
+    instance.readFile   = config->readFile;
+    instance.writeFile  = config->writeFile;
     instance.pathPrefix = config->pathPrefix;
     ValidateConfig(config);
     InitialiseVtable();
 
+    ScanForExistingFiles();
+
     FormatFilename(instance.writeSequence);
 
-    if (OpenFile(instance.filename))
+    if (OpenWriteFile(instance.filename))
     {
+        FormatFilename(instance.readSequence);
+        OpenReadFile(instance.filename);
         ResumeFromExistingFile();
     }
 
@@ -153,6 +173,32 @@ static inline size_t ClampToRange(size_t value, size_t min, size_t max)
     return result;
 }
 
+static void ScanForExistingFiles(void)
+{
+    enum
+    {
+        MAX_SEQUENCE = 100
+    };
+
+    bool foundFirst = false;
+
+    for (uint8_t seq = 0; seq < MAX_SEQUENCE; seq++)
+    {
+        FormatFilename(seq);
+
+        if (SolidSyslogFile_Exists(instance.writeFile, instance.filename))
+        {
+            if (!foundFirst)
+            {
+                instance.readSequence = seq;
+                foundFirst            = true;
+            }
+
+            instance.writeSequence = seq;
+        }
+    }
+}
+
 static inline void InitialiseVtable(void)
 {
     instance.base.Write          = Write;
@@ -161,14 +207,24 @@ static inline void InitialiseVtable(void)
     instance.base.HasUnsent      = HasUnsent;
 }
 
-static inline bool OpenFile(const char* path)
+static inline bool OpenWriteFile(const char* path)
 {
-    return SolidSyslogFile_Open(instance.file, path);
+    return SolidSyslogFile_Open(instance.writeFile, path);
 }
 
-static inline bool IsOpen(void)
+static inline bool OpenReadFile(const char* path)
 {
-    return (instance.file != NULL) && SolidSyslogFile_IsOpen(instance.file);
+    return SolidSyslogFile_Open(instance.readFile, path);
+}
+
+static inline bool IsWriteFileOpen(void)
+{
+    return (instance.writeFile != NULL) && SolidSyslogFile_IsOpen(instance.writeFile);
+}
+
+static inline bool IsReadFileOpen(void)
+{
+    return (instance.readFile != NULL) && SolidSyslogFile_IsOpen(instance.readFile);
 }
 
 static void ResumeFromExistingFile(void)
@@ -180,7 +236,7 @@ static void ResumeFromExistingFile(void)
 
 static inline void MeasureFileSize(void)
 {
-    instance.writePosition = SolidSyslogFile_Size(instance.file);
+    instance.writePosition = SolidSyslogFile_Size(instance.readFile);
 }
 
 static inline void FindFirstUnsentRecord(void)
@@ -224,13 +280,13 @@ static bool AdvancePastSentRecord(size_t* cursor, size_t fileSize)
 
 static bool ReadRecordLength(size_t offset, uint32_t* length)
 {
-    SolidSyslogFile_SeekTo(instance.file, offset);
+    SolidSyslogFile_SeekTo(instance.readFile, offset);
     return ReadExact(length, RECORD_LENGTH_SIZE);
 }
 
 static inline bool ReadExact(void* buf, size_t count)
 {
-    return SolidSyslogFile_Read(instance.file, buf, count);
+    return SolidSyslogFile_Read(instance.readFile, buf, count);
 }
 
 static inline bool IsRecordSent(size_t recordStart, uint32_t length)
@@ -242,7 +298,7 @@ static inline bool IsRecordSent(size_t recordStart, uint32_t length)
 
 static bool ReadSentFlag(size_t recordStart, uint32_t dataLength, uint8_t* flag)
 {
-    SolidSyslogFile_SeekTo(instance.file, SentFlagOffset(recordStart, dataLength));
+    SolidSyslogFile_SeekTo(instance.readFile, SentFlagOffset(recordStart, dataLength));
     return ReadExact(flag, SENT_FLAG_SIZE);
 }
 
@@ -281,7 +337,7 @@ static inline bool AllRecordsSent(void)
 
 static inline void ResetFile(void)
 {
-    SolidSyslogFile_Truncate(instance.file);
+    SolidSyslogFile_Truncate(instance.writeFile);
     instance.readCursor    = 0;
     instance.writePosition = 0;
 }
@@ -292,9 +348,14 @@ static inline void ResetFile(void)
 
 void SolidSyslogFileStore_Destroy(void)
 {
-    if (IsOpen())
+    if (IsWriteFileOpen())
     {
-        SolidSyslogFile_Close(instance.file);
+        SolidSyslogFile_Close(instance.writeFile);
+    }
+
+    if (IsReadFileOpen())
+    {
+        SolidSyslogFile_Close(instance.readFile);
     }
 
     instance = DEFAULT_INSTANCE;
@@ -309,7 +370,7 @@ static bool Write(struct SolidSyslogStore* self, const void* data, size_t size)
     (void) self;
     bool written = false;
 
-    if (IsOpen())
+    if (IsWriteFileOpen())
     {
         written = WriteRecordToFile(data, size);
     }
@@ -320,6 +381,16 @@ static bool Write(struct SolidSyslogStore* self, const void* data, size_t size)
 static bool WriteRecordToFile(const void* data, size_t size)
 {
     bool written = false;
+
+    if (FileIsFull(size))
+    {
+        if (StoreIsFull())
+        {
+            return false;
+        }
+
+        RotateToNextFile();
+    }
 
     SeekToWritePosition();
 
@@ -332,9 +403,55 @@ static bool WriteRecordToFile(const void* data, size_t size)
     return written;
 }
 
+static inline bool StoreIsFull(void)
+{
+    return (FileCount() >= instance.maxFiles) && (instance.discardPolicy == SOLIDSYSLOG_DISCARD_NEWEST);
+}
+
+static inline bool FileIsFull(size_t dataSize)
+{
+    return (instance.writePosition + RecordSize((uint32_t) dataSize)) > instance.maxFileSize;
+}
+
+static void RotateToNextFile(void)
+{
+    SolidSyslogFile_Close(instance.writeFile);
+
+    if (FileCount() >= instance.maxFiles)
+    {
+        DiscardOldestFile();
+    }
+
+    instance.writeSequence = NextSequence(instance.writeSequence);
+    instance.writePosition = 0;
+    FormatFilename(instance.writeSequence);
+    OpenWriteFile(instance.filename);
+}
+
+static inline uint8_t NextSequence(uint8_t current)
+{
+    return (uint8_t)((current + 1) % SEQUENCE_MODULUS);
+}
+
+static inline size_t FileCount(void)
+{
+    return (size_t)((instance.writeSequence - instance.readSequence + SEQUENCE_MODULUS) % SEQUENCE_MODULUS) + 1;
+}
+
+static void DiscardOldestFile(void)
+{
+    SolidSyslogFile_Close(instance.readFile);
+    FormatFilename(instance.readSequence);
+    SolidSyslogFile_Delete(instance.readFile, instance.filename);
+    instance.readSequence = NextSequence(instance.readSequence);
+    instance.readCursor   = 0;
+    FormatFilename(instance.readSequence);
+    OpenReadFile(instance.filename);
+}
+
 static inline void SeekToWritePosition(void)
 {
-    SolidSyslogFile_SeekTo(instance.file, instance.writePosition);
+    SolidSyslogFile_SeekTo(instance.writeFile, instance.writePosition);
 }
 
 static inline bool WriteRecordHeader(size_t dataSize)
@@ -345,7 +462,7 @@ static inline bool WriteRecordHeader(size_t dataSize)
 
 static inline bool WriteExact(const void* buf, size_t count)
 {
-    return SolidSyslogFile_Write(instance.file, buf, count);
+    return SolidSyslogFile_Write(instance.writeFile, buf, count);
 }
 
 static inline bool WriteRecordBody(const void* data, size_t size)
@@ -374,9 +491,14 @@ static bool HasUnsent(struct SolidSyslogStore* self)
     return HasUnsentRecords();
 }
 
+static inline bool ReadingOlderFile(void)
+{
+    return instance.readSequence != instance.writeSequence;
+}
+
 static inline bool HasUnsentRecords(void)
 {
-    return instance.readCursor < instance.writePosition;
+    return ReadingOlderFile() || (instance.readCursor < instance.writePosition);
 }
 
 /* ------------------------------------------------------------------
@@ -422,7 +544,7 @@ static bool ReadRecordData(size_t recordStart, uint32_t length, void* data, size
 {
     size_t copySize = BoundedSize(length, maxSize);
 
-    SolidSyslogFile_SeekTo(instance.file, DataOffset(recordStart));
+    SolidSyslogFile_SeekTo(instance.readFile, DataOffset(recordStart));
 
     if (ReadExact(data, copySize))
     {
@@ -453,7 +575,15 @@ static void MarkSent(struct SolidSyslogStore* self)
     if (instance.hasReadRecord && WriteSentFlag())
     {
         AdvanceReadCursor();
-        TruncateIfAllSent();
+
+        if (ReadingOlderFile())
+        {
+            DiscardOldestFile();
+        }
+        else
+        {
+            TruncateIfAllSent();
+        }
     }
 }
 
@@ -461,8 +591,8 @@ static inline bool WriteSentFlag(void)
 {
     uint8_t flag = SENT_FLAG_SENT;
 
-    SolidSyslogFile_SeekTo(instance.file, instance.lastSentFlagOffset);
-    return WriteExact(&flag, SENT_FLAG_SIZE);
+    SolidSyslogFile_SeekTo(instance.readFile, instance.lastSentFlagOffset);
+    return SolidSyslogFile_Write(instance.readFile, &flag, SENT_FLAG_SIZE);
 }
 
 static inline void AdvanceReadCursor(void)
