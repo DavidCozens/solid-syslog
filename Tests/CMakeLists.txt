@@ -21,6 +21,7 @@ set(TEST_SOURCES
     StringFake.c
     FileFakeTest.cpp
     FileFake.c
+    TestAssert.cpp
     SolidSyslogFileStoreTest.cpp
     main.cpp
 )

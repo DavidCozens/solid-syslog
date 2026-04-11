@@ -2,6 +2,7 @@
 #include "FileFake.h"
 
 #include <cstring>
+#include <stdexcept>
 
 // clang-format off
 TEST_GROUP(FileFake)
@@ -225,4 +226,108 @@ TEST(FileFake, ExistsDistinguishesFilesByName)
 
     CHECK_TRUE(SolidSyslogFileApi_Exists(api, "a.log"));
     CHECK_FALSE(SolidSyslogFileApi_Exists(api, "b.log"));
+}
+
+/* ------------------------------------------------------------------
+ * Operations on closed file
+ * ----------------------------------------------------------------*/
+
+TEST(FileFake, CloseWithNoFileOpenThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_Close(api));
+}
+
+TEST(FileFake, ReadWithNoFileOpenThrows)
+{
+    char buf[16];
+    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_Read(api, buf, 1));
+}
+
+TEST(FileFake, WriteWithNoFileOpenThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_Write(api, "x", 1));
+}
+
+TEST(FileFake, SeekToWithNoFileOpenThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_SeekTo(api, 0));
+}
+
+TEST(FileFake, SizeWithNoFileOpenThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_Size(api));
+}
+
+TEST(FileFake, TruncateWithNoFileOpenThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_Truncate(api));
+}
+
+/* ------------------------------------------------------------------
+ * Operations after Destroy
+ * ----------------------------------------------------------------*/
+
+// clang-format off
+TEST_GROUP(FileFakeAfterDestroy)
+{
+    struct SolidSyslogFileApi* api = nullptr;
+
+    void setup() override
+    {
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+        api = FileFake_Create();
+        FileFake_Destroy();
+    }
+
+    void teardown() override
+    {
+    }
+};
+
+// clang-format on
+
+TEST(FileFakeAfterDestroy, OpenThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_Open(api, "test.dat"));
+}
+
+TEST(FileFakeAfterDestroy, CloseThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_Close(api));
+}
+
+TEST(FileFakeAfterDestroy, IsOpenThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_IsOpen(api));
+}
+
+TEST(FileFakeAfterDestroy, ReadThrows)
+{
+    char buf[16];
+    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_Read(api, buf, 1));
+}
+
+TEST(FileFakeAfterDestroy, WriteThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_Write(api, "x", 1));
+}
+
+TEST(FileFakeAfterDestroy, SeekToThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_SeekTo(api, 0));
+}
+
+TEST(FileFakeAfterDestroy, SizeThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_Size(api));
+}
+
+TEST(FileFakeAfterDestroy, TruncateThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_Truncate(api));
+}
+
+TEST(FileFakeAfterDestroy, ExistsThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_Exists(api, "test.dat"));
 }
