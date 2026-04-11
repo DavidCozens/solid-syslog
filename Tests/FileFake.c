@@ -32,23 +32,6 @@ static size_t FileFake_DestroyedSize(struct SolidSyslogFileApi* self);
 static void   FileFake_DestroyedTruncate(struct SolidSyslogFileApi* self);
 static bool   FileFake_DestroyedExists(struct SolidSyslogFileApi* self, const char* path);
 
-/* helpers */
-static void              RequireOpenFile(const char* message);
-static inline bool       IsFileClosed(void);
-static inline bool       HasActiveFile(void);
-static inline bool       ShouldFailOnThisCall(bool* flag);
-static inline bool       HasBytesToRead(size_t count);
-static inline bool       HasSpaceToWrite(size_t count);
-static inline void*      ActiveContentAtPosition(void);
-static inline void       AdvancePosition(size_t count);
-static inline void       ExtendFileSize(void);
-static struct FileEntry* FindEntry(const char* path);
-static struct FileEntry* FindOrCreateEntry(const char* path);
-static struct FileEntry* FindFreeSlot(void);
-static inline bool       IsSlotFree(const struct FileEntry* entry);
-static inline bool       EntryMatchesPath(const struct FileEntry* entry, const char* path);
-static inline void       InitialiseEntry(struct FileEntry* entry, const char* path);
-
 struct FileEntry
 {
     char   path[FILEFAKE_MAX_PATH];
@@ -68,6 +51,28 @@ struct FileFake
     bool                      failNextWrite;
     bool                      failNextRead;
 };
+
+/* helpers */
+static inline struct FileFake* AsFake(struct SolidSyslogFileApi* self);
+static void                    RequireOpenFile(struct FileFake* fake, const char* message);
+static inline bool             IsFileClosed(const struct FileFake* fake);
+static inline bool             HasActiveFile(const struct FileFake* fake);
+static inline bool             ShouldFailOnThisCall(bool* flag);
+static inline bool             FoundEntry(const struct FileEntry* entry);
+static inline void             ActivateEntry(struct FileFake* fake, struct FileEntry* entry);
+static inline bool             HasBytesToRead(const struct FileFake* fake, size_t count);
+static inline void             CopyFromFile(struct FileFake* fake, void* buf, size_t count);
+static inline bool             HasSpaceToWrite(const struct FileFake* fake, size_t count);
+static inline void             CopyToFile(struct FileFake* fake, const void* buf, size_t count);
+static inline void             AdvancePosition(struct FileFake* fake, size_t count);
+static inline void             ExtendFileSize(struct FileFake* fake);
+static inline void             ResetActiveFile(struct FileFake* fake);
+static struct FileEntry*       FindEntry(struct FileFake* fake, const char* path);
+static struct FileEntry*       FindOrCreateEntry(struct FileFake* fake, const char* path);
+static struct FileEntry*       FindFreeSlot(struct FileFake* fake);
+static inline bool             IsSlotFree(const struct FileEntry* entry);
+static inline bool             EntryMatchesPath(const struct FileEntry* entry, const char* path);
+static inline void             InitialiseEntry(struct FileEntry* entry, const char* path);
 
 static const struct SolidSyslogFileApi LIVE_VTABLE = {
     FileFake_Open,  FileFake_Close, FileFake_IsOpen,   FileFake_Read,
@@ -124,17 +129,17 @@ void FileFake_FailNextRead(void)
 
 const void* FileFake_FileContent(void)
 {
-    return HasActiveFile() ? instance.active->content : NULL;
+    return HasActiveFile(&instance) ? instance.active->content : NULL;
 }
 
 size_t FileFake_FileSize(void)
 {
-    return HasActiveFile() ? instance.active->fileSize : 0;
+    return HasActiveFile(&instance) ? instance.active->fileSize : 0;
 }
 
-static inline bool HasActiveFile(void)
+static inline bool HasActiveFile(const struct FileFake* fake)
 {
-    return instance.active != NULL;
+    return FoundEntry(fake->active);
 }
 
 /* ------------------------------------------------------------------
@@ -143,24 +148,26 @@ static inline bool HasActiveFile(void)
 
 static bool FileFake_Open(struct SolidSyslogFileApi* self, const char* path)
 {
-    (void) self;
+    struct FileFake* fake = AsFake(self);
 
-    if (ShouldFailOnThisCall(&instance.failNextOpen))
+    if (ShouldFailOnThisCall(&fake->failNextOpen))
     {
         return false;
     }
 
-    struct FileEntry* entry = FindOrCreateEntry(path);
-    bool              found = entry != NULL;
+    struct FileEntry* entry = FindOrCreateEntry(fake, path);
 
-    if (found)
+    if (FoundEntry(entry))
     {
-        instance.active   = entry;
-        instance.open     = true;
-        instance.position = 0;
+        ActivateEntry(fake, entry);
     }
 
-    return found;
+    return FoundEntry(entry);
+}
+
+static inline struct FileFake* AsFake(struct SolidSyslogFileApi* self)
+{
+    return (struct FileFake*) self;
 }
 
 static inline bool ShouldFailOnThisCall(bool* flag)
@@ -170,15 +177,27 @@ static inline bool ShouldFailOnThisCall(bool* flag)
     return consumed;
 }
 
-static struct FileEntry* FindOrCreateEntry(const char* path)
+static inline bool FoundEntry(const struct FileEntry* entry)
 {
-    struct FileEntry* entry = FindEntry(path);
+    return entry != NULL;
+}
+
+static inline void ActivateEntry(struct FileFake* fake, struct FileEntry* entry)
+{
+    fake->active   = entry;
+    fake->open     = true;
+    fake->position = 0;
+}
+
+static struct FileEntry* FindOrCreateEntry(struct FileFake* fake, const char* path)
+{
+    struct FileEntry* entry = FindEntry(fake, path);
 
     if (entry == NULL)
     {
-        entry = FindFreeSlot();
+        entry = FindFreeSlot(fake);
 
-        if (entry != NULL)
+        if (FoundEntry(entry))
         {
             InitialiseEntry(entry, path);
         }
@@ -187,15 +206,15 @@ static struct FileEntry* FindOrCreateEntry(const char* path)
     return entry;
 }
 
-static struct FileEntry* FindEntry(const char* path)
+static struct FileEntry* FindEntry(struct FileFake* fake, const char* path)
 {
     struct FileEntry* result = NULL;
 
     for (size_t i = 0; i < FILEFAKE_MAX_FILES; i++)
     {
-        if (EntryMatchesPath(&instance.files[i], path))
+        if (EntryMatchesPath(&fake->files[i], path))
         {
-            result = &instance.files[i];
+            result = &fake->files[i];
             break;
         }
     }
@@ -208,15 +227,15 @@ static inline bool EntryMatchesPath(const struct FileEntry* entry, const char* p
     return entry->inUse && (strcmp(entry->path, path) == 0);
 }
 
-static struct FileEntry* FindFreeSlot(void)
+static struct FileEntry* FindFreeSlot(struct FileFake* fake)
 {
     struct FileEntry* result = NULL;
 
     for (size_t i = 0; i < FILEFAKE_MAX_FILES; i++)
     {
-        if (IsSlotFree(&instance.files[i]))
+        if (IsSlotFree(&fake->files[i]))
         {
-            result = &instance.files[i];
+            result = &fake->files[i];
             break;
         }
     }
@@ -243,23 +262,23 @@ static inline void InitialiseEntry(struct FileEntry* entry, const char* path)
 
 static void FileFake_Close(struct SolidSyslogFileApi* self)
 {
-    (void) self;
-    RequireOpenFile("Close called with no file open");
-    instance.open     = false;
-    instance.position = 0;
+    struct FileFake* fake = AsFake(self);
+    RequireOpenFile(fake, "Close called with no file open");
+    fake->open     = false;
+    fake->position = 0;
 }
 
-static void RequireOpenFile(const char* message)
+static void RequireOpenFile(struct FileFake* fake, const char* message)
 {
-    if (IsFileClosed())
+    if (IsFileClosed(fake))
     {
         TestAssert_Fail(message);
     }
 }
 
-static inline bool IsFileClosed(void)
+static inline bool IsFileClosed(const struct FileFake* fake)
 {
-    return !instance.open;
+    return !fake->open;
 }
 
 /* ------------------------------------------------------------------
@@ -268,8 +287,8 @@ static inline bool IsFileClosed(void)
 
 static bool FileFake_IsOpen(struct SolidSyslogFileApi* self)
 {
-    (void) self;
-    return instance.open;
+    struct FileFake* fake = AsFake(self);
+    return fake->open;
 }
 
 /* ------------------------------------------------------------------
@@ -278,39 +297,39 @@ static bool FileFake_IsOpen(struct SolidSyslogFileApi* self)
 
 static bool FileFake_Read(struct SolidSyslogFileApi* self, void* buf, size_t count)
 {
-    (void) self;
-    RequireOpenFile("Read called with no file open");
+    struct FileFake* fake = AsFake(self);
+    RequireOpenFile(fake, "Read called with no file open");
 
-    if (ShouldFailOnThisCall(&instance.failNextRead))
+    if (ShouldFailOnThisCall(&fake->failNextRead))
     {
         return false;
     }
 
-    bool success = HasBytesToRead(count);
+    bool success = HasBytesToRead(fake, count);
 
     if (success)
     {
-        // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memcpy with bounded count; memcpy_s is not portable
-        memcpy(buf, ActiveContentAtPosition(), count);
-        AdvancePosition(count);
+        CopyFromFile(fake, buf, count);
     }
 
     return success;
 }
 
-static inline bool HasBytesToRead(size_t count)
+static inline bool HasBytesToRead(const struct FileFake* fake, size_t count)
 {
-    return (instance.position + count) <= instance.active->fileSize;
+    return (fake->position + count) <= fake->active->fileSize;
 }
 
-static inline void* ActiveContentAtPosition(void)
+static inline void CopyFromFile(struct FileFake* fake, void* buf, size_t count)
 {
-    return instance.active->content + instance.position;
+    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memcpy with bounded count; memcpy_s is not portable
+    memcpy(buf, fake->active->content + fake->position, count);
+    AdvancePosition(fake, count);
 }
 
-static inline void AdvancePosition(size_t count)
+static inline void AdvancePosition(struct FileFake* fake, size_t count)
 {
-    instance.position += count;
+    fake->position += count;
 }
 
 /* ------------------------------------------------------------------
@@ -319,37 +338,42 @@ static inline void AdvancePosition(size_t count)
 
 static bool FileFake_Write(struct SolidSyslogFileApi* self, const void* buf, size_t count)
 {
-    (void) self;
-    RequireOpenFile("Write called with no file open");
+    struct FileFake* fake = AsFake(self);
+    RequireOpenFile(fake, "Write called with no file open");
 
-    if (ShouldFailOnThisCall(&instance.failNextWrite))
+    if (ShouldFailOnThisCall(&fake->failNextWrite))
     {
         return false;
     }
 
-    bool success = HasSpaceToWrite(count);
+    bool success = HasSpaceToWrite(fake, count);
 
     if (success)
     {
-        // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memcpy with bounded count; memcpy_s is not portable
-        memcpy(ActiveContentAtPosition(), buf, count);
-        AdvancePosition(count);
-        ExtendFileSize();
+        CopyToFile(fake, buf, count);
     }
 
     return success;
 }
 
-static inline bool HasSpaceToWrite(size_t count)
+static inline bool HasSpaceToWrite(const struct FileFake* fake, size_t count)
 {
-    return (instance.position + count) <= FILEFAKE_MAX_SIZE;
+    return (fake->position + count) <= FILEFAKE_MAX_SIZE;
 }
 
-static inline void ExtendFileSize(void)
+static inline void CopyToFile(struct FileFake* fake, const void* buf, size_t count)
 {
-    if (instance.position > instance.active->fileSize)
+    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memcpy with bounded count; memcpy_s is not portable
+    memcpy(fake->active->content + fake->position, buf, count);
+    AdvancePosition(fake, count);
+    ExtendFileSize(fake);
+}
+
+static inline void ExtendFileSize(struct FileFake* fake)
+{
+    if (fake->position > fake->active->fileSize)
     {
-        instance.active->fileSize = instance.position;
+        fake->active->fileSize = fake->position;
     }
 }
 
@@ -359,30 +383,35 @@ static inline void ExtendFileSize(void)
 
 static void FileFake_SeekTo(struct SolidSyslogFileApi* self, size_t offset)
 {
-    (void) self;
-    RequireOpenFile("SeekTo called with no file open");
-    instance.position = offset;
+    struct FileFake* fake = AsFake(self);
+    RequireOpenFile(fake, "SeekTo called with no file open");
+    fake->position = offset;
 }
 
 static size_t FileFake_Size(struct SolidSyslogFileApi* self)
 {
-    (void) self;
-    RequireOpenFile("Size called with no file open");
-    return instance.active->fileSize;
+    struct FileFake* fake = AsFake(self);
+    RequireOpenFile(fake, "Size called with no file open");
+    return fake->active->fileSize;
 }
 
 static void FileFake_Truncate(struct SolidSyslogFileApi* self)
 {
-    (void) self;
-    RequireOpenFile("Truncate called with no file open");
-    instance.active->fileSize = 0;
-    instance.position         = 0;
+    struct FileFake* fake = AsFake(self);
+    RequireOpenFile(fake, "Truncate called with no file open");
+    ResetActiveFile(fake);
+}
+
+static inline void ResetActiveFile(struct FileFake* fake)
+{
+    fake->active->fileSize = 0;
+    fake->position         = 0;
 }
 
 static bool FileFake_Exists(struct SolidSyslogFileApi* self, const char* path)
 {
-    (void) self;
-    return FindEntry(path) != NULL;
+    struct FileFake* fake = AsFake(self);
+    return FoundEntry(FindEntry(fake, path));
 }
 
 /* ------------------------------------------------------------------
