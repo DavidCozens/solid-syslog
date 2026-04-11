@@ -1,12 +1,14 @@
 import os
 import re
 import shutil
+import signal
 import socket
 import subprocess
 import time
 from datetime import datetime, timezone
 
 from behave import given, when, then
+from environment import STORE_FILE_PATH
 
 RECEIVED_LOG = "Bdd/output/received.log"
 EXAMPLE_BINARY = "build/debug/Example/SolidSyslogExample"
@@ -204,6 +206,8 @@ def step_threaded_running_with_transport(context, transport):
 @given("the file store is enabled")
 def step_file_store_enabled(context):
     context.store_type = "file"
+    if os.path.exists(STORE_FILE_PATH):
+        os.remove(STORE_FILE_PATH)
 
 
 @when("the client sends a message")
@@ -440,6 +444,13 @@ def step_client_sends_n_messages(context, count):
     time.sleep(0.5)
 
 
+@when("the client is killed")
+def step_client_is_killed(context):
+    context.interactive_process.send_signal(signal.SIGKILL)
+    context.interactive_process.wait(timeout=5)
+    del context.interactive_process
+
+
 @then("the messages have contiguous sequenceIds")
 def step_check_contiguous_sequence_ids(context):
     ids = []
@@ -456,3 +467,42 @@ def step_check_contiguous_sequence_ids(context):
         assert ids[i] == ids[i - 1] + 1, (
             f"Non-contiguous sequenceIds: {ids[i - 1]} followed by {ids[i]}"
         )
+
+
+@then("the replayed messages have sequenceIds {id_list}")
+def step_check_replayed_sequence_ids(context, id_list):
+    expected = [int(x.strip()) for x in id_list.split(",")]
+    assert len(context.all_lines) >= len(expected), (
+        f"Expected at least {len(expected)} messages, "
+        f"got {len(context.all_lines)}"
+    )
+    # Replayed messages are the most recent batch excluding the first message
+    # from the previous session (already verified)
+    replayed = context.all_lines[-len(expected):]
+    for i, line in enumerate(replayed):
+        fields = parse_syslog_line(line)
+        sd = fields.get("STRUCTURED_DATA", "")
+        match = re.search(r'sequenceId="(\d+)"', sd)
+        assert match, (
+            f"Replayed message {i + 1}: no sequenceId in structured data: {sd}"
+        )
+        actual = int(match.group(1))
+        assert actual == expected[i], (
+            f"Replayed message {i + 1}: expected sequenceId {expected[i]}, "
+            f"got {actual}"
+        )
+
+
+@then("the last message has sequenceId {value:d}")
+def step_check_last_sequence_id(context, value):
+    assert context.all_lines, "No messages received to check last sequenceId"
+    fields = parse_syslog_line(context.all_lines[-1])
+    sd = fields.get("STRUCTURED_DATA", "")
+    match = re.search(r'sequenceId="(\d+)"', sd)
+    assert match, (
+        f"No sequenceId in last message structured data: {sd}"
+    )
+    actual = int(match.group(1))
+    assert actual == value, (
+        f"Last message: expected sequenceId {value}, got {actual}"
+    )

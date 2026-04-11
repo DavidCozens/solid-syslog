@@ -9,6 +9,7 @@ logger = logging.getLogger("behave.environment")
 SYSLOG_NG_CONF = "Bdd/syslog-ng/syslog-ng.conf"
 SYSLOG_NG_FULL_CONF = "Bdd/syslog-ng/syslog-ng-full.conf"
 SYSLOG_NG_CTL = "/var/lib/syslog-ng/syslog-ng.ctl"
+STORE_FILE_PATH = "/tmp/solidsyslog_store.dat"
 
 
 def before_all(context):
@@ -46,3 +47,9 @@ def after_scenario(context, scenario):
         except Exception as exc:
             logger.warning("Failed to restore syslog-ng config in teardown: %s", exc)
         context.syslog_ng_config_changed = False
+
+    # Clean up store file to prevent cross-scenario contamination
+    try:
+        os.remove(STORE_FILE_PATH)
+    except FileNotFoundError:
+        pass
