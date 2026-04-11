@@ -495,6 +495,7 @@ def step_check_replayed_sequence_ids(context, id_list):
 
 @then("the last message has sequenceId {value:d}")
 def step_check_last_sequence_id(context, value):
+    assert context.all_lines, "No messages received to check last sequenceId"
     fields = parse_syslog_line(context.all_lines[-1])
     sd = fields.get("STRUCTURED_DATA", "")
     match = re.search(r'sequenceId="(\d+)"', sd)
