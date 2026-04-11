@@ -1,3 +1,4 @@
+import glob
 import logging
 import os
 import shutil
@@ -10,6 +11,7 @@ SYSLOG_NG_CONF = "Bdd/syslog-ng/syslog-ng.conf"
 SYSLOG_NG_FULL_CONF = "Bdd/syslog-ng/syslog-ng-full.conf"
 SYSLOG_NG_CTL = "/var/lib/syslog-ng/syslog-ng.ctl"
 STORE_FILE_PATH = "/tmp/solidsyslog_store.dat"
+STORE_PATH_PREFIX = "/tmp/STORE"
 
 
 def before_all(context):
@@ -48,8 +50,10 @@ def after_scenario(context, scenario):
             logger.warning("Failed to restore syslog-ng config in teardown: %s", exc)
         context.syslog_ng_config_changed = False
 
-    # Clean up store file to prevent cross-scenario contamination
+    # Clean up store files to prevent cross-scenario contamination
     try:
         os.remove(STORE_FILE_PATH)
     except FileNotFoundError:
         pass
+    for path in glob.glob(STORE_PATH_PREFIX + "*.log"):
+        os.remove(path)
