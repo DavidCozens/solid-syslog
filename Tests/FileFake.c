@@ -16,6 +16,7 @@ static bool   Write(struct SolidSyslogFileApi* self, const void* buf, size_t cou
 static void   SeekTo(struct SolidSyslogFileApi* self, size_t offset);
 static size_t Size(struct SolidSyslogFileApi* self);
 static void   Truncate(struct SolidSyslogFileApi* self);
+static bool   Exists(struct SolidSyslogFileApi* self, const char* path);
 
 struct FileFake
 {
@@ -24,6 +25,7 @@ struct FileFake
     size_t                    fileSize;
     size_t                    position;
     bool                      open;
+    bool                      hasFile;
     bool                      failNextOpen;
     bool                      failNextWrite;
     bool                      failNextRead;
@@ -42,6 +44,7 @@ struct SolidSyslogFileApi* FileFake_Create(void)
     instance.base.SeekTo   = SeekTo;
     instance.base.Size     = Size;
     instance.base.Truncate = Truncate;
+    instance.base.Exists   = Exists;
     return &instance.base;
 }
 
@@ -87,6 +90,7 @@ static bool Open(struct SolidSyslogFileApi* self, const char* path)
     }
 
     instance.open     = true;
+    instance.hasFile  = true;
     instance.position = 0;
     return true;
 }
@@ -170,4 +174,11 @@ static void Truncate(struct SolidSyslogFileApi* self)
     (void) self;
     instance.fileSize = 0;
     instance.position = 0;
+}
+
+static bool Exists(struct SolidSyslogFileApi* self, const char* path)
+{
+    (void) self;
+    (void) path;
+    return instance.hasFile;
 }

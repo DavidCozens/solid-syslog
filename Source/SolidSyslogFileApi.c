@@ -39,3 +39,8 @@ void SolidSyslogFileApi_Truncate(struct SolidSyslogFileApi* api)
 {
     api->Truncate(api);
 }
+
+bool SolidSyslogFileApi_Exists(struct SolidSyslogFileApi* api, const char* path)
+{
+    return api->Exists(api, path);
+}

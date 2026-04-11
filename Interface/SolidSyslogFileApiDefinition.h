@@ -15,6 +15,7 @@ EXTERN_C_BEGIN
         void (*SeekTo)(struct SolidSyslogFileApi* self, size_t offset);
         size_t (*Size)(struct SolidSyslogFileApi* self);
         void (*Truncate)(struct SolidSyslogFileApi* self);
+        bool (*Exists)(struct SolidSyslogFileApi* self, const char* path);
     };
 
 EXTERN_C_END

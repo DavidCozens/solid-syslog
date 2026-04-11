@@ -183,3 +183,21 @@ TEST(FileFake, OpenPreservesExistingContent)
     SolidSyslogFileApi_Read(api, buf, 5);
     MEMCMP_EQUAL("hello", buf, 5);
 }
+
+TEST(FileFake, ExistsReturnsTrueForOpenFile)
+{
+    SolidSyslogFileApi_Open(api, "test.dat");
+    CHECK_TRUE(SolidSyslogFileApi_Exists(api, "test.dat"));
+}
+
+TEST(FileFake, ExistsReturnsFalseForUnknownFile)
+{
+    CHECK_FALSE(SolidSyslogFileApi_Exists(api, "unknown.dat"));
+}
+
+TEST(FileFake, ExistsReturnsTrueForClosedFile)
+{
+    SolidSyslogFileApi_Open(api, "test.dat");
+    SolidSyslogFileApi_Close(api);
+    CHECK_TRUE(SolidSyslogFileApi_Exists(api, "test.dat"));
+}

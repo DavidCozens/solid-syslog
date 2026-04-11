@@ -21,6 +21,7 @@ static bool   Write(struct SolidSyslogFileApi* self, const void* buf, size_t cou
 static void   SeekTo(struct SolidSyslogFileApi* self, size_t offset);
 static size_t Size(struct SolidSyslogFileApi* self);
 static void   Truncate(struct SolidSyslogFileApi* self);
+static bool   Exists(struct SolidSyslogFileApi* self, const char* path);
 
 struct SolidSyslogPosixFileApi
 {
@@ -40,6 +41,7 @@ struct SolidSyslogFileApi* SolidSyslogPosixFileApi_Create(void)
     instance.base.SeekTo   = SeekTo;
     instance.base.Size     = Size;
     instance.base.Truncate = Truncate;
+    instance.base.Exists   = Exists;
     instance.fd            = INVALID_FD;
     return &instance.base;
 }
@@ -60,6 +62,7 @@ void SolidSyslogPosixFileApi_Destroy(void)
     instance.base.SeekTo   = NULL;
     instance.base.Size     = NULL;
     instance.base.Truncate = NULL;
+    instance.base.Exists   = NULL;
 }
 
 static bool Open(struct SolidSyslogFileApi* self, const char* path)
@@ -115,4 +118,10 @@ static void Truncate(struct SolidSyslogFileApi* self)
 {
     struct SolidSyslogPosixFileApi* posix = (struct SolidSyslogPosixFileApi*) self;
     ftruncate(posix->fd, 0);
+}
+
+static bool Exists(struct SolidSyslogFileApi* self, const char* path)
+{
+    (void) self;
+    return access(path, F_OK) == 0;
 }
