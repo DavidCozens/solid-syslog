@@ -53,5 +53,9 @@ Bdd/output/*
 Bdd/junit/*
 !Bdd/junit/.gitkeep
 
+# Python bytecode (BDD steps)
+__pycache__/
+*.pyc
+
 # Claude Code local config
 .claude/

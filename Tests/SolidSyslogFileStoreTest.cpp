@@ -1,18 +1,33 @@
 #include "CppUTest/TestHarness.h"
 #include "SolidSyslogFileStore.h"
+#include "SolidSyslog.h"
 #include "FileFake.h"
 
 #include <cstring>
 
-static const char* const TEST_PATH     = "/tmp/test_store.dat";
-static const char* const TEST_DATA     = "hello";
-static const size_t      TEST_DATA_LEN = 5;
+static const char* const TEST_PATH_PREFIX = "/tmp/test_store";
+static const char* const TEST_DATA        = "hello";
+static const size_t      TEST_DATA_LEN    = 5;
 
 enum
 {
-    TEST_BUF_SIZE = 512,
-    SENTINEL      = 'Z'
+    TEST_BUF_SIZE      = 512,
+    SENTINEL           = 'Z',
+    TEST_MAX_FILE_SIZE = 4096,
+    TEST_MAX_FILES     = 2
 };
+
+static const struct SolidSyslogFileStoreConfig DEFAULT_CONFIG = {
+    nullptr, nullptr, TEST_PATH_PREFIX, TEST_MAX_FILE_SIZE, TEST_MAX_FILES, SOLIDSYSLOG_DISCARD_OLDEST,
+};
+
+static struct SolidSyslogFileStoreConfig MakeConfig(struct SolidSyslogFile* file)
+{
+    struct SolidSyslogFileStoreConfig config = DEFAULT_CONFIG;
+    config.readFile                          = file;
+    config.writeFile                         = file;
+    return config;
+}
 
 /* ------------------------------------------------------------------
  * Basic operations
@@ -21,15 +36,17 @@ enum
 // clang-format off
 TEST_GROUP(SolidSyslogFileStore)
 {
-    struct SolidSyslogFileApi* fileApi = nullptr;
+    struct FileFakeStorage storage = {};
+    struct SolidSyslogFile* file = nullptr;
     struct SolidSyslogStore*   store   = nullptr;
 
     void setup() override
     {
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        fileApi = FileFake_Create();
+        file = FileFake_Create(&storage);
+        struct SolidSyslogFileStoreConfig config = MakeConfig(file);
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        store = SolidSyslogFileStore_Create(fileApi, TEST_PATH);
+        store = SolidSyslogFileStore_Create(&config);
     }
 
     void teardown() override
@@ -44,6 +61,11 @@ TEST_GROUP(SolidSyslogFileStore)
 TEST(SolidSyslogFileStore, CreateReturnsNonNull)
 {
     CHECK_TRUE(store != nullptr);
+}
+
+TEST(SolidSyslogFileStore, CreatesFileWithSequence00)
+{
+    CHECK_TRUE(SolidSyslogFile_Exists(file, "/tmp/test_store00.log"));
 }
 
 TEST(SolidSyslogFileStore, HasUnsentReturnsFalseOnEmpty)
@@ -150,7 +172,7 @@ TEST(SolidSyslogFileStore, MarkSentWithoutReadDoesNotCrash)
     SolidSyslogStore_MarkSent(store);
 }
 
-TEST(SolidSyslogFileStore, FileTruncatedAfterAllSent)
+TEST(SolidSyslogFileStore, HasUnsentFalseAfterAllSent)
 {
     SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
     char   buf[TEST_BUF_SIZE];
@@ -158,7 +180,7 @@ TEST(SolidSyslogFileStore, FileTruncatedAfterAllSent)
     SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
     SolidSyslogStore_MarkSent(store);
 
-    LONGS_EQUAL(0, FileFake_FileSize());
+    CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
 }
 
 TEST(SolidSyslogFileStore, WriteAfterDrainWorks)
@@ -235,12 +257,13 @@ TEST(SolidSyslogFileStore, FiveWritesDrainAllInOrder)
 // clang-format off
 TEST_GROUP(SolidSyslogFileStoreResume)
 {
-    struct SolidSyslogFileApi* fileApi = nullptr;
+    struct FileFakeStorage storage = {};
+    struct SolidSyslogFile* file = nullptr;
     struct SolidSyslogStore*   store   = nullptr;
 
     void setup() override
     {
-        fileApi = FileFake_Create();
+        file = FileFake_Create(&storage);
     }
 
     void teardown() override
@@ -252,14 +275,15 @@ TEST_GROUP(SolidSyslogFileStoreResume)
     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- total and markedSent have distinct semantics
     void WritePreviousSession(int total, int markedSent)
     {
+        struct SolidSyslogFileStoreConfig config = MakeConfig(file);
         // cppcheck-suppress unreadVariable -- used by WriteMessages/DrainMessages; cppcheck does not model CppUTest macros
-        store = SolidSyslogFileStore_Create(fileApi, TEST_PATH);
+        store = SolidSyslogFileStore_Create(&config);
         WriteMessages(total);
         DrainMessages(markedSent);
         SolidSyslogFileStore_Destroy();
 
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        store = SolidSyslogFileStore_Create(fileApi, TEST_PATH);
+        store = SolidSyslogFileStore_Create(&config);
     }
 
     void WriteMessages(int count) const
@@ -355,12 +379,13 @@ TEST(SolidSyslogFileStoreResume, CanWriteNewMessagesAfterResume)
 // clang-format off
 TEST_GROUP(SolidSyslogFileStoreDestroy)
 {
-    struct SolidSyslogFileApi* fileApi = nullptr;
+    struct FileFakeStorage storage = {};
+    struct SolidSyslogFile* file = nullptr;
 
     void setup() override
     {
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        fileApi = FileFake_Create();
+        file = FileFake_Create(&storage);
     }
 
     void teardown() override
@@ -373,17 +398,135 @@ TEST_GROUP(SolidSyslogFileStoreDestroy)
 
 TEST(SolidSyslogFileStoreDestroy, DestroyClosesFile)
 {
-    SolidSyslogFileStore_Create(fileApi, TEST_PATH);
-    CHECK_TRUE(SolidSyslogFileApi_IsOpen(fileApi));
+    struct SolidSyslogFileStoreConfig config = MakeConfig(file);
+    SolidSyslogFileStore_Create(&config);
+    CHECK_TRUE(SolidSyslogFile_IsOpen(file));
     SolidSyslogFileStore_Destroy();
-    CHECK_FALSE(SolidSyslogFileApi_IsOpen(fileApi));
+    CHECK_FALSE(SolidSyslogFile_IsOpen(file));
 }
 
 TEST(SolidSyslogFileStoreDestroy, DoubleDestroyDoesNotCrash)
 {
-    SolidSyslogFileStore_Create(fileApi, TEST_PATH);
+    struct SolidSyslogFileStoreConfig config = MakeConfig(file);
+    SolidSyslogFileStore_Create(&config);
     SolidSyslogFileStore_Destroy();
     SolidSyslogFileStore_Destroy();
+}
+
+/* ------------------------------------------------------------------
+ * Config validation
+ * ----------------------------------------------------------------*/
+
+// clang-format off
+TEST_GROUP(SolidSyslogFileStoreConfig)
+{
+    struct FileFakeStorage storage = {};
+    struct SolidSyslogFile* file = nullptr;
+    struct SolidSyslogStore*   store   = nullptr;
+
+    void setup() override
+    {
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+        file = FileFake_Create(&storage);
+    }
+
+    void teardown() override
+    {
+        SolidSyslogFileStore_Destroy();
+        FileFake_Destroy();
+    }
+
+    void CreateWithMaxFiles(size_t maxFiles)
+    {
+        struct SolidSyslogFileStoreConfig config = MakeConfig(file);
+        config.maxFiles = maxFiles;
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+        store = SolidSyslogFileStore_Create(&config);
+    }
+
+    void CreateWithMaxFileSize(size_t maxFileSize)
+    {
+        struct SolidSyslogFileStoreConfig config = MakeConfig(file);
+        config.maxFileSize = maxFileSize;
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+        store = SolidSyslogFileStore_Create(&config);
+    }
+
+    void CreateWithPathPrefix(const char* prefix)
+    {
+        struct SolidSyslogFileStoreConfig config = MakeConfig(file);
+        config.pathPrefix = prefix;
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+        store = SolidSyslogFileStore_Create(&config);
+    }
+
+    void VerifyWriteAndReadBack() const
+    {
+        CHECK_TRUE(SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN));
+        char   buf[TEST_BUF_SIZE] = {};
+        size_t bytesRead = 0;
+        SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
+        MEMCMP_EQUAL(TEST_DATA, buf, TEST_DATA_LEN);
+    }
+};
+
+// clang-format on
+
+TEST(SolidSyslogFileStoreConfig, MaxFilesZeroClampedToMinimum)
+{
+    CreateWithMaxFiles(0);
+    VerifyWriteAndReadBack();
+}
+
+TEST(SolidSyslogFileStoreConfig, MaxFilesOneClampedToMinimum)
+{
+    CreateWithMaxFiles(1);
+    VerifyWriteAndReadBack();
+}
+
+TEST(SolidSyslogFileStoreConfig, MaxFilesHundredClampedToMaximum)
+{
+    CreateWithMaxFiles(100);
+    VerifyWriteAndReadBack();
+}
+
+TEST(SolidSyslogFileStoreConfig, MaxFileSizeZeroClampedToMinimum)
+{
+    CreateWithMaxFileSize(0);
+    VerifyWriteAndReadBack();
+}
+
+TEST(SolidSyslogFileStoreConfig, MaxFileSizeOneClampedToMinimum)
+{
+    CreateWithMaxFileSize(1);
+    VerifyWriteAndReadBack();
+}
+
+TEST(SolidSyslogFileStoreConfig, FilenameExactlyAtMaxPath)
+{
+    /* MAX_PATH_SIZE=128, suffix "00.log"=6, null=1, so max prefix=121 chars */
+    char prefix[122];
+    memset(prefix, 'A', 121);
+    prefix[121] = '\0';
+
+    CreateWithPathPrefix(prefix);
+
+    char expected[129];
+    memset(expected, 'A', 121);
+    memcpy(expected + 121, "00.log", 7);
+
+    CHECK_TRUE(SolidSyslogFile_Exists(file, expected));
+}
+
+TEST(SolidSyslogFileStoreConfig, FilenameTruncatedWhenPrefixTooLong)
+{
+    /* Prefix longer than max — filename is truncated but store still works */
+    char prefix[140];
+    memset(prefix, 'B', 139);
+    prefix[139] = '\0';
+
+    CreateWithPathPrefix(prefix);
+    VerifyWriteAndReadBack();
 }
 
 /* ------------------------------------------------------------------
@@ -393,14 +536,15 @@ TEST(SolidSyslogFileStoreDestroy, DoubleDestroyDoesNotCrash)
 // clang-format off
 TEST_GROUP(SolidSyslogFileStoreErrors)
 {
-    struct SolidSyslogFileApi* fileApi = nullptr;
+    struct FileFakeStorage storage = {};
+    struct SolidSyslogFile* file = nullptr;
     // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
     struct SolidSyslogStore*   store   = nullptr;
 
     void setup() override
     {
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        fileApi = FileFake_Create();
+        file = FileFake_Create(&storage);
     }
 
     void teardown() override
@@ -414,28 +558,32 @@ TEST_GROUP(SolidSyslogFileStoreErrors)
 
 TEST(SolidSyslogFileStoreErrors, OpenFailureStillReturnsNonNull)
 {
+    struct SolidSyslogFileStoreConfig config = MakeConfig(file);
     FileFake_FailNextOpen();
-    store = SolidSyslogFileStore_Create(fileApi, TEST_PATH);
+    store = SolidSyslogFileStore_Create(&config);
     CHECK_TRUE(store != nullptr);
 }
 
 TEST(SolidSyslogFileStoreErrors, WriteReturnsFalseWhenNotOpen)
 {
+    struct SolidSyslogFileStoreConfig config = MakeConfig(file);
     FileFake_FailNextOpen();
-    store = SolidSyslogFileStore_Create(fileApi, TEST_PATH);
+    store = SolidSyslogFileStore_Create(&config);
     CHECK_FALSE(SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN));
 }
 
 TEST(SolidSyslogFileStoreErrors, WriteReturnsFalseOnWriteFailure)
 {
-    store = SolidSyslogFileStore_Create(fileApi, TEST_PATH);
+    struct SolidSyslogFileStoreConfig config = MakeConfig(file);
+    store                                    = SolidSyslogFileStore_Create(&config);
     FileFake_FailNextWrite();
     CHECK_FALSE(SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN));
 }
 
 TEST(SolidSyslogFileStoreErrors, ReadReturnsFalseOnReadFailure)
 {
-    store = SolidSyslogFileStore_Create(fileApi, TEST_PATH);
+    struct SolidSyslogFileStoreConfig config = MakeConfig(file);
+    store                                    = SolidSyslogFileStore_Create(&config);
     SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
     FileFake_FailNextRead();
 
@@ -447,14 +595,16 @@ TEST(SolidSyslogFileStoreErrors, ReadReturnsFalseOnReadFailure)
 
 TEST(SolidSyslogFileStoreErrors, HasUnsentReturnsFalseWhenNotOpen)
 {
+    struct SolidSyslogFileStoreConfig config = MakeConfig(file);
     FileFake_FailNextOpen();
-    store = SolidSyslogFileStore_Create(fileApi, TEST_PATH);
+    store = SolidSyslogFileStore_Create(&config);
     CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
 }
 
 TEST(SolidSyslogFileStoreErrors, MarkSentDoesNotAdvanceWhenWriteFails)
 {
-    store = SolidSyslogFileStore_Create(fileApi, TEST_PATH);
+    struct SolidSyslogFileStoreConfig config = MakeConfig(file);
+    store                                    = SolidSyslogFileStore_Create(&config);
     SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
 
     char   buf[TEST_BUF_SIZE];
@@ -465,4 +615,434 @@ TEST(SolidSyslogFileStoreErrors, MarkSentDoesNotAdvanceWhenWriteFails)
     SolidSyslogStore_MarkSent(store);
 
     CHECK_TRUE(SolidSyslogStore_HasUnsent(store));
+}
+
+/* ------------------------------------------------------------------
+ * File rotation
+ * ----------------------------------------------------------------*/
+
+// clang-format off
+TEST_GROUP(SolidSyslogFileStoreRotation)
+{
+    static const size_t RECORD_OVERHEAD    = 5; /* 4 (length) + 1 (sent flag) */
+    static const size_t ONE_MAX_MSG_RECORD = SOLIDSYSLOG_MAX_MESSAGE_SIZE + RECORD_OVERHEAD;
+
+    struct FileFakeStorage readStorage = {};
+    struct FileFakeStorage writeStorage = {};
+    struct SolidSyslogFile* readFile = nullptr;
+    struct SolidSyslogFile* writeFile = nullptr;
+    struct SolidSyslogStore* store = nullptr;
+    char maxMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE] = {};
+
+    void setup() override
+    {
+        readFile = FileFake_Create(&readStorage);
+        writeFile = FileFake_Create(&writeStorage);
+        memset(maxMsg, 'A', sizeof(maxMsg));
+    }
+
+    void teardown() override
+    {
+        SolidSyslogFileStore_Destroy();
+        FileFake_Destroy();
+    }
+
+    void CreateWithMaxFileSize(size_t maxFileSize, enum SolidSyslogDiscardPolicy policy = SOLIDSYSLOG_DISCARD_OLDEST,
+                               size_t maxFiles = 2)
+    {
+        struct SolidSyslogFileStoreConfig config = DEFAULT_CONFIG;
+        config.readFile      = readFile;
+        config.writeFile     = writeFile;
+        config.maxFileSize   = maxFileSize;
+        config.maxFiles      = maxFiles;
+        config.discardPolicy = policy;
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+        store = SolidSyslogFileStore_Create(&config);
+    }
+
+    void WriteMaxMsg()
+    {
+        SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg));
+    }
+};
+
+// clang-format on
+
+TEST(SolidSyslogFileStoreRotation, WriteRotatesToNewFileWhenFull)
+{
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    WriteMaxMsg();
+    WriteMaxMsg();
+    CHECK_TRUE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store01.log"));
+}
+
+TEST(SolidSyslogFileStoreRotation, WriteDoesNotRotateWhenFileHasSpace)
+{
+    CreateWithMaxFileSize(2 * ONE_MAX_MSG_RECORD);
+    WriteMaxMsg();
+    WriteMaxMsg();
+    CHECK_FALSE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store01.log"));
+}
+
+TEST(SolidSyslogFileStoreRotation, HasUnsentReturnsTrueAfterRotation)
+{
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    WriteMaxMsg();
+    WriteMaxMsg();
+    CHECK_TRUE(SolidSyslogStore_HasUnsent(store));
+}
+
+TEST(SolidSyslogFileStoreRotation, ReadReturnsFirstFileAfterRotation)
+{
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+
+    char firstMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    memset(firstMsg, 'B', sizeof(firstMsg));
+    SolidSyslogStore_Write(store, firstMsg, sizeof(firstMsg));
+
+    WriteMaxMsg(); /* rotates to file 01 */
+
+    char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE] = {};
+    size_t bytesRead                         = 0;
+    SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
+
+    LONGS_EQUAL(sizeof(firstMsg), bytesRead);
+    BYTES_EQUAL('B', buf[0]);
+}
+
+TEST(SolidSyslogFileStoreRotation, MarkSentAdvancesReadToSecondFile)
+{
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+
+    char firstMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    memset(firstMsg, 'B', sizeof(firstMsg));
+    SolidSyslogStore_Write(store, firstMsg, sizeof(firstMsg));
+
+    WriteMaxMsg(); /* rotates to file 01 */
+
+    char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE] = {};
+    size_t bytesRead                         = 0;
+    SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
+    SolidSyslogStore_MarkSent(store);
+
+    memset(buf, 0, sizeof(buf));
+    SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
+
+    LONGS_EQUAL(SOLIDSYSLOG_MAX_MESSAGE_SIZE, bytesRead);
+    BYTES_EQUAL('A', buf[0]);
+}
+
+TEST(SolidSyslogFileStoreRotation, FullDrainAcrossTwoFilesHasUnsentFalse)
+{
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    WriteMaxMsg();
+    WriteMaxMsg();
+
+    char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    size_t bytesRead = 0;
+
+    SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
+    SolidSyslogStore_MarkSent(store);
+
+    SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
+    SolidSyslogStore_MarkSent(store);
+
+    CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
+}
+
+TEST(SolidSyslogFileStoreRotation, DiscardOldestDeletesOldestFileWhenAtMaxFiles)
+{
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    WriteMaxMsg(); /* file 00 */
+    WriteMaxMsg(); /* file 01 — now at maxFiles=2 */
+    WriteMaxMsg(); /* file 02 — must discard 00 */
+
+    CHECK_FALSE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store00.log"));
+    CHECK_TRUE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store02.log"));
+}
+
+TEST(SolidSyslogFileStoreRotation, DiscardOldestSurvivingDataIsReadable)
+{
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+
+    char firstMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    memset(firstMsg, 'B', sizeof(firstMsg));
+    SolidSyslogStore_Write(store, firstMsg, sizeof(firstMsg)); /* file 00 */
+
+    char secondMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    memset(secondMsg, 'C', sizeof(secondMsg));
+    SolidSyslogStore_Write(store, secondMsg, sizeof(secondMsg)); /* file 01 */
+
+    WriteMaxMsg(); /* file 02 — discards 00 */
+
+    char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE] = {};
+    size_t bytesRead                         = 0;
+    SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
+
+    LONGS_EQUAL(SOLIDSYSLOG_MAX_MESSAGE_SIZE, bytesRead);
+    BYTES_EQUAL('C', buf[0]);
+}
+
+TEST(SolidSyslogFileStoreRotation, DiscardNewestReturnsFalseWhenAtMaxFiles)
+{
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_DISCARD_NEWEST);
+    WriteMaxMsg(); /* file 00 */
+    WriteMaxMsg(); /* file 01 — now at maxFiles=2 */
+
+    CHECK_FALSE(SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)));
+}
+
+TEST(SolidSyslogFileStoreRotation, ResumeHasUnsentWhenMultipleFilesExist)
+{
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    WriteMaxMsg(); /* file 00 */
+    WriteMaxMsg(); /* file 01 */
+    SolidSyslogFileStore_Destroy();
+
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    CHECK_TRUE(SolidSyslogStore_HasUnsent(store));
+}
+
+TEST(SolidSyslogFileStoreRotation, ResumeDrainsAcrossFilesInOrder)
+{
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+
+    char firstMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    memset(firstMsg, 'B', sizeof(firstMsg));
+    SolidSyslogStore_Write(store, firstMsg, sizeof(firstMsg)); /* file 00 */
+
+    WriteMaxMsg(); /* file 01 — 'A' */
+    SolidSyslogFileStore_Destroy();
+
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+
+    char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE] = {};
+    size_t bytesRead                         = 0;
+
+    SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
+    BYTES_EQUAL('B', buf[0]);
+    SolidSyslogStore_MarkSent(store);
+
+    memset(buf, 0, sizeof(buf));
+    SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
+    BYTES_EQUAL('A', buf[0]);
+    SolidSyslogStore_MarkSent(store);
+
+    CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
+}
+
+TEST(SolidSyslogFileStoreRotation, ResumeContinuesWritingToCorrectFile)
+{
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    WriteMaxMsg(); /* file 00 */
+    SolidSyslogFileStore_Destroy();
+
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    WriteMaxMsg(); /* should rotate to file 01, not overwrite 00 */
+
+    CHECK_TRUE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store00.log"));
+    CHECK_TRUE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store01.log"));
+}
+
+TEST(SolidSyslogFileStoreRotation, ResumeWithMultipleFilesCanWriteNewMessage)
+{
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    WriteMaxMsg(); /* file 00 */
+    WriteMaxMsg(); /* file 01 */
+    SolidSyslogFileStore_Destroy();
+
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+
+    char newMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    memset(newMsg, 'N', sizeof(newMsg));
+    CHECK_TRUE(SolidSyslogStore_Write(store, newMsg, sizeof(newMsg)));
+
+    /* Should have rotated to file 02 — file 01 was full */
+    CHECK_TRUE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store02.log"));
+}
+
+TEST(SolidSyslogFileStoreRotation, ResumeWriteAppendsToPartiallyFilledWriteFile)
+{
+    static const size_t TWO_MAX_MSG_RECORDS = 2 * ONE_MAX_MSG_RECORD;
+
+    CreateWithMaxFileSize(TWO_MAX_MSG_RECORDS);
+    WriteMaxMsg(); /* file 00, record 1 */
+    WriteMaxMsg(); /* file 00, record 2 — file 00 full */
+    WriteMaxMsg(); /* file 01, record 1 — file 01 partially filled */
+    SolidSyslogFileStore_Destroy();
+
+    CreateWithMaxFileSize(TWO_MAX_MSG_RECORDS);
+
+    /* Write should append to file 01, not rotate */
+    CHECK_TRUE(SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)));
+    CHECK_FALSE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store02.log"));
+}
+
+TEST(SolidSyslogFileStoreRotation, SequenceWrapsFrom99To00)
+{
+    /* Pre-seed file 99 so the scan finds it as the write file */
+    SolidSyslogFile_Open(writeFile, "/tmp/test_store99.log");
+    SolidSyslogFile_Close(writeFile);
+
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    WriteMaxMsg(); /* fills file 99 */
+    WriteMaxMsg(); /* should wrap to file 00 */
+
+    CHECK_TRUE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store00.log"));
+}
+
+TEST(SolidSyslogFileStoreRotation, WriteAfterDrainRotatesToNextFile)
+{
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    WriteMaxMsg();
+
+    char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    size_t bytesRead = 0;
+    SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
+    SolidSyslogStore_MarkSent(store);
+
+    CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
+
+    /* Drained file still occupies space — next write rotates */
+    WriteMaxMsg();
+    CHECK_TRUE(SolidSyslogStore_HasUnsent(store));
+    CHECK_TRUE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store01.log"));
+}
+
+TEST(SolidSyslogFileStoreRotation, DestroyClosesBothHandles)
+{
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    WriteMaxMsg(); /* file 00 */
+    WriteMaxMsg(); /* file 01 — read on 00, write on 01 */
+    SolidSyslogFileStore_Destroy();
+
+    CHECK_FALSE(SolidSyslogFile_IsOpen(readFile));
+    CHECK_FALSE(SolidSyslogFile_IsOpen(writeFile));
+}
+
+TEST(SolidSyslogFileStoreRotation, MixedMessageSizesDrainCorrectlyAcrossFiles)
+{
+    static const size_t SHORT_LEN = 7;
+
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+
+    char shortMsg[SHORT_LEN];
+    memset(shortMsg, 'S', SHORT_LEN);
+    SolidSyslogStore_Write(store, shortMsg, SHORT_LEN); /* file 00 — small record */
+
+    WriteMaxMsg(); /* file 01 — max record */
+
+    char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE] = {};
+    size_t bytesRead                         = 0;
+
+    SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
+    LONGS_EQUAL(SHORT_LEN, bytesRead);
+    BYTES_EQUAL('S', buf[0]);
+    SolidSyslogStore_MarkSent(store);
+
+    memset(buf, 0, sizeof(buf));
+    SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
+    LONGS_EQUAL(SOLIDSYSLOG_MAX_MESSAGE_SIZE, bytesRead);
+    BYTES_EQUAL('A', buf[0]);
+    SolidSyslogStore_MarkSent(store);
+
+    CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
+}
+
+TEST(SolidSyslogFileStoreRotation, ContinuousDiscardWithoutReadingSurvivorsCorrect)
+{
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+
+    /* Write 5 messages across 5 files — maxFiles=2 means 3 are discarded */
+    char msgs[5][SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    for (int i = 0; i < 5; i++)
+    {
+        memset(msgs[i], 'A' + i, sizeof(msgs[i]));               // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
+        SolidSyslogStore_Write(store, msgs[i], sizeof(msgs[i])); // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
+    }
+
+    /* Only files 03 and 04 should survive */
+    CHECK_FALSE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store00.log"));
+    CHECK_FALSE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store01.log"));
+    CHECK_FALSE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store02.log"));
+    CHECK_TRUE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store03.log"));
+    CHECK_TRUE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store04.log"));
+
+    /* Drain — should get msg3 ('D') then msg4 ('E') */
+    char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE] = {};
+    size_t bytesRead                         = 0;
+
+    SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
+    BYTES_EQUAL('D', buf[0]);
+    SolidSyslogStore_MarkSent(store);
+
+    memset(buf, 0, sizeof(buf));
+    SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
+    BYTES_EQUAL('E', buf[0]);
+    SolidSyslogStore_MarkSent(store);
+
+    CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
+}
+
+TEST(SolidSyslogFileStoreRotation, MaxFilesAtUpperLimit)
+{
+    enum
+    {
+        MAX_FILES = 99
+    };
+
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_DISCARD_OLDEST, MAX_FILES);
+
+    /* Fill all 99 files */
+    for (int i = 0; i < MAX_FILES; i++)
+    {
+        WriteMaxMsg();
+    }
+
+    /* All 99 files should exist (00–98) */
+    CHECK_TRUE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store00.log"));
+    CHECK_TRUE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store98.log"));
+    CHECK_FALSE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store99.log"));
+
+    /* One more write — should discard file 00 and create file 99 */
+    WriteMaxMsg();
+
+    CHECK_FALSE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store00.log"));
+    CHECK_TRUE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store99.log"));
+}
+
+TEST(SolidSyslogFileStoreRotation, MultipleRecordsPerFileDrainAcrossRotation)
+{
+    static const size_t TWO_MAX_MSG_RECORDS = 2 * ONE_MAX_MSG_RECORD;
+
+    CreateWithMaxFileSize(TWO_MAX_MSG_RECORDS);
+
+    char msg0[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    memset(msg0, 'X', sizeof(msg0));
+    SolidSyslogStore_Write(store, msg0, sizeof(msg0)); /* file 00, record 1 */
+
+    char msg1[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    memset(msg1, 'Y', sizeof(msg1));
+    SolidSyslogStore_Write(store, msg1, sizeof(msg1)); /* file 00, record 2 */
+
+    WriteMaxMsg(); /* file 01, record 1 — 'A' */
+
+    char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE] = {};
+    size_t bytesRead                         = 0;
+
+    SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
+    BYTES_EQUAL('X', buf[0]);
+    SolidSyslogStore_MarkSent(store);
+
+    memset(buf, 0, sizeof(buf));
+    SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
+    BYTES_EQUAL('Y', buf[0]);
+    SolidSyslogStore_MarkSent(store);
+
+    memset(buf, 0, sizeof(buf));
+    SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
+    BYTES_EQUAL('A', buf[0]);
+    SolidSyslogStore_MarkSent(store);
+
+    CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
 }

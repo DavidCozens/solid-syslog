@@ -1,3 +1,4 @@
+import glob
 import os
 import re
 import shutil
@@ -8,7 +9,7 @@ import time
 from datetime import datetime, timezone
 
 from behave import given, when, then
-from environment import STORE_FILE_PATH
+from environment import STORE_FILE_PATH, STORE_PATH_PREFIX
 
 RECEIVED_LOG = "Bdd/output/received.log"
 EXAMPLE_BINARY = "build/debug/Example/SolidSyslogExample"
@@ -17,6 +18,12 @@ SYSLOG_NG_CTL = "/var/lib/syslog-ng/syslog-ng.ctl"
 SYSLOG_NG_CONF = "Bdd/syslog-ng/syslog-ng.conf"
 SYSLOG_NG_FULL_CONF = "Bdd/syslog-ng/syslog-ng-full.conf"
 SYSLOG_NG_UDP_ONLY_CONF = "Bdd/syslog-ng/syslog-ng-udp-only.conf"
+
+
+def clean_store_files():
+    """Remove all rotating store files matching the path prefix."""
+    for path in glob.glob(STORE_PATH_PREFIX + "*.log"):
+        os.remove(path)
 
 
 def line_count(path):
@@ -180,8 +187,8 @@ def step_syslog_ng_is_running(context):
     context.lines_before = line_count(RECEIVED_LOG)
 
 
-@given("the threaded example is running with transport {transport}")
-def step_threaded_running_with_transport(context, transport):
+def build_threaded_command(context, transport, no_sd=False):
+    """Build the command line for the threaded example with all options."""
     binary = THREADED_BINARY
     assert os.path.exists(binary), (
         f"Threaded binary not found at {binary} — build with cmake first"
@@ -190,7 +197,19 @@ def step_threaded_running_with_transport(context, transport):
     cmd = [os.path.join(".", binary), "--transport", transport]
     if getattr(context, "store_type", None):
         cmd.extend(["--store", context.store_type])
+    if getattr(context, "store_max_files", None):
+        cmd.extend(["--max-files", str(context.store_max_files)])
+    if getattr(context, "store_max_file_size", None):
+        cmd.extend(["--max-file-size", str(context.store_max_file_size)])
+    if getattr(context, "store_discard_policy", None):
+        cmd.extend(["--discard-policy", context.store_discard_policy])
+    if no_sd:
+        cmd.append("--no-sd")
+    return cmd
 
+
+def start_threaded_example(context, cmd):
+    """Start the threaded example process and wait for the initial prompt."""
     context.interactive_process = subprocess.Popen(
         cmd,
         stdin=subprocess.PIPE,
@@ -199,8 +218,19 @@ def step_threaded_running_with_transport(context, transport):
         text=True,
     )
     context.example_pid = context.interactive_process.pid
-    # Wait for the initial prompt
     wait_for_prompt(context.interactive_process)
+
+
+@given("the threaded example is running with transport {transport:w}")
+def step_threaded_running_with_transport(context, transport):
+    cmd = build_threaded_command(context, transport)
+    start_threaded_example(context, cmd)
+
+
+@given("the threaded example is running with transport {transport:w} and no structured data")
+def step_threaded_running_with_transport_no_sd(context, transport):
+    cmd = build_threaded_command(context, transport, no_sd=True)
+    start_threaded_example(context, cmd)
 
 
 @given("the file store is enabled")
@@ -208,6 +238,15 @@ def step_file_store_enabled(context):
     context.store_type = "file"
     if os.path.exists(STORE_FILE_PATH):
         os.remove(STORE_FILE_PATH)
+
+
+@given("the file store is enabled with max-files {max_files:d} and max-file-size {max_file_size:d} and discard-policy {policy}")
+def step_file_store_enabled_with_config(context, max_files, max_file_size, policy):
+    context.store_type = "file"
+    context.store_max_files = max_files
+    context.store_max_file_size = max_file_size
+    context.store_discard_policy = policy
+    clean_store_files()
 
 
 @when("the client sends a message")
@@ -466,6 +505,27 @@ def step_check_contiguous_sequence_ids(context):
     for i in range(1, len(ids)):
         assert ids[i] == ids[i - 1] + 1, (
             f"Non-contiguous sequenceIds: {ids[i - 1]} followed by {ids[i]}"
+        )
+
+
+@then("the last {count:d} messages have contiguous sequenceIds starting from {start:d}")
+def step_check_last_n_contiguous_ids(context, count, start):
+    assert len(context.all_lines) >= count, (
+        f"Expected at least {count} messages, got {len(context.all_lines)}"
+    )
+    last_n = context.all_lines[-count:]
+    for i, line in enumerate(last_n):
+        fields = parse_syslog_line(line)
+        sd = fields.get("STRUCTURED_DATA", "")
+        match = re.search(r'sequenceId="(\d+)"', sd)
+        assert match, (
+            f"Message {i + 1} of last {count}: no sequenceId in structured data: {sd}"
+        )
+        expected = start + i
+        actual = int(match.group(1))
+        assert actual == expected, (
+            f"Message {i + 1} of last {count}: expected sequenceId {expected}, "
+            f"got {actual}"
         )
 
 
