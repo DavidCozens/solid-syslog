@@ -373,3 +373,52 @@ TEST(FileFakeAfterDestroy, DeleteThrows)
 {
     CHECK_THROWS(std::runtime_error, SolidSyslogFile_Delete(api, "test.dat"));
 }
+
+/* ------------------------------------------------------------------
+ * Stale handle after delete
+ * ----------------------------------------------------------------*/
+
+// clang-format off
+TEST_GROUP(FileFakeStaleHandle)
+{
+    struct FileFakeStorage storageA = {};
+    struct FileFakeStorage storageB = {};
+    struct SolidSyslogFile* handleA = nullptr;
+    struct SolidSyslogFile* handleB = nullptr;
+
+    void setup() override
+    {
+        handleA = FileFake_Create(&storageA);
+        handleB = FileFake_Create(&storageB);
+    }
+
+    void teardown() override
+    {
+        FileFake_Destroy();
+    }
+};
+
+// clang-format on
+
+TEST(FileFakeStaleHandle, ReadFailsOnStaleHandleAfterDeleteAndSlotReuse)
+{
+    /* handleA opens file "old.dat" and writes data */
+    SolidSyslogFile_Open(handleA, "old.dat");
+    const char data[] = "original";
+    SolidSyslogFile_Write(handleA, data, sizeof(data));
+
+    /* Delete the file via handleB */
+    SolidSyslogFile_Delete(handleB, "old.dat");
+
+    /* Create a new file that could reuse the freed slot */
+    SolidSyslogFile_Open(handleB, "new.dat");
+    const char newData[] = "replaced";
+    SolidSyslogFile_Write(handleB, newData, sizeof(newData));
+
+    /* handleA still points at the old slot — read must fail, not return new file's data */
+    SolidSyslogFile_SeekTo(handleA, 0);
+    char   buf[16] = {};
+    bool   success = SolidSyslogFile_Read(handleA, buf, sizeof(data));
+
+    CHECK_FALSE(success);
+}

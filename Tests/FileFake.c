@@ -449,7 +449,10 @@ static bool FileFake_Delete(struct SolidSyslogFile* self, const char* path)
 static inline void ClearEntry(struct FileEntry* entry)
 {
     // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memset with bounded size; memset_s is not portable
-    memset(entry, 0, sizeof(*entry));
+    memset(entry->content, 0, sizeof(entry->content));
+    entry->fileSize = 0;
+    entry->path[0]  = '\0';
+    /* inUse stays true — prevents slot reuse while stale handles may reference this entry */
 }
 
 /* ------------------------------------------------------------------

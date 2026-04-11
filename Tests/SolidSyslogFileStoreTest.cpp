@@ -172,7 +172,7 @@ TEST(SolidSyslogFileStore, MarkSentWithoutReadDoesNotCrash)
     SolidSyslogStore_MarkSent(store);
 }
 
-TEST(SolidSyslogFileStore, FileTruncatedAfterAllSent)
+TEST(SolidSyslogFileStore, HasUnsentFalseAfterAllSent)
 {
     SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
     char   buf[TEST_BUF_SIZE];
@@ -180,7 +180,7 @@ TEST(SolidSyslogFileStore, FileTruncatedAfterAllSent)
     SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
     SolidSyslogStore_MarkSent(store);
 
-    LONGS_EQUAL(0, FileFake_FileSize());
+    CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
 }
 
 TEST(SolidSyslogFileStore, WriteAfterDrainWorks)
@@ -857,7 +857,7 @@ TEST(SolidSyslogFileStoreRotation, SequenceWrapsFrom99To00)
     CHECK_TRUE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store00.log"));
 }
 
-TEST(SolidSyslogFileStoreRotation, TruncateStillWorksWithTwoHandlesSameFile)
+TEST(SolidSyslogFileStoreRotation, WriteAfterDrainRotatesToNextFile)
 {
     CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
     WriteMaxMsg();
@@ -869,10 +869,10 @@ TEST(SolidSyslogFileStoreRotation, TruncateStillWorksWithTwoHandlesSameFile)
 
     CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
 
-    /* File should be truncated — new write starts at offset 0 */
+    /* Drained file still occupies space — next write rotates */
     WriteMaxMsg();
     CHECK_TRUE(SolidSyslogStore_HasUnsent(store));
-    CHECK_FALSE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store01.log"));
+    CHECK_TRUE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store01.log"));
 }
 
 TEST(SolidSyslogFileStoreRotation, DestroyClosesBothHandles)
