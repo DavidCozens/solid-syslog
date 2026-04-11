@@ -976,3 +976,39 @@ TEST(SolidSyslogFileStoreRotation, MaxFilesAtUpperLimit)
     CHECK_FALSE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store00.log"));
     CHECK_TRUE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store99.log"));
 }
+
+TEST(SolidSyslogFileStoreRotation, MultipleRecordsPerFileDrainAcrossRotation)
+{
+    static const size_t TWO_MAX_MSG_RECORDS = 2 * ONE_MAX_MSG_RECORD;
+
+    CreateWithMaxFileSize(TWO_MAX_MSG_RECORDS);
+
+    char msg0[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    memset(msg0, 'X', sizeof(msg0));
+    SolidSyslogStore_Write(store, msg0, sizeof(msg0)); /* file 00, record 1 */
+
+    char msg1[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    memset(msg1, 'Y', sizeof(msg1));
+    SolidSyslogStore_Write(store, msg1, sizeof(msg1)); /* file 00, record 2 */
+
+    WriteMaxMsg(); /* file 01, record 1 — 'A' */
+
+    char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE] = {};
+    size_t bytesRead                         = 0;
+
+    SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
+    BYTES_EQUAL('X', buf[0]);
+    SolidSyslogStore_MarkSent(store);
+
+    memset(buf, 0, sizeof(buf));
+    SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
+    BYTES_EQUAL('Y', buf[0]);
+    SolidSyslogStore_MarkSent(store);
+
+    memset(buf, 0, sizeof(buf));
+    SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
+    BYTES_EQUAL('A', buf[0]);
+    SolidSyslogStore_MarkSent(store);
+
+    CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
+}

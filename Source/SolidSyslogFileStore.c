@@ -578,7 +578,10 @@ static void MarkSent(struct SolidSyslogStore* self)
 
         if (ReadingOlderFile())
         {
-            DiscardOldestFile();
+            if (instance.readCursor >= SolidSyslogFile_Size(instance.readFile))
+            {
+                DiscardOldestFile();
+            }
         }
         else
         {
