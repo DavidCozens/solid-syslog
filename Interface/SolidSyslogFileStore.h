@@ -1,7 +1,7 @@
 #ifndef SOLIDSYSLOGFILESTORE_H
 #define SOLIDSYSLOGFILESTORE_H
 
-#include "SolidSyslogFileApi.h"
+#include "SolidSyslogFile.h"
 #include "SolidSyslogStore.h"
 
 #include <stddef.h>
@@ -16,8 +16,8 @@ EXTERN_C_BEGIN
 
     struct SolidSyslogFileStoreConfig
     {
-        struct SolidSyslogFileApi*    readFileApi;
-        struct SolidSyslogFileApi*    writeFileApi;
+        struct SolidSyslogFile*       readFile;
+        struct SolidSyslogFile*       writeFile;
         const char*                   pathPrefix;
         size_t                        maxFileSize;
         size_t                        maxFiles;

@@ -7,7 +7,7 @@
 // clang-format off
 TEST_GROUP(FileFake)
 {
-    struct SolidSyslogFileApi* api = nullptr;
+    struct SolidSyslogFile* api = nullptr;
 
     void setup() override
     {
@@ -30,202 +30,202 @@ TEST(FileFake, CreateReturnsNonNull)
 
 TEST(FileFake, IsOpenReturnsFalseBeforeOpen)
 {
-    CHECK_FALSE(SolidSyslogFileApi_IsOpen(api));
+    CHECK_FALSE(SolidSyslogFile_IsOpen(api));
 }
 
 TEST(FileFake, OpenSetsIsOpen)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
-    CHECK_TRUE(SolidSyslogFileApi_IsOpen(api));
+    SolidSyslogFile_Open(api, "test.dat");
+    CHECK_TRUE(SolidSyslogFile_IsOpen(api));
 }
 
 TEST(FileFake, CloseClearsIsOpen)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
-    SolidSyslogFileApi_Close(api);
-    CHECK_FALSE(SolidSyslogFileApi_IsOpen(api));
+    SolidSyslogFile_Open(api, "test.dat");
+    SolidSyslogFile_Close(api);
+    CHECK_FALSE(SolidSyslogFile_IsOpen(api));
 }
 
 TEST(FileFake, WriteAndReadRoundTrip)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
-    SolidSyslogFileApi_Write(api, "hello", 5);
-    SolidSyslogFileApi_SeekTo(api, 0);
+    SolidSyslogFile_Open(api, "test.dat");
+    SolidSyslogFile_Write(api, "hello", 5);
+    SolidSyslogFile_SeekTo(api, 0);
 
     char buf[16] = {};
-    CHECK_TRUE(SolidSyslogFileApi_Read(api, buf, 5));
+    CHECK_TRUE(SolidSyslogFile_Read(api, buf, 5));
     MEMCMP_EQUAL("hello", buf, 5);
 }
 
 TEST(FileFake, ReadBeyondFileSizeFails)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
+    SolidSyslogFile_Open(api, "test.dat");
 
     char buf[16];
-    CHECK_FALSE(SolidSyslogFileApi_Read(api, buf, 1));
+    CHECK_FALSE(SolidSyslogFile_Read(api, buf, 1));
 }
 
 TEST(FileFake, SeekToChangesReadPosition)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
-    SolidSyslogFileApi_Write(api, "abcde", 5);
-    SolidSyslogFileApi_SeekTo(api, 3);
+    SolidSyslogFile_Open(api, "test.dat");
+    SolidSyslogFile_Write(api, "abcde", 5);
+    SolidSyslogFile_SeekTo(api, 3);
 
     char buf[16] = {};
-    SolidSyslogFileApi_Read(api, buf, 2);
+    SolidSyslogFile_Read(api, buf, 2);
     MEMCMP_EQUAL("de", buf, 2);
 }
 
 TEST(FileFake, SizeReturnsFileSize)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
-    LONGS_EQUAL(0, SolidSyslogFileApi_Size(api));
-    SolidSyslogFileApi_Write(api, "hello", 5);
-    LONGS_EQUAL(5, SolidSyslogFileApi_Size(api));
+    SolidSyslogFile_Open(api, "test.dat");
+    LONGS_EQUAL(0, SolidSyslogFile_Size(api));
+    SolidSyslogFile_Write(api, "hello", 5);
+    LONGS_EQUAL(5, SolidSyslogFile_Size(api));
 }
 
 TEST(FileFake, TruncateClearsContent)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
-    SolidSyslogFileApi_Write(api, "hello", 5);
-    SolidSyslogFileApi_Truncate(api);
-    LONGS_EQUAL(0, SolidSyslogFileApi_Size(api));
+    SolidSyslogFile_Open(api, "test.dat");
+    SolidSyslogFile_Write(api, "hello", 5);
+    SolidSyslogFile_Truncate(api);
+    LONGS_EQUAL(0, SolidSyslogFile_Size(api));
 }
 
 TEST(FileFake, WriteAtPositionOverwritesContent)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
-    SolidSyslogFileApi_Write(api, "hello", 5);
-    SolidSyslogFileApi_SeekTo(api, 0);
-    SolidSyslogFileApi_Write(api, "HE", 2);
-    SolidSyslogFileApi_SeekTo(api, 0);
+    SolidSyslogFile_Open(api, "test.dat");
+    SolidSyslogFile_Write(api, "hello", 5);
+    SolidSyslogFile_SeekTo(api, 0);
+    SolidSyslogFile_Write(api, "HE", 2);
+    SolidSyslogFile_SeekTo(api, 0);
 
     char buf[16] = {};
-    SolidSyslogFileApi_Read(api, buf, 5);
+    SolidSyslogFile_Read(api, buf, 5);
     MEMCMP_EQUAL("HEllo", buf, 5);
 }
 
 TEST(FileFake, FailNextOpenMakesOpenReturnFalse)
 {
     FileFake_FailNextOpen();
-    CHECK_FALSE(SolidSyslogFileApi_Open(api, "test.dat"));
-    CHECK_FALSE(SolidSyslogFileApi_IsOpen(api));
+    CHECK_FALSE(SolidSyslogFile_Open(api, "test.dat"));
+    CHECK_FALSE(SolidSyslogFile_IsOpen(api));
 }
 
 TEST(FileFake, FailNextOpenOnlyAffectsOneCall)
 {
     FileFake_FailNextOpen();
-    SolidSyslogFileApi_Open(api, "test.dat");
-    CHECK_TRUE(SolidSyslogFileApi_Open(api, "test.dat"));
+    SolidSyslogFile_Open(api, "test.dat");
+    CHECK_TRUE(SolidSyslogFile_Open(api, "test.dat"));
 }
 
 TEST(FileFake, FailNextWriteMakesWriteReturnFalse)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
+    SolidSyslogFile_Open(api, "test.dat");
     FileFake_FailNextWrite();
-    CHECK_FALSE(SolidSyslogFileApi_Write(api, "hello", 5));
+    CHECK_FALSE(SolidSyslogFile_Write(api, "hello", 5));
 }
 
 TEST(FileFake, FailNextWriteOnlyAffectsOneCall)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
+    SolidSyslogFile_Open(api, "test.dat");
     FileFake_FailNextWrite();
-    SolidSyslogFileApi_Write(api, "hello", 5);
-    CHECK_TRUE(SolidSyslogFileApi_Write(api, "world", 5));
+    SolidSyslogFile_Write(api, "hello", 5);
+    CHECK_TRUE(SolidSyslogFile_Write(api, "world", 5));
 }
 
 TEST(FileFake, FailNextReadMakesReadReturnFalse)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
-    SolidSyslogFileApi_Write(api, "hello", 5);
-    SolidSyslogFileApi_SeekTo(api, 0);
+    SolidSyslogFile_Open(api, "test.dat");
+    SolidSyslogFile_Write(api, "hello", 5);
+    SolidSyslogFile_SeekTo(api, 0);
     FileFake_FailNextRead();
 
     char buf[16];
-    CHECK_FALSE(SolidSyslogFileApi_Read(api, buf, 5));
+    CHECK_FALSE(SolidSyslogFile_Read(api, buf, 5));
 }
 
 TEST(FileFake, FailNextReadOnlyAffectsOneCall)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
-    SolidSyslogFileApi_Write(api, "hello", 5);
-    SolidSyslogFileApi_SeekTo(api, 0);
+    SolidSyslogFile_Open(api, "test.dat");
+    SolidSyslogFile_Write(api, "hello", 5);
+    SolidSyslogFile_SeekTo(api, 0);
     FileFake_FailNextRead();
 
     char buf[16] = {};
-    SolidSyslogFileApi_Read(api, buf, 5);
-    SolidSyslogFileApi_SeekTo(api, 0);
-    CHECK_TRUE(SolidSyslogFileApi_Read(api, buf, 5));
+    SolidSyslogFile_Read(api, buf, 5);
+    SolidSyslogFile_SeekTo(api, 0);
+    CHECK_TRUE(SolidSyslogFile_Read(api, buf, 5));
 }
 
 TEST(FileFake, FileContentReturnsInternalBuffer)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
-    SolidSyslogFileApi_Write(api, "hello", 5);
+    SolidSyslogFile_Open(api, "test.dat");
+    SolidSyslogFile_Write(api, "hello", 5);
     MEMCMP_EQUAL("hello", FileFake_FileContent(), 5);
 }
 
 TEST(FileFake, FileSizeMatchesApiSize)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
-    SolidSyslogFileApi_Write(api, "hello", 5);
-    LONGS_EQUAL(SolidSyslogFileApi_Size(api), FileFake_FileSize());
+    SolidSyslogFile_Open(api, "test.dat");
+    SolidSyslogFile_Write(api, "hello", 5);
+    LONGS_EQUAL(SolidSyslogFile_Size(api), FileFake_FileSize());
 }
 
 TEST(FileFake, OpenPreservesExistingContent)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
-    SolidSyslogFileApi_Write(api, "hello", 5);
-    SolidSyslogFileApi_Close(api);
-    SolidSyslogFileApi_Open(api, "test.dat");
+    SolidSyslogFile_Open(api, "test.dat");
+    SolidSyslogFile_Write(api, "hello", 5);
+    SolidSyslogFile_Close(api);
+    SolidSyslogFile_Open(api, "test.dat");
 
-    LONGS_EQUAL(5, SolidSyslogFileApi_Size(api));
+    LONGS_EQUAL(5, SolidSyslogFile_Size(api));
     char buf[16] = {};
-    SolidSyslogFileApi_Read(api, buf, 5);
+    SolidSyslogFile_Read(api, buf, 5);
     MEMCMP_EQUAL("hello", buf, 5);
 }
 
 TEST(FileFake, ExistsReturnsTrueForOpenFile)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
-    CHECK_TRUE(SolidSyslogFileApi_Exists(api, "test.dat"));
+    SolidSyslogFile_Open(api, "test.dat");
+    CHECK_TRUE(SolidSyslogFile_Exists(api, "test.dat"));
 }
 
 TEST(FileFake, ExistsReturnsFalseForUnknownFile)
 {
-    CHECK_FALSE(SolidSyslogFileApi_Exists(api, "unknown.dat"));
+    CHECK_FALSE(SolidSyslogFile_Exists(api, "unknown.dat"));
 }
 
 TEST(FileFake, ExistsReturnsTrueForClosedFile)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
-    SolidSyslogFileApi_Close(api);
-    CHECK_TRUE(SolidSyslogFileApi_Exists(api, "test.dat"));
+    SolidSyslogFile_Open(api, "test.dat");
+    SolidSyslogFile_Close(api);
+    CHECK_TRUE(SolidSyslogFile_Exists(api, "test.dat"));
 }
 
 TEST(FileFake, CanOpenTwoFilesByName)
 {
-    SolidSyslogFileApi_Open(api, "a.log");
-    SolidSyslogFileApi_Write(api, "aaa", 3);
-    SolidSyslogFileApi_Close(api);
+    SolidSyslogFile_Open(api, "a.log");
+    SolidSyslogFile_Write(api, "aaa", 3);
+    SolidSyslogFile_Close(api);
 
-    SolidSyslogFileApi_Open(api, "b.log");
-    SolidSyslogFileApi_Write(api, "bbb", 3);
-    SolidSyslogFileApi_Close(api);
+    SolidSyslogFile_Open(api, "b.log");
+    SolidSyslogFile_Write(api, "bbb", 3);
+    SolidSyslogFile_Close(api);
 
-    SolidSyslogFileApi_Open(api, "a.log");
+    SolidSyslogFile_Open(api, "a.log");
     char buf[16] = {};
-    SolidSyslogFileApi_Read(api, buf, 3);
+    SolidSyslogFile_Read(api, buf, 3);
     MEMCMP_EQUAL("aaa", buf, 3);
 }
 
 TEST(FileFake, ExistsDistinguishesFilesByName)
 {
-    SolidSyslogFileApi_Open(api, "a.log");
-    SolidSyslogFileApi_Close(api);
+    SolidSyslogFile_Open(api, "a.log");
+    SolidSyslogFile_Close(api);
 
-    CHECK_TRUE(SolidSyslogFileApi_Exists(api, "a.log"));
-    CHECK_FALSE(SolidSyslogFileApi_Exists(api, "b.log"));
+    CHECK_TRUE(SolidSyslogFile_Exists(api, "a.log"));
+    CHECK_FALSE(SolidSyslogFile_Exists(api, "b.log"));
 }
 
 /* ------------------------------------------------------------------
@@ -234,33 +234,33 @@ TEST(FileFake, ExistsDistinguishesFilesByName)
 
 TEST(FileFake, CloseWithNoFileOpenThrows)
 {
-    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_Close(api));
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_Close(api));
 }
 
 TEST(FileFake, ReadWithNoFileOpenThrows)
 {
     char buf[16];
-    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_Read(api, buf, 1));
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_Read(api, buf, 1));
 }
 
 TEST(FileFake, WriteWithNoFileOpenThrows)
 {
-    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_Write(api, "x", 1));
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_Write(api, "x", 1));
 }
 
 TEST(FileFake, SeekToWithNoFileOpenThrows)
 {
-    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_SeekTo(api, 0));
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_SeekTo(api, 0));
 }
 
 TEST(FileFake, SizeWithNoFileOpenThrows)
 {
-    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_Size(api));
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_Size(api));
 }
 
 TEST(FileFake, TruncateWithNoFileOpenThrows)
 {
-    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_Truncate(api));
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_Truncate(api));
 }
 
 /* ------------------------------------------------------------------
@@ -270,7 +270,7 @@ TEST(FileFake, TruncateWithNoFileOpenThrows)
 // clang-format off
 TEST_GROUP(FileFakeAfterDestroy)
 {
-    struct SolidSyslogFileApi* api = nullptr;
+    struct SolidSyslogFile* api = nullptr;
 
     void setup() override
     {
@@ -288,46 +288,46 @@ TEST_GROUP(FileFakeAfterDestroy)
 
 TEST(FileFakeAfterDestroy, OpenThrows)
 {
-    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_Open(api, "test.dat"));
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_Open(api, "test.dat"));
 }
 
 TEST(FileFakeAfterDestroy, CloseThrows)
 {
-    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_Close(api));
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_Close(api));
 }
 
 TEST(FileFakeAfterDestroy, IsOpenThrows)
 {
-    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_IsOpen(api));
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_IsOpen(api));
 }
 
 TEST(FileFakeAfterDestroy, ReadThrows)
 {
     char buf[16];
-    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_Read(api, buf, 1));
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_Read(api, buf, 1));
 }
 
 TEST(FileFakeAfterDestroy, WriteThrows)
 {
-    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_Write(api, "x", 1));
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_Write(api, "x", 1));
 }
 
 TEST(FileFakeAfterDestroy, SeekToThrows)
 {
-    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_SeekTo(api, 0));
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_SeekTo(api, 0));
 }
 
 TEST(FileFakeAfterDestroy, SizeThrows)
 {
-    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_Size(api));
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_Size(api));
 }
 
 TEST(FileFakeAfterDestroy, TruncateThrows)
 {
-    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_Truncate(api));
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_Truncate(api));
 }
 
 TEST(FileFakeAfterDestroy, ExistsThrows)
 {
-    CHECK_THROWS(std::runtime_error, SolidSyslogFileApi_Exists(api, "test.dat"));
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_Exists(api, "test.dat"));
 }

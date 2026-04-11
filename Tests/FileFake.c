@@ -1,5 +1,5 @@
 #include "FileFake.h"
-#include "SolidSyslogFileApiDefinition.h"
+#include "SolidSyslogFileDefinition.h"
 #include "TestAssert.h"
 
 #include <string.h>
@@ -11,26 +11,26 @@ enum
     FILEFAKE_MAX_PATH  = 128
 };
 
-static bool   FileFake_Open(struct SolidSyslogFileApi* self, const char* path);
-static void   FileFake_Close(struct SolidSyslogFileApi* self);
-static bool   FileFake_IsOpen(struct SolidSyslogFileApi* self);
-static bool   FileFake_Read(struct SolidSyslogFileApi* self, void* buf, size_t count);
-static bool   FileFake_Write(struct SolidSyslogFileApi* self, const void* buf, size_t count);
-static void   FileFake_SeekTo(struct SolidSyslogFileApi* self, size_t offset);
-static size_t FileFake_Size(struct SolidSyslogFileApi* self);
-static void   FileFake_Truncate(struct SolidSyslogFileApi* self);
-static bool   FileFake_Exists(struct SolidSyslogFileApi* self, const char* path);
+static bool   FileFake_Open(struct SolidSyslogFile* self, const char* path);
+static void   FileFake_Close(struct SolidSyslogFile* self);
+static bool   FileFake_IsOpen(struct SolidSyslogFile* self);
+static bool   FileFake_Read(struct SolidSyslogFile* self, void* buf, size_t count);
+static bool   FileFake_Write(struct SolidSyslogFile* self, const void* buf, size_t count);
+static void   FileFake_SeekTo(struct SolidSyslogFile* self, size_t offset);
+static size_t FileFake_Size(struct SolidSyslogFile* self);
+static void   FileFake_Truncate(struct SolidSyslogFile* self);
+static bool   FileFake_Exists(struct SolidSyslogFile* self, const char* path);
 
 /* poisoned vtable — installed by Destroy to catch use-after-destroy */
-static bool   FileFake_DestroyedOpen(struct SolidSyslogFileApi* self, const char* path);
-static void   FileFake_DestroyedClose(struct SolidSyslogFileApi* self);
-static bool   FileFake_DestroyedIsOpen(struct SolidSyslogFileApi* self);
-static bool   FileFake_DestroyedRead(struct SolidSyslogFileApi* self, void* buf, size_t count);
-static bool   FileFake_DestroyedWrite(struct SolidSyslogFileApi* self, const void* buf, size_t count);
-static void   FileFake_DestroyedSeekTo(struct SolidSyslogFileApi* self, size_t offset);
-static size_t FileFake_DestroyedSize(struct SolidSyslogFileApi* self);
-static void   FileFake_DestroyedTruncate(struct SolidSyslogFileApi* self);
-static bool   FileFake_DestroyedExists(struct SolidSyslogFileApi* self, const char* path);
+static bool   FileFake_DestroyedOpen(struct SolidSyslogFile* self, const char* path);
+static void   FileFake_DestroyedClose(struct SolidSyslogFile* self);
+static bool   FileFake_DestroyedIsOpen(struct SolidSyslogFile* self);
+static bool   FileFake_DestroyedRead(struct SolidSyslogFile* self, void* buf, size_t count);
+static bool   FileFake_DestroyedWrite(struct SolidSyslogFile* self, const void* buf, size_t count);
+static void   FileFake_DestroyedSeekTo(struct SolidSyslogFile* self, size_t offset);
+static size_t FileFake_DestroyedSize(struct SolidSyslogFile* self);
+static void   FileFake_DestroyedTruncate(struct SolidSyslogFile* self);
+static bool   FileFake_DestroyedExists(struct SolidSyslogFile* self, const char* path);
 
 struct FileEntry
 {
@@ -42,18 +42,18 @@ struct FileEntry
 
 struct FileFake
 {
-    struct SolidSyslogFileApi base;
-    struct FileEntry          files[FILEFAKE_MAX_FILES];
-    struct FileEntry*         active;
-    size_t                    position;
-    bool                      open;
-    bool                      failNextOpen;
-    bool                      failNextWrite;
-    bool                      failNextRead;
+    struct SolidSyslogFile base;
+    struct FileEntry       files[FILEFAKE_MAX_FILES];
+    struct FileEntry*      active;
+    size_t                 position;
+    bool                   open;
+    bool                   failNextOpen;
+    bool                   failNextWrite;
+    bool                   failNextRead;
 };
 
 /* helpers */
-static inline struct FileFake* AsFake(struct SolidSyslogFileApi* self);
+static inline struct FileFake* AsFake(struct SolidSyslogFile* self);
 static void                    RequireOpenFile(struct FileFake* fake, const char* message);
 static inline bool             IsFileClosed(const struct FileFake* fake);
 static inline bool             HasActiveFile(const struct FileFake* fake);
@@ -74,15 +74,13 @@ static inline bool             IsSlotFree(const struct FileEntry* entry);
 static inline bool             EntryMatchesPath(const struct FileEntry* entry, const char* path);
 static inline void             InitialiseEntry(struct FileEntry* entry, const char* path);
 
-static const struct SolidSyslogFileApi LIVE_VTABLE = {
-    FileFake_Open,  FileFake_Close, FileFake_IsOpen,   FileFake_Read,
-    FileFake_Write, FileFake_SeekTo, FileFake_Size,    FileFake_Truncate, FileFake_Exists,
+static const struct SolidSyslogFile LIVE_VTABLE = {
+    FileFake_Open, FileFake_Close, FileFake_IsOpen, FileFake_Read, FileFake_Write, FileFake_SeekTo, FileFake_Size, FileFake_Truncate, FileFake_Exists,
 };
 
-static const struct SolidSyslogFileApi POISONED_VTABLE = {
-    FileFake_DestroyedOpen,   FileFake_DestroyedClose, FileFake_DestroyedIsOpen,
-    FileFake_DestroyedRead,   FileFake_DestroyedWrite, FileFake_DestroyedSeekTo,
-    FileFake_DestroyedSize,   FileFake_DestroyedTruncate, FileFake_DestroyedExists,
+static const struct SolidSyslogFile POISONED_VTABLE = {
+    FileFake_DestroyedOpen,   FileFake_DestroyedClose, FileFake_DestroyedIsOpen,   FileFake_DestroyedRead,   FileFake_DestroyedWrite,
+    FileFake_DestroyedSeekTo, FileFake_DestroyedSize,  FileFake_DestroyedTruncate, FileFake_DestroyedExists,
 };
 
 static struct FileFake instance;
@@ -91,7 +89,7 @@ static struct FileFake instance;
  * Create / Destroy
  * ----------------------------------------------------------------*/
 
-struct SolidSyslogFileApi* FileFake_Create(void)
+struct SolidSyslogFile* FileFake_Create(void)
 {
     instance      = (struct FileFake) {0};
     instance.base = LIVE_VTABLE;
@@ -146,7 +144,7 @@ static inline bool HasActiveFile(const struct FileFake* fake)
  * Open
  * ----------------------------------------------------------------*/
 
-static bool FileFake_Open(struct SolidSyslogFileApi* self, const char* path)
+static bool FileFake_Open(struct SolidSyslogFile* self, const char* path)
 {
     struct FileFake* fake = AsFake(self);
 
@@ -165,7 +163,7 @@ static bool FileFake_Open(struct SolidSyslogFileApi* self, const char* path)
     return FoundEntry(entry);
 }
 
-static inline struct FileFake* AsFake(struct SolidSyslogFileApi* self)
+static inline struct FileFake* AsFake(struct SolidSyslogFile* self)
 {
     return (struct FileFake*) self;
 }
@@ -260,7 +258,7 @@ static inline void InitialiseEntry(struct FileEntry* entry, const char* path)
  * Close
  * ----------------------------------------------------------------*/
 
-static void FileFake_Close(struct SolidSyslogFileApi* self)
+static void FileFake_Close(struct SolidSyslogFile* self)
 {
     struct FileFake* fake = AsFake(self);
     RequireOpenFile(fake, "Close called with no file open");
@@ -285,7 +283,7 @@ static inline bool IsFileClosed(const struct FileFake* fake)
  * IsOpen
  * ----------------------------------------------------------------*/
 
-static bool FileFake_IsOpen(struct SolidSyslogFileApi* self)
+static bool FileFake_IsOpen(struct SolidSyslogFile* self)
 {
     struct FileFake* fake = AsFake(self);
     return fake->open;
@@ -295,7 +293,7 @@ static bool FileFake_IsOpen(struct SolidSyslogFileApi* self)
  * Read
  * ----------------------------------------------------------------*/
 
-static bool FileFake_Read(struct SolidSyslogFileApi* self, void* buf, size_t count)
+static bool FileFake_Read(struct SolidSyslogFile* self, void* buf, size_t count)
 {
     struct FileFake* fake = AsFake(self);
     RequireOpenFile(fake, "Read called with no file open");
@@ -336,7 +334,7 @@ static inline void AdvancePosition(struct FileFake* fake, size_t count)
  * Write
  * ----------------------------------------------------------------*/
 
-static bool FileFake_Write(struct SolidSyslogFileApi* self, const void* buf, size_t count)
+static bool FileFake_Write(struct SolidSyslogFile* self, const void* buf, size_t count)
 {
     struct FileFake* fake = AsFake(self);
     RequireOpenFile(fake, "Write called with no file open");
@@ -381,21 +379,21 @@ static inline void ExtendFileSize(struct FileFake* fake)
  * SeekTo / Size / Truncate / Exists
  * ----------------------------------------------------------------*/
 
-static void FileFake_SeekTo(struct SolidSyslogFileApi* self, size_t offset)
+static void FileFake_SeekTo(struct SolidSyslogFile* self, size_t offset)
 {
     struct FileFake* fake = AsFake(self);
     RequireOpenFile(fake, "SeekTo called with no file open");
     fake->position = offset;
 }
 
-static size_t FileFake_Size(struct SolidSyslogFileApi* self)
+static size_t FileFake_Size(struct SolidSyslogFile* self)
 {
     struct FileFake* fake = AsFake(self);
     RequireOpenFile(fake, "Size called with no file open");
     return fake->active->fileSize;
 }
 
-static void FileFake_Truncate(struct SolidSyslogFileApi* self)
+static void FileFake_Truncate(struct SolidSyslogFile* self)
 {
     struct FileFake* fake = AsFake(self);
     RequireOpenFile(fake, "Truncate called with no file open");
@@ -408,7 +406,7 @@ static inline void ResetActiveFile(struct FileFake* fake)
     fake->position         = 0;
 }
 
-static bool FileFake_Exists(struct SolidSyslogFileApi* self, const char* path)
+static bool FileFake_Exists(struct SolidSyslogFile* self, const char* path)
 {
     struct FileFake* fake = AsFake(self);
     return FoundEntry(FindEntry(fake, path));
@@ -418,7 +416,7 @@ static bool FileFake_Exists(struct SolidSyslogFileApi* self, const char* path)
  * Poisoned vtable — installed by Destroy
  * ----------------------------------------------------------------*/
 
-static bool FileFake_DestroyedOpen(struct SolidSyslogFileApi* self, const char* path)
+static bool FileFake_DestroyedOpen(struct SolidSyslogFile* self, const char* path)
 {
     (void) self;
     (void) path;
@@ -426,20 +424,20 @@ static bool FileFake_DestroyedOpen(struct SolidSyslogFileApi* self, const char* 
     return false;
 }
 
-static void FileFake_DestroyedClose(struct SolidSyslogFileApi* self)
+static void FileFake_DestroyedClose(struct SolidSyslogFile* self)
 {
     (void) self;
     TestAssert_Fail("Close called after FileFake_Destroy");
 }
 
-static bool FileFake_DestroyedIsOpen(struct SolidSyslogFileApi* self)
+static bool FileFake_DestroyedIsOpen(struct SolidSyslogFile* self)
 {
     (void) self;
     TestAssert_Fail("IsOpen called after FileFake_Destroy");
     return false;
 }
 
-static bool FileFake_DestroyedRead(struct SolidSyslogFileApi* self, void* buf, size_t count)
+static bool FileFake_DestroyedRead(struct SolidSyslogFile* self, void* buf, size_t count)
 {
     (void) self;
     (void) buf;
@@ -448,7 +446,7 @@ static bool FileFake_DestroyedRead(struct SolidSyslogFileApi* self, void* buf, s
     return false;
 }
 
-static bool FileFake_DestroyedWrite(struct SolidSyslogFileApi* self, const void* buf, size_t count)
+static bool FileFake_DestroyedWrite(struct SolidSyslogFile* self, const void* buf, size_t count)
 {
     (void) self;
     (void) buf;
@@ -457,27 +455,27 @@ static bool FileFake_DestroyedWrite(struct SolidSyslogFileApi* self, const void*
     return false;
 }
 
-static void FileFake_DestroyedSeekTo(struct SolidSyslogFileApi* self, size_t offset)
+static void FileFake_DestroyedSeekTo(struct SolidSyslogFile* self, size_t offset)
 {
     (void) self;
     (void) offset;
     TestAssert_Fail("SeekTo called after FileFake_Destroy");
 }
 
-static size_t FileFake_DestroyedSize(struct SolidSyslogFileApi* self)
+static size_t FileFake_DestroyedSize(struct SolidSyslogFile* self)
 {
     (void) self;
     TestAssert_Fail("Size called after FileFake_Destroy");
     return 0;
 }
 
-static void FileFake_DestroyedTruncate(struct SolidSyslogFileApi* self)
+static void FileFake_DestroyedTruncate(struct SolidSyslogFile* self)
 {
     (void) self;
     TestAssert_Fail("Truncate called after FileFake_Destroy");
 }
 
-static bool FileFake_DestroyedExists(struct SolidSyslogFileApi* self, const char* path)
+static bool FileFake_DestroyedExists(struct SolidSyslogFile* self, const char* path)
 {
     (void) self;
     (void) path;

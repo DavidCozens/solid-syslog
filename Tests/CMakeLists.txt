@@ -39,7 +39,7 @@ if(SOLIDSYSLOG_POSIX)
         ClockFakeTest.cpp
         SolidSyslogUdpSenderTest.cpp
         SolidSyslogTcpSenderTest.cpp
-        SolidSyslogPosixFileApiTest.cpp
+        SolidSyslogPosixFileTest.cpp
     )
 endif()
 

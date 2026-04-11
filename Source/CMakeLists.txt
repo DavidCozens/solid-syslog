@@ -10,7 +10,7 @@ set(SOURCES
     SolidSyslogStructuredData.c
     SolidSyslogTimeQualitySd.c
     SolidSyslogOriginSd.c
-    SolidSyslogFileApi.c
+    SolidSyslogFile.c
     SolidSyslogFileStore.c
 )
 
@@ -28,7 +28,7 @@ if(SOLIDSYSLOG_POSIX)
         SolidSyslogPosixProcessId.c
         SolidSyslogUdpSender.c
         SolidSyslogTcpSender.c
-        SolidSyslogPosixFileApi.c
+        SolidSyslogPosixFile.c
     )
 endif()
 

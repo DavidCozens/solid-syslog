@@ -13,7 +13,7 @@
 #include "SolidSyslogTimeQualitySd.h"
 #include "SolidSyslogNullStore.h"
 #include "SolidSyslogPosixClock.h"
-#include "SolidSyslogPosixFileApi.h"
+#include "SolidSyslogPosixFile.h"
 #include "SolidSyslogPosixHostname.h"
 #include "SolidSyslogPosixMessageQueueBuffer.h"
 #include "SolidSyslogPosixProcessId.h"
@@ -72,11 +72,11 @@ static struct SolidSyslogStore* CreateStore(const struct ExampleOptions* options
 
     if (useFile)
     {
-        struct SolidSyslogFileApi* fileApi = SolidSyslogPosixFileApi_Create();
+        struct SolidSyslogFile* file = SolidSyslogPosixFile_Create();
 
         static struct SolidSyslogFileStoreConfig storeConfig = {0};
-        storeConfig.readFileApi   = fileApi;
-        storeConfig.writeFileApi  = fileApi;
+        storeConfig.readFile      = file;
+        storeConfig.writeFile     = file;
         storeConfig.pathPrefix    = STORE_PATH_PREFIX;
         storeConfig.maxFileSize   = DEFAULT_MAX_FILE_SIZE;
         storeConfig.maxFiles      = DEFAULT_MAX_FILES;
@@ -108,7 +108,7 @@ static void DestroyStore(const struct ExampleOptions* options)
     if (useFile)
     {
         SolidSyslogFileStore_Destroy();
-        SolidSyslogPosixFileApi_Destroy();
+        SolidSyslogPosixFile_Destroy();
     }
     else
     {

@@ -1,6 +1,6 @@
 #include "SolidSyslogFileStore.h"
 #include "SolidSyslog.h"
-#include "SolidSyslogFileApi.h"
+#include "SolidSyslogFile.h"
 #include "SolidSyslogFormat.h"
 #include "SolidSyslogStoreDefinition.h"
 
@@ -8,15 +8,15 @@
 
 enum
 {
-    RECORD_LENGTH_SIZE   = 4,
-    SENT_FLAG_SIZE       = 1,
-    RECORD_OVERHEAD      = RECORD_LENGTH_SIZE + SENT_FLAG_SIZE,
-    SENT_FLAG_UNSENT     = 0,
-    SENT_FLAG_SENT       = 1,
-    MIN_MAX_FILES        = 2,
-    MAX_MAX_FILES        = 99,
-    MIN_MAX_FILE_SIZE = SOLIDSYSLOG_MAX_MESSAGE_SIZE + RECORD_OVERHEAD,
-    MAX_PATH_SIZE     = 128
+    RECORD_LENGTH_SIZE = 4,
+    SENT_FLAG_SIZE     = 1,
+    RECORD_OVERHEAD    = RECORD_LENGTH_SIZE + SENT_FLAG_SIZE,
+    SENT_FLAG_UNSENT   = 0,
+    SENT_FLAG_SENT     = 1,
+    MIN_MAX_FILES      = 2,
+    MAX_MAX_FILES      = 99,
+    MIN_MAX_FILE_SIZE  = SOLIDSYSLOG_MAX_MESSAGE_SIZE + RECORD_OVERHEAD,
+    MAX_PATH_SIZE      = 128
 };
 
 /* vtable */
@@ -74,18 +74,18 @@ static inline void AdvanceReadCursor(void);
 
 struct SolidSyslogFileStore
 {
-    struct SolidSyslogStore           base;
-    struct SolidSyslogFileApi*        fileApi;
-    const char*                       pathPrefix;
-    char                              filename[MAX_PATH_SIZE];
-    size_t                            maxFileSize;
-    size_t                            maxFiles;
-    enum SolidSyslogDiscardPolicy     discardPolicy;
-    uint8_t                           writeSequence;
-    size_t                            readCursor;
-    size_t                            writePosition;
-    size_t                            lastSentFlagOffset;
-    bool                              hasReadRecord;
+    struct SolidSyslogStore       base;
+    struct SolidSyslogFile*       file;
+    const char*                   pathPrefix;
+    char                          filename[MAX_PATH_SIZE];
+    size_t                        maxFileSize;
+    size_t                        maxFiles;
+    enum SolidSyslogDiscardPolicy discardPolicy;
+    uint8_t                       writeSequence;
+    size_t                        readCursor;
+    size_t                        writePosition;
+    size_t                        lastSentFlagOffset;
+    bool                          hasReadRecord;
 };
 
 static const struct SolidSyslogFileStore DEFAULT_INSTANCE = {0};
@@ -98,7 +98,7 @@ static struct SolidSyslogFileStore       instance;
 struct SolidSyslogStore* SolidSyslogFileStore_Create(const struct SolidSyslogFileStoreConfig* config)
 {
     instance            = DEFAULT_INSTANCE;
-    instance.fileApi    = config->writeFileApi;
+    instance.file       = config->writeFile;
     instance.pathPrefix = config->pathPrefix;
     ValidateConfig(config);
     InitialiseVtable();
@@ -163,12 +163,12 @@ static inline void InitialiseVtable(void)
 
 static inline bool OpenFile(const char* path)
 {
-    return SolidSyslogFileApi_Open(instance.fileApi, path);
+    return SolidSyslogFile_Open(instance.file, path);
 }
 
 static inline bool IsOpen(void)
 {
-    return (instance.fileApi != NULL) && SolidSyslogFileApi_IsOpen(instance.fileApi);
+    return (instance.file != NULL) && SolidSyslogFile_IsOpen(instance.file);
 }
 
 static void ResumeFromExistingFile(void)
@@ -180,7 +180,7 @@ static void ResumeFromExistingFile(void)
 
 static inline void MeasureFileSize(void)
 {
-    instance.writePosition = SolidSyslogFileApi_Size(instance.fileApi);
+    instance.writePosition = SolidSyslogFile_Size(instance.file);
 }
 
 static inline void FindFirstUnsentRecord(void)
@@ -224,13 +224,13 @@ static bool AdvancePastSentRecord(size_t* cursor, size_t fileSize)
 
 static bool ReadRecordLength(size_t offset, uint32_t* length)
 {
-    SolidSyslogFileApi_SeekTo(instance.fileApi, offset);
+    SolidSyslogFile_SeekTo(instance.file, offset);
     return ReadExact(length, RECORD_LENGTH_SIZE);
 }
 
 static inline bool ReadExact(void* buf, size_t count)
 {
-    return SolidSyslogFileApi_Read(instance.fileApi, buf, count);
+    return SolidSyslogFile_Read(instance.file, buf, count);
 }
 
 static inline bool IsRecordSent(size_t recordStart, uint32_t length)
@@ -242,7 +242,7 @@ static inline bool IsRecordSent(size_t recordStart, uint32_t length)
 
 static bool ReadSentFlag(size_t recordStart, uint32_t dataLength, uint8_t* flag)
 {
-    SolidSyslogFileApi_SeekTo(instance.fileApi, SentFlagOffset(recordStart, dataLength));
+    SolidSyslogFile_SeekTo(instance.file, SentFlagOffset(recordStart, dataLength));
     return ReadExact(flag, SENT_FLAG_SIZE);
 }
 
@@ -281,7 +281,7 @@ static inline bool AllRecordsSent(void)
 
 static inline void ResetFile(void)
 {
-    SolidSyslogFileApi_Truncate(instance.fileApi);
+    SolidSyslogFile_Truncate(instance.file);
     instance.readCursor    = 0;
     instance.writePosition = 0;
 }
@@ -294,7 +294,7 @@ void SolidSyslogFileStore_Destroy(void)
 {
     if (IsOpen())
     {
-        SolidSyslogFileApi_Close(instance.fileApi);
+        SolidSyslogFile_Close(instance.file);
     }
 
     instance = DEFAULT_INSTANCE;
@@ -334,7 +334,7 @@ static bool WriteRecordToFile(const void* data, size_t size)
 
 static inline void SeekToWritePosition(void)
 {
-    SolidSyslogFileApi_SeekTo(instance.fileApi, instance.writePosition);
+    SolidSyslogFile_SeekTo(instance.file, instance.writePosition);
 }
 
 static inline bool WriteRecordHeader(size_t dataSize)
@@ -345,7 +345,7 @@ static inline bool WriteRecordHeader(size_t dataSize)
 
 static inline bool WriteExact(const void* buf, size_t count)
 {
-    return SolidSyslogFileApi_Write(instance.fileApi, buf, count);
+    return SolidSyslogFile_Write(instance.file, buf, count);
 }
 
 static inline bool WriteRecordBody(const void* data, size_t size)
@@ -422,7 +422,7 @@ static bool ReadRecordData(size_t recordStart, uint32_t length, void* data, size
 {
     size_t copySize = BoundedSize(length, maxSize);
 
-    SolidSyslogFileApi_SeekTo(instance.fileApi, DataOffset(recordStart));
+    SolidSyslogFile_SeekTo(instance.file, DataOffset(recordStart));
 
     if (ReadExact(data, copySize))
     {
@@ -461,7 +461,7 @@ static inline bool WriteSentFlag(void)
 {
     uint8_t flag = SENT_FLAG_SENT;
 
-    SolidSyslogFileApi_SeekTo(instance.fileApi, instance.lastSentFlagOffset);
+    SolidSyslogFile_SeekTo(instance.file, instance.lastSentFlagOffset);
     return WriteExact(&flag, SENT_FLAG_SIZE);
 }
 
