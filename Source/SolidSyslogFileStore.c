@@ -234,7 +234,7 @@ static void ResumeFromExistingFile(void)
 
 static inline void MeasureFileSize(void)
 {
-    instance.writePosition = SolidSyslogFile_Size(instance.readFile);
+    instance.writePosition = SolidSyslogFile_Size(instance.writeFile);
 }
 
 static inline void FindFirstUnsentRecord(void)

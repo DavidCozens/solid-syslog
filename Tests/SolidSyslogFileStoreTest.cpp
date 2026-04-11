@@ -844,6 +844,40 @@ TEST(SolidSyslogFileStoreRotation, ResumeContinuesWritingToCorrectFile)
     CHECK_TRUE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store01.log"));
 }
 
+TEST(SolidSyslogFileStoreRotation, ResumeWithMultipleFilesCanWriteNewMessage)
+{
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    WriteMaxMsg(); /* file 00 */
+    WriteMaxMsg(); /* file 01 */
+    SolidSyslogFileStore_Destroy();
+
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+
+    char newMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    memset(newMsg, 'N', sizeof(newMsg));
+    CHECK_TRUE(SolidSyslogStore_Write(store, newMsg, sizeof(newMsg)));
+
+    /* Should have rotated to file 02 — file 01 was full */
+    CHECK_TRUE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store02.log"));
+}
+
+TEST(SolidSyslogFileStoreRotation, ResumeWriteAppendsToPartiallyFilledWriteFile)
+{
+    static const size_t TWO_MAX_MSG_RECORDS = 2 * ONE_MAX_MSG_RECORD;
+
+    CreateWithMaxFileSize(TWO_MAX_MSG_RECORDS);
+    WriteMaxMsg(); /* file 00, record 1 */
+    WriteMaxMsg(); /* file 00, record 2 — file 00 full */
+    WriteMaxMsg(); /* file 01, record 1 — file 01 partially filled */
+    SolidSyslogFileStore_Destroy();
+
+    CreateWithMaxFileSize(TWO_MAX_MSG_RECORDS);
+
+    /* Write should append to file 01, not rotate */
+    CHECK_TRUE(SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)));
+    CHECK_FALSE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store02.log"));
+}
+
 TEST(SolidSyslogFileStoreRotation, SequenceWrapsFrom99To00)
 {
     /* Pre-seed file 99 so the scan finds it as the write file */
