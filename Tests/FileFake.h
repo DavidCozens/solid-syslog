@@ -14,7 +14,7 @@ EXTERN_C_BEGIN
 
     struct FileFakeStorage
     {
-        uint8_t opaque[FILEFAKE_STORAGE_SLOTS * sizeof(void*)];
+        void* opaque[FILEFAKE_STORAGE_SLOTS];
     };
 
     struct SolidSyslogFile* FileFake_Create(struct FileFakeStorage * storage);

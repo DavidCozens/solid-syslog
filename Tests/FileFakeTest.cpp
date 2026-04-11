@@ -262,6 +262,10 @@ TEST(FileFake, TwoInstancesShareFilesystem)
     char buf[16] = {};
     SolidSyslogFile_Read(reader, buf, 5);
     MEMCMP_EQUAL("hello", buf, 5);
+
+    /* Restore lastCreated to group-owned storage so teardown doesn't use dangling pointer */
+    // cppcheck-suppress unreadVariable -- restores lastCreated for teardown; cppcheck does not model CppUTest macros
+    api = FileFake_Create(&storage);
 }
 
 /* ------------------------------------------------------------------
