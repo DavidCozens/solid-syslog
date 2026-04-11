@@ -1,4 +1,5 @@
 #include "SolidSyslogFileStore.h"
+#include "SolidSyslog.h"
 #include "SolidSyslogFileApi.h"
 #include "SolidSyslogStoreDefinition.h"
 
@@ -8,8 +9,12 @@ enum
 {
     RECORD_LENGTH_SIZE = 4,
     SENT_FLAG_SIZE     = 1,
+    RECORD_OVERHEAD    = RECORD_LENGTH_SIZE + SENT_FLAG_SIZE,
     SENT_FLAG_UNSENT   = 0,
-    SENT_FLAG_SENT     = 1
+    SENT_FLAG_SENT     = 1,
+    MIN_MAX_FILES      = 2,
+    MAX_MAX_FILES      = 99,
+    MIN_MAX_FILE_SIZE  = SOLIDSYSLOG_MAX_MESSAGE_SIZE + RECORD_OVERHEAD
 };
 
 /* vtable */
@@ -19,6 +24,8 @@ static void MarkSent(struct SolidSyslogStore* self);
 static bool HasUnsent(struct SolidSyslogStore* self);
 
 /* Create helpers */
+static inline void   ValidateConfig(const struct SolidSyslogFileStoreConfig* config);
+static inline size_t ClampToRange(size_t value, size_t min, size_t max);
 static inline void   InitialiseVtable(void);
 static inline bool   OpenFile(const char* path);
 static inline bool   IsOpen(void);
@@ -64,12 +71,15 @@ static inline void AdvanceReadCursor(void);
 
 struct SolidSyslogFileStore
 {
-    struct SolidSyslogStore    base;
-    struct SolidSyslogFileApi* fileApi;
-    size_t                     readCursor;
-    size_t                     writePosition;
-    size_t                     lastSentFlagOffset;
-    bool                       hasReadRecord;
+    struct SolidSyslogStore           base;
+    struct SolidSyslogFileApi*        fileApi;
+    size_t                            maxFileSize;
+    size_t                            maxFiles;
+    enum SolidSyslogDiscardPolicy     discardPolicy;
+    size_t                            readCursor;
+    size_t                            writePosition;
+    size_t                            lastSentFlagOffset;
+    bool                              hasReadRecord;
 };
 
 static const struct SolidSyslogFileStore DEFAULT_INSTANCE = {0};
@@ -79,18 +89,43 @@ static struct SolidSyslogFileStore       instance;
  * Create
  * ----------------------------------------------------------------*/
 
-struct SolidSyslogStore* SolidSyslogFileStore_Create(struct SolidSyslogFileApi* fileApi, const char* path)
+struct SolidSyslogStore* SolidSyslogFileStore_Create(const struct SolidSyslogFileStoreConfig* config)
 {
     instance         = DEFAULT_INSTANCE;
-    instance.fileApi = fileApi;
+    instance.fileApi = config->writeFileApi;
+    ValidateConfig(config);
     InitialiseVtable();
 
-    if (OpenFile(path))
+    if (OpenFile(config->pathPrefix))
     {
         ResumeFromExistingFile();
     }
 
     return &instance.base;
+}
+
+static inline void ValidateConfig(const struct SolidSyslogFileStoreConfig* config)
+{
+    instance.maxFiles      = ClampToRange(config->maxFiles, MIN_MAX_FILES, MAX_MAX_FILES);
+    instance.maxFileSize   = ClampToRange(config->maxFileSize, MIN_MAX_FILE_SIZE, (size_t) -1);
+    instance.discardPolicy = config->discardPolicy;
+}
+
+static inline size_t ClampToRange(size_t value, size_t min, size_t max)
+{
+    size_t result = value;
+
+    if (result < min)
+    {
+        result = min;
+    }
+
+    if (result > max)
+    {
+        result = max;
+    }
+
+    return result;
 }
 
 static inline void InitialiseVtable(void)

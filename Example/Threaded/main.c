@@ -24,7 +24,13 @@
 #include <string.h>
 #include <unistd.h>
 
-static const char* const STORE_FILE_PATH = "/tmp/solidsyslog_store.dat";
+static const char* const STORE_PATH_PREFIX = "/tmp/STORE";
+
+enum
+{
+    DEFAULT_MAX_FILE_SIZE = 65536,
+    DEFAULT_MAX_FILES     = 10
+};
 
 static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
 {
@@ -67,7 +73,15 @@ static struct SolidSyslogStore* CreateStore(const struct ExampleOptions* options
     if (useFile)
     {
         struct SolidSyslogFileApi* fileApi = SolidSyslogPosixFileApi_Create();
-        return SolidSyslogFileStore_Create(fileApi, STORE_FILE_PATH);
+
+        static struct SolidSyslogFileStoreConfig storeConfig = {0};
+        storeConfig.readFileApi   = fileApi;
+        storeConfig.writeFileApi  = fileApi;
+        storeConfig.pathPrefix    = STORE_PATH_PREFIX;
+        storeConfig.maxFileSize   = DEFAULT_MAX_FILE_SIZE;
+        storeConfig.maxFiles      = DEFAULT_MAX_FILES;
+        storeConfig.discardPolicy = SOLIDSYSLOG_DISCARD_OLDEST;
+        return SolidSyslogFileStore_Create(&storeConfig);
     }
 
     return SolidSyslogNullStore_Create();

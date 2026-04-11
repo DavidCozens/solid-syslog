@@ -4,9 +4,27 @@
 #include "SolidSyslogFileApi.h"
 #include "SolidSyslogStore.h"
 
+#include <stddef.h>
+
 EXTERN_C_BEGIN
 
-    struct SolidSyslogStore* SolidSyslogFileStore_Create(struct SolidSyslogFileApi * fileApi, const char* path);
+    enum SolidSyslogDiscardPolicy
+    {
+        SOLIDSYSLOG_DISCARD_OLDEST,
+        SOLIDSYSLOG_DISCARD_NEWEST
+    };
+
+    struct SolidSyslogFileStoreConfig
+    {
+        struct SolidSyslogFileApi*    readFileApi;
+        struct SolidSyslogFileApi*    writeFileApi;
+        const char*                   pathPrefix;
+        size_t                        maxFileSize;
+        size_t                        maxFiles;
+        enum SolidSyslogDiscardPolicy discardPolicy;
+    };
+
+    struct SolidSyslogStore* SolidSyslogFileStore_Create(const struct SolidSyslogFileStoreConfig* config);
     void                     SolidSyslogFileStore_Destroy(void);
 
 EXTERN_C_END

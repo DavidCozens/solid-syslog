@@ -4,15 +4,29 @@
 
 #include <cstring>
 
-static const char* const TEST_PATH     = "/tmp/test_store.dat";
-static const char* const TEST_DATA     = "hello";
-static const size_t      TEST_DATA_LEN = 5;
+static const char* const TEST_PATH_PREFIX = "/tmp/test_store";
+static const char* const TEST_DATA       = "hello";
+static const size_t      TEST_DATA_LEN   = 5;
 
 enum
 {
-    TEST_BUF_SIZE = 512,
-    SENTINEL      = 'Z'
+    TEST_BUF_SIZE        = 512,
+    SENTINEL             = 'Z',
+    TEST_MAX_FILE_SIZE   = 4096,
+    TEST_MAX_FILES       = 2
 };
+
+static struct SolidSyslogFileStoreConfig MakeConfig(struct SolidSyslogFileApi* fileApi)
+{
+    struct SolidSyslogFileStoreConfig config;
+    config.readFileApi   = fileApi;
+    config.writeFileApi  = fileApi;
+    config.pathPrefix    = TEST_PATH_PREFIX;
+    config.maxFileSize   = TEST_MAX_FILE_SIZE;
+    config.maxFiles      = TEST_MAX_FILES;
+    config.discardPolicy = SOLIDSYSLOG_DISCARD_OLDEST;
+    return config;
+}
 
 /* ------------------------------------------------------------------
  * Basic operations
@@ -28,8 +42,9 @@ TEST_GROUP(SolidSyslogFileStore)
     {
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
         fileApi = FileFake_Create();
+        struct SolidSyslogFileStoreConfig config = MakeConfig(fileApi);
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        store = SolidSyslogFileStore_Create(fileApi, TEST_PATH);
+        store = SolidSyslogFileStore_Create(&config);
     }
 
     void teardown() override
@@ -252,14 +267,15 @@ TEST_GROUP(SolidSyslogFileStoreResume)
     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- total and markedSent have distinct semantics
     void WritePreviousSession(int total, int markedSent)
     {
+        struct SolidSyslogFileStoreConfig config = MakeConfig(fileApi);
         // cppcheck-suppress unreadVariable -- used by WriteMessages/DrainMessages; cppcheck does not model CppUTest macros
-        store = SolidSyslogFileStore_Create(fileApi, TEST_PATH);
+        store = SolidSyslogFileStore_Create(&config);
         WriteMessages(total);
         DrainMessages(markedSent);
         SolidSyslogFileStore_Destroy();
 
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        store = SolidSyslogFileStore_Create(fileApi, TEST_PATH);
+        store = SolidSyslogFileStore_Create(&config);
     }
 
     void WriteMessages(int count) const
@@ -373,7 +389,8 @@ TEST_GROUP(SolidSyslogFileStoreDestroy)
 
 TEST(SolidSyslogFileStoreDestroy, DestroyClosesFile)
 {
-    SolidSyslogFileStore_Create(fileApi, TEST_PATH);
+    struct SolidSyslogFileStoreConfig config = MakeConfig(fileApi);
+    SolidSyslogFileStore_Create(&config);
     CHECK_TRUE(SolidSyslogFileApi_IsOpen(fileApi));
     SolidSyslogFileStore_Destroy();
     CHECK_FALSE(SolidSyslogFileApi_IsOpen(fileApi));
@@ -381,9 +398,90 @@ TEST(SolidSyslogFileStoreDestroy, DestroyClosesFile)
 
 TEST(SolidSyslogFileStoreDestroy, DoubleDestroyDoesNotCrash)
 {
-    SolidSyslogFileStore_Create(fileApi, TEST_PATH);
+    struct SolidSyslogFileStoreConfig config = MakeConfig(fileApi);
+    SolidSyslogFileStore_Create(&config);
     SolidSyslogFileStore_Destroy();
     SolidSyslogFileStore_Destroy();
+}
+
+/* ------------------------------------------------------------------
+ * Config validation
+ * ----------------------------------------------------------------*/
+
+// clang-format off
+TEST_GROUP(SolidSyslogFileStoreConfig)
+{
+    struct SolidSyslogFileApi* fileApi = nullptr;
+    struct SolidSyslogStore*   store   = nullptr;
+
+    void setup() override
+    {
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+        fileApi = FileFake_Create();
+    }
+
+    void teardown() override
+    {
+        SolidSyslogFileStore_Destroy();
+        FileFake_Destroy();
+    }
+
+    void CreateWithMaxFiles(size_t maxFiles)
+    {
+        struct SolidSyslogFileStoreConfig config = MakeConfig(fileApi);
+        config.maxFiles = maxFiles;
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+        store = SolidSyslogFileStore_Create(&config);
+    }
+
+    void CreateWithMaxFileSize(size_t maxFileSize)
+    {
+        struct SolidSyslogFileStoreConfig config = MakeConfig(fileApi);
+        config.maxFileSize = maxFileSize;
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+        store = SolidSyslogFileStore_Create(&config);
+    }
+
+    void VerifyWriteAndReadBack()
+    {
+        CHECK_TRUE(SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN));
+        char   buf[TEST_BUF_SIZE] = {};
+        size_t bytesRead = 0;
+        SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
+        MEMCMP_EQUAL(TEST_DATA, buf, TEST_DATA_LEN);
+    }
+};
+
+// clang-format on
+
+TEST(SolidSyslogFileStoreConfig, MaxFilesZeroClampedToMinimum)
+{
+    CreateWithMaxFiles(0);
+    VerifyWriteAndReadBack();
+}
+
+TEST(SolidSyslogFileStoreConfig, MaxFilesOneClampedToMinimum)
+{
+    CreateWithMaxFiles(1);
+    VerifyWriteAndReadBack();
+}
+
+TEST(SolidSyslogFileStoreConfig, MaxFilesHundredClampedToMaximum)
+{
+    CreateWithMaxFiles(100);
+    VerifyWriteAndReadBack();
+}
+
+TEST(SolidSyslogFileStoreConfig, MaxFileSizeZeroClampedToMinimum)
+{
+    CreateWithMaxFileSize(0);
+    VerifyWriteAndReadBack();
+}
+
+TEST(SolidSyslogFileStoreConfig, MaxFileSizeOneClampedToMinimum)
+{
+    CreateWithMaxFileSize(1);
+    VerifyWriteAndReadBack();
 }
 
 /* ------------------------------------------------------------------
@@ -414,28 +512,32 @@ TEST_GROUP(SolidSyslogFileStoreErrors)
 
 TEST(SolidSyslogFileStoreErrors, OpenFailureStillReturnsNonNull)
 {
+    struct SolidSyslogFileStoreConfig config = MakeConfig(fileApi);
     FileFake_FailNextOpen();
-    store = SolidSyslogFileStore_Create(fileApi, TEST_PATH);
+    store = SolidSyslogFileStore_Create(&config);
     CHECK_TRUE(store != nullptr);
 }
 
 TEST(SolidSyslogFileStoreErrors, WriteReturnsFalseWhenNotOpen)
 {
+    struct SolidSyslogFileStoreConfig config = MakeConfig(fileApi);
     FileFake_FailNextOpen();
-    store = SolidSyslogFileStore_Create(fileApi, TEST_PATH);
+    store = SolidSyslogFileStore_Create(&config);
     CHECK_FALSE(SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN));
 }
 
 TEST(SolidSyslogFileStoreErrors, WriteReturnsFalseOnWriteFailure)
 {
-    store = SolidSyslogFileStore_Create(fileApi, TEST_PATH);
+    struct SolidSyslogFileStoreConfig config = MakeConfig(fileApi);
+    store = SolidSyslogFileStore_Create(&config);
     FileFake_FailNextWrite();
     CHECK_FALSE(SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN));
 }
 
 TEST(SolidSyslogFileStoreErrors, ReadReturnsFalseOnReadFailure)
 {
-    store = SolidSyslogFileStore_Create(fileApi, TEST_PATH);
+    struct SolidSyslogFileStoreConfig config = MakeConfig(fileApi);
+    store = SolidSyslogFileStore_Create(&config);
     SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
     FileFake_FailNextRead();
 
@@ -447,14 +549,16 @@ TEST(SolidSyslogFileStoreErrors, ReadReturnsFalseOnReadFailure)
 
 TEST(SolidSyslogFileStoreErrors, HasUnsentReturnsFalseWhenNotOpen)
 {
+    struct SolidSyslogFileStoreConfig config = MakeConfig(fileApi);
     FileFake_FailNextOpen();
-    store = SolidSyslogFileStore_Create(fileApi, TEST_PATH);
+    store = SolidSyslogFileStore_Create(&config);
     CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
 }
 
 TEST(SolidSyslogFileStoreErrors, MarkSentDoesNotAdvanceWhenWriteFails)
 {
-    store = SolidSyslogFileStore_Create(fileApi, TEST_PATH);
+    struct SolidSyslogFileStoreConfig config = MakeConfig(fileApi);
+    store = SolidSyslogFileStore_Create(&config);
     SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
 
     char   buf[TEST_BUF_SIZE];
