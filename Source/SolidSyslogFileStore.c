@@ -37,10 +37,10 @@ static bool HasUnsent(struct SolidSyslogStore* self);
 
 enum
 {
-    INTEGRITY_BUFFER_SIZE = MAGIC_SIZE + RECORD_LENGTH_SIZE + SOLIDSYSLOG_MAX_MESSAGE_SIZE + SOLIDSYSLOG_MAX_INTEGRITY_SIZE
+    RECORD_BUFFER_SIZE = MAGIC_SIZE + RECORD_LENGTH_SIZE + SOLIDSYSLOG_MAX_MESSAGE_SIZE + SOLIDSYSLOG_MAX_INTEGRITY_SIZE + SENT_FLAG_SIZE
 };
 
-static uint8_t recordBuffer[INTEGRITY_BUFFER_SIZE];
+static uint8_t recordBuffer[RECORD_BUFFER_SIZE];
 
 static inline uint8_t* MagicAddress(void)
 {
@@ -92,23 +92,28 @@ struct SolidSyslogFileStore
     uint8_t                           writeSequence;
     size_t                            readCursor;
     size_t                            writePosition;
-    size_t                            lastSentFlagOffset;
+    size_t                            lastSentFlagFileOffset;
     bool                              hasReadRecord;
 };
 
 static const struct SolidSyslogFileStore DEFAULT_INSTANCE = {0};
 static struct SolidSyslogFileStore       instance;
 
+static inline uint8_t* SentFlagAddress(size_t dataSize)
+{
+    return recordBuffer + MAGIC_SIZE + RECORD_LENGTH_SIZE + dataSize + instance.securityPolicy->integritySize;
+}
+
 /* ------------------------------------------------------------------
  * Shared helpers — used by both Create (resume scan) and ReadNextUnsent
  * ----------------------------------------------------------------*/
 
-static inline bool ReadExact(void* buf, size_t count)
+static inline bool ReadFromFile(void* buf, size_t count)
 {
     return SolidSyslogFile_Read(instance.readFile, buf, count);
 }
 
-static inline bool WriteExact(const void* buf, size_t count)
+static inline bool WriteToFile(const void* buf, size_t count)
 {
     return SolidSyslogFile_Write(instance.writeFile, buf, count);
 }
@@ -138,29 +143,28 @@ static inline size_t RecordSize(uint16_t dataLength)
     return (size_t) MAGIC_SIZE + RECORD_LENGTH_SIZE + dataLength + instance.securityPolicy->integritySize + SENT_FLAG_SIZE;
 }
 
-static inline size_t SentFlagOffset(size_t recordStart, uint16_t dataLength)
+static inline size_t SentFlagFileOffset(size_t recordStart, uint16_t dataLength)
 {
     return recordStart + MAGIC_SIZE + RECORD_LENGTH_SIZE + dataLength + instance.securityPolicy->integritySize;
 }
 
-static inline size_t DataOffset(size_t recordStart)
-{
-    return recordStart + MAGIC_SIZE + RECORD_LENGTH_SIZE;
-}
-
-static inline bool ReadMagic(size_t offset)
-{
-    uint8_t magic[MAGIC_SIZE] = {0};
-
-    SolidSyslogFile_SeekTo(instance.readFile, offset);
-
-    return ReadExact(magic, MAGIC_SIZE) && (magic[0] == MAGIC_BYTE_0) && (magic[1] == MAGIC_BYTE_1);
-}
-
-static bool ReadRecordLength(size_t offset, uint16_t* length)
+static inline bool ReadRecordHeader(size_t offset)
 {
     SolidSyslogFile_SeekTo(instance.readFile, offset);
-    return ReadExact(length, RECORD_LENGTH_SIZE);
+    return ReadFromFile(IntegrityRegionAddress(), MAGIC_SIZE + RECORD_LENGTH_SIZE);
+}
+
+static inline bool IsMagicValid(void)
+{
+    return (MagicAddress()[0] == MAGIC_BYTE_0) && (MagicAddress()[1] == MAGIC_BYTE_1);
+}
+
+static inline uint16_t RecordLength(void)
+{
+    uint16_t length = 0;
+    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memcpy with bounded size
+    memcpy(&length, LengthAddress(), RECORD_LENGTH_SIZE);
+    return length;
 }
 
 static inline bool IsValidLength(uint16_t length)
@@ -168,10 +172,17 @@ static inline bool IsValidLength(uint16_t length)
     return length <= SOLIDSYSLOG_MAX_MESSAGE_SIZE;
 }
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- offset is a file position, length is a data size; distinct semantics
+static bool ReadRecordBody(size_t offset, uint16_t length)
+{
+    SolidSyslogFile_SeekTo(instance.readFile, offset + MAGIC_SIZE + RECORD_LENGTH_SIZE);
+    return ReadFromFile(MessageAddress(), length);
+}
+
 static bool ReadSentFlag(size_t recordStart, uint16_t dataLength, uint8_t* flag)
 {
-    SolidSyslogFile_SeekTo(instance.readFile, SentFlagOffset(recordStart, dataLength));
-    return ReadExact(flag, SENT_FLAG_SIZE);
+    SolidSyslogFile_SeekTo(instance.readFile, SentFlagFileOffset(recordStart, dataLength));
+    return ReadFromFile(flag, SENT_FLAG_SIZE);
 }
 
 static inline bool IsRecordSent(size_t recordStart, uint16_t length)
@@ -239,30 +250,23 @@ static inline void   SkipRecord(size_t* cursor, uint16_t length);
 static inline void   SkipToEndOfValidData(size_t* cursor, size_t fileSize);
 
 /* Write helpers — forward-declared because they appear below Write */
-static bool        WriteRecordToFile(const void* data, size_t size);
+static bool        StoreRecord(const void* data, size_t size);
 static inline bool FileIsFull(size_t dataSize);
 static inline bool StoreIsFull(void);
 static void        RotateToNextFile(void);
 static void        DiscardOldestFile(void);
-static inline void SeekToWritePosition(void);
-static inline bool WriteMagic(void);
-static inline bool WriteRecordHeader(size_t dataSize);
-static inline bool WriteRecordBody(const void* data, size_t size);
-static bool        ComputeAndWriteIntegrity(const void* data, size_t size);
-static inline void AssembleIntegrityRegion(const void* data, size_t size);
-static inline bool WriteIntegrity(size_t dataSize);
-static inline bool WriteUnsentFlag(void);
-static inline void AdvanceWritePosition(size_t dataSize);
+static bool        MakeSpaceForRecord(size_t dataSize);
+static inline void AssembleRecord(const void* data, size_t size);
+static bool        FlushRecord(size_t dataSize);
 
 /* ReadNextUnsent helpers */
-static void AdvanceToNextReadFile(void);
-static bool ReadCurrentRecord(void* data, size_t maxSize, size_t* bytesRead);
-static bool VerifyIntegrity(size_t recordStart, uint16_t length);
-// NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- recordStart is a file offset, regionSize is a byte count; distinct semantics
-static bool          ReadIntegrityRegion(size_t recordStart, uint16_t regionSize);
-static inline bool   ReadIntegrity(size_t recordStart, uint16_t dataLength);
-static inline size_t IntegrityOffset(size_t recordStart, uint16_t dataLength);
-static bool          ReadRecordData(size_t recordStart, uint16_t length, void* data, size_t maxSize, size_t* bytesRead);
+static void          AdvanceToNextReadFile(void);
+static bool          ReadCurrentRecord(void* data, size_t maxSize, size_t* bytesRead);
+static bool          ValidateHeader(uint16_t* length);
+static bool          VerifyIntegrity(uint16_t length);
+static inline bool   ReadIntegrityChecksum(size_t recordStart, uint16_t dataLength);
+static inline size_t IntegrityChecksumFileOffset(size_t recordStart, uint16_t dataLength);
+static inline void   CopyRecordData(uint16_t length, void* data, size_t maxSize, size_t* bytesRead);
 static inline size_t BoundedSize(uint16_t length, size_t maxSize);
 static inline void   RememberCurrentRecord(uint16_t length);
 
@@ -397,7 +401,7 @@ static bool AdvancePastSentRecord(size_t* cursor, size_t fileSize)
     uint16_t length   = 0;
     bool     advanced = false;
 
-    if (ReadMagic(*cursor) && ReadRecordLength(*cursor + MAGIC_SIZE, &length) && IsValidLength(length))
+    if (ReadRecordHeader(*cursor) && ValidateHeader(&length))
     {
         if (IsRecordSent(*cursor, length))
         {
@@ -453,35 +457,39 @@ static bool Write(struct SolidSyslogStore* self, const void* data, size_t size)
 
     if (IsWriteFileOpen())
     {
-        written = WriteRecordToFile(data, size);
+        written = StoreRecord(data, size);
     }
 
     return written;
 }
 
-static bool WriteRecordToFile(const void* data, size_t size)
+static bool StoreRecord(const void* data, size_t size)
 {
     bool written = false;
 
-    if (FileIsFull(size))
+    if (MakeSpaceForRecord(size))
     {
-        if (StoreIsFull())
-        {
-            return false;
-        }
-
-        RotateToNextFile();
-    }
-
-    SeekToWritePosition();
-
-    if (WriteMagic() && WriteRecordHeader(size) && WriteRecordBody(data, size) && ComputeAndWriteIntegrity(data, size) && WriteUnsentFlag())
-    {
-        AdvanceWritePosition(size);
-        written = true;
+        AssembleRecord(data, size);
+        written = FlushRecord(size);
     }
 
     return written;
+}
+
+static bool MakeSpaceForRecord(size_t dataSize)
+{
+    bool spaceAvailable = true;
+
+    if (FileIsFull(dataSize) && StoreIsFull())
+    {
+        spaceAvailable = false;
+    }
+    else if (FileIsFull(dataSize))
+    {
+        RotateToNextFile();
+    }
+
+    return spaceAvailable;
 }
 
 static inline bool FileIsFull(size_t dataSize)
@@ -520,32 +528,7 @@ static inline void SeekToWritePosition(void)
     SolidSyslogFile_SeekTo(instance.writeFile, instance.writePosition);
 }
 
-static inline bool WriteMagic(void)
-{
-    uint8_t magic[MAGIC_SIZE] = {MAGIC_BYTE_0, MAGIC_BYTE_1};
-    return WriteExact(magic, MAGIC_SIZE);
-}
-
-static inline bool WriteRecordHeader(size_t dataSize)
-{
-    uint16_t length = (uint16_t) dataSize;
-    return WriteExact(&length, RECORD_LENGTH_SIZE);
-}
-
-static inline bool WriteRecordBody(const void* data, size_t size)
-{
-    return WriteExact(data, size);
-}
-
-static bool ComputeAndWriteIntegrity(const void* data, size_t size)
-{
-    AssembleIntegrityRegion(data, size);
-    instance.securityPolicy->ComputeIntegrity(IntegrityRegionAddress(), IntegrityRegionSize(size), IntegrityChecksumAddress(size));
-
-    return WriteIntegrity(size);
-}
-
-static inline void AssembleIntegrityRegion(const void* data, size_t size)
+static inline void AssembleRecord(const void* data, size_t size)
 {
     MagicAddress()[0] = MAGIC_BYTE_0;
     MagicAddress()[1] = MAGIC_BYTE_1;
@@ -555,22 +538,29 @@ static inline void AssembleIntegrityRegion(const void* data, size_t size)
     memcpy(LengthAddress(), &length, RECORD_LENGTH_SIZE);
     // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memcpy with bounded size
     memcpy(MessageAddress(), data, size);
-}
 
-static inline bool WriteIntegrity(size_t dataSize)
-{
-    return WriteExact(IntegrityChecksumAddress(dataSize), instance.securityPolicy->integritySize);
-}
+    instance.securityPolicy->ComputeIntegrity(IntegrityRegionAddress(), IntegrityRegionSize(size), IntegrityChecksumAddress(size));
 
-static inline bool WriteUnsentFlag(void)
-{
-    uint8_t flag = SENT_FLAG_UNSENT;
-    return WriteExact(&flag, SENT_FLAG_SIZE);
+    *SentFlagAddress(size) = SENT_FLAG_UNSENT;
 }
 
 static inline void AdvanceWritePosition(size_t dataSize)
 {
     instance.writePosition += RecordSize((uint16_t) dataSize);
+}
+
+static bool FlushRecord(size_t dataSize)
+{
+    SeekToWritePosition();
+
+    bool written = WriteToFile(recordBuffer, RecordSize((uint16_t) dataSize));
+
+    if (written)
+    {
+        AdvanceWritePosition(dataSize);
+    }
+
+    return written;
 }
 
 /* ------------------------------------------------------------------
@@ -621,62 +611,52 @@ static bool ReadCurrentRecord(void* data, size_t maxSize, size_t* bytesRead)
     uint16_t length = 0;
     bool     read   = false;
 
-    if (ReadMagic(instance.readCursor) && ReadRecordLength(instance.readCursor + MAGIC_SIZE, &length) && IsValidLength(length) &&
-        VerifyIntegrity(instance.readCursor, length) && ReadRecordData(instance.readCursor, length, data, maxSize, bytesRead))
+    if (ReadRecordHeader(instance.readCursor) && ValidateHeader(&length) && ReadRecordBody(instance.readCursor, length) &&
+        ReadIntegrityChecksum(instance.readCursor, length) && VerifyIntegrity(length))
     {
+        CopyRecordData(length, data, maxSize, bytesRead);
         RememberCurrentRecord(length);
-        read = true;
+        read = *bytesRead > 0;
     }
 
     return read;
 }
 
-static bool VerifyIntegrity(size_t recordStart, uint16_t length)
+static bool ValidateHeader(uint16_t* length)
 {
-    if (!ReadIntegrityRegion(recordStart, IntegrityRegionSize(length)))
+    bool valid = IsMagicValid();
+
+    if (valid)
     {
-        return false;
+        *length = RecordLength();
+        valid   = IsValidLength(*length);
     }
 
-    if (!ReadIntegrity(recordStart, length))
-    {
-        return false;
-    }
+    return valid;
+}
 
+static bool VerifyIntegrity(uint16_t length)
+{
     return instance.securityPolicy->VerifyIntegrity(IntegrityRegionAddress(), IntegrityRegionSize(length), IntegrityChecksumAddress(length));
 }
 
-// NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- recordStart is a file offset, regionSize is a byte count; distinct semantics
-static bool ReadIntegrityRegion(size_t recordStart, uint16_t regionSize)
+static inline bool ReadIntegrityChecksum(size_t recordStart, uint16_t dataLength)
 {
-    SolidSyslogFile_SeekTo(instance.readFile, recordStart);
-    return ReadExact(IntegrityRegionAddress(), regionSize);
+    SolidSyslogFile_SeekTo(instance.readFile, IntegrityChecksumFileOffset(recordStart, dataLength));
+    return ReadFromFile(IntegrityChecksumAddress(dataLength), instance.securityPolicy->integritySize);
 }
 
-static inline bool ReadIntegrity(size_t recordStart, uint16_t dataLength)
-{
-    SolidSyslogFile_SeekTo(instance.readFile, IntegrityOffset(recordStart, dataLength));
-    return ReadExact(IntegrityChecksumAddress(dataLength), instance.securityPolicy->integritySize);
-}
-
-static inline size_t IntegrityOffset(size_t recordStart, uint16_t dataLength)
+static inline size_t IntegrityChecksumFileOffset(size_t recordStart, uint16_t dataLength)
 {
     return recordStart + MAGIC_SIZE + RECORD_LENGTH_SIZE + dataLength;
 }
 
-// NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- recordStart is a file offset, length is a data size; distinct semantics
-static bool ReadRecordData(size_t recordStart, uint16_t length, void* data, size_t maxSize, size_t* bytesRead)
+static inline void CopyRecordData(uint16_t length, void* data, size_t maxSize, size_t* bytesRead)
 {
     size_t copySize = BoundedSize(length, maxSize);
-
-    SolidSyslogFile_SeekTo(instance.readFile, DataOffset(recordStart));
-
-    if (ReadExact(data, copySize))
-    {
-        *bytesRead = copySize;
-    }
-
-    return *bytesRead > 0;
+    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memcpy with bounded size
+    memcpy(data, MessageAddress(), copySize);
+    *bytesRead = copySize;
 }
 
 static inline size_t BoundedSize(uint16_t length, size_t maxSize)
@@ -686,8 +666,8 @@ static inline size_t BoundedSize(uint16_t length, size_t maxSize)
 
 static inline void RememberCurrentRecord(uint16_t length)
 {
-    instance.lastSentFlagOffset = SentFlagOffset(instance.readCursor, length);
-    instance.hasReadRecord      = true;
+    instance.lastSentFlagFileOffset = SentFlagFileOffset(instance.readCursor, length);
+    instance.hasReadRecord          = true;
 }
 
 /* ------------------------------------------------------------------
@@ -708,12 +688,12 @@ static inline bool WriteSentFlag(void)
 {
     uint8_t flag = SENT_FLAG_SENT;
 
-    SolidSyslogFile_SeekTo(instance.readFile, instance.lastSentFlagOffset);
+    SolidSyslogFile_SeekTo(instance.readFile, instance.lastSentFlagFileOffset);
     return SolidSyslogFile_Write(instance.readFile, &flag, SENT_FLAG_SIZE);
 }
 
 static inline void AdvanceReadCursor(void)
 {
-    instance.readCursor    = instance.lastSentFlagOffset + SENT_FLAG_SIZE;
+    instance.readCursor    = instance.lastSentFlagFileOffset + SENT_FLAG_SIZE;
     instance.hasReadRecord = false;
 }
