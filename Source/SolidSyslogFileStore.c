@@ -147,8 +147,17 @@ static inline void FormatFilename(uint8_t sequence)
 
     size_t len = 0;
     len += SolidSyslogFormat_BoundedString(instance.filename + len, instance.pathPrefix, MAX_PATH_SIZE - len);
-    len += SolidSyslogFormat_Character(instance.filename + len, SolidSyslogFormat_DigitToChar(sequence / TENS_DIVISOR));
-    len += SolidSyslogFormat_Character(instance.filename + len, SolidSyslogFormat_DigitToChar(sequence % TENS_DIVISOR));
+
+    if ((len + 1) < MAX_PATH_SIZE)
+    {
+        len += SolidSyslogFormat_Character(instance.filename + len, SolidSyslogFormat_DigitToChar(sequence / TENS_DIVISOR));
+    }
+
+    if ((len + 1) < MAX_PATH_SIZE)
+    {
+        len += SolidSyslogFormat_Character(instance.filename + len, SolidSyslogFormat_DigitToChar(sequence % TENS_DIVISOR));
+    }
+
     len += SolidSyslogFormat_BoundedString(instance.filename + len, ".log", MAX_PATH_SIZE - len);
     instance.filename[len] = '\0';
 }
