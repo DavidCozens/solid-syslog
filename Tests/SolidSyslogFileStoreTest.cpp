@@ -865,7 +865,7 @@ TEST(SolidSyslogFileStoreRotation, DiscardNewestDoesNotInvokeCallback)
     WriteMaxMsg(); /* file 00 */
     WriteMaxMsg(); /* file 01 — now at maxFiles=2 */
 
-    SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg));
+    CHECK_FALSE(SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)));
     CHECK_FALSE(storeFullCallbackInvoked);
 }
 
