@@ -8,8 +8,15 @@
 
 EXTERN_C_BEGIN
 
+    /* large enough for HMAC-SHA256 (32 bytes); CRC-16 uses 2 */
+    enum
+    {
+        SOLIDSYSLOG_MAX_INTEGRITY_SIZE = 32
+    };
+
     struct SolidSyslogSecurityPolicy
     {
+        uint16_t integrity_size;
         void (*ComputeIntegrity)(const uint8_t* data, uint16_t length, uint8_t* integrityOut);
         bool (*VerifyIntegrity)(const uint8_t* data, uint16_t length, const uint8_t* integrityIn);
     };

@@ -25,6 +25,11 @@ TEST(SolidSyslogNullSecurityPolicy, CreateReturnsNonNull)
     CHECK_TRUE(policy != nullptr);
 }
 
+TEST(SolidSyslogNullSecurityPolicy, IntegritySizeIsZero)
+{
+    LONGS_EQUAL(0, policy->integrity_size);
+}
+
 TEST(SolidSyslogNullSecurityPolicy, VerifyIntegrityReturnsTrue)
 {
     CHECK_TRUE(policy->VerifyIntegrity(nullptr, 0, nullptr));

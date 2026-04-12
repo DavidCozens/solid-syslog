@@ -8,6 +8,8 @@ set(SOURCES
     SolidSyslogStore.c
     SolidSyslogNullStore.c
     SolidSyslogNullSecurityPolicy.c
+    SolidSyslogCrc16.c
+    SolidSyslogCrc16Policy.c
     SolidSyslogStructuredData.c
     SolidSyslogTimeQualitySd.c
     SolidSyslogOriginSd.c

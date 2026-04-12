@@ -17,6 +17,7 @@ static bool NullVerifyIntegrity(const uint8_t* data, uint16_t length, const uint
 }
 
 static struct SolidSyslogSecurityPolicy instance = {
+    0,
     NullComputeIntegrity,
     NullVerifyIntegrity,
 };

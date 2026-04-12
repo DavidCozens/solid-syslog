@@ -1090,6 +1090,7 @@ static bool SpyVerifyIntegrity(const uint8_t* data, uint16_t length, const uint8
 }
 
 static struct SolidSyslogSecurityPolicy spyPolicy = {
+    0,
     SpyComputeIntegrity,
     SpyVerifyIntegrity,
 };
