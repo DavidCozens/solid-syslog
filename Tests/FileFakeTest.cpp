@@ -2,16 +2,18 @@
 #include "FileFake.h"
 
 #include <cstring>
+#include <stdexcept>
 
 // clang-format off
 TEST_GROUP(FileFake)
 {
-    struct SolidSyslogFileApi* api = nullptr;
+    struct FileFakeStorage storage = {};
+    struct SolidSyslogFile* api = nullptr;
 
     void setup() override
     {
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        api = FileFake_Create();
+        api = FileFake_Create(&storage);
     }
 
     void teardown() override
@@ -29,157 +31,400 @@ TEST(FileFake, CreateReturnsNonNull)
 
 TEST(FileFake, IsOpenReturnsFalseBeforeOpen)
 {
-    CHECK_FALSE(SolidSyslogFileApi_IsOpen(api));
+    CHECK_FALSE(SolidSyslogFile_IsOpen(api));
 }
 
 TEST(FileFake, OpenSetsIsOpen)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
-    CHECK_TRUE(SolidSyslogFileApi_IsOpen(api));
+    SolidSyslogFile_Open(api, "test.dat");
+    CHECK_TRUE(SolidSyslogFile_IsOpen(api));
 }
 
 TEST(FileFake, CloseClearsIsOpen)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
-    SolidSyslogFileApi_Close(api);
-    CHECK_FALSE(SolidSyslogFileApi_IsOpen(api));
+    SolidSyslogFile_Open(api, "test.dat");
+    SolidSyslogFile_Close(api);
+    CHECK_FALSE(SolidSyslogFile_IsOpen(api));
 }
 
 TEST(FileFake, WriteAndReadRoundTrip)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
-    SolidSyslogFileApi_Write(api, "hello", 5);
-    SolidSyslogFileApi_SeekTo(api, 0);
+    SolidSyslogFile_Open(api, "test.dat");
+    SolidSyslogFile_Write(api, "hello", 5);
+    SolidSyslogFile_SeekTo(api, 0);
 
     char buf[16] = {};
-    CHECK_TRUE(SolidSyslogFileApi_Read(api, buf, 5));
+    CHECK_TRUE(SolidSyslogFile_Read(api, buf, 5));
     MEMCMP_EQUAL("hello", buf, 5);
 }
 
 TEST(FileFake, ReadBeyondFileSizeFails)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
+    SolidSyslogFile_Open(api, "test.dat");
 
     char buf[16];
-    CHECK_FALSE(SolidSyslogFileApi_Read(api, buf, 1));
+    CHECK_FALSE(SolidSyslogFile_Read(api, buf, 1));
 }
 
 TEST(FileFake, SeekToChangesReadPosition)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
-    SolidSyslogFileApi_Write(api, "abcde", 5);
-    SolidSyslogFileApi_SeekTo(api, 3);
+    SolidSyslogFile_Open(api, "test.dat");
+    SolidSyslogFile_Write(api, "abcde", 5);
+    SolidSyslogFile_SeekTo(api, 3);
 
     char buf[16] = {};
-    SolidSyslogFileApi_Read(api, buf, 2);
+    SolidSyslogFile_Read(api, buf, 2);
     MEMCMP_EQUAL("de", buf, 2);
 }
 
 TEST(FileFake, SizeReturnsFileSize)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
-    LONGS_EQUAL(0, SolidSyslogFileApi_Size(api));
-    SolidSyslogFileApi_Write(api, "hello", 5);
-    LONGS_EQUAL(5, SolidSyslogFileApi_Size(api));
+    SolidSyslogFile_Open(api, "test.dat");
+    LONGS_EQUAL(0, SolidSyslogFile_Size(api));
+    SolidSyslogFile_Write(api, "hello", 5);
+    LONGS_EQUAL(5, SolidSyslogFile_Size(api));
 }
 
 TEST(FileFake, TruncateClearsContent)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
-    SolidSyslogFileApi_Write(api, "hello", 5);
-    SolidSyslogFileApi_Truncate(api);
-    LONGS_EQUAL(0, SolidSyslogFileApi_Size(api));
+    SolidSyslogFile_Open(api, "test.dat");
+    SolidSyslogFile_Write(api, "hello", 5);
+    SolidSyslogFile_Truncate(api);
+    LONGS_EQUAL(0, SolidSyslogFile_Size(api));
 }
 
 TEST(FileFake, WriteAtPositionOverwritesContent)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
-    SolidSyslogFileApi_Write(api, "hello", 5);
-    SolidSyslogFileApi_SeekTo(api, 0);
-    SolidSyslogFileApi_Write(api, "HE", 2);
-    SolidSyslogFileApi_SeekTo(api, 0);
+    SolidSyslogFile_Open(api, "test.dat");
+    SolidSyslogFile_Write(api, "hello", 5);
+    SolidSyslogFile_SeekTo(api, 0);
+    SolidSyslogFile_Write(api, "HE", 2);
+    SolidSyslogFile_SeekTo(api, 0);
 
     char buf[16] = {};
-    SolidSyslogFileApi_Read(api, buf, 5);
+    SolidSyslogFile_Read(api, buf, 5);
     MEMCMP_EQUAL("HEllo", buf, 5);
 }
 
 TEST(FileFake, FailNextOpenMakesOpenReturnFalse)
 {
     FileFake_FailNextOpen();
-    CHECK_FALSE(SolidSyslogFileApi_Open(api, "test.dat"));
-    CHECK_FALSE(SolidSyslogFileApi_IsOpen(api));
+    CHECK_FALSE(SolidSyslogFile_Open(api, "test.dat"));
+    CHECK_FALSE(SolidSyslogFile_IsOpen(api));
 }
 
 TEST(FileFake, FailNextOpenOnlyAffectsOneCall)
 {
     FileFake_FailNextOpen();
-    SolidSyslogFileApi_Open(api, "test.dat");
-    CHECK_TRUE(SolidSyslogFileApi_Open(api, "test.dat"));
+    SolidSyslogFile_Open(api, "test.dat");
+    CHECK_TRUE(SolidSyslogFile_Open(api, "test.dat"));
 }
 
 TEST(FileFake, FailNextWriteMakesWriteReturnFalse)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
+    SolidSyslogFile_Open(api, "test.dat");
     FileFake_FailNextWrite();
-    CHECK_FALSE(SolidSyslogFileApi_Write(api, "hello", 5));
+    CHECK_FALSE(SolidSyslogFile_Write(api, "hello", 5));
 }
 
 TEST(FileFake, FailNextWriteOnlyAffectsOneCall)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
+    SolidSyslogFile_Open(api, "test.dat");
     FileFake_FailNextWrite();
-    SolidSyslogFileApi_Write(api, "hello", 5);
-    CHECK_TRUE(SolidSyslogFileApi_Write(api, "world", 5));
+    SolidSyslogFile_Write(api, "hello", 5);
+    CHECK_TRUE(SolidSyslogFile_Write(api, "world", 5));
 }
 
 TEST(FileFake, FailNextReadMakesReadReturnFalse)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
-    SolidSyslogFileApi_Write(api, "hello", 5);
-    SolidSyslogFileApi_SeekTo(api, 0);
+    SolidSyslogFile_Open(api, "test.dat");
+    SolidSyslogFile_Write(api, "hello", 5);
+    SolidSyslogFile_SeekTo(api, 0);
     FileFake_FailNextRead();
 
     char buf[16];
-    CHECK_FALSE(SolidSyslogFileApi_Read(api, buf, 5));
+    CHECK_FALSE(SolidSyslogFile_Read(api, buf, 5));
 }
 
 TEST(FileFake, FailNextReadOnlyAffectsOneCall)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
-    SolidSyslogFileApi_Write(api, "hello", 5);
-    SolidSyslogFileApi_SeekTo(api, 0);
+    SolidSyslogFile_Open(api, "test.dat");
+    SolidSyslogFile_Write(api, "hello", 5);
+    SolidSyslogFile_SeekTo(api, 0);
     FileFake_FailNextRead();
 
     char buf[16] = {};
-    SolidSyslogFileApi_Read(api, buf, 5);
-    SolidSyslogFileApi_SeekTo(api, 0);
-    CHECK_TRUE(SolidSyslogFileApi_Read(api, buf, 5));
+    SolidSyslogFile_Read(api, buf, 5);
+    SolidSyslogFile_SeekTo(api, 0);
+    CHECK_TRUE(SolidSyslogFile_Read(api, buf, 5));
 }
 
 TEST(FileFake, FileContentReturnsInternalBuffer)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
-    SolidSyslogFileApi_Write(api, "hello", 5);
+    SolidSyslogFile_Open(api, "test.dat");
+    SolidSyslogFile_Write(api, "hello", 5);
     MEMCMP_EQUAL("hello", FileFake_FileContent(), 5);
 }
 
 TEST(FileFake, FileSizeMatchesApiSize)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
-    SolidSyslogFileApi_Write(api, "hello", 5);
-    LONGS_EQUAL(SolidSyslogFileApi_Size(api), FileFake_FileSize());
+    SolidSyslogFile_Open(api, "test.dat");
+    SolidSyslogFile_Write(api, "hello", 5);
+    LONGS_EQUAL(SolidSyslogFile_Size(api), FileFake_FileSize());
 }
 
 TEST(FileFake, OpenPreservesExistingContent)
 {
-    SolidSyslogFileApi_Open(api, "test.dat");
-    SolidSyslogFileApi_Write(api, "hello", 5);
-    SolidSyslogFileApi_Close(api);
-    SolidSyslogFileApi_Open(api, "test.dat");
+    SolidSyslogFile_Open(api, "test.dat");
+    SolidSyslogFile_Write(api, "hello", 5);
+    SolidSyslogFile_Close(api);
+    SolidSyslogFile_Open(api, "test.dat");
 
-    LONGS_EQUAL(5, SolidSyslogFileApi_Size(api));
+    LONGS_EQUAL(5, SolidSyslogFile_Size(api));
     char buf[16] = {};
-    SolidSyslogFileApi_Read(api, buf, 5);
+    SolidSyslogFile_Read(api, buf, 5);
     MEMCMP_EQUAL("hello", buf, 5);
+}
+
+TEST(FileFake, ExistsReturnsTrueForOpenFile)
+{
+    SolidSyslogFile_Open(api, "test.dat");
+    CHECK_TRUE(SolidSyslogFile_Exists(api, "test.dat"));
+}
+
+TEST(FileFake, ExistsReturnsFalseForUnknownFile)
+{
+    CHECK_FALSE(SolidSyslogFile_Exists(api, "unknown.dat"));
+}
+
+TEST(FileFake, ExistsReturnsTrueForClosedFile)
+{
+    SolidSyslogFile_Open(api, "test.dat");
+    SolidSyslogFile_Close(api);
+    CHECK_TRUE(SolidSyslogFile_Exists(api, "test.dat"));
+}
+
+TEST(FileFake, CanOpenTwoFilesByName)
+{
+    SolidSyslogFile_Open(api, "a.log");
+    SolidSyslogFile_Write(api, "aaa", 3);
+    SolidSyslogFile_Close(api);
+
+    SolidSyslogFile_Open(api, "b.log");
+    SolidSyslogFile_Write(api, "bbb", 3);
+    SolidSyslogFile_Close(api);
+
+    SolidSyslogFile_Open(api, "a.log");
+    char buf[16] = {};
+    SolidSyslogFile_Read(api, buf, 3);
+    MEMCMP_EQUAL("aaa", buf, 3);
+}
+
+TEST(FileFake, ExistsDistinguishesFilesByName)
+{
+    SolidSyslogFile_Open(api, "a.log");
+    SolidSyslogFile_Close(api);
+
+    CHECK_TRUE(SolidSyslogFile_Exists(api, "a.log"));
+    CHECK_FALSE(SolidSyslogFile_Exists(api, "b.log"));
+}
+
+TEST(FileFake, DeleteRemovesOnlyNamedFile)
+{
+    SolidSyslogFile_Open(api, "a.log");
+    SolidSyslogFile_Close(api);
+    SolidSyslogFile_Open(api, "b.log");
+    SolidSyslogFile_Close(api);
+
+    CHECK_TRUE(SolidSyslogFile_Delete(api, "a.log"));
+    CHECK_FALSE(SolidSyslogFile_Exists(api, "a.log"));
+    CHECK_TRUE(SolidSyslogFile_Exists(api, "b.log"));
+}
+
+TEST(FileFake, DeleteReturnsFalseForUnknownFile)
+{
+    CHECK_FALSE(SolidSyslogFile_Delete(api, "nonexistent.dat"));
+}
+
+/* ------------------------------------------------------------------
+ * Two independent instances
+ * ----------------------------------------------------------------*/
+
+TEST(FileFake, TwoInstancesShareFilesystem)
+{
+    SolidSyslogFile_Open(api, "shared.dat");
+    SolidSyslogFile_Write(api, "hello", 5);
+
+    struct FileFakeStorage  storage2 = {};
+    struct SolidSyslogFile* reader   = FileFake_Create(&storage2);
+
+    SolidSyslogFile_Open(reader, "shared.dat");
+    char buf[16] = {};
+    SolidSyslogFile_Read(reader, buf, 5);
+    MEMCMP_EQUAL("hello", buf, 5);
+
+    /* Restore lastCreated to group-owned storage so teardown doesn't use dangling pointer */
+    // cppcheck-suppress unreadVariable -- restores lastCreated for teardown; cppcheck does not model CppUTest macros
+    api = FileFake_Create(&storage);
+}
+
+/* ------------------------------------------------------------------
+ * Operations on closed file
+ * ----------------------------------------------------------------*/
+
+TEST(FileFake, CloseWithNoFileOpenThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_Close(api));
+}
+
+TEST(FileFake, ReadWithNoFileOpenThrows)
+{
+    char buf[16];
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_Read(api, buf, 1));
+}
+
+TEST(FileFake, WriteWithNoFileOpenThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_Write(api, "x", 1));
+}
+
+TEST(FileFake, SeekToWithNoFileOpenThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_SeekTo(api, 0));
+}
+
+TEST(FileFake, SizeWithNoFileOpenThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_Size(api));
+}
+
+TEST(FileFake, TruncateWithNoFileOpenThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_Truncate(api));
+}
+
+/* ------------------------------------------------------------------
+ * Operations after Destroy
+ * ----------------------------------------------------------------*/
+
+// clang-format off
+TEST_GROUP(FileFakeAfterDestroy)
+{
+    struct FileFakeStorage storage = {};
+    struct SolidSyslogFile* api = nullptr;
+
+    void setup() override
+    {
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+        api = FileFake_Create(&storage);
+        FileFake_Destroy();
+    }
+
+    void teardown() override
+    {
+    }
+};
+
+// clang-format on
+
+TEST(FileFakeAfterDestroy, OpenThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_Open(api, "test.dat"));
+}
+
+TEST(FileFakeAfterDestroy, CloseThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_Close(api));
+}
+
+TEST(FileFakeAfterDestroy, IsOpenThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_IsOpen(api));
+}
+
+TEST(FileFakeAfterDestroy, ReadThrows)
+{
+    char buf[16];
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_Read(api, buf, 1));
+}
+
+TEST(FileFakeAfterDestroy, WriteThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_Write(api, "x", 1));
+}
+
+TEST(FileFakeAfterDestroy, SeekToThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_SeekTo(api, 0));
+}
+
+TEST(FileFakeAfterDestroy, SizeThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_Size(api));
+}
+
+TEST(FileFakeAfterDestroy, TruncateThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_Truncate(api));
+}
+
+TEST(FileFakeAfterDestroy, ExistsThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_Exists(api, "test.dat"));
+}
+
+TEST(FileFakeAfterDestroy, DeleteThrows)
+{
+    CHECK_THROWS(std::runtime_error, SolidSyslogFile_Delete(api, "test.dat"));
+}
+
+/* ------------------------------------------------------------------
+ * Stale handle after delete
+ * ----------------------------------------------------------------*/
+
+// clang-format off
+TEST_GROUP(FileFakeStaleHandle)
+{
+    struct FileFakeStorage storageA = {};
+    struct FileFakeStorage storageB = {};
+    struct SolidSyslogFile* handleA = nullptr;
+    struct SolidSyslogFile* handleB = nullptr;
+
+    void setup() override
+    {
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+        handleA = FileFake_Create(&storageA);
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+        handleB = FileFake_Create(&storageB);
+    }
+
+    void teardown() override
+    {
+        FileFake_Destroy();
+    }
+};
+
+// clang-format on
+
+TEST(FileFakeStaleHandle, ReadFailsOnStaleHandleAfterDeleteAndSlotReuse)
+{
+    /* handleA opens file "old.dat" and writes data */
+    SolidSyslogFile_Open(handleA, "old.dat");
+    const char data[] = "original";
+    SolidSyslogFile_Write(handleA, data, sizeof(data));
+
+    /* Delete the file via handleB */
+    SolidSyslogFile_Delete(handleB, "old.dat");
+
+    /* Create a new file that could reuse the freed slot */
+    SolidSyslogFile_Open(handleB, "new.dat");
+    const char newData[] = "replaced";
+    SolidSyslogFile_Write(handleB, newData, sizeof(newData));
+
+    /* handleA still points at the old slot — read must fail, not return new file's data */
+    SolidSyslogFile_SeekTo(handleA, 0);
+    char buf[16] = {};
+    bool success = SolidSyslogFile_Read(handleA, buf, sizeof(data));
+
+    CHECK_FALSE(success);
 }

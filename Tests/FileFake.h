@@ -1,17 +1,29 @@
 #ifndef FILEFAKE_H
 #define FILEFAKE_H
 
-#include "SolidSyslogFileApi.h"
+#include "SolidSyslogFile.h"
+
+#include <stdint.h>
 
 EXTERN_C_BEGIN
 
-    struct SolidSyslogFileApi* FileFake_Create(void);
-    void                       FileFake_Destroy(void);
-    void                       FileFake_FailNextOpen(void);
-    void                       FileFake_FailNextWrite(void);
-    void                       FileFake_FailNextRead(void);
-    const void*                FileFake_FileContent(void);
-    size_t                     FileFake_FileSize(void);
+    enum
+    {
+        FILEFAKE_STORAGE_SLOTS = 13
+    };
+
+    struct FileFakeStorage
+    {
+        void* opaque[FILEFAKE_STORAGE_SLOTS];
+    };
+
+    struct SolidSyslogFile* FileFake_Create(struct FileFakeStorage * storage);
+    void                    FileFake_Destroy(void);
+    void                    FileFake_FailNextOpen(void);
+    void                    FileFake_FailNextWrite(void);
+    void                    FileFake_FailNextRead(void);
+    const void*             FileFake_FileContent(void);
+    size_t                  FileFake_FileSize(void);
 
 EXTERN_C_END
 
