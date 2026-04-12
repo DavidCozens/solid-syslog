@@ -163,6 +163,11 @@ static bool ReadRecordLength(size_t offset, uint16_t* length)
     return ReadExact(length, RECORD_LENGTH_SIZE);
 }
 
+static inline bool IsValidLength(uint16_t length)
+{
+    return length <= SOLIDSYSLOG_MAX_MESSAGE_SIZE;
+}
+
 static bool ReadSentFlag(size_t recordStart, uint16_t dataLength, uint8_t* flag)
 {
     SolidSyslogFile_SeekTo(instance.readFile, SentFlagOffset(recordStart, dataLength));
@@ -392,7 +397,7 @@ static bool AdvancePastSentRecord(size_t* cursor, size_t fileSize)
     uint16_t length   = 0;
     bool     advanced = false;
 
-    if (ReadMagic(*cursor) && ReadRecordLength(*cursor + MAGIC_SIZE, &length))
+    if (ReadMagic(*cursor) && ReadRecordLength(*cursor + MAGIC_SIZE, &length) && IsValidLength(length))
     {
         if (IsRecordSent(*cursor, length))
         {
@@ -616,8 +621,8 @@ static bool ReadCurrentRecord(void* data, size_t maxSize, size_t* bytesRead)
     uint16_t length = 0;
     bool     read   = false;
 
-    if (ReadMagic(instance.readCursor) && ReadRecordLength(instance.readCursor + MAGIC_SIZE, &length) && VerifyIntegrity(instance.readCursor, length) &&
-        ReadRecordData(instance.readCursor, length, data, maxSize, bytesRead))
+    if (ReadMagic(instance.readCursor) && ReadRecordLength(instance.readCursor + MAGIC_SIZE, &length) && IsValidLength(length) &&
+        VerifyIntegrity(instance.readCursor, length) && ReadRecordData(instance.readCursor, length, data, maxSize, bytesRead))
     {
         RememberCurrentRecord(length);
         read = true;
