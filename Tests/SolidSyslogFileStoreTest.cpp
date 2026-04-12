@@ -1055,22 +1055,29 @@ TEST(SolidSyslogFileStoreRotation, MultipleRecordsPerFileDrainAcrossRotation)
  * Integrity (SecurityPolicy integration)
  * ----------------------------------------------------------------*/
 
-static bool computeIntegrityCalled;
+static bool     computeIntegrityCalled;
+static uint8_t  computeIntegrityData[TEST_BUF_SIZE];
+static uint16_t computeIntegrityLength;
 
 // NOLINTNEXTLINE(readability-non-const-parameter) -- matches SecurityPolicy vtable signature
 static void SpyComputeIntegrity(const uint8_t* data, uint16_t length, uint8_t* integrityOut)
 {
-    (void) data;
-    (void) length;
     (void) integrityOut;
     computeIntegrityCalled = true;
+    computeIntegrityLength = length;
+    memcpy(computeIntegrityData, data, length);
 }
+
+static bool     verifyIntegrityCalled;
+static uint8_t  verifyIntegrityData[TEST_BUF_SIZE];
+static uint16_t verifyIntegrityLength;
 
 static bool SpyVerifyIntegrity(const uint8_t* data, uint16_t length, const uint8_t* integrityIn)
 {
-    (void) data;
-    (void) length;
     (void) integrityIn;
+    verifyIntegrityCalled = true;
+    verifyIntegrityLength = length;
+    memcpy(verifyIntegrityData, data, length);
     return true;
 }
 
@@ -1089,7 +1096,12 @@ TEST_GROUP(SolidSyslogFileStoreIntegrity)
     void setup() override
     {
         file = FileFake_Create(&storage);
-        computeIntegrityCalled = false;
+        computeIntegrityCalled  = false;
+        computeIntegrityLength  = 0;
+        memset(computeIntegrityData, 0, sizeof(computeIntegrityData));
+        verifyIntegrityCalled   = false;
+        verifyIntegrityLength   = 0;
+        memset(verifyIntegrityData, 0, sizeof(verifyIntegrityData));
 
         struct SolidSyslogFileStoreConfig config = DEFAULT_CONFIG;
         config.readFile       = file;
@@ -1112,4 +1124,30 @@ TEST(SolidSyslogFileStoreIntegrity, WriteCallsComputeIntegrity)
 {
     SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
     CHECK_TRUE(computeIntegrityCalled);
+}
+
+TEST(SolidSyslogFileStoreIntegrity, ComputeIntegrityReceivesWrittenData)
+{
+    SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
+    LONGS_EQUAL(TEST_DATA_LEN, computeIntegrityLength);
+    MEMCMP_EQUAL(TEST_DATA, computeIntegrityData, TEST_DATA_LEN);
+}
+
+TEST(SolidSyslogFileStoreIntegrity, ReadCallsVerifyIntegrity)
+{
+    SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
+    char   buf[TEST_BUF_SIZE];
+    size_t bytesRead = 0;
+    SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
+    CHECK_TRUE(verifyIntegrityCalled);
+}
+
+TEST(SolidSyslogFileStoreIntegrity, VerifyIntegrityReceivesWrittenData)
+{
+    SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
+    char   buf[TEST_BUF_SIZE];
+    size_t bytesRead = 0;
+    SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
+    LONGS_EQUAL(TEST_DATA_LEN, verifyIntegrityLength);
+    MEMCMP_EQUAL(TEST_DATA, verifyIntegrityData, TEST_DATA_LEN);
 }

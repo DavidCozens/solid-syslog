@@ -77,6 +77,7 @@ static inline bool HasUnsentRecords(void);
 static bool          ReadCurrentRecord(void* data, size_t maxSize, size_t* bytesRead);
 static inline void   RememberCurrentRecord(uint32_t length);
 static bool          ReadRecordData(size_t recordStart, uint32_t length, void* data, size_t maxSize, size_t* bytesRead);
+static inline bool   VerifyIntegrity(const void* data, size_t size);
 static inline size_t DataOffset(size_t recordStart);
 static inline size_t BoundedSize(uint32_t length, size_t maxSize);
 
@@ -536,7 +537,8 @@ static bool ReadCurrentRecord(void* data, size_t maxSize, size_t* bytesRead)
     uint32_t length = 0;
     bool     read   = false;
 
-    if (ReadRecordLength(instance.readCursor, &length) && ReadRecordData(instance.readCursor, length, data, maxSize, bytesRead))
+    if (ReadRecordLength(instance.readCursor, &length) && ReadRecordData(instance.readCursor, length, data, maxSize, bytesRead) &&
+        VerifyIntegrity(data, length))
     {
         RememberCurrentRecord(length);
         read = true;
@@ -564,6 +566,16 @@ static bool ReadRecordData(size_t recordStart, uint32_t length, void* data, size
     }
 
     return *bytesRead > 0;
+}
+
+static inline bool VerifyIntegrity(const void* data, size_t size)
+{
+    if (instance.securityPolicy != NULL)
+    {
+        return instance.securityPolicy->VerifyIntegrity((const uint8_t*) data, (uint16_t) size, NULL);
+    }
+
+    return true;
 }
 
 static inline size_t DataOffset(size_t recordStart)
