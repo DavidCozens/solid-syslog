@@ -13,8 +13,11 @@ EXTERN_C_BEGIN
     enum SolidSyslogDiscardPolicy
     {
         SOLIDSYSLOG_DISCARD_OLDEST,
-        SOLIDSYSLOG_DISCARD_NEWEST
+        SOLIDSYSLOG_DISCARD_NEWEST,
+        SOLIDSYSLOG_HALT
     };
+
+    typedef void (*SolidSyslogStoreFullCallback)(void); // NOLINT(modernize-redundant-void-arg) -- required in C
 
     struct SolidSyslogFileStoreConfig
     {
@@ -25,6 +28,7 @@ EXTERN_C_BEGIN
         size_t                            maxFiles;
         enum SolidSyslogDiscardPolicy     discardPolicy;
         struct SolidSyslogSecurityPolicy* securityPolicy;
+        SolidSyslogStoreFullCallback      onStoreFull;
     };
 
     struct SolidSyslogStore* SolidSyslogFileStore_Create(const struct SolidSyslogFileStoreConfig* config);

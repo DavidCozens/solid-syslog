@@ -20,7 +20,7 @@ enum
 };
 
 static const struct SolidSyslogFileStoreConfig DEFAULT_CONFIG = {
-    nullptr, nullptr, TEST_PATH_PREFIX, TEST_MAX_FILE_SIZE, TEST_MAX_FILES, SOLIDSYSLOG_DISCARD_OLDEST, nullptr,
+    nullptr, nullptr, TEST_PATH_PREFIX, TEST_MAX_FILE_SIZE, TEST_MAX_FILES, SOLIDSYSLOG_DISCARD_OLDEST, nullptr, nullptr,
 };
 
 static struct SolidSyslogFileStoreConfig MakeConfig(struct SolidSyslogFile* file)
@@ -799,6 +799,50 @@ TEST(SolidSyslogFileStoreRotation, DiscardOldestSurvivingDataIsReadable)
 TEST(SolidSyslogFileStoreRotation, DiscardNewestReturnsFalseWhenAtMaxFiles)
 {
     CreateWithMaxFileSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_DISCARD_NEWEST);
+    WriteMaxMsg(); /* file 00 */
+    WriteMaxMsg(); /* file 01 — now at maxFiles=2 */
+
+    CHECK_FALSE(SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)));
+}
+
+static bool storeFullCallbackInvoked;
+
+static void StoreFullCallback()
+{
+    storeFullCallbackInvoked = true;
+}
+
+TEST(SolidSyslogFileStoreRotation, HaltInvokesCallbackWhenStoreFull)
+{
+    storeFullCallbackInvoked = false;
+
+    struct SolidSyslogFileStoreConfig config = DEFAULT_CONFIG;
+    config.readFile                          = readFile;
+    config.writeFile                         = writeFile;
+    config.maxFileSize                       = ONE_MAX_MSG_RECORD;
+    config.maxFiles                          = 2;
+    config.discardPolicy                     = SOLIDSYSLOG_HALT;
+    config.onStoreFull                       = StoreFullCallback;
+    store                                    = SolidSyslogFileStore_Create(&config);
+
+    WriteMaxMsg(); /* file 00 */
+    WriteMaxMsg(); /* file 01 — now at maxFiles=2 */
+
+    CHECK_FALSE(SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)));
+    CHECK_TRUE(storeFullCallbackInvoked);
+}
+
+TEST(SolidSyslogFileStoreRotation, HaltWithNullCallbackDoesNotCrash)
+{
+    struct SolidSyslogFileStoreConfig config = DEFAULT_CONFIG;
+    config.readFile                          = readFile;
+    config.writeFile                         = writeFile;
+    config.maxFileSize                       = ONE_MAX_MSG_RECORD;
+    config.maxFiles                          = 2;
+    config.discardPolicy                     = SOLIDSYSLOG_HALT;
+    config.onStoreFull                       = nullptr;
+    store                                    = SolidSyslogFileStore_Create(&config);
+
     WriteMaxMsg(); /* file 00 */
     WriteMaxMsg(); /* file 01 — now at maxFiles=2 */
 
