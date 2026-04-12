@@ -1434,15 +1434,19 @@ TEST(SolidSyslogFileStoreCorruptionRecovery, ReadSkipsCorruptOlderFileToNextFile
 
 TEST(SolidSyslogFileStoreCorruptionRecovery, CorruptWriteFileRotatesOnNextWrite)
 {
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
-    WriteMaxMsg(); /* file 00 */
+    /* Use a file size that fits two records — the first write leaves space,
+     * so rotation on the second write proves corruption forced it */
+    static const size_t TWO_MAX_MSG_RECORDS = 2 * ONE_MAX_MSG_RECORD;
+
+    CreateWithMaxFileSize(TWO_MAX_MSG_RECORDS);
+    WriteMaxMsg(); /* file 00 — partially filled */
     SolidSyslogFileStore_Destroy();
 
     CorruptFirstRecordBody("/tmp/test_store00.log");
 
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    CreateWithMaxFileSize(TWO_MAX_MSG_RECORDS);
 
-    /* Next write should rotate to file 01 because file 00 is corrupt */
+    /* File 00 has space but is corrupt — write should rotate to file 01 */
     char newMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
     memset(newMsg, 'N', sizeof(newMsg));
     CHECK_TRUE(SolidSyslogStore_Write(store, newMsg, sizeof(newMsg)));

@@ -94,6 +94,7 @@ struct SolidSyslogFileStore
     size_t                            writePosition;
     size_t                            lastSentFlagFileOffset;
     bool                              hasReadRecord;
+    bool                              writeFileCorrupt;
 };
 
 static const struct SolidSyslogFileStore DEFAULT_INSTANCE = {0};
@@ -243,9 +244,8 @@ static inline void   InitialiseVtable(void);
 static void          ScanForExistingFiles(void);
 static void          ResumeFromExistingFile(void);
 static inline void   MeasureFileSize(void);
-static inline void   FindFirstUnsentRecord(void);
-static size_t        ScanForFirstUnsent(size_t fileSize);
-static bool          AdvancePastSentRecord(size_t* cursor, size_t fileSize);
+static size_t        ScanForFirstUnsent(size_t fileSize, bool* corrupt);
+static bool          AdvancePastSentRecord(size_t* cursor, size_t fileSize, bool* corrupt);
 static inline void   SkipRecord(size_t* cursor, uint16_t length);
 static inline void   SkipToEndOfValidData(size_t* cursor, size_t fileSize);
 
@@ -302,16 +302,26 @@ struct SolidSyslogStore* SolidSyslogFileStore_Create(const struct SolidSyslogFil
     return &instance.base;
 }
 
+static inline size_t MinFileSize(void)
+{
+    return SOLIDSYSLOG_MAX_MESSAGE_SIZE + RECORD_OVERHEAD + instance.securityPolicy->integritySize;
+}
+
 static inline void ValidateConfig(const struct SolidSyslogFileStoreConfig* config)
 {
-    instance.maxFiles      = ClampToRange(config->maxFiles, MIN_MAX_FILES, MAX_MAX_FILES);
-    instance.maxFileSize   = ClampToRange(config->maxFileSize, MIN_MAX_FILE_SIZE, (size_t) -1);
-    instance.discardPolicy = config->discardPolicy;
-
     if (instance.securityPolicy == NULL)
     {
         instance.securityPolicy = SolidSyslogNullSecurityPolicy_Create();
     }
+
+    if (instance.securityPolicy->integritySize > SOLIDSYSLOG_MAX_INTEGRITY_SIZE)
+    {
+        instance.securityPolicy = SolidSyslogNullSecurityPolicy_Create();
+    }
+
+    instance.maxFiles      = ClampToRange(config->maxFiles, MIN_MAX_FILES, MAX_MAX_FILES);
+    instance.maxFileSize   = ClampToRange(config->maxFileSize, MinFileSize(), (size_t) -1);
+    instance.discardPolicy = config->discardPolicy;
 }
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- value, min, max have distinct semantics
@@ -370,7 +380,11 @@ static void ScanForExistingFiles(void)
 static void ResumeFromExistingFile(void)
 {
     MeasureFileSize();
-    FindFirstUnsentRecord();
+
+    bool corrupt        = false;
+    instance.readCursor = ScanForFirstUnsent(instance.writePosition, &corrupt);
+
+    instance.writeFileCorrupt = corrupt;
 }
 
 static inline void MeasureFileSize(void)
@@ -378,30 +392,27 @@ static inline void MeasureFileSize(void)
     instance.writePosition = SolidSyslogFile_Size(instance.writeFile);
 }
 
-static inline void FindFirstUnsentRecord(void)
-{
-    instance.readCursor = ScanForFirstUnsent(instance.writePosition);
-}
-
-static size_t ScanForFirstUnsent(size_t fileSize)
+static size_t ScanForFirstUnsent(size_t fileSize, bool* corrupt)
 {
     size_t cursor   = 0;
     bool   scanning = true;
+    *corrupt        = false;
 
     while (scanning && (cursor < fileSize))
     {
-        scanning = AdvancePastSentRecord(&cursor, fileSize);
+        scanning = AdvancePastSentRecord(&cursor, fileSize, corrupt);
     }
 
     return cursor;
 }
 
-static bool AdvancePastSentRecord(size_t* cursor, size_t fileSize)
+static bool AdvancePastSentRecord(size_t* cursor, size_t fileSize, bool* corrupt)
 {
     uint16_t length   = 0;
     bool     advanced = false;
 
-    if (ReadRecordHeader(*cursor) && ValidateHeader(&length))
+    if (ReadRecordHeader(*cursor) && ValidateHeader(&length) && ReadRecordBody(*cursor, length) && ReadIntegrityChecksum(*cursor, length) &&
+        VerifyIntegrity(length))
     {
         if (IsRecordSent(*cursor, length))
         {
@@ -412,6 +423,7 @@ static bool AdvancePastSentRecord(size_t* cursor, size_t fileSize)
     else
     {
         SkipToEndOfValidData(cursor, fileSize);
+        *corrupt = true;
     }
 
     return advanced;
@@ -494,7 +506,7 @@ static bool MakeSpaceForRecord(size_t dataSize)
 
 static inline bool FileIsFull(size_t dataSize)
 {
-    return (instance.writePosition + RecordSize((uint16_t) dataSize)) > instance.maxFileSize;
+    return instance.writeFileCorrupt || (instance.writePosition + RecordSize((uint16_t) dataSize)) > instance.maxFileSize;
 }
 
 static inline bool StoreIsFull(void)
@@ -505,8 +517,9 @@ static inline bool StoreIsFull(void)
 static void RotateToNextFile(void)
 {
     SolidSyslogFile_Close(instance.writeFile);
-    instance.writeSequence = NextSequence(instance.writeSequence);
-    instance.writePosition = 0;
+    instance.writeSequence    = NextSequence(instance.writeSequence);
+    instance.writePosition    = 0;
+    instance.writeFileCorrupt = false;
     FormatFilename(instance.writeSequence);
     OpenWriteFile(instance.filename);
 
