@@ -135,12 +135,12 @@ static inline bool IsReadFileOpen(void)
 
 static inline size_t RecordSize(uint16_t dataLength)
 {
-    return (size_t) MAGIC_SIZE + RECORD_LENGTH_SIZE + dataLength + instance.securityPolicy->integrity_size + SENT_FLAG_SIZE;
+    return (size_t) MAGIC_SIZE + RECORD_LENGTH_SIZE + dataLength + instance.securityPolicy->integritySize + SENT_FLAG_SIZE;
 }
 
 static inline size_t SentFlagOffset(size_t recordStart, uint16_t dataLength)
 {
-    return recordStart + MAGIC_SIZE + RECORD_LENGTH_SIZE + dataLength + instance.securityPolicy->integrity_size;
+    return recordStart + MAGIC_SIZE + RECORD_LENGTH_SIZE + dataLength + instance.securityPolicy->integritySize;
 }
 
 static inline size_t DataOffset(size_t recordStart)
@@ -559,7 +559,7 @@ static inline void AssembleIntegrityRegion(const void* data, size_t size)
 
 static inline bool WriteIntegrity(size_t dataSize)
 {
-    return WriteExact(IntegrityChecksumAddress(dataSize), instance.securityPolicy->integrity_size);
+    return WriteExact(IntegrityChecksumAddress(dataSize), instance.securityPolicy->integritySize);
 }
 
 static inline bool WriteUnsentFlag(void)
@@ -656,7 +656,7 @@ static bool ReadIntegrityRegion(size_t recordStart, uint16_t regionSize)
 static inline bool ReadIntegrity(size_t recordStart, uint16_t dataLength)
 {
     SolidSyslogFile_SeekTo(instance.readFile, IntegrityOffset(recordStart, dataLength));
-    return ReadExact(IntegrityChecksumAddress(dataLength), instance.securityPolicy->integrity_size);
+    return ReadExact(IntegrityChecksumAddress(dataLength), instance.securityPolicy->integritySize);
 }
 
 static inline size_t IntegrityOffset(size_t recordStart, uint16_t dataLength)

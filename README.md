@@ -38,7 +38,7 @@ Public headers are split by audience (Interface Segregation Principle):
   is a Historic RFC — the IESG recommends TLS (RFC 5425) over plain TCP for new deployments.
   TCP is provided for interoperability with existing infrastructure
 - **`SolidSyslogStoreDefinition.h`** / **`SolidSyslogFileStore.h`** — file-based store-and-forward with rotating files
-- **`SolidSyslogSecurityPolicyDefinition.h`** — extension point for record integrity and encryption
+- **`SolidSyslogSecurityPolicyDefinition.h`** — extension point for record integrity policies
 - **`SolidSyslogCrc16Policy.h`** — CRC-16/CCITT-FALSE integrity policy
 - **`SolidSyslogStructuredDataDefinition.h`** — extension point for custom structured data
 - **`SolidSyslogMetaSd.h`** — sequenceId structured data (RFC 5424 §7.3)

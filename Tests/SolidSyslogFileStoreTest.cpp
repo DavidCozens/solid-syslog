@@ -1064,8 +1064,13 @@ TEST(SolidSyslogFileStoreRotation, MultipleRecordsPerFileDrainAcrossRotation)
  * Integrity (SecurityPolicy integration)
  * ----------------------------------------------------------------*/
 
+enum
+{
+    INTEGRITY_REGION_MAX = 2 + 2 + SOLIDSYSLOG_MAX_MESSAGE_SIZE /* magic + length + body */
+};
+
 static bool     computeIntegrityCalled;
-static uint8_t  computeIntegrityData[TEST_BUF_SIZE];
+static uint8_t  computeIntegrityData[INTEGRITY_REGION_MAX];
 static uint16_t computeIntegrityLength;
 
 // NOLINTNEXTLINE(readability-non-const-parameter) -- matches SecurityPolicy vtable signature
@@ -1078,7 +1083,7 @@ static void SpyComputeIntegrity(const uint8_t* data, uint16_t length, uint8_t* i
 }
 
 static bool     verifyIntegrityCalled;
-static uint8_t  verifyIntegrityData[TEST_BUF_SIZE];
+static uint8_t  verifyIntegrityData[INTEGRITY_REGION_MAX];
 static uint16_t verifyIntegrityLength;
 
 static bool SpyVerifyIntegrity(const uint8_t* data, uint16_t length, const uint8_t* integrityIn)

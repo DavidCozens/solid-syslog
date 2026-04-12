@@ -27,7 +27,7 @@ TEST(SolidSyslogNullSecurityPolicy, CreateReturnsNonNull)
 
 TEST(SolidSyslogNullSecurityPolicy, IntegritySizeIsZero)
 {
-    LONGS_EQUAL(0, policy->integrity_size);
+    LONGS_EQUAL(0, policy->integritySize);
 }
 
 TEST(SolidSyslogNullSecurityPolicy, VerifyIntegrityReturnsTrue)
