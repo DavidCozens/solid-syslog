@@ -87,6 +87,7 @@ struct SolidSyslogFileStore
     size_t                            maxFileSize;
     size_t                            maxFiles;
     enum SolidSyslogDiscardPolicy     discardPolicy;
+    SolidSyslogStoreFullCallback      onStoreFull;
     uint8_t                           oldestSequence;
     uint8_t                           readSequence;
     uint8_t                           writeSequence;
@@ -253,6 +254,7 @@ static inline void   SkipToEndOfValidData(size_t* cursor, size_t fileSize);
 static bool        StoreRecord(const void* data, size_t size);
 static inline bool FileIsFull(size_t dataSize);
 static inline bool StoreIsFull(void);
+static inline void NotifyStoreFull(void);
 static void        RotateToNextFile(void);
 static void        DiscardOldestFile(void);
 static bool        MakeSpaceForRecord(size_t dataSize);
@@ -322,6 +324,7 @@ static inline void ValidateConfig(const struct SolidSyslogFileStoreConfig* confi
     instance.maxFiles      = ClampToRange(config->maxFiles, MIN_MAX_FILES, MAX_MAX_FILES);
     instance.maxFileSize   = ClampToRange(config->maxFileSize, MinFileSize(), (size_t) -1);
     instance.discardPolicy = config->discardPolicy;
+    instance.onStoreFull   = config->onStoreFull;
 }
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- value, min, max have distinct semantics
@@ -494,6 +497,7 @@ static bool MakeSpaceForRecord(size_t dataSize)
 
     if (FileIsFull(dataSize) && StoreIsFull())
     {
+        NotifyStoreFull();
         spaceAvailable = false;
     }
     else if (FileIsFull(dataSize))
@@ -511,7 +515,15 @@ static inline bool FileIsFull(size_t dataSize)
 
 static inline bool StoreIsFull(void)
 {
-    return (FileCount() >= instance.maxFiles) && (instance.discardPolicy == SOLIDSYSLOG_DISCARD_NEWEST);
+    return (FileCount() >= instance.maxFiles) && (instance.discardPolicy != SOLIDSYSLOG_DISCARD_OLDEST);
+}
+
+static inline void NotifyStoreFull(void)
+{
+    if ((instance.discardPolicy == SOLIDSYSLOG_HALT) && (instance.onStoreFull != NULL))
+    {
+        instance.onStoreFull();
+    }
 }
 
 static void RotateToNextFile(void)

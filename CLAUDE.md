@@ -144,7 +144,7 @@ Headers in `Interface/` are split by audience — each user includes only what t
 | `SolidSyslogNullStore.h` | System setup code (no store-and-forward) | `SolidSyslogNullStore_Create`, `_Destroy` |
 | `SolidSyslogFileDefinition.h` | File implementors (extension point) | `SolidSyslogFile` vtable struct |
 | `SolidSyslogFile.h` | Any code using the file abstraction | `SolidSyslogFile_Open`, `_Close`, `_IsOpen`, `_Read`, `_Write`, `_SeekTo`, `_Size`, `_Truncate` |
-| `SolidSyslogFileStore.h` | System setup code using file-based store | `SolidSyslogFileStore_Create`, `_Destroy` |
+| `SolidSyslogFileStore.h` | System setup code using file-based store | `SolidSyslogFileStore_Create`, `_Destroy`, `SOLIDSYSLOG_HALT`, `SolidSyslogStoreFullCallback` |
 | `SolidSyslogSecurityPolicyDefinition.h` | SecurityPolicy implementors (extension point) | `SolidSyslogSecurityPolicy` vtable struct, `SOLIDSYSLOG_MAX_INTEGRITY_SIZE` |
 | `SolidSyslogNullSecurityPolicy.h` | System setup code (no integrity checking) | `SolidSyslogNullSecurityPolicy_Create`, `_Destroy` |
 | `SolidSyslogCrc16Policy.h` | System setup code using CRC-16 integrity | `SolidSyslogCrc16Policy_Create`, `_Destroy` |
