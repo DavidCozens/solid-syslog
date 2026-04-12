@@ -8,6 +8,8 @@
 
 EXTERN_C_BEGIN
 
+    struct SolidSyslogSecurityPolicy;
+
     enum SolidSyslogDiscardPolicy
     {
         SOLIDSYSLOG_DISCARD_OLDEST,
@@ -16,12 +18,13 @@ EXTERN_C_BEGIN
 
     struct SolidSyslogFileStoreConfig
     {
-        struct SolidSyslogFile*       readFile;
-        struct SolidSyslogFile*       writeFile;
-        const char*                   pathPrefix;
-        size_t                        maxFileSize;
-        size_t                        maxFiles;
-        enum SolidSyslogDiscardPolicy discardPolicy;
+        struct SolidSyslogFile*           readFile;
+        struct SolidSyslogFile*           writeFile;
+        const char*                       pathPrefix;
+        size_t                            maxFileSize;
+        size_t                            maxFiles;
+        enum SolidSyslogDiscardPolicy     discardPolicy;
+        struct SolidSyslogSecurityPolicy* securityPolicy;
     };
 
     struct SolidSyslogStore* SolidSyslogFileStore_Create(const struct SolidSyslogFileStoreConfig* config);

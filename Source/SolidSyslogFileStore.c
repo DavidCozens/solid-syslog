@@ -2,6 +2,7 @@
 #include "SolidSyslog.h"
 #include "SolidSyslogFile.h"
 #include "SolidSyslogFormat.h"
+#include "SolidSyslogSecurityPolicyDefinition.h"
 #include "SolidSyslogStoreDefinition.h"
 
 #include <stdint.h>
@@ -65,6 +66,7 @@ static inline void SeekToWritePosition(void);
 static inline bool WriteRecordHeader(size_t dataSize);
 static inline bool WriteExact(const void* buf, size_t count);
 static inline bool WriteRecordBody(const void* data, size_t size);
+static inline void ComputeIntegrity(const void* data, size_t size);
 static inline bool WriteUnsentFlag(void);
 static inline void AdvanceWritePosition(size_t dataSize);
 
@@ -84,21 +86,22 @@ static inline void AdvanceReadCursor(void);
 
 struct SolidSyslogFileStore
 {
-    struct SolidSyslogStore       base;
-    struct SolidSyslogFile*       readFile;
-    struct SolidSyslogFile*       writeFile;
-    const char*                   pathPrefix;
-    char                          filename[MAX_PATH_SIZE];
-    size_t                        maxFileSize;
-    size_t                        maxFiles;
-    enum SolidSyslogDiscardPolicy discardPolicy;
-    uint8_t                       oldestSequence;
-    uint8_t                       readSequence;
-    uint8_t                       writeSequence;
-    size_t                        readCursor;
-    size_t                        writePosition;
-    size_t                        lastSentFlagOffset;
-    bool                          hasReadRecord;
+    struct SolidSyslogStore           base;
+    struct SolidSyslogFile*           readFile;
+    struct SolidSyslogFile*           writeFile;
+    struct SolidSyslogSecurityPolicy* securityPolicy;
+    const char*                       pathPrefix;
+    char                              filename[MAX_PATH_SIZE];
+    size_t                            maxFileSize;
+    size_t                            maxFiles;
+    enum SolidSyslogDiscardPolicy     discardPolicy;
+    uint8_t                           oldestSequence;
+    uint8_t                           readSequence;
+    uint8_t                           writeSequence;
+    size_t                            readCursor;
+    size_t                            writePosition;
+    size_t                            lastSentFlagOffset;
+    bool                              hasReadRecord;
 };
 
 static const struct SolidSyslogFileStore DEFAULT_INSTANCE = {0};
@@ -110,10 +113,11 @@ static struct SolidSyslogFileStore       instance;
 
 struct SolidSyslogStore* SolidSyslogFileStore_Create(const struct SolidSyslogFileStoreConfig* config)
 {
-    instance            = DEFAULT_INSTANCE;
-    instance.readFile   = config->readFile;
-    instance.writeFile  = config->writeFile;
-    instance.pathPrefix = config->pathPrefix;
+    instance                = DEFAULT_INSTANCE;
+    instance.readFile       = config->readFile;
+    instance.writeFile      = config->writeFile;
+    instance.securityPolicy = config->securityPolicy;
+    instance.pathPrefix     = config->pathPrefix;
     ValidateConfig(config);
     InitialiseVtable();
 
@@ -383,6 +387,7 @@ static bool WriteRecordToFile(const void* data, size_t size)
 
     if (WriteRecordHeader(size) && WriteRecordBody(data, size) && WriteUnsentFlag())
     {
+        ComputeIntegrity(data, size);
         AdvanceWritePosition(size);
         written = true;
     }
@@ -450,6 +455,14 @@ static inline bool WriteExact(const void* buf, size_t count)
 static inline bool WriteRecordBody(const void* data, size_t size)
 {
     return WriteExact(data, size);
+}
+
+static inline void ComputeIntegrity(const void* data, size_t size)
+{
+    if (instance.securityPolicy != NULL)
+    {
+        instance.securityPolicy->ComputeIntegrity((const uint8_t*) data, (uint16_t) size, NULL);
+    }
 }
 
 static inline bool WriteUnsentFlag(void)

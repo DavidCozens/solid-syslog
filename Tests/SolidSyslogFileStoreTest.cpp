@@ -1,5 +1,6 @@
 #include "CppUTest/TestHarness.h"
 #include "SolidSyslogFileStore.h"
+#include "SolidSyslogSecurityPolicyDefinition.h"
 #include "SolidSyslog.h"
 #include "FileFake.h"
 
@@ -18,7 +19,7 @@ enum
 };
 
 static const struct SolidSyslogFileStoreConfig DEFAULT_CONFIG = {
-    nullptr, nullptr, TEST_PATH_PREFIX, TEST_MAX_FILE_SIZE, TEST_MAX_FILES, SOLIDSYSLOG_DISCARD_OLDEST,
+    nullptr, nullptr, TEST_PATH_PREFIX, TEST_MAX_FILE_SIZE, TEST_MAX_FILES, SOLIDSYSLOG_DISCARD_OLDEST, nullptr,
 };
 
 static struct SolidSyslogFileStoreConfig MakeConfig(struct SolidSyslogFile* file)
@@ -1048,4 +1049,67 @@ TEST(SolidSyslogFileStoreRotation, MultipleRecordsPerFileDrainAcrossRotation)
     SolidSyslogStore_MarkSent(store);
 
     CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
+}
+
+/* ------------------------------------------------------------------
+ * Integrity (SecurityPolicy integration)
+ * ----------------------------------------------------------------*/
+
+static bool computeIntegrityCalled;
+
+// NOLINTNEXTLINE(readability-non-const-parameter) -- matches SecurityPolicy vtable signature
+static void SpyComputeIntegrity(const uint8_t* data, uint16_t length, uint8_t* integrityOut)
+{
+    (void) data;
+    (void) length;
+    (void) integrityOut;
+    computeIntegrityCalled = true;
+}
+
+static bool SpyVerifyIntegrity(const uint8_t* data, uint16_t length, const uint8_t* integrityIn)
+{
+    (void) data;
+    (void) length;
+    (void) integrityIn;
+    return true;
+}
+
+static struct SolidSyslogSecurityPolicy spyPolicy = {
+    SpyComputeIntegrity,
+    SpyVerifyIntegrity,
+};
+
+// clang-format off
+TEST_GROUP(SolidSyslogFileStoreIntegrity)
+{
+    struct FileFakeStorage storage = {};
+    struct SolidSyslogFile* file = nullptr;
+    struct SolidSyslogStore* store = nullptr;
+
+    void setup() override
+    {
+        file = FileFake_Create(&storage);
+        computeIntegrityCalled = false;
+
+        struct SolidSyslogFileStoreConfig config = DEFAULT_CONFIG;
+        config.readFile       = file;
+        config.writeFile      = file;
+        config.securityPolicy = &spyPolicy;
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+        store = SolidSyslogFileStore_Create(&config);
+    }
+
+    void teardown() override
+    {
+        SolidSyslogFileStore_Destroy();
+        FileFake_Destroy();
+    }
+};
+
+// clang-format on
+
+TEST(SolidSyslogFileStoreIntegrity, WriteCallsComputeIntegrity)
+{
+    SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
+    CHECK_TRUE(computeIntegrityCalled);
 }
