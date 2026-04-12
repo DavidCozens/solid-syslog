@@ -10,6 +10,7 @@ set(TEST_SOURCES
     SolidSyslogOriginSdTest.cpp
     SolidSyslogNullBufferTest.cpp
     SolidSyslogNullStoreTest.cpp
+    SolidSyslogNullSecurityPolicyTest.cpp
     SolidSyslogPrivalTest.cpp
     BufferFakeTest.cpp
     BufferFake.c

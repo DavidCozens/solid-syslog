@@ -2,7 +2,7 @@
 #include "SolidSyslog.h"
 #include "SolidSyslogFile.h"
 #include "SolidSyslogFormat.h"
-#include "SolidSyslogSecurityPolicyDefinition.h"
+#include "SolidSyslogNullSecurityPolicy.h"
 #include "SolidSyslogStoreDefinition.h"
 
 #include <stdint.h>
@@ -141,6 +141,11 @@ static inline void ValidateConfig(const struct SolidSyslogFileStoreConfig* confi
     instance.maxFiles      = ClampToRange(config->maxFiles, MIN_MAX_FILES, MAX_MAX_FILES);
     instance.maxFileSize   = ClampToRange(config->maxFileSize, MIN_MAX_FILE_SIZE, (size_t) -1);
     instance.discardPolicy = config->discardPolicy;
+
+    if (instance.securityPolicy == NULL)
+    {
+        instance.securityPolicy = SolidSyslogNullSecurityPolicy_Create();
+    }
 }
 
 static inline void FormatFilename(uint8_t sequence)
@@ -460,10 +465,7 @@ static inline bool WriteRecordBody(const void* data, size_t size)
 
 static inline void ComputeIntegrity(const void* data, size_t size)
 {
-    if (instance.securityPolicy != NULL)
-    {
-        instance.securityPolicy->ComputeIntegrity((const uint8_t*) data, (uint16_t) size, NULL);
-    }
+    instance.securityPolicy->ComputeIntegrity((const uint8_t*) data, (uint16_t) size, NULL);
 }
 
 static inline bool WriteUnsentFlag(void)
@@ -570,12 +572,7 @@ static bool ReadRecordData(size_t recordStart, uint32_t length, void* data, size
 
 static inline bool VerifyIntegrity(const void* data, size_t size)
 {
-    if (instance.securityPolicy != NULL)
-    {
-        return instance.securityPolicy->VerifyIntegrity((const uint8_t*) data, (uint16_t) size, NULL);
-    }
-
-    return true;
+    return instance.securityPolicy->VerifyIntegrity((const uint8_t*) data, (uint16_t) size, NULL);
 }
 
 static inline size_t DataOffset(size_t recordStart)

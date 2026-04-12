@@ -533,6 +533,14 @@ TEST(SolidSyslogFileStoreConfig, FilenameTruncatedWhenPrefixTooLong)
     VerifyWriteAndReadBack();
 }
 
+TEST(SolidSyslogFileStoreConfig, NullSecurityPolicyDefaultsToNoOp)
+{
+    struct SolidSyslogFileStoreConfig config = MakeConfig(file);
+    config.securityPolicy                    = nullptr;
+    store                                    = SolidSyslogFileStore_Create(&config);
+    VerifyWriteAndReadBack();
+}
+
 /* ------------------------------------------------------------------
  * Error paths
  * ----------------------------------------------------------------*/

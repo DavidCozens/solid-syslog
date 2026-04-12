@@ -7,6 +7,7 @@ set(SOURCES
     SolidSyslogSender.c
     SolidSyslogStore.c
     SolidSyslogNullStore.c
+    SolidSyslogNullSecurityPolicy.c
     SolidSyslogStructuredData.c
     SolidSyslogTimeQualitySd.c
     SolidSyslogOriginSd.c
