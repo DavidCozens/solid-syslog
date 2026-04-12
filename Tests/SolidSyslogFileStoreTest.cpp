@@ -849,6 +849,26 @@ TEST(SolidSyslogFileStoreRotation, HaltWithNullCallbackDoesNotCrash)
     CHECK_FALSE(SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)));
 }
 
+TEST(SolidSyslogFileStoreRotation, DiscardNewestDoesNotInvokeCallback)
+{
+    storeFullCallbackInvoked = false;
+
+    struct SolidSyslogFileStoreConfig config = DEFAULT_CONFIG;
+    config.readFile                          = readFile;
+    config.writeFile                         = writeFile;
+    config.maxFileSize                       = ONE_MAX_MSG_RECORD;
+    config.maxFiles                          = 2;
+    config.discardPolicy                     = SOLIDSYSLOG_DISCARD_NEWEST;
+    config.onStoreFull                       = StoreFullCallback;
+    store                                    = SolidSyslogFileStore_Create(&config);
+
+    WriteMaxMsg(); /* file 00 */
+    WriteMaxMsg(); /* file 01 — now at maxFiles=2 */
+
+    SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg));
+    CHECK_FALSE(storeFullCallbackInvoked);
+}
+
 TEST(SolidSyslogFileStoreRotation, ResumeHasUnsentWhenMultipleFilesExist)
 {
     CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);

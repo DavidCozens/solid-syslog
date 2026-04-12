@@ -520,7 +520,7 @@ static inline bool StoreIsFull(void)
 
 static inline void NotifyStoreFull(void)
 {
-    if (instance.onStoreFull != NULL)
+    if ((instance.discardPolicy == SOLIDSYSLOG_HALT) && (instance.onStoreFull != NULL))
     {
         instance.onStoreFull();
     }
