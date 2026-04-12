@@ -7,6 +7,7 @@
 #include "SolidSyslog.h"
 #include "SolidSyslogAtomicCounter.h"
 #include "SolidSyslogConfig.h"
+#include "SolidSyslogCrc16Policy.h"
 #include "SolidSyslogFileStore.h"
 #include "SolidSyslogMetaSd.h"
 #include "SolidSyslogOriginSd.h"
@@ -84,6 +85,7 @@ static struct SolidSyslogStore* CreateStore(const struct ExampleOptions* options
         storeConfig.maxFileSize                              = DEFAULT_MAX_FILE_SIZE;
         storeConfig.maxFiles                                 = DEFAULT_MAX_FILES;
         storeConfig.discardPolicy                            = SOLIDSYSLOG_DISCARD_OLDEST;
+        storeConfig.securityPolicy                           = SolidSyslogCrc16Policy_Create();
         return SolidSyslogFileStore_Create(&storeConfig);
     }
 
@@ -111,6 +113,7 @@ static void DestroyStore(const struct ExampleOptions* options)
     if (useFile)
     {
         SolidSyslogFileStore_Destroy();
+        SolidSyslogCrc16Policy_Destroy();
         SolidSyslogPosixFile_Destroy(storeFile);
     }
     else

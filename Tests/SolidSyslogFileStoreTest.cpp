@@ -1,5 +1,7 @@
 #include "CppUTest/TestHarness.h"
 #include "SolidSyslogFileStore.h"
+#include "SolidSyslogCrc16Policy.h"
+#include "SolidSyslogSecurityPolicyDefinition.h"
 #include "SolidSyslog.h"
 #include "FileFake.h"
 
@@ -18,7 +20,7 @@ enum
 };
 
 static const struct SolidSyslogFileStoreConfig DEFAULT_CONFIG = {
-    nullptr, nullptr, TEST_PATH_PREFIX, TEST_MAX_FILE_SIZE, TEST_MAX_FILES, SOLIDSYSLOG_DISCARD_OLDEST,
+    nullptr, nullptr, TEST_PATH_PREFIX, TEST_MAX_FILE_SIZE, TEST_MAX_FILES, SOLIDSYSLOG_DISCARD_OLDEST, nullptr,
 };
 
 static struct SolidSyslogFileStoreConfig MakeConfig(struct SolidSyslogFile* file)
@@ -532,6 +534,14 @@ TEST(SolidSyslogFileStoreConfig, FilenameTruncatedWhenPrefixTooLong)
     VerifyWriteAndReadBack();
 }
 
+TEST(SolidSyslogFileStoreConfig, NullSecurityPolicyDefaultsToNoOp)
+{
+    struct SolidSyslogFileStoreConfig config = MakeConfig(file);
+    config.securityPolicy                    = nullptr;
+    store                                    = SolidSyslogFileStore_Create(&config);
+    VerifyWriteAndReadBack();
+}
+
 /* ------------------------------------------------------------------
  * Error paths
  * ----------------------------------------------------------------*/
@@ -627,7 +637,7 @@ TEST(SolidSyslogFileStoreErrors, MarkSentDoesNotAdvanceWhenWriteFails)
 // clang-format off
 TEST_GROUP(SolidSyslogFileStoreRotation)
 {
-    static const size_t RECORD_OVERHEAD    = 5; /* 4 (length) + 1 (sent flag) */
+    static const size_t RECORD_OVERHEAD    = 5; /* 2 (magic) + 2 (length) + 1 (sent flag) */
     static const size_t ONE_MAX_MSG_RECORD = SOLIDSYSLOG_MAX_MESSAGE_SIZE + RECORD_OVERHEAD;
 
     struct FileFakeStorage readStorage = {};
@@ -1048,4 +1058,397 @@ TEST(SolidSyslogFileStoreRotation, MultipleRecordsPerFileDrainAcrossRotation)
     SolidSyslogStore_MarkSent(store);
 
     CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
+}
+
+/* ------------------------------------------------------------------
+ * Integrity (SecurityPolicy integration)
+ * ----------------------------------------------------------------*/
+
+enum
+{
+    INTEGRITY_REGION_MAX = 2 + 2 + SOLIDSYSLOG_MAX_MESSAGE_SIZE /* magic + length + body */
+};
+
+static bool     computeIntegrityCalled;
+static uint8_t  computeIntegrityData[INTEGRITY_REGION_MAX];
+static uint16_t computeIntegrityLength;
+
+// NOLINTNEXTLINE(readability-non-const-parameter) -- matches SecurityPolicy vtable signature
+static void SpyComputeIntegrity(const uint8_t* data, uint16_t length, uint8_t* integrityOut)
+{
+    (void) integrityOut;
+    computeIntegrityCalled = true;
+    computeIntegrityLength = length;
+    memcpy(computeIntegrityData, data, length);
+}
+
+static bool     verifyIntegrityCalled;
+static uint8_t  verifyIntegrityData[INTEGRITY_REGION_MAX];
+static uint16_t verifyIntegrityLength;
+
+static bool SpyVerifyIntegrity(const uint8_t* data, uint16_t length, const uint8_t* integrityIn)
+{
+    (void) integrityIn;
+    verifyIntegrityCalled = true;
+    verifyIntegrityLength = length;
+    memcpy(verifyIntegrityData, data, length);
+    return true;
+}
+
+static struct SolidSyslogSecurityPolicy spyPolicy = {
+    0,
+    SpyComputeIntegrity,
+    SpyVerifyIntegrity,
+};
+
+// clang-format off
+TEST_GROUP(SolidSyslogFileStoreIntegrity)
+{
+    struct FileFakeStorage storage = {};
+    struct SolidSyslogFile* file = nullptr;
+    struct SolidSyslogStore* store = nullptr;
+
+    void setup() override
+    {
+        file = FileFake_Create(&storage);
+        computeIntegrityCalled  = false;
+        computeIntegrityLength  = 0;
+        memset(computeIntegrityData, 0, sizeof(computeIntegrityData));
+        verifyIntegrityCalled   = false;
+        verifyIntegrityLength   = 0;
+        memset(verifyIntegrityData, 0, sizeof(verifyIntegrityData));
+
+        struct SolidSyslogFileStoreConfig config = DEFAULT_CONFIG;
+        config.readFile       = file;
+        config.writeFile      = file;
+        config.securityPolicy = &spyPolicy;
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+        store = SolidSyslogFileStore_Create(&config);
+    }
+
+    void teardown() override
+    {
+        SolidSyslogFileStore_Destroy();
+        FileFake_Destroy();
+    }
+};
+
+// clang-format on
+
+TEST(SolidSyslogFileStoreIntegrity, WriteCallsComputeIntegrity)
+{
+    SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
+    CHECK_TRUE(computeIntegrityCalled);
+}
+
+TEST(SolidSyslogFileStoreIntegrity, ComputeIntegrityReceivesIntegrityRegion)
+{
+    enum
+    {
+        MAGIC_SIZE  = 2,
+        LENGTH_SIZE = 2,
+        REGION_SIZE = MAGIC_SIZE + LENGTH_SIZE + TEST_DATA_LEN
+    };
+
+    SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
+    LONGS_EQUAL(REGION_SIZE, computeIntegrityLength);
+
+    /* verify magic bytes */
+    BYTES_EQUAL(0xA5, computeIntegrityData[0]);
+    BYTES_EQUAL(0x5A, computeIntegrityData[1]);
+
+    /* verify body is included */
+    MEMCMP_EQUAL(TEST_DATA, computeIntegrityData + MAGIC_SIZE + LENGTH_SIZE, TEST_DATA_LEN);
+}
+
+TEST(SolidSyslogFileStoreIntegrity, ReadCallsVerifyIntegrity)
+{
+    SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
+    char   buf[TEST_BUF_SIZE];
+    size_t bytesRead = 0;
+    SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
+    CHECK_TRUE(verifyIntegrityCalled);
+}
+
+TEST(SolidSyslogFileStoreIntegrity, VerifyIntegrityReceivesIntegrityRegion)
+{
+    enum
+    {
+        MAGIC_SIZE  = 2,
+        LENGTH_SIZE = 2,
+        REGION_SIZE = MAGIC_SIZE + LENGTH_SIZE + TEST_DATA_LEN
+    };
+
+    SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
+    char   buf[TEST_BUF_SIZE];
+    size_t bytesRead = 0;
+    SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
+    LONGS_EQUAL(REGION_SIZE, verifyIntegrityLength);
+
+    /* verify magic bytes */
+    BYTES_EQUAL(0xA5, verifyIntegrityData[0]);
+    BYTES_EQUAL(0x5A, verifyIntegrityData[1]);
+
+    /* verify body is included */
+    MEMCMP_EQUAL(TEST_DATA, verifyIntegrityData + MAGIC_SIZE + LENGTH_SIZE, TEST_DATA_LEN);
+}
+
+/* ------------------------------------------------------------------
+ * Corruption detection
+ * ----------------------------------------------------------------*/
+
+// clang-format off
+TEST_GROUP(SolidSyslogFileStoreCorruption)
+{
+    struct FileFakeStorage storage = {};
+    struct SolidSyslogFile* file = nullptr;
+    struct SolidSyslogStore* store = nullptr;
+
+    void setup() override
+    {
+        file = FileFake_Create(&storage);
+    }
+
+    void teardown() override
+    {
+        SolidSyslogFileStore_Destroy();
+        FileFake_Destroy();
+    }
+
+    void WriteRawBytes(const char* path, const void* data, size_t size) const
+    {
+        SolidSyslogFile_Open(file, path);
+        SolidSyslogFile_Write(file, data, size);
+        SolidSyslogFile_Close(file);
+    }
+
+    void CreateStore()
+    {
+        struct SolidSyslogFileStoreConfig config = MakeConfig(file);
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+        store = SolidSyslogFileStore_Create(&config);
+    }
+};
+
+// clang-format on
+
+TEST(SolidSyslogFileStoreCorruption, TruncatedMagicHasNoUnsent)
+{
+    uint8_t oneByte = 0xA5;
+    WriteRawBytes("/tmp/test_store00.log", &oneByte, 1);
+    CreateStore();
+    CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
+}
+
+TEST(SolidSyslogFileStoreCorruption, BadMagicHasNoUnsent)
+{
+    uint8_t badMagic[] = {0x00, 0x00, 0x05, 0x00, 'h', 'e', 'l', 'l', 'o', 0xFF};
+    WriteRawBytes("/tmp/test_store00.log", badMagic, sizeof(badMagic));
+    CreateStore();
+    CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
+}
+
+TEST(SolidSyslogFileStoreCorruption, TruncatedLengthHasNoUnsent)
+{
+    uint8_t truncatedHeader[] = {0xA5, 0x5A, 0x05};
+    WriteRawBytes("/tmp/test_store00.log", truncatedHeader, sizeof(truncatedHeader));
+    CreateStore();
+    CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
+}
+
+TEST(SolidSyslogFileStoreCorruption, TruncatedBodyHasNoUnsent)
+{
+    /* valid magic + length=5, but only 2 bytes of body, no integrity or sent flag */
+    uint8_t truncatedBody[] = {0xA5, 0x5A, 0x05, 0x00, 'h', 'e'};
+    WriteRawBytes("/tmp/test_store00.log", truncatedBody, sizeof(truncatedBody));
+    CreateStore();
+    CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
+}
+
+TEST(SolidSyslogFileStoreCorruption, ValidRecordBeforeCorruptionIsReadable)
+{
+    struct SolidSyslogFileStoreConfig config = MakeConfig(file);
+    config.securityPolicy                    = SolidSyslogCrc16Policy_Create();
+    store                                    = SolidSyslogFileStore_Create(&config);
+    SolidSyslogStore_Write(store, "first", 5);
+    SolidSyslogStore_Write(store, "second", 6);
+    SolidSyslogFileStore_Destroy();
+
+    /* Corrupt the second record's body */
+    enum
+    {
+        MAGIC                     = 2,
+        LENGTH                    = 2,
+        FIRST_BODY                = 5,
+        CRC                       = 2,
+        SENT                      = 1,
+        SECOND_RECORD_BODY_OFFSET = MAGIC + LENGTH + FIRST_BODY + CRC + SENT + MAGIC + LENGTH
+    };
+
+    SolidSyslogFile_Open(file, "/tmp/test_store00.log");
+    uint8_t corrupt = 0xFF;
+    SolidSyslogFile_SeekTo(file, SECOND_RECORD_BODY_OFFSET);
+    SolidSyslogFile_Write(file, &corrupt, 1);
+    SolidSyslogFile_Close(file);
+
+    /* Re-open: first record is valid, second is corrupt */
+    store                     = SolidSyslogFileStore_Create(&config);
+    char   buf[TEST_BUF_SIZE] = {};
+    size_t bytesRead          = 0;
+
+    CHECK_TRUE(SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead));
+    LONGS_EQUAL(5, bytesRead);
+    MEMCMP_EQUAL("first", buf, 5);
+}
+
+TEST(SolidSyslogFileStoreCorruption, IntegrityFailureReadReturnsFalse)
+{
+    struct SolidSyslogFileStoreConfig config = MakeConfig(file);
+    config.securityPolicy                    = SolidSyslogCrc16Policy_Create();
+    store                                    = SolidSyslogFileStore_Create(&config);
+    SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
+    SolidSyslogFileStore_Destroy();
+
+    /* Corrupt one byte of the body in the stored record */
+    SolidSyslogFile_Open(file, "/tmp/test_store00.log");
+    uint8_t corrupt = 0xFF;
+    SolidSyslogFile_SeekTo(file, 4); /* offset past magic(2) + length(2) */
+    SolidSyslogFile_Write(file, &corrupt, 1);
+    SolidSyslogFile_Close(file);
+
+    store = SolidSyslogFileStore_Create(&config);
+    char   buf[TEST_BUF_SIZE];
+    size_t bytesRead = 0;
+    CHECK_FALSE(SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead));
+}
+
+TEST(SolidSyslogFileStoreCorruption, InvalidLengthReadReturnsFalse)
+{
+    /* Write many records to make the file large enough that a bogus length
+     * doesn't hit EOF — the length check must reject it explicitly */
+    struct SolidSyslogFileStoreConfig config = MakeConfig(file);
+    store                                    = SolidSyslogFileStore_Create(&config);
+
+    char largeMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    memset(largeMsg, 'X', sizeof(largeMsg));
+    SolidSyslogStore_Write(store, largeMsg, sizeof(largeMsg));
+    SolidSyslogStore_Write(store, largeMsg, sizeof(largeMsg));
+    SolidSyslogFileStore_Destroy();
+
+    /* Overwrite the length field of the first record (bytes 2-3) */
+    SolidSyslogFile_Open(file, "/tmp/test_store00.log");
+    uint16_t badLength = SOLIDSYSLOG_MAX_MESSAGE_SIZE + 1;
+    SolidSyslogFile_SeekTo(file, 2);
+    SolidSyslogFile_Write(file, &badLength, 2);
+    SolidSyslogFile_Close(file);
+
+    store = SolidSyslogFileStore_Create(&config);
+    char   buf[TEST_BUF_SIZE];
+    size_t bytesRead = 0;
+    CHECK_FALSE(SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead));
+}
+
+/* ------------------------------------------------------------------
+ * Corruption recovery
+ * ----------------------------------------------------------------*/
+
+// clang-format off
+TEST_GROUP(SolidSyslogFileStoreCorruptionRecovery)
+{
+    static const size_t RECORD_OVERHEAD    = 7; /* 2 (magic) + 2 (length) + 2 (crc) + 1 (sent) */
+    static const size_t ONE_MAX_MSG_RECORD = SOLIDSYSLOG_MAX_MESSAGE_SIZE + RECORD_OVERHEAD;
+
+    struct FileFakeStorage readStorage = {};
+    struct FileFakeStorage writeStorage = {};
+    struct SolidSyslogFile* readFile = nullptr;
+    struct SolidSyslogFile* writeFile = nullptr;
+    struct SolidSyslogStore* store = nullptr;
+    struct SolidSyslogSecurityPolicy* policy = nullptr;
+    char maxMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE] = {};
+
+    void setup() override
+    {
+        readFile = FileFake_Create(&readStorage);
+        writeFile = FileFake_Create(&writeStorage);
+        policy = SolidSyslogCrc16Policy_Create();
+        memset(maxMsg, 'A', sizeof(maxMsg));
+    }
+
+    void teardown() override
+    {
+        SolidSyslogFileStore_Destroy();
+        FileFake_Destroy();
+    }
+
+    // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- maxFileSize and maxFiles have distinct semantics
+    void CreateWithMaxFileSize(size_t maxFileSize, size_t maxFiles = 2)
+    {
+        struct SolidSyslogFileStoreConfig config = DEFAULT_CONFIG;
+        config.readFile        = readFile;
+        config.writeFile       = writeFile;
+        config.maxFileSize     = maxFileSize;
+        config.maxFiles        = maxFiles;
+        config.securityPolicy  = policy;
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+        store = SolidSyslogFileStore_Create(&config);
+    }
+
+    void WriteMaxMsg()
+    {
+        SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg));
+    }
+
+    void CorruptFirstRecordBody(const char* path) const
+    {
+        SolidSyslogFile_Open(writeFile, path);
+        uint8_t corrupt = 0xFF;
+        SolidSyslogFile_SeekTo(writeFile, 4);
+        SolidSyslogFile_Write(writeFile, &corrupt, 1);
+        SolidSyslogFile_Close(writeFile);
+    }
+};
+
+// clang-format on
+
+TEST(SolidSyslogFileStoreCorruptionRecovery, ReadSkipsCorruptOlderFileToNextFile)
+{
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+
+    char firstMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    memset(firstMsg, 'B', sizeof(firstMsg));
+    SolidSyslogStore_Write(store, firstMsg, sizeof(firstMsg)); /* file 00 */
+
+    WriteMaxMsg(); /* file 01 */
+    SolidSyslogFileStore_Destroy();
+
+    CorruptFirstRecordBody("/tmp/test_store00.log");
+
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+
+    char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE] = {};
+    size_t bytesRead                         = 0;
+    CHECK_TRUE(SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead));
+    LONGS_EQUAL(SOLIDSYSLOG_MAX_MESSAGE_SIZE, bytesRead);
+    BYTES_EQUAL('A', buf[0]);
+}
+
+TEST(SolidSyslogFileStoreCorruptionRecovery, CorruptWriteFileRotatesOnNextWrite)
+{
+    /* Use a file size that fits two records — the first write leaves space,
+     * so rotation on the second write proves corruption forced it */
+    static const size_t TWO_MAX_MSG_RECORDS = 2 * ONE_MAX_MSG_RECORD;
+
+    CreateWithMaxFileSize(TWO_MAX_MSG_RECORDS);
+    WriteMaxMsg(); /* file 00 — partially filled */
+    SolidSyslogFileStore_Destroy();
+
+    CorruptFirstRecordBody("/tmp/test_store00.log");
+
+    CreateWithMaxFileSize(TWO_MAX_MSG_RECORDS);
+
+    /* File 00 has space but is corrupt — write should rotate to file 01 */
+    char newMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    memset(newMsg, 'N', sizeof(newMsg));
+    CHECK_TRUE(SolidSyslogStore_Write(store, newMsg, sizeof(newMsg)));
+    CHECK_TRUE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store01.log"));
 }
