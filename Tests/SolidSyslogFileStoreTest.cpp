@@ -636,7 +636,7 @@ TEST(SolidSyslogFileStoreErrors, MarkSentDoesNotAdvanceWhenWriteFails)
 // clang-format off
 TEST_GROUP(SolidSyslogFileStoreRotation)
 {
-    static const size_t RECORD_OVERHEAD    = 5; /* 4 (length) + 1 (sent flag) */
+    static const size_t RECORD_OVERHEAD    = 5; /* 2 (magic) + 2 (length) + 1 (sent flag) */
     static const size_t ONE_MAX_MSG_RECORD = SOLIDSYSLOG_MAX_MESSAGE_SIZE + RECORD_OVERHEAD;
 
     struct FileFakeStorage readStorage = {};
@@ -1135,11 +1135,24 @@ TEST(SolidSyslogFileStoreIntegrity, WriteCallsComputeIntegrity)
     CHECK_TRUE(computeIntegrityCalled);
 }
 
-TEST(SolidSyslogFileStoreIntegrity, ComputeIntegrityReceivesWrittenData)
+TEST(SolidSyslogFileStoreIntegrity, ComputeIntegrityReceivesIntegrityRegion)
 {
+    enum
+    {
+        MAGIC_SIZE  = 2,
+        LENGTH_SIZE = 2,
+        REGION_SIZE = MAGIC_SIZE + LENGTH_SIZE + TEST_DATA_LEN
+    };
+
     SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
-    LONGS_EQUAL(TEST_DATA_LEN, computeIntegrityLength);
-    MEMCMP_EQUAL(TEST_DATA, computeIntegrityData, TEST_DATA_LEN);
+    LONGS_EQUAL(REGION_SIZE, computeIntegrityLength);
+
+    /* verify magic bytes */
+    BYTES_EQUAL(0xA5, computeIntegrityData[0]);
+    BYTES_EQUAL(0x5A, computeIntegrityData[1]);
+
+    /* verify body is included */
+    MEMCMP_EQUAL(TEST_DATA, computeIntegrityData + MAGIC_SIZE + LENGTH_SIZE, TEST_DATA_LEN);
 }
 
 TEST(SolidSyslogFileStoreIntegrity, ReadCallsVerifyIntegrity)
@@ -1151,12 +1164,25 @@ TEST(SolidSyslogFileStoreIntegrity, ReadCallsVerifyIntegrity)
     CHECK_TRUE(verifyIntegrityCalled);
 }
 
-TEST(SolidSyslogFileStoreIntegrity, VerifyIntegrityReceivesWrittenData)
+TEST(SolidSyslogFileStoreIntegrity, VerifyIntegrityReceivesIntegrityRegion)
 {
+    enum
+    {
+        MAGIC_SIZE  = 2,
+        LENGTH_SIZE = 2,
+        REGION_SIZE = MAGIC_SIZE + LENGTH_SIZE + TEST_DATA_LEN
+    };
+
     SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
     char   buf[TEST_BUF_SIZE];
     size_t bytesRead = 0;
     SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
-    LONGS_EQUAL(TEST_DATA_LEN, verifyIntegrityLength);
-    MEMCMP_EQUAL(TEST_DATA, verifyIntegrityData, TEST_DATA_LEN);
+    LONGS_EQUAL(REGION_SIZE, verifyIntegrityLength);
+
+    /* verify magic bytes */
+    BYTES_EQUAL(0xA5, verifyIntegrityData[0]);
+    BYTES_EQUAL(0x5A, verifyIntegrityData[1]);
+
+    /* verify body is included */
+    MEMCMP_EQUAL(TEST_DATA, verifyIntegrityData + MAGIC_SIZE + LENGTH_SIZE, TEST_DATA_LEN);
 }
