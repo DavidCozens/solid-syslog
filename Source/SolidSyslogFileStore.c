@@ -197,12 +197,19 @@ static inline bool IsRecordSent(size_t recordStart, uint16_t length)
 
 static const char FILE_EXTENSION[] = ".log";
 
+enum
+{
+    SEQUENCE_DIGITS   = 2,
+    FILENAME_SUFFIX   = SEQUENCE_DIGITS + sizeof(FILE_EXTENSION) - 1,
+    MAX_PREFIX_LENGTH = MAX_PATH_SIZE - FILENAME_SUFFIX - 1
+};
+
 static inline const char* FormatFilename(SolidSyslogFormatterStorage* storage, uint8_t sequence)
 {
     struct SolidSyslogFormatter* f = SolidSyslogFormatter_Create(storage, MAX_PATH_SIZE);
 
-    SolidSyslogFormatter_BoundedString(f, instance.pathPrefix, MAX_PATH_SIZE);
-    SolidSyslogFormatter_PaddedUint32(f, sequence, 2);
+    SolidSyslogFormatter_BoundedString(f, instance.pathPrefix, MAX_PREFIX_LENGTH);
+    SolidSyslogFormatter_PaddedUint32(f, sequence, SEQUENCE_DIGITS);
     SolidSyslogFormatter_BoundedString(f, FILE_EXTENSION, sizeof(FILE_EXTENSION) - 1);
 
     return SolidSyslogFormatter_Data(f);

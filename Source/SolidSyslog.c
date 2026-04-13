@@ -333,14 +333,14 @@ static inline void FormatStringField(struct SolidSyslogFormatter* f, SolidSyslog
 
 static inline void FormatMsgId(struct SolidSyslogFormatter* f, const char* messageId)
 {
-    size_t len = 0;
+    size_t lengthBefore = SolidSyslogFormatter_Length(f);
 
     if (StringIsValid(messageId))
     {
-        len = SolidSyslogFormatter_BoundedString(f, messageId, SOLIDSYSLOG_MAX_MSGID_SIZE - 1);
+        SolidSyslogFormatter_BoundedString(f, messageId, SOLIDSYSLOG_MAX_MSGID_SIZE - 1);
     }
 
-    if (len == 0)
+    if (SolidSyslogFormatter_Length(f) == lengthBefore)
     {
         FormatNilvalue(f);
     }
@@ -371,7 +371,7 @@ static inline void FormatMsg(struct SolidSyslogFormatter* f, const char* msg)
     if (StringIsValid(msg))
     {
         SolidSyslogFormatter_Character(f, ' ');
-        SolidSyslogFormatter_BoundedString(f, msg, SolidSyslogFormatter_Remaining(f) - 1);
+        SolidSyslogFormatter_BoundedString(f, msg, SOLIDSYSLOG_MAX_MESSAGE_SIZE);
     }
 }
 
