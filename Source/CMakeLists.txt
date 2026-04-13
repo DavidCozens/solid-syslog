@@ -2,6 +2,7 @@ set(SOURCES
     SolidSyslog.c
     SolidSyslogBuffer.c
     SolidSyslogFormat.c
+    SolidSyslogFormatter.c
     SolidSyslogMetaSd.c
     SolidSyslogNullBuffer.c
     SolidSyslogSender.c

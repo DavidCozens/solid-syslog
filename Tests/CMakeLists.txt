@@ -14,6 +14,7 @@ set(TEST_SOURCES
     SolidSyslogCrc16Test.cpp
     SolidSyslogCrc16PolicyTest.cpp
     SolidSyslogPrivalTest.cpp
+    SolidSyslogFormatterTest.cpp
     BufferFakeTest.cpp
     BufferFake.c
     StoreFakeTest.cpp
