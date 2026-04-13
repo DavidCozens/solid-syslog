@@ -131,7 +131,8 @@ Headers in `Interface/` are split by audience — each user includes only what t
 | Header | Audience | Provides |
 |---|---|---|
 | `SolidSyslog.h` | Application code that logs events | `SolidSyslogMessage`, `SolidSyslog_Log`, `SolidSyslog_Service` |
-| `SolidSyslogConfig.h` | System setup code | `SolidSyslogConfig`, `SolidSyslog_Create`, `SolidSyslog_Destroy` |
+| `SolidSyslogConfig.h` | System setup code | `SolidSyslogConfig`, `SolidSyslog_Create`, `SolidSyslog_Destroy`, `SolidSyslogStringFunction` |
+| `SolidSyslogFormatter.h` | Any code that formats into a bounded buffer | `SolidSyslogFormatter`, `SolidSyslogFormatterStorage`, `SOLIDSYSLOG_FORMATTER_STORAGE_SIZE`, `_Create`, `_FromStorage`, `_Character`, `_BoundedString`, `_Uint32`, `_PaddedUint32`, `_Data`, `_Length`, `_Remaining` |
 | `SolidSyslogPrival.h` | Any code that needs facility/severity enums | `SolidSyslog_Facility`, `SolidSyslog_Severity` |
 | `SolidSyslogTimestamp.h` | Any code that needs the timestamp struct | `SolidSyslogTimestamp`, `SolidSyslogClockFunction` |
 | `SolidSyslogSenderDefinition.h` | Sender implementors (extension point) | `SolidSyslogSender` vtable struct |
@@ -151,10 +152,10 @@ Headers in `Interface/` are split by audience — each user includes only what t
 | `SolidSyslogCrc16.h` | Any code needing CRC-16 computation | `SolidSyslogCrc16_Compute` |
 | `SolidSyslogPosixFile.h` | System setup code using POSIX file I/O | `SolidSyslogPosixFile_Create`, `_Destroy` |
 | `SolidSyslogPosixClock.h` | System setup code using POSIX clock | `SolidSyslogPosixClock_GetTimestamp` |
-| `SolidSyslogPosixHostname.h` | System setup code using POSIX hostname | `SolidSyslogPosixHostname_Get` |
-| `SolidSyslogPosixProcessId.h` | System setup code using POSIX process ID | `SolidSyslogPosixProcessId_Get` |
-| `SolidSyslogStructuredData.h` | Library internals (SD dispatch) | `SolidSyslogStructuredData_Format` |
-| `SolidSyslogStructuredDataDefinition.h` | SD implementors (extension point) | `SolidSyslogStructuredData` vtable struct |
+| `SolidSyslogPosixHostname.h` | String callback implementor using POSIX hostname | `SolidSyslogPosixHostname_Get` (writes into `SolidSyslogFormatter*`) |
+| `SolidSyslogPosixProcessId.h` | String callback implementor using POSIX process ID | `SolidSyslogPosixProcessId_Get` (writes into `SolidSyslogFormatter*`) |
+| `SolidSyslogStructuredData.h` | Library internals (SD dispatch) | `SolidSyslogStructuredData_Format` (writes into `SolidSyslogFormatter*`) |
+| `SolidSyslogStructuredDataDefinition.h` | SD implementors (extension point) | `SolidSyslogStructuredData` vtable struct (Format takes `SolidSyslogFormatter*`) |
 | `SolidSyslogMetaSd.h` | System setup code using sequenceId SD | `SolidSyslogMetaSd_Create`, `_Destroy` |
 | `SolidSyslogAtomicCounter.h` | System setup code on platforms with C11 atomics | `SolidSyslogAtomicCounter_Create`, `_Destroy`, `_Increment` |
 | `SolidSyslogTimeQuality.h` | Any code providing time quality data | `SolidSyslogTimeQuality`, `SolidSyslogTimeQualityFunction`, `SOLIDSYSLOG_SYNC_ACCURACY_OMIT` |
