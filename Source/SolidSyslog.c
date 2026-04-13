@@ -23,6 +23,7 @@ static inline int16_t AbsoluteInt16(int16_t value);
 static inline bool    CaptureTimestamp(struct SolidSyslogTimestamp* ts, SolidSyslogClockFunction clock);
 static inline uint8_t CombineFacilityAndSeverity(uint8_t facility, uint8_t severity);
 static inline bool    FacilityIsValid(uint8_t facility);
+static inline bool    FetchFromStore(char* buf, size_t maxSize, size_t* len);
 static inline size_t  FormatAppName(char* buffer, SolidSyslogStringFunction getAppName);
 static inline size_t  FormatAsHours(char* buffer, int16_t absoluteMinutes);
 static inline size_t  FormatAsMinutes(char* buffer, int16_t absoluteMinutes);
@@ -42,11 +43,14 @@ static inline size_t  FormatTimestamp(char* buffer, size_t size, SolidSyslogCloc
 static inline size_t  FormatTwoDigit(char* buffer, uint8_t value);
 static inline size_t  FormatUtcOffset(char* buffer, int16_t offsetMinutes);
 static inline size_t  FormatVersion(char* buffer);
+static inline bool    IsServiceEnabled(void);
 static inline size_t  FormatYear(char* buffer, uint16_t value);
 static inline uint8_t MakePrival(const struct SolidSyslogMessage* message);
 static void           NilClock(struct SolidSyslogTimestamp* ts);
 static size_t         NilStringFunction(char* buffer, size_t size);
 static inline bool    PrivalComponentsAreValid(uint8_t facility, uint8_t severity);
+static void           ProcessMessages(void);
+static inline bool    ReceiveFromBufferIntoStore(char* buf, size_t maxSize, size_t* len);
 static inline bool    SeverityIsValid(uint8_t severity);
 static inline bool    StringIsValid(const char* value);
 static inline bool    TimestampIsValid(const struct SolidSyslogTimestamp* ts);
@@ -110,6 +114,39 @@ void SolidSyslog_Destroy(void)
     instance.sdCount      = 0;
 }
 
+void SolidSyslog_Service(void)
+{
+    if (IsServiceEnabled())
+    {
+        ProcessMessages();
+    }
+}
+
+static inline bool IsServiceEnabled(void)
+{
+    return !SolidSyslogStore_IsHalted(instance.store);
+}
+
+static void ProcessMessages(void)
+{
+    char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    size_t len = 0;
+
+    bool haveMessage = ReceiveFromBufferIntoStore(buf, sizeof(buf), &len);
+    bool fromStore   = FetchFromStore(buf, sizeof(buf), &len);
+
+    if (fromStore || haveMessage)
+    {
+        if (SolidSyslogSender_Send(instance.sender, buf, len))
+        {
+            if (fromStore)
+            {
+                SolidSyslogStore_MarkSent(instance.store);
+            }
+        }
+    }
+}
+
 static inline bool ReceiveFromBufferIntoStore(char* buf, size_t maxSize, size_t* len)
 {
     bool received = SolidSyslogBuffer_Read(instance.buffer, buf, maxSize, len);
@@ -130,26 +167,6 @@ static inline bool FetchFromStore(char* buf, size_t maxSize, size_t* len)
     }
 
     return false;
-}
-
-void SolidSyslog_Service(void)
-{
-    char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
-    size_t len = 0;
-
-    bool haveMessage = ReceiveFromBufferIntoStore(buf, sizeof(buf), &len);
-    bool fromStore   = FetchFromStore(buf, sizeof(buf), &len);
-
-    if (fromStore || haveMessage)
-    {
-        if (SolidSyslogSender_Send(instance.sender, buf, len))
-        {
-            if (fromStore)
-            {
-                SolidSyslogStore_MarkSent(instance.store);
-            }
-        }
-    }
 }
 
 void SolidSyslog_Log(const struct SolidSyslogMessage* message)

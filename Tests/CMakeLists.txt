@@ -43,6 +43,7 @@ if(SOLIDSYSLOG_POSIX)
         SolidSyslogUdpSenderTest.cpp
         SolidSyslogTcpSenderTest.cpp
         SolidSyslogPosixFileTest.cpp
+        SolidSyslogFileStorePosixTest.cpp
     )
 endif()
 

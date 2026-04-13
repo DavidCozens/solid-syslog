@@ -796,6 +796,37 @@ TEST(SolidSyslogFileStoreRotation, DiscardOldestSurvivingDataIsReadable)
     BYTES_EQUAL('C', buf[0]);
 }
 
+TEST(SolidSyslogFileStoreRotation, DiscardOldestDrainYieldsOnlySurvivingRecords)
+{
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+
+    char firstMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    memset(firstMsg, 'B', sizeof(firstMsg));
+    SolidSyslogStore_Write(store, firstMsg, sizeof(firstMsg)); /* file 00 — will be discarded */
+
+    char secondMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    memset(secondMsg, 'C', sizeof(secondMsg));
+    SolidSyslogStore_Write(store, secondMsg, sizeof(secondMsg)); /* file 01 — survives */
+
+    WriteMaxMsg(); /* file 02 — triggers discard of file 00 */
+
+    char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE] = {};
+    size_t bytesRead                         = 0;
+
+    /* First record should be from surviving file 01, not discarded file 00 */
+    CHECK_TRUE(SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead));
+    BYTES_EQUAL('C', buf[0]);
+    SolidSyslogStore_MarkSent(store);
+
+    /* Second record from file 02 */
+    CHECK_TRUE(SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead));
+    BYTES_EQUAL('A', buf[0]);
+    SolidSyslogStore_MarkSent(store);
+
+    /* No more records */
+    CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
+}
+
 TEST(SolidSyslogFileStoreRotation, DiscardNewestReturnsFalseWhenAtMaxFiles)
 {
     CreateWithMaxFileSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_DISCARD_NEWEST);
@@ -847,6 +878,25 @@ TEST(SolidSyslogFileStoreRotation, HaltWithNullCallbackDoesNotCrash)
     WriteMaxMsg(); /* file 01 — now at maxFiles=2 */
 
     CHECK_FALSE(SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)));
+}
+
+TEST(SolidSyslogFileStoreRotation, HaltSetsIsHaltedTrue)
+{
+    struct SolidSyslogFileStoreConfig config = DEFAULT_CONFIG;
+    config.readFile                          = readFile;
+    config.writeFile                         = writeFile;
+    config.maxFileSize                       = ONE_MAX_MSG_RECORD;
+    config.maxFiles                          = 2;
+    config.discardPolicy                     = SOLIDSYSLOG_HALT;
+    config.onStoreFull                       = nullptr;
+    store                                    = SolidSyslogFileStore_Create(&config);
+
+    WriteMaxMsg(); /* file 00 */
+    WriteMaxMsg(); /* file 01 — now at maxFiles=2 */
+
+    CHECK_FALSE(SolidSyslogStore_IsHalted(store));
+    SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)); /* triggers halt */
+    CHECK_TRUE(SolidSyslogStore_IsHalted(store));
 }
 
 TEST(SolidSyslogFileStoreRotation, DiscardNewestDoesNotInvokeCallback)

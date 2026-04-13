@@ -19,3 +19,8 @@ bool SolidSyslogStore_HasUnsent(struct SolidSyslogStore* store)
 {
     return store->HasUnsent(store);
 }
+
+bool SolidSyslogStore_IsHalted(struct SolidSyslogStore* store)
+{
+    return store->IsHalted(store);
+}

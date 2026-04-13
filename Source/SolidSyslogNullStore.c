@@ -5,6 +5,7 @@ static bool Write(struct SolidSyslogStore* self, const void* data, size_t size);
 static bool ReadNextUnsent(struct SolidSyslogStore* self, void* data, size_t maxSize, size_t* bytesRead);
 static void MarkSent(struct SolidSyslogStore* self);
 static bool HasUnsent(struct SolidSyslogStore* self);
+static bool IsHalted(struct SolidSyslogStore* self);
 
 struct SolidSyslogNullStore
 {
@@ -19,6 +20,7 @@ struct SolidSyslogStore* SolidSyslogNullStore_Create(void)
     instance.base.ReadNextUnsent = ReadNextUnsent;
     instance.base.MarkSent       = MarkSent;
     instance.base.HasUnsent      = HasUnsent;
+    instance.base.IsHalted       = IsHalted;
     return &instance.base;
 }
 
@@ -28,6 +30,7 @@ void SolidSyslogNullStore_Destroy(void)
     instance.base.ReadNextUnsent = NULL;
     instance.base.MarkSent       = NULL;
     instance.base.HasUnsent      = NULL;
+    instance.base.IsHalted       = NULL;
 }
 
 static bool Write(struct SolidSyslogStore* self, const void* data, size_t size)
@@ -53,6 +56,12 @@ static void MarkSent(struct SolidSyslogStore* self)
 }
 
 static bool HasUnsent(struct SolidSyslogStore* self)
+{
+    (void) self;
+    return false;
+}
+
+static bool IsHalted(struct SolidSyslogStore* self)
 {
     (void) self;
     return false;

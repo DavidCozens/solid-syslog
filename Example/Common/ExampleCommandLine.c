@@ -4,14 +4,35 @@
 #include <stdlib.h>
 #include <string.h>
 
+enum
+{
+    DEFAULT_MAX_FILES     = 10,
+    DEFAULT_MAX_FILE_SIZE = 65536,
+    OPT_MAX_FILES         = 256,
+    OPT_MAX_FILE_SIZE     = 257,
+    OPT_DISCARD_POLICY    = 258,
+    OPT_NO_SD             = 259,
+    OPT_HALT_EXIT         = 260
+};
+
+static bool IsValidDiscardPolicy(const char* policy)
+{
+    return (strcmp(policy, "oldest") == 0) || (strcmp(policy, "newest") == 0) || (strcmp(policy, "halt") == 0);
+}
+
 int ExampleCommandLine_Parse(int argc, char* argv[], struct ExampleOptions* options)
 {
-    options->facility  = SOLIDSYSLOG_FACILITY_LOCAL0;
-    options->severity  = SOLIDSYSLOG_SEVERITY_INFO;
-    options->messageId = NULL;
-    options->msg       = NULL;
-    options->transport = "udp";
-    options->store     = "null";
+    options->facility      = SOLIDSYSLOG_FACILITY_LOCAL0;
+    options->severity      = SOLIDSYSLOG_SEVERITY_INFO;
+    options->messageId     = NULL;
+    options->msg           = NULL;
+    options->transport     = "udp";
+    options->store         = "null";
+    options->maxFiles      = DEFAULT_MAX_FILES;
+    options->maxFileSize   = DEFAULT_MAX_FILE_SIZE;
+    options->discardPolicy = "oldest";
+    options->noSd          = false;
+    options->haltExit      = false;
 
     static struct option longOptions[] = {
         {"facility", required_argument, NULL, 'f'},
@@ -20,6 +41,11 @@ int ExampleCommandLine_Parse(int argc, char* argv[], struct ExampleOptions* opti
         {"message", required_argument, NULL, 'm'},
         {"transport", required_argument, NULL, 't'},
         {"store", required_argument, NULL, 'o'},
+        {"max-files", required_argument, NULL, OPT_MAX_FILES},
+        {"max-file-size", required_argument, NULL, OPT_MAX_FILE_SIZE},
+        {"discard-policy", required_argument, NULL, OPT_DISCARD_POLICY},
+        {"no-sd", no_argument, NULL, OPT_NO_SD},
+        {"halt-exit", no_argument, NULL, OPT_HALT_EXIT},
         {NULL, 0, NULL, 0},
     };
 
@@ -53,6 +79,25 @@ int ExampleCommandLine_Parse(int argc, char* argv[], struct ExampleOptions* opti
                     return 1;
                 }
                 options->store = optarg;
+                break;
+            case OPT_MAX_FILES:
+                options->maxFiles = (size_t) strtol(optarg, NULL, 10);
+                break;
+            case OPT_MAX_FILE_SIZE:
+                options->maxFileSize = (size_t) strtol(optarg, NULL, 10);
+                break;
+            case OPT_DISCARD_POLICY:
+                if (!IsValidDiscardPolicy(optarg))
+                {
+                    return 1;
+                }
+                options->discardPolicy = optarg;
+                break;
+            case OPT_NO_SD:
+                options->noSd = true;
+                break;
+            case OPT_HALT_EXIT:
+                options->haltExit = true;
                 break;
             default:
                 return 1;

@@ -11,6 +11,7 @@ EXTERN_C_BEGIN
         bool (*ReadNextUnsent)(struct SolidSyslogStore* self, void* data, size_t maxSize, size_t* bytesRead);
         void (*MarkSent)(struct SolidSyslogStore* self);
         bool (*HasUnsent)(struct SolidSyslogStore* self);
+        bool (*IsHalted)(struct SolidSyslogStore* self);
     };
 
 EXTERN_C_END
