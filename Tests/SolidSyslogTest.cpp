@@ -93,16 +93,19 @@ static const int TIMESTAMP_OFFSET_OFFSET       = 26;
 
 // NOLINTEND(cppcoreguidelines-macro-usage)
 
+static const char SD_SPY_TEXT[]  = "[spy]";
+static const char SD_SPY2_TEXT[] = "[spy2]";
+
 static void SdSpyFormat(struct SolidSyslogStructuredData* /* self */, struct SolidSyslogFormatter* formatter)
 {
-    SolidSyslogFormatter_BoundedString(formatter, "[spy]", 5);
+    SolidSyslogFormatter_BoundedString(formatter, SD_SPY_TEXT, sizeof(SD_SPY_TEXT) - 1);
 }
 
 static struct SolidSyslogStructuredData sdSpy = {SdSpyFormat};
 
 static void SdSpyFormat2(struct SolidSyslogStructuredData* /* self */, struct SolidSyslogFormatter* formatter)
 {
-    SolidSyslogFormatter_BoundedString(formatter, "[spy2]", 6);
+    SolidSyslogFormatter_BoundedString(formatter, SD_SPY2_TEXT, sizeof(SD_SPY2_TEXT) - 1);
 }
 
 static struct SolidSyslogStructuredData sdSpy2 = {SdSpyFormat2};

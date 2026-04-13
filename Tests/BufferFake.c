@@ -1,11 +1,8 @@
 #include "BufferFake.h"
 #include "SolidSyslogBufferDefinition.h"
-#include <string.h>
+#include "TestUtils.h"
 
-static inline size_t MinSize(size_t a, size_t b)
-{
-    return (a < b) ? a : b;
-}
+#include <string.h>
 
 enum
 {

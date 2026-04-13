@@ -3,19 +3,19 @@
 
 enum
 {
-    BUFFER_SIZE = 64
+    TEST_BUFFER_SIZE = 64
 };
 
 TEST_GROUP(SolidSyslogFormatter)
 {
-    SolidSyslogFormatterStorage storage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(BUFFER_SIZE)];
+    SolidSyslogFormatterStorage storage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(TEST_BUFFER_SIZE)];
     // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
     struct SolidSyslogFormatter* formatter;
 
     void setup() override
     {
         // cppcheck-suppress unreadVariable -- formatter is used across TEST() bodies via CppUTest macro
-        formatter = SolidSyslogFormatter_Create(storage, BUFFER_SIZE);
+        formatter = SolidSyslogFormatter_Create(storage, TEST_BUFFER_SIZE);
     }
 };
 
@@ -132,11 +132,11 @@ TEST(SolidSyslogFormatter, PaddedUint32ZeroPadsToFullWidth)
 
 TEST(SolidSyslogFormatter, RemainingReturnsSpaceLeft)
 {
-    LONGS_EQUAL(BUFFER_SIZE, SolidSyslogFormatter_Remaining(formatter));
+    LONGS_EQUAL(TEST_BUFFER_SIZE, SolidSyslogFormatter_Remaining(formatter));
 
     SolidSyslogFormatter_Character(formatter, 'A');
 
-    LONGS_EQUAL(BUFFER_SIZE - 1, SolidSyslogFormatter_Remaining(formatter));
+    LONGS_EQUAL(TEST_BUFFER_SIZE - 1, SolidSyslogFormatter_Remaining(formatter));
 }
 
 TEST(SolidSyslogFormatter, LengthReturnsNumberOfCharactersWritten)
@@ -153,4 +153,38 @@ TEST(SolidSyslogFormatter, DataReturnsFormattedString)
     SolidSyslogFormatter_BoundedString(formatter, "test", 4);
 
     STRCMP_EQUAL("test", SolidSyslogFormatter_Data(formatter));
+}
+
+TEST(SolidSyslogFormatter, ZeroSizeBufferDoesNotCrash)
+{
+    SolidSyslogFormatterStorage  zeroStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(0)];
+    struct SolidSyslogFormatter* zeroFormatter = SolidSyslogFormatter_Create(zeroStorage, 0);
+
+    SolidSyslogFormatter_Character(zeroFormatter, 'A');
+
+    LONGS_EQUAL(0, SolidSyslogFormatter_Length(zeroFormatter));
+}
+
+TEST(SolidSyslogFormatter, WritesUpToExactCapacity)
+{
+    SolidSyslogFormatterStorage  smallStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(4)];
+    struct SolidSyslogFormatter* small = SolidSyslogFormatter_Create(smallStorage, 4);
+
+    SolidSyslogFormatter_BoundedString(small, "abcdef", 6);
+
+    LONGS_EQUAL(3, SolidSyslogFormatter_Length(small));
+    STRCMP_EQUAL("abc", SolidSyslogFormatter_Data(small));
+}
+
+TEST(SolidSyslogFormatter, CharacterStopsWhenFull)
+{
+    SolidSyslogFormatterStorage  smallStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(3)];
+    struct SolidSyslogFormatter* small = SolidSyslogFormatter_Create(smallStorage, 3);
+
+    SolidSyslogFormatter_Character(small, 'A');
+    SolidSyslogFormatter_Character(small, 'B');
+    SolidSyslogFormatter_Character(small, 'C');
+
+    LONGS_EQUAL(2, SolidSyslogFormatter_Length(small));
+    STRCMP_EQUAL("AB", SolidSyslogFormatter_Data(small));
 }

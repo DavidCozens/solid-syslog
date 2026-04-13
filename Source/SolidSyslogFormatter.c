@@ -1,5 +1,6 @@
 #include "SolidSyslogFormatter.h"
 
+#include <stdbool.h>
 #include <stddef.h>
 
 struct SolidSyslogFormatter
@@ -17,9 +18,14 @@ static inline void NullTerminate(struct SolidSyslogFormatter* formatter);
 static inline char DigitToChar(uint32_t value);
 static size_t      CountDigits(uint32_t value);
 
+static inline bool HasCapacity(const struct SolidSyslogFormatter* formatter)
+{
+    return (formatter->size > 0) && (formatter->position < formatter->size - 1);
+}
+
 static inline void WriteChar(struct SolidSyslogFormatter* formatter, char value)
 {
-    if (formatter->position < formatter->size - 1)
+    if (HasCapacity(formatter))
     {
         formatter->buffer[formatter->position] = value;
         formatter->position++;
@@ -28,7 +34,10 @@ static inline void WriteChar(struct SolidSyslogFormatter* formatter, char value)
 
 static inline void NullTerminate(struct SolidSyslogFormatter* formatter)
 {
-    formatter->buffer[formatter->position] = '\0';
+    if (formatter->size > 0)
+    {
+        formatter->buffer[formatter->position] = '\0';
+    }
 }
 
 struct SolidSyslogFormatter* SolidSyslogFormatter_Create(SolidSyslogFormatterStorage* storage, size_t bufferSize)
@@ -36,7 +45,7 @@ struct SolidSyslogFormatter* SolidSyslogFormatter_Create(SolidSyslogFormatterSto
     struct SolidSyslogFormatter* formatter = (struct SolidSyslogFormatter*) storage;
     formatter->size                        = bufferSize;
     formatter->position                    = 0;
-    formatter->buffer[0]                   = '\0';
+    NullTerminate(formatter);
     return formatter;
 }
 

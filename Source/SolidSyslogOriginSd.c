@@ -15,6 +15,10 @@ struct SolidSyslogOriginSd
     SolidSyslogFormatterStorage      formattedStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(ORIGIN_FORMATTED_MAX)];
 };
 
+static const char SD_SOFTWARE_PREFIX[] = "[origin software=\"";
+static const char SD_VERSION_PREFIX[]  = "\" swVersion=\"";
+static const char SD_SUFFIX[]          = "\"]";
+
 static void Format(struct SolidSyslogStructuredData* self, struct SolidSyslogFormatter* formatter);
 
 static struct SolidSyslogOriginSd instance;
@@ -29,11 +33,11 @@ struct SolidSyslogStructuredData* SolidSyslogOriginSd_Create(const char* softwar
     struct SolidSyslogFormatter* f = SolidSyslogFormatter_Create(instance.formattedStorage, ORIGIN_FORMATTED_MAX);
 
     instance.base.Format = Format;
-    SolidSyslogFormatter_BoundedString(f, "[origin software=\"", 18);
+    SolidSyslogFormatter_BoundedString(f, SD_SOFTWARE_PREFIX, sizeof(SD_SOFTWARE_PREFIX) - 1);
     SolidSyslogFormatter_BoundedString(f, software, ORIGIN_SOFTWARE_MAX);
-    SolidSyslogFormatter_BoundedString(f, "\" swVersion=\"", 13);
+    SolidSyslogFormatter_BoundedString(f, SD_VERSION_PREFIX, sizeof(SD_VERSION_PREFIX) - 1);
     SolidSyslogFormatter_BoundedString(f, swVersion, ORIGIN_SWVERSION_MAX);
-    SolidSyslogFormatter_BoundedString(f, "\"]", 2);
+    SolidSyslogFormatter_BoundedString(f, SD_SUFFIX, sizeof(SD_SUFFIX) - 1);
 
     return &instance.base;
 }

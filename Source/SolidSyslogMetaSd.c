@@ -28,12 +28,15 @@ void SolidSyslogMetaSd_Destroy(void)
     instance.counter     = NULL;
 }
 
+static const char SD_PREFIX[] = "[meta sequenceId=\"";
+static const char SD_SUFFIX[] = "\"]";
+
 static void Format(struct SolidSyslogStructuredData* self, struct SolidSyslogFormatter* formatter)
 {
     struct SolidSyslogMetaSd* meta = (struct SolidSyslogMetaSd*) self;
     uint_fast32_t             id   = SolidSyslogAtomicCounter_Increment(meta->counter);
 
-    SolidSyslogFormatter_BoundedString(formatter, "[meta sequenceId=\"", 18);
+    SolidSyslogFormatter_BoundedString(formatter, SD_PREFIX, sizeof(SD_PREFIX) - 1);
     SolidSyslogFormatter_Uint32(formatter, (uint32_t) id);
-    SolidSyslogFormatter_BoundedString(formatter, "\"]", 2);
+    SolidSyslogFormatter_BoundedString(formatter, SD_SUFFIX, sizeof(SD_SUFFIX) - 1);
 }

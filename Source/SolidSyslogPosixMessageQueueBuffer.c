@@ -11,6 +11,8 @@ enum
     MAX_NAME_SIZE = 64
 };
 
+static const char QUEUE_NAME_PREFIX[] = "/solidsyslog_";
+
 static bool Read(struct SolidSyslogBuffer* self, void* data, size_t maxSize, size_t* bytesRead);
 static void Write(struct SolidSyslogBuffer* self, const void* data, size_t size);
 
@@ -35,7 +37,7 @@ struct SolidSyslogBuffer* SolidSyslogPosixMessageQueueBuffer_Create(size_t maxMe
     instance = (struct SolidSyslogPosixMessageQueueBuffer) {0};
 
     struct SolidSyslogFormatter* name = SolidSyslogFormatter_Create(instance.nameStorage, MAX_NAME_SIZE);
-    SolidSyslogFormatter_BoundedString(name, "/solidsyslog_", 13);
+    SolidSyslogFormatter_BoundedString(name, QUEUE_NAME_PREFIX, sizeof(QUEUE_NAME_PREFIX) - 1);
     SolidSyslogPosixProcessId_Get(name);
 
     struct mq_attr attr = {0};

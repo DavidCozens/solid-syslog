@@ -4,9 +4,11 @@
 #include "SolidSyslogMetaSd.h"
 #include "SolidSyslogStructuredData.h"
 
+#include <cstring>
+
 enum
 {
-    BUFFER_SIZE = 256
+    TEST_BUFFER_SIZE = 256
 };
 
 // clang-format off
@@ -16,13 +18,13 @@ TEST_GROUP(SolidSyslogMetaSd)
     SolidSyslogAtomicCounter* counter;
     // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
     SolidSyslogStructuredData* sd;
-    SolidSyslogFormatterStorage storage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(BUFFER_SIZE)];
+    SolidSyslogFormatterStorage storage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(TEST_BUFFER_SIZE)];
     // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
     SolidSyslogFormatter* formatter;
 
     void setup() override
     {
-        formatter = SolidSyslogFormatter_Create(storage, BUFFER_SIZE);
+        formatter = SolidSyslogFormatter_Create(storage, TEST_BUFFER_SIZE);
         counter = SolidSyslogAtomicCounter_Create();
         sd = SolidSyslogMetaSd_Create(counter);
     }
@@ -40,7 +42,7 @@ TEST_GROUP(SolidSyslogMetaSd)
 
     void resetFormatter()
     {
-        formatter = SolidSyslogFormatter_Create(storage, BUFFER_SIZE);
+        formatter = SolidSyslogFormatter_Create(storage, TEST_BUFFER_SIZE);
     }
 };
 
@@ -74,9 +76,11 @@ TEST(SolidSyslogMetaSd, ThirdFormatProducesSequenceId3)
     STRCMP_EQUAL("[meta sequenceId=\"3\"]", SolidSyslogFormatter_Data(formatter));
 }
 
-TEST(SolidSyslogMetaSd, FormatAdvancesFormatterPosition)
+TEST(SolidSyslogMetaSd, FormatAdvancesFormatterLength)
 {
+    LONGS_EQUAL(0, SolidSyslogFormatter_Length(formatter));
     format();
+    CHECK(SolidSyslogFormatter_Length(formatter) > 0);
     LONGS_EQUAL(strlen(SolidSyslogFormatter_Data(formatter)), SolidSyslogFormatter_Length(formatter));
 }
 
