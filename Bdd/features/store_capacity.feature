@@ -3,28 +3,48 @@ Feature: Store capacity limit and discard policy
   When the store is full, the discard policy determines whether
   the oldest or newest messages are dropped.
 
-  @wip
   Scenario: Discard-oldest drops oldest messages when store overflows
     Given syslog-ng is running
-    And the file store is enabled with max-files 2 and max-file-size 1100 and discard-policy oldest
+    And the file store is enabled with max-files 2 and max-file-size 520 and discard-policy oldest
     And the threaded example is running with transport tcp and no structured data
     When the client sends a message
     Then syslog-ng receives 1 message
     When the syslog server stops accepting TCP connections
-    And the client sends 6 messages
+    And the client sends 10 messages
     And the syslog server resumes accepting TCP connections
-    Then syslog-ng receives 5 messages
-    And the last 4 messages have contiguous sequenceIds starting from 4
+    Then syslog-ng receives 8 messages
+    And the last 7 messages have contiguous sequenceIds starting from 5
 
-  @wip
   Scenario: Discard-newest preserves oldest messages when store overflows
     Given syslog-ng is running
-    And the file store is enabled with max-files 2 and max-file-size 1100 and discard-policy newest
+    And the file store is enabled with max-files 2 and max-file-size 520 and discard-policy newest
     And the threaded example is running with transport tcp and no structured data
     When the client sends a message
     Then syslog-ng receives 1 message
     When the syslog server stops accepting TCP connections
-    And the client sends 6 messages
+    And the client sends 10 messages
     And the syslog server resumes accepting TCP connections
-    Then syslog-ng receives 5 messages
-    And the last 4 messages have contiguous sequenceIds starting from 2
+    Then syslog-ng receives 8 messages
+    And the last 7 messages have contiguous sequenceIds starting from 2
+
+  Scenario: Halt stops the application when store overflows
+    Given syslog-ng is running
+    And the file store is enabled with max-files 2 and max-file-size 520 and discard-policy halt
+    And the halt callback exits the process
+    And the threaded example is running with transport tcp and no structured data
+    When the client sends a message
+    Then syslog-ng receives 1 message
+    When the syslog server stops accepting TCP connections
+    And the client sends 8 messages
+    And the client attempts to send it exits with code 2
+
+  Scenario: Halt prevents further service after store overflows
+    Given syslog-ng is running
+    And the file store is enabled with max-files 2 and max-file-size 520 and discard-policy halt
+    And the threaded example is running with transport tcp and no structured data
+    When the client sends a message
+    Then syslog-ng receives 1 message
+    When the syslog server stops accepting TCP connections
+    And the client sends 10 messages
+    And the syslog server resumes accepting TCP connections
+    Then syslog-ng receives no more messages

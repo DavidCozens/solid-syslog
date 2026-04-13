@@ -14,6 +14,20 @@ STORE_FILE_PATH = "/tmp/solidsyslog_store.dat"
 STORE_PATH_PREFIX = "/tmp/STORE"
 
 
+def wait_for_tcp_port_open(host="syslog-ng", port=5514, timeout=5):
+    """Poll until the TCP port accepts connections."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(0.5)
+                s.connect((host, port))
+            return
+        except (ConnectionRefusedError, OSError):
+            time.sleep(0.1)
+    raise AssertionError(f"TCP port {port} not open after {timeout}s")
+
+
 def before_all(context):
     context.example_binary = os.environ.get(
         "EXAMPLE_BINARY", "build/debug/Example/ExampleProgram"
@@ -45,7 +59,7 @@ def after_scenario(context, scenario):
                 sock.connect(SYSLOG_NG_CTL)
                 sock.sendall(b"RELOAD\n")
                 sock.recv(1024)
-            time.sleep(0.5)
+            wait_for_tcp_port_open()
         except Exception as exc:
             logger.warning("Failed to restore syslog-ng config in teardown: %s", exc)
         context.syslog_ng_config_changed = False

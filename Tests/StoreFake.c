@@ -13,6 +13,7 @@ static bool Write(struct SolidSyslogStore* self, const void* data, size_t size);
 static bool ReadNextUnsent(struct SolidSyslogStore* self, void* data, size_t maxSize, size_t* bytesRead);
 static void MarkSent(struct SolidSyslogStore* self);
 static bool HasUnsent(struct SolidSyslogStore* self);
+static bool IsHalted(struct SolidSyslogStore* self);
 
 struct StoreFake
 {
@@ -22,6 +23,7 @@ struct StoreFake
     bool                    unsent;
     bool                    failNextWrite;
     bool                    failNextRead;
+    bool                    halted;
 };
 
 static struct StoreFake instance;
@@ -33,6 +35,7 @@ struct SolidSyslogStore* StoreFake_Create(void)
     instance.base.ReadNextUnsent = ReadNextUnsent;
     instance.base.MarkSent       = MarkSent;
     instance.base.HasUnsent      = HasUnsent;
+    instance.base.IsHalted       = IsHalted;
     return &instance.base;
 }
 
@@ -106,4 +109,15 @@ static bool HasUnsent(struct SolidSyslogStore* self)
 {
     struct StoreFake* fake = (struct StoreFake*) self;
     return fake->unsent;
+}
+
+static bool IsHalted(struct SolidSyslogStore* self)
+{
+    struct StoreFake* fake = (struct StoreFake*) self;
+    return fake->halted;
+}
+
+void StoreFake_SetHalted(void)
+{
+    instance.halted = true;
 }

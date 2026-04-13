@@ -30,6 +30,7 @@ static bool Write(struct SolidSyslogStore* self, const void* data, size_t size);
 static bool ReadNextUnsent(struct SolidSyslogStore* self, void* data, size_t maxSize, size_t* bytesRead);
 static void MarkSent(struct SolidSyslogStore* self);
 static bool HasUnsent(struct SolidSyslogStore* self);
+static bool IsHalted(struct SolidSyslogStore* self);
 
 /* ------------------------------------------------------------------
  * Record buffer — single static buffer for integrity computation
@@ -88,6 +89,7 @@ struct SolidSyslogFileStore
     size_t                            maxFiles;
     enum SolidSyslogDiscardPolicy     discardPolicy;
     SolidSyslogStoreFullCallback      onStoreFull;
+    bool                              halted;
     uint8_t                           oldestSequence;
     uint8_t                           readSequence;
     uint8_t                           writeSequence;
@@ -257,6 +259,8 @@ static inline bool StoreIsFull(void);
 static inline void NotifyStoreFull(void);
 static void        RotateToNextFile(void);
 static void        DiscardOldestFile(void);
+static void        DeleteOldestFile(void);
+static void        SwitchReadFile(uint8_t newSequence);
 static bool        MakeSpaceForRecord(size_t dataSize);
 static inline void AssembleRecord(const void* data, size_t size);
 static bool        FlushRecord(size_t dataSize);
@@ -351,6 +355,7 @@ static inline void InitialiseVtable(void)
     instance.base.ReadNextUnsent = ReadNextUnsent;
     instance.base.MarkSent       = MarkSent;
     instance.base.HasUnsent      = HasUnsent;
+    instance.base.IsHalted       = IsHalted;
 }
 
 static void ScanForExistingFiles(void)
@@ -520,9 +525,14 @@ static inline bool StoreIsFull(void)
 
 static inline void NotifyStoreFull(void)
 {
-    if ((instance.discardPolicy == SOLIDSYSLOG_HALT) && (instance.onStoreFull != NULL))
+    if (instance.discardPolicy == SOLIDSYSLOG_HALT)
     {
-        instance.onStoreFull();
+        instance.halted = true;
+
+        if (instance.onStoreFull != NULL)
+        {
+            instance.onStoreFull();
+        }
     }
 }
 
@@ -541,11 +551,38 @@ static void RotateToNextFile(void)
     }
 }
 
-static void DiscardOldestFile(void)
+static void DeleteOldestFile(void)
 {
     FormatFilename(instance.oldestSequence);
     SolidSyslogFile_Delete(instance.writeFile, instance.filename);
     instance.oldestSequence = NextSequence(instance.oldestSequence);
+}
+
+static void SwitchReadFile(uint8_t newSequence)
+{
+    SolidSyslogFile_Close(instance.readFile);
+    instance.readSequence  = newSequence;
+    instance.readCursor    = 0;
+    instance.hasReadRecord = false;
+    FormatFilename(instance.readSequence);
+    OpenReadFile(instance.filename);
+}
+
+static void ResetReadToOldestFile(void)
+{
+    SwitchReadFile(instance.oldestSequence);
+}
+
+static void DiscardOldestFile(void)
+{
+    bool readingOldestFile = (instance.readSequence == instance.oldestSequence);
+
+    DeleteOldestFile();
+
+    if (readingOldestFile)
+    {
+        ResetReadToOldestFile();
+    }
 }
 
 static inline void SeekToWritePosition(void)
@@ -598,6 +635,12 @@ static bool HasUnsent(struct SolidSyslogStore* self)
     return HasUnsentRecords();
 }
 
+static bool IsHalted(struct SolidSyslogStore* self)
+{
+    (void) self;
+    return instance.halted;
+}
+
 /* ------------------------------------------------------------------
  * ReadNextUnsent
  * ----------------------------------------------------------------*/
@@ -624,11 +667,7 @@ static bool ReadNextUnsent(struct SolidSyslogStore* self, void* data, size_t max
 
 static void AdvanceToNextReadFile(void)
 {
-    SolidSyslogFile_Close(instance.readFile);
-    instance.readSequence = NextSequence(instance.readSequence);
-    instance.readCursor   = 0;
-    FormatFilename(instance.readSequence);
-    OpenReadFile(instance.filename);
+    SwitchReadFile(NextSequence(instance.readSequence));
 }
 
 static bool ReadCurrentRecord(void* data, size_t maxSize, size_t* bytesRead)

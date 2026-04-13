@@ -1287,6 +1287,28 @@ TEST(SolidSyslog, ServiceDoesNotMarkSentWhenSendingFromBuffer)
     BufferFake_Destroy();
 }
 
+TEST(SolidSyslog, ServiceDoesNothingWhenStoreIsHalted)
+{
+    SolidSyslogBuffer* fakeBuffer    = BufferFake_Create();
+    SolidSyslogStore*  fakeStore     = StoreFake_Create();
+    SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderFake_GetSender(), nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
+
+    SolidSyslog_Destroy();
+    SolidSyslog_Create(&serviceConfig);
+
+    SolidSyslogBuffer_Write(fakeBuffer, "test", 4);
+    StoreFake_SetHalted();
+    SenderFake_Reset();
+    SolidSyslog_Service();
+
+    LONGS_EQUAL(0, SenderFake_CallCount());
+
+    SolidSyslog_Destroy();
+    SolidSyslog_Create(&config);
+    StoreFake_Destroy();
+    BufferFake_Destroy();
+}
+
 TEST(SolidSyslog, LogAfterDestroyAndRecreateWithNullFunctionsProducesNilvalues)
 {
     SolidSyslog_Destroy();

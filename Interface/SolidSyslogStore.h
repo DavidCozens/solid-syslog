@@ -13,6 +13,7 @@ EXTERN_C_BEGIN
     bool SolidSyslogStore_ReadNextUnsent(struct SolidSyslogStore * store, void* data, size_t maxSize, size_t* bytesRead);
     void SolidSyslogStore_MarkSent(struct SolidSyslogStore * store);
     bool SolidSyslogStore_HasUnsent(struct SolidSyslogStore * store);
+    bool SolidSyslogStore_IsHalted(struct SolidSyslogStore * store);
 
 EXTERN_C_END
 

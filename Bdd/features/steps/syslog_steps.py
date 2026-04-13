@@ -205,6 +205,8 @@ def build_threaded_command(context, transport, no_sd=False):
         cmd.extend(["--discard-policy", context.store_discard_policy])
     if no_sd:
         cmd.append("--no-sd")
+    if getattr(context, "halt_exit", False):
+        cmd.append("--halt-exit")
     return cmd
 
 
@@ -249,6 +251,11 @@ def step_file_store_enabled_with_config(context, max_files, max_file_size, polic
     clean_store_files()
 
 
+@given("the halt callback exits the process")
+def step_halt_callback_exits(context):
+    context.halt_exit = True
+
+
 @when("the client sends a message")
 def step_client_sends_message(context):
     send_command(context.interactive_process, "send")
@@ -256,15 +263,73 @@ def step_client_sends_message(context):
     time.sleep(0.2)
 
 
+def wait_for_tcp_port_closed(host="syslog-ng", port=5514, timeout=5):
+    """Poll until the TCP port refuses connections."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(0.5)
+                s.connect((host, port))
+            time.sleep(0.1)
+        except (ConnectionRefusedError, OSError):
+            return
+    raise AssertionError(f"TCP port {port} still open after {timeout}s")
+
+
+def wait_for_tcp_port_open(host="syslog-ng", port=5514, timeout=5):
+    """Poll until the TCP port accepts connections."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(0.5)
+                s.connect((host, port))
+            return
+        except (ConnectionRefusedError, OSError):
+            time.sleep(0.1)
+    raise AssertionError(f"TCP port {port} not open after {timeout}s")
+
+
+def wait_for_connection_teardown(probe_socket, timeout=5):
+    """Wait until an established TCP connection is broken by the server.
+
+    Sends data on the probe socket until a broken pipe or reset indicates
+    that syslog-ng has closed the connection after a config reload.
+    """
+    msg = b"<134>1 2026-01-01T00:00:00Z probe probe - - - probe"
+    frame = f"{len(msg)} ".encode() + msg
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            probe_socket.sendall(frame)
+            time.sleep(0.1)
+        except (BrokenPipeError, ConnectionResetError, OSError):
+            probe_socket.close()
+            return
+    probe_socket.close()
+    raise AssertionError(f"Probe connection still alive after {timeout}s")
+
+
 @when("the syslog server stops accepting TCP connections")
 def step_syslog_server_stops_tcp(context):
+    # Open a probe connection before the reload so we can detect teardown
+    probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    probe.settimeout(1)
+    probe.connect(("syslog-ng", 5514))
+
     syslog_ng_swap_config(SYSLOG_NG_UDP_ONLY_CONF)
+    wait_for_tcp_port_closed()
+    wait_for_connection_teardown(probe)
+    # Allow time for the sender's existing connection to receive RST
+    time.sleep(0.5)
     context.syslog_ng_config_changed = True
 
 
 @when("the syslog server resumes accepting TCP connections")
 def step_syslog_server_resumes_tcp(context):
     syslog_ng_swap_config(SYSLOG_NG_FULL_CONF)
+    wait_for_tcp_port_open()
 
 
 @when("the example program sends a syslog message")
@@ -399,6 +464,16 @@ def step_check_message_count(context, count):
     )
 
 
+@then("syslog-ng receives no more messages")
+def step_check_no_more_messages(context):
+    before = line_count(RECEIVED_LOG)
+    time.sleep(5)
+    after = line_count(RECEIVED_LOG)
+    assert after == before, (
+        f"Expected no more messages, but received {after - before} additional"
+    )
+
+
 @then('the structured data contains sequenceId "{value}"')
 def step_check_sequence_id(context, value):
     sd = context.fields.get("STRUCTURED_DATA", "")
@@ -481,6 +556,23 @@ def step_client_sends_n_messages(context, count):
     send_command(context.interactive_process, f"send {count}")
     # Allow time for the service thread to drain the buffer
     time.sleep(0.5)
+
+
+@when("the client attempts to send it exits with code {code:d}")
+def step_client_attempts_send_exits(context, code):
+    process = context.interactive_process
+    # Allow the service thread to drain the buffer and fill the store
+    time.sleep(3)
+    try:
+        process.stdin.write("send\n")
+        process.stdin.flush()
+    except (BrokenPipeError, OSError):
+        pass
+    process.wait(timeout=10)
+    assert process.returncode == code, (
+        f"Expected exit code {code}, got {process.returncode}"
+    )
+    del context.interactive_process
 
 
 @when("the client is killed")

@@ -1,4 +1,5 @@
 set(EXAMPLE_TEST_SOURCES
+    ExampleCommandLineTest.cpp
     SolidSyslogExampleTest.cpp
     ExampleServiceThreadTest.cpp
     main.cpp

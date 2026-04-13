@@ -26,13 +26,8 @@
 #include <unistd.h>
 
 static const char* const       STORE_PATH_PREFIX = "/tmp/STORE";
-static struct SolidSyslogFile* storeFile;
-
-enum
-{
-    DEFAULT_MAX_FILE_SIZE = 65536,
-    DEFAULT_MAX_FILES     = 10
-};
+static struct SolidSyslogFile* storeReadFile;
+static struct SolidSyslogFile* storeWriteFile;
 
 static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
 {
@@ -68,24 +63,49 @@ static struct SolidSyslogSender* CreateSender(const struct ExampleOptions* optio
     return SolidSyslogUdpSender_Create(&udpConfig);
 }
 
+static enum SolidSyslogDiscardPolicy MapDiscardPolicy(const char* policy)
+{
+    if (strcmp(policy, "newest") == 0)
+    {
+        return SOLIDSYSLOG_DISCARD_NEWEST;
+    }
+    if (strcmp(policy, "halt") == 0)
+    {
+        return SOLIDSYSLOG_HALT;
+    }
+    return SOLIDSYSLOG_DISCARD_OLDEST;
+}
+
+static volatile bool haltExit;
+
+static void OnStoreFull(void)
+{
+    if (haltExit)
+    {
+        _exit(2);
+    }
+}
+
 static struct SolidSyslogStore* CreateStore(const struct ExampleOptions* options)
 {
     bool useFile = (strcmp(options->store, "file") == 0);
 
     if (useFile)
     {
-        static struct SolidSyslogPosixFileStorage fileStorage;
-        storeFile                    = SolidSyslogPosixFile_Create(&fileStorage);
-        struct SolidSyslogFile* file = storeFile;
+        static struct SolidSyslogPosixFileStorage readStorage;
+        static struct SolidSyslogPosixFileStorage writeStorage;
+        storeReadFile  = SolidSyslogPosixFile_Create(&readStorage);
+        storeWriteFile = SolidSyslogPosixFile_Create(&writeStorage);
 
         static struct SolidSyslogFileStoreConfig storeConfig = {0};
-        storeConfig.readFile                                 = file;
-        storeConfig.writeFile                                = file;
+        storeConfig.readFile                                 = storeReadFile;
+        storeConfig.writeFile                                = storeWriteFile;
         storeConfig.pathPrefix                               = STORE_PATH_PREFIX;
-        storeConfig.maxFileSize                              = DEFAULT_MAX_FILE_SIZE;
-        storeConfig.maxFiles                                 = DEFAULT_MAX_FILES;
-        storeConfig.discardPolicy                            = SOLIDSYSLOG_DISCARD_OLDEST;
+        storeConfig.maxFileSize                              = options->maxFileSize;
+        storeConfig.maxFiles                                 = options->maxFiles;
+        storeConfig.discardPolicy                            = MapDiscardPolicy(options->discardPolicy);
         storeConfig.securityPolicy                           = SolidSyslogCrc16Policy_Create();
+        storeConfig.onStoreFull                              = OnStoreFull;
         return SolidSyslogFileStore_Create(&storeConfig);
     }
 
@@ -114,7 +134,8 @@ static void DestroyStore(const struct ExampleOptions* options)
     {
         SolidSyslogFileStore_Destroy();
         SolidSyslogCrc16Policy_Destroy();
-        SolidSyslogPosixFile_Destroy(storeFile);
+        SolidSyslogPosixFile_Destroy(storeWriteFile);
+        SolidSyslogPosixFile_Destroy(storeReadFile);
     }
     else
     {
@@ -135,13 +156,15 @@ int main(int argc, char* argv[])
     struct SolidSyslogSender* sender = CreateSender(&options);
     struct SolidSyslogStore*  store  = CreateStore(&options);
 
-    struct SolidSyslogBuffer*         buffer      = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
-    struct SolidSyslogAtomicCounter*  counter     = SolidSyslogAtomicCounter_Create();
-    struct SolidSyslogStructuredData* metaSd      = SolidSyslogMetaSd_Create(counter);
+    struct SolidSyslogBuffer*         buffer  = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
+    struct SolidSyslogAtomicCounter*  counter = SolidSyslogAtomicCounter_Create();
+    struct SolidSyslogStructuredData* metaSd  = SolidSyslogMetaSd_Create(counter);
+
     struct SolidSyslogStructuredData* timeQuality = SolidSyslogTimeQualitySd_Create(GetTimeQuality);
     struct SolidSyslogStructuredData* originSd    = SolidSyslogOriginSd_Create("SolidSyslogExample", "0.7.0");
 
-    struct SolidSyslogStructuredData* sdList[] = {metaSd, timeQuality, originSd};
+    struct SolidSyslogStructuredData* sdList[3] = {metaSd, timeQuality, originSd};
+    size_t                            sdCount   = options.noSd ? 1 : 3;
 
     struct SolidSyslogConfig config = {
         .buffer       = buffer,
@@ -152,11 +175,12 @@ int main(int argc, char* argv[])
         .getProcessId = SolidSyslogPosixProcessId_Get,
         .store        = store,
         .sd           = sdList,
-        .sdCount      = sizeof(sdList) / sizeof(sdList[0]),
+        .sdCount      = sdCount,
     };
     SolidSyslog_Create(&config);
 
     shutdown_flag = false;
+    haltExit      = options.haltExit;
 
     pthread_t serviceThread = 0;
     pthread_create(&serviceThread, NULL, ServiceThreadEntry, (void*) &shutdown_flag);
