@@ -1,9 +1,5 @@
 #include "CppUTest/TestHarness.h"
-
-extern "C"
-{
 #include "SolidSyslogFormatter.h"
-}
 
 TEST_GROUP(SolidSyslogFormatter)
 {

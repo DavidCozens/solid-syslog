@@ -1,4 +1,5 @@
 #include "CppUTest/TestHarness.h"
+#include "SolidSyslogFormatter.h"
 #include "SolidSyslogTimeQualitySd.h"
 #include "SolidSyslogStructuredData.h"
 
@@ -17,9 +18,12 @@ TEST_GROUP(SolidSyslogTimeQualitySd)
     // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
     SolidSyslogStructuredData* sd;
     char buffer[256];
+    SolidSyslogFormatter formatter;
 
     void setup() override
     {
+        memset(buffer, 0, sizeof(buffer));
+        SolidSyslogFormatter_Create(&formatter, buffer, sizeof(buffer));
         stubTimeQuality = {true, true, SOLIDSYSLOG_SYNC_ACCURACY_OMIT};
         sd = SolidSyslogTimeQualitySd_Create(StubGetTimeQuality);
     }
@@ -29,9 +33,15 @@ TEST_GROUP(SolidSyslogTimeQualitySd)
         SolidSyslogTimeQualitySd_Destroy();
     }
 
-    size_t format()
+    void format()
     {
-        return SolidSyslogStructuredData_Format(sd, buffer, sizeof(buffer));
+        SolidSyslogStructuredData_Format(sd, &formatter);
+    }
+
+    void resetFormatter()
+    {
+        memset(buffer, 0, sizeof(buffer));
+        SolidSyslogFormatter_Create(&formatter, buffer, sizeof(buffer));
     }
 };
 
@@ -90,21 +100,22 @@ TEST(SolidSyslogTimeQualitySd, CallbackIsInvokedOnEachFormat)
     STRCMP_EQUAL("[timeQuality tzKnown=\"1\" isSynced=\"1\"]", buffer);
 
     stubTimeQuality.isSynced = false;
+    resetFormatter();
     format();
     STRCMP_EQUAL("[timeQuality tzKnown=\"1\" isSynced=\"0\"]", buffer);
 }
 
-TEST(SolidSyslogTimeQualitySd, FormatReturnsLengthOfFormattedString)
+TEST(SolidSyslogTimeQualitySd, FormatAdvancesFormatterPosition)
 {
-    size_t len = format();
-    LONGS_EQUAL(strlen(buffer), len);
+    format();
+    LONGS_EQUAL(strlen(buffer), formatter.position);
 }
 
-TEST(SolidSyslogTimeQualitySd, FormatReturnsLengthWithSyncAccuracy)
+TEST(SolidSyslogTimeQualitySd, FormatAdvancesPositionWithSyncAccuracy)
 {
     stubTimeQuality.syncAccuracyMicroseconds = 50;
-    size_t len                               = format();
-    LONGS_EQUAL(strlen(buffer), len);
+    format();
+    LONGS_EQUAL(strlen(buffer), formatter.position);
 }
 
 TEST(SolidSyslogTimeQualitySd, DestroyDoesNotCrash)

@@ -351,16 +351,14 @@ static inline bool StringIsValid(const char* value)
 
 static inline void FormatStructuredData(struct SolidSyslogFormatter* f, struct SolidSyslogStructuredData** sd, size_t sdCount)
 {
-    size_t totalLen = 0;
+    size_t positionBefore = f->position;
 
     for (size_t i = 0; i < sdCount; i++)
     {
-        size_t written = SolidSyslogStructuredData_Format(sd[i], SolidSyslogFormatter_WritePointer(f), SolidSyslogFormatter_Remaining(f));
-        SolidSyslogFormatter_Advance(f, written);
-        totalLen += written;
+        SolidSyslogStructuredData_Format(sd[i], f);
     }
 
-    if (totalLen == 0)
+    if (f->position == positionBefore)
     {
         FormatNilvalue(f);
     }

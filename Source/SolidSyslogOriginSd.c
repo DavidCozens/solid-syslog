@@ -1,5 +1,6 @@
 #include "SolidSyslogOriginSd.h"
 #include "SolidSyslogFormat.h"
+#include "SolidSyslogFormatter.h"
 #include "SolidSyslogStructuredDataDefinition.h"
 
 enum
@@ -16,7 +17,7 @@ struct SolidSyslogOriginSd
     size_t                           formattedLength;
 };
 
-static size_t Format(struct SolidSyslogStructuredData* self, char* buffer, size_t size);
+static void   Format(struct SolidSyslogStructuredData* self, struct SolidSyslogFormatter* formatter);
 static size_t FormatParam(char* buffer, const char* value, size_t remaining, size_t paramMax);
 static size_t Min(size_t a, size_t b);
 
@@ -59,8 +60,8 @@ static size_t Min(size_t a, size_t b)
     return (a < b) ? a : b;
 }
 
-static size_t Format(struct SolidSyslogStructuredData* self, char* buffer, size_t size)
+static void Format(struct SolidSyslogStructuredData* self, struct SolidSyslogFormatter* formatter)
 {
     struct SolidSyslogOriginSd* origin = (struct SolidSyslogOriginSd*) self;
-    return SolidSyslogFormat_BoundedString(buffer, origin->formatted, size);
+    SolidSyslogFormatter_BoundedString(formatter, origin->formatted, origin->formattedLength);
 }

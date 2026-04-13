@@ -1,6 +1,6 @@
 #include "SolidSyslogMetaSd.h"
 #include "SolidSyslogAtomicCounter.h"
-#include "SolidSyslogFormat.h"
+#include "SolidSyslogFormatter.h"
 #include "SolidSyslogStructuredDataDefinition.h"
 
 #include <stdint.h>
@@ -11,7 +11,7 @@ struct SolidSyslogMetaSd
     struct SolidSyslogAtomicCounter* counter;
 };
 
-static size_t Format(struct SolidSyslogStructuredData* self, char* buffer, size_t size);
+static void Format(struct SolidSyslogStructuredData* self, struct SolidSyslogFormatter* formatter);
 
 static struct SolidSyslogMetaSd instance;
 
@@ -28,15 +28,12 @@ void SolidSyslogMetaSd_Destroy(void)
     instance.counter     = NULL;
 }
 
-static size_t Format(struct SolidSyslogStructuredData* self, char* buffer, size_t size)
+static void Format(struct SolidSyslogStructuredData* self, struct SolidSyslogFormatter* formatter)
 {
     struct SolidSyslogMetaSd* meta = (struct SolidSyslogMetaSd*) self;
     uint_fast32_t             id   = SolidSyslogAtomicCounter_Increment(meta->counter);
-    size_t                    len  = 0;
 
-    len += SolidSyslogFormat_BoundedString(buffer + len, "[meta sequenceId=\"", size - len);
-    len += SolidSyslogFormat_Uint32(buffer + len, (uint32_t) id);
-    len += SolidSyslogFormat_BoundedString(buffer + len, "\"]", size - len);
-
-    return len;
+    SolidSyslogFormatter_BoundedString(formatter, "[meta sequenceId=\"", 18);
+    SolidSyslogFormatter_Uint32(formatter, (uint32_t) id);
+    SolidSyslogFormatter_BoundedString(formatter, "\"]", 2);
 }
