@@ -8,19 +8,32 @@
 
 EXTERN_C_BEGIN
 
-    struct SolidSyslogFormatter
+    typedef size_t SolidSyslogFormatterStorage;
+
+    enum
     {
-        char*  buffer;
-        size_t size;
-        size_t position;
+        SOLIDSYSLOG_FORMATTER_OVERHEAD = 2
     };
 
-    void   SolidSyslogFormatter_Create(struct SolidSyslogFormatter * formatter, char* buffer, size_t size);
-    size_t SolidSyslogFormatter_Character(struct SolidSyslogFormatter * formatter, char value);
-    size_t SolidSyslogFormatter_BoundedString(struct SolidSyslogFormatter * formatter, const char* source, size_t maxLength);
-    size_t SolidSyslogFormatter_Uint32(struct SolidSyslogFormatter * formatter, uint32_t value);
-    size_t SolidSyslogFormatter_PaddedUint32(struct SolidSyslogFormatter * formatter, uint32_t value, size_t width);
-    size_t SolidSyslogFormatter_Remaining(struct SolidSyslogFormatter * formatter);
+/* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- cannot compute array size as a constexpr in C */
+#define SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(bufferSize) \
+    (SOLIDSYSLOG_FORMATTER_OVERHEAD + (((bufferSize) + sizeof(SolidSyslogFormatterStorage) - 1) / sizeof(SolidSyslogFormatterStorage)))
+
+    struct SolidSyslogFormatter;
+
+    static inline struct SolidSyslogFormatter* SolidSyslogFormatter_FromStorage(SolidSyslogFormatterStorage * storage)
+    {
+        return (struct SolidSyslogFormatter*) storage; // NOLINT(cppcoreguidelines-pro-type-cstyle-cast) -- C header; C++ cast not available
+    }
+
+    struct SolidSyslogFormatter* SolidSyslogFormatter_Create(SolidSyslogFormatterStorage * storage, size_t bufferSize);
+    size_t                       SolidSyslogFormatter_Character(struct SolidSyslogFormatter * formatter, char value);
+    size_t                       SolidSyslogFormatter_BoundedString(struct SolidSyslogFormatter * formatter, const char* source, size_t maxLength);
+    size_t                       SolidSyslogFormatter_Uint32(struct SolidSyslogFormatter * formatter, uint32_t value);
+    size_t                       SolidSyslogFormatter_PaddedUint32(struct SolidSyslogFormatter * formatter, uint32_t value, size_t width);
+    size_t                       SolidSyslogFormatter_Remaining(const struct SolidSyslogFormatter* formatter);
+    const char*                  SolidSyslogFormatter_Data(const struct SolidSyslogFormatter* formatter);
+    size_t                       SolidSyslogFormatter_Length(const struct SolidSyslogFormatter* formatter);
 
 EXTERN_C_END
 

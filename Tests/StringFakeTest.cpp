@@ -2,16 +2,22 @@
 #include "SolidSyslogFormatter.h"
 #include "StringFake.h"
 
+enum
+{
+    BUFFER_SIZE = 32
+};
+
 // clang-format off
 TEST_GROUP(StringFake)
 {
-    char                 buffer[32];
-    SolidSyslogFormatter formatter;
+    SolidSyslogFormatterStorage storage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(BUFFER_SIZE)];
+    // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
+    SolidSyslogFormatter* formatter;
 
     void setup() override
     {
-        memset(buffer, 0, sizeof(buffer));
-        SolidSyslogFormatter_Create(&formatter, buffer, sizeof(buffer));
+        // cppcheck-suppress unreadVariable -- formatter is used across TEST() bodies via CppUTest macro
+        formatter = SolidSyslogFormatter_Create(storage, BUFFER_SIZE);
         StringFake_Reset();
     }
 };
@@ -20,15 +26,15 @@ TEST_GROUP(StringFake)
 
 TEST(StringFake, ReturnsEmptyStringAfterReset)
 {
-    StringFake_GetHostname(&formatter);
-    STRCMP_EQUAL("", buffer);
-    LONGS_EQUAL(0, formatter.position);
+    StringFake_GetHostname(formatter);
+    STRCMP_EQUAL("", SolidSyslogFormatter_Data(formatter));
+    LONGS_EQUAL(0, SolidSyslogFormatter_Length(formatter));
 }
 
 TEST(StringFake, ReturnsConfiguredHostname)
 {
     StringFake_SetHostname("MyHost");
-    StringFake_GetHostname(&formatter);
-    STRCMP_EQUAL("MyHost", buffer);
-    LONGS_EQUAL(6, formatter.position);
+    StringFake_GetHostname(formatter);
+    STRCMP_EQUAL("MyHost", SolidSyslogFormatter_Data(formatter));
+    LONGS_EQUAL(6, SolidSyslogFormatter_Length(formatter));
 }

@@ -6,34 +6,43 @@
 #include <mqueue.h>
 #include <time.h>
 
+enum
+{
+    MAX_NAME_SIZE = 64
+};
+
 static bool Read(struct SolidSyslogBuffer* self, void* data, size_t maxSize, size_t* bytesRead);
 static void Write(struct SolidSyslogBuffer* self, const void* data, size_t size);
 
 struct SolidSyslogPosixMessageQueueBuffer
 {
-    struct SolidSyslogBuffer base;
-    mqd_t                    mq;
-    char                     name[64];
-    size_t                   maxMessageSize;
+    struct SolidSyslogBuffer    base;
+    mqd_t                       mq;
+    SolidSyslogFormatterStorage nameStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(MAX_NAME_SIZE)];
+    size_t                      maxMessageSize;
 };
 
 static struct SolidSyslogPosixMessageQueueBuffer instance;
+
+static inline const char* QueueName(void)
+{
+    return SolidSyslogFormatter_Data(SolidSyslogFormatter_FromStorage(instance.nameStorage));
+}
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- distinct semantic meaning; struct wrapper would over-engineer
 struct SolidSyslogBuffer* SolidSyslogPosixMessageQueueBuffer_Create(size_t maxMessageSize, long maxMessages)
 {
     instance = (struct SolidSyslogPosixMessageQueueBuffer) {0};
 
-    struct SolidSyslogFormatter nameFormatter;
-    SolidSyslogFormatter_Create(&nameFormatter, instance.name, sizeof(instance.name));
-    SolidSyslogFormatter_BoundedString(&nameFormatter, "/solidsyslog_", 13);
-    SolidSyslogPosixProcessId_Get(&nameFormatter);
+    struct SolidSyslogFormatter* name = SolidSyslogFormatter_Create(instance.nameStorage, MAX_NAME_SIZE);
+    SolidSyslogFormatter_BoundedString(name, "/solidsyslog_", 13);
+    SolidSyslogPosixProcessId_Get(name);
 
     struct mq_attr attr = {0};
     attr.mq_maxmsg      = maxMessages;
     attr.mq_msgsize     = (long) maxMessageSize;
 
-    instance.mq             = mq_open(instance.name, O_CREAT | O_RDWR | O_NONBLOCK, 0600, &attr);
+    instance.mq             = mq_open(QueueName(), O_CREAT | O_RDWR | O_NONBLOCK, 0600, &attr);
     instance.maxMessageSize = maxMessageSize;
     instance.base.Write     = Write;
     instance.base.Read      = Read;
@@ -44,7 +53,7 @@ struct SolidSyslogBuffer* SolidSyslogPosixMessageQueueBuffer_Create(size_t maxMe
 void SolidSyslogPosixMessageQueueBuffer_Destroy(void)
 {
     mq_close(instance.mq);
-    mq_unlink(instance.name);
+    mq_unlink(QueueName());
     instance = (struct SolidSyslogPosixMessageQueueBuffer) {0};
 }
 

@@ -1,5 +1,17 @@
 #include "SolidSyslogFormatter.h"
 
+#include <stddef.h>
+
+struct SolidSyslogFormatter
+{
+    size_t size;
+    size_t position;
+    char   buffer[];
+};
+
+_Static_assert(sizeof(struct SolidSyslogFormatter) == SOLIDSYSLOG_FORMATTER_OVERHEAD * sizeof(SolidSyslogFormatterStorage),
+               "SOLIDSYSLOG_FORMATTER_OVERHEAD does not match struct layout");
+
 static inline void WriteChar(struct SolidSyslogFormatter* formatter, char value);
 static inline void NullTerminate(struct SolidSyslogFormatter* formatter);
 static inline char DigitToChar(uint32_t value);
@@ -7,8 +19,11 @@ static size_t      CountDigits(uint32_t value);
 
 static inline void WriteChar(struct SolidSyslogFormatter* formatter, char value)
 {
-    formatter->buffer[formatter->position] = value;
-    formatter->position++;
+    if (formatter->position < formatter->size - 1)
+    {
+        formatter->buffer[formatter->position] = value;
+        formatter->position++;
+    }
 }
 
 static inline void NullTerminate(struct SolidSyslogFormatter* formatter)
@@ -16,11 +31,13 @@ static inline void NullTerminate(struct SolidSyslogFormatter* formatter)
     formatter->buffer[formatter->position] = '\0';
 }
 
-void SolidSyslogFormatter_Create(struct SolidSyslogFormatter* formatter, char* buffer, size_t size)
+struct SolidSyslogFormatter* SolidSyslogFormatter_Create(SolidSyslogFormatterStorage* storage, size_t bufferSize)
 {
-    formatter->buffer   = buffer;
-    formatter->size     = size;
-    formatter->position = 0;
+    struct SolidSyslogFormatter* formatter = (struct SolidSyslogFormatter*) storage;
+    formatter->size                        = bufferSize;
+    formatter->position                    = 0;
+    formatter->buffer[0]                   = '\0';
+    return formatter;
 }
 
 size_t SolidSyslogFormatter_Character(struct SolidSyslogFormatter* formatter, char value)
@@ -81,9 +98,19 @@ size_t SolidSyslogFormatter_PaddedUint32(struct SolidSyslogFormatter* formatter,
     return padding + digits;
 }
 
-size_t SolidSyslogFormatter_Remaining(struct SolidSyslogFormatter* formatter)
+size_t SolidSyslogFormatter_Remaining(const struct SolidSyslogFormatter* formatter)
 {
     return formatter->size - formatter->position;
+}
+
+const char* SolidSyslogFormatter_Data(const struct SolidSyslogFormatter* formatter)
+{
+    return formatter->buffer;
+}
+
+size_t SolidSyslogFormatter_Length(const struct SolidSyslogFormatter* formatter)
+{
+    return formatter->position;
 }
 
 static inline char DigitToChar(uint32_t value)

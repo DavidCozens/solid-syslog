@@ -24,7 +24,7 @@ static inline uint8_t CombineFacilityAndSeverity(uint8_t facility, uint8_t sever
 static inline bool    FacilityIsValid(uint8_t facility);
 static inline bool    FetchFromStore(char* buf, size_t maxSize, size_t* len);
 static inline void    FormatCapturedTimestamp(struct SolidSyslogFormatter* f, const struct SolidSyslogTimestamp* ts);
-static inline size_t  FormatMessage(char* buffer, size_t size, const struct SolidSyslogMessage* message);
+static inline void    FormatMessage(struct SolidSyslogFormatter* f, const struct SolidSyslogMessage* message);
 static inline void    FormatMsg(struct SolidSyslogFormatter* f, const char* msg);
 static inline void    FormatMsgId(struct SolidSyslogFormatter* f, const char* messageId);
 static inline void    FormatNilvalue(struct SolidSyslogFormatter* f);
@@ -158,33 +158,30 @@ static inline bool FetchFromStore(char* buf, size_t maxSize, size_t* len)
 
 void SolidSyslog_Log(const struct SolidSyslogMessage* message)
 {
-    char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
-    size_t len = FormatMessage(buf, sizeof(buf), message);
-    SolidSyslogBuffer_Write(instance.buffer, buf, len);
+    SolidSyslogFormatterStorage  storage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(SOLIDSYSLOG_MAX_MESSAGE_SIZE)];
+    struct SolidSyslogFormatter* f = SolidSyslogFormatter_Create(storage, SOLIDSYSLOG_MAX_MESSAGE_SIZE);
+
+    FormatMessage(f, message);
+    SolidSyslogBuffer_Write(instance.buffer, SolidSyslogFormatter_Data(f), SolidSyslogFormatter_Length(f));
 }
 
-static inline size_t FormatMessage(char* buffer, size_t size, const struct SolidSyslogMessage* message)
+static inline void FormatMessage(struct SolidSyslogFormatter* f, const struct SolidSyslogMessage* message)
 {
-    struct SolidSyslogFormatter f;
-    SolidSyslogFormatter_Create(&f, buffer, size);
-
-    FormatPrival(&f, MakePrival(message));
-    SolidSyslogFormatter_Character(&f, '1');
-    SolidSyslogFormatter_Character(&f, ' ');
-    FormatTimestamp(&f, instance.clock);
-    SolidSyslogFormatter_Character(&f, ' ');
-    FormatStringField(&f, instance.getHostname, SOLIDSYSLOG_MAX_HOSTNAME_SIZE);
-    SolidSyslogFormatter_Character(&f, ' ');
-    FormatStringField(&f, instance.getAppName, SOLIDSYSLOG_MAX_APP_NAME_SIZE);
-    SolidSyslogFormatter_Character(&f, ' ');
-    FormatStringField(&f, instance.getProcessId, SOLIDSYSLOG_MAX_PROCESS_ID_SIZE);
-    SolidSyslogFormatter_Character(&f, ' ');
-    FormatMsgId(&f, message->messageId);
-    SolidSyslogFormatter_Character(&f, ' ');
-    FormatStructuredData(&f, instance.sd, instance.sdCount);
-    FormatMsg(&f, message->msg);
-
-    return f.position;
+    FormatPrival(f, MakePrival(message));
+    SolidSyslogFormatter_Character(f, '1');
+    SolidSyslogFormatter_Character(f, ' ');
+    FormatTimestamp(f, instance.clock);
+    SolidSyslogFormatter_Character(f, ' ');
+    FormatStringField(f, instance.getHostname, SOLIDSYSLOG_MAX_HOSTNAME_SIZE);
+    SolidSyslogFormatter_Character(f, ' ');
+    FormatStringField(f, instance.getAppName, SOLIDSYSLOG_MAX_APP_NAME_SIZE);
+    SolidSyslogFormatter_Character(f, ' ');
+    FormatStringField(f, instance.getProcessId, SOLIDSYSLOG_MAX_PROCESS_ID_SIZE);
+    SolidSyslogFormatter_Character(f, ' ');
+    FormatMsgId(f, message->messageId);
+    SolidSyslogFormatter_Character(f, ' ');
+    FormatStructuredData(f, instance.sd, instance.sdCount);
+    FormatMsg(f, message->msg);
 }
 
 static inline void FormatPrival(struct SolidSyslogFormatter* f, uint8_t prival)
@@ -317,20 +314,18 @@ static inline int16_t AbsoluteInt16(int16_t value)
 
 static inline void FormatStringField(struct SolidSyslogFormatter* f, SolidSyslogStringFunction fn, size_t maxSize)
 {
-    size_t maxChars       = maxSize - 1;
-    size_t positionBefore = f->position;
+    SolidSyslogFormatterStorage  fieldStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(SOLIDSYSLOG_MAX_HOSTNAME_SIZE)];
+    struct SolidSyslogFormatter* field = SolidSyslogFormatter_Create(fieldStorage, maxSize);
 
-    fn(f);
+    fn(field);
 
-    size_t written = f->position - positionBefore;
+    size_t fieldLength = SolidSyslogFormatter_Length(field);
 
-    if (written > maxChars)
+    if (fieldLength > 0)
     {
-        f->position            = positionBefore + maxChars;
-        f->buffer[f->position] = '\0';
+        SolidSyslogFormatter_BoundedString(f, SolidSyslogFormatter_Data(field), fieldLength);
     }
-
-    if (f->position == positionBefore)
+    else
     {
         FormatNilvalue(f);
     }
@@ -358,14 +353,14 @@ static inline bool StringIsValid(const char* value)
 
 static inline void FormatStructuredData(struct SolidSyslogFormatter* f, struct SolidSyslogStructuredData** sd, size_t sdCount)
 {
-    size_t positionBefore = f->position;
+    size_t lengthBefore = SolidSyslogFormatter_Length(f);
 
     for (size_t i = 0; i < sdCount; i++)
     {
         SolidSyslogStructuredData_Format(sd[i], f);
     }
 
-    if (f->position == positionBefore)
+    if (SolidSyslogFormatter_Length(f) == lengthBefore)
     {
         FormatNilvalue(f);
     }

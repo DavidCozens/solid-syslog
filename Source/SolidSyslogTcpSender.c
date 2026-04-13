@@ -28,16 +28,16 @@ enum
     OCTET_COUNTING_PREFIX_CAPACITY = UINT32_MAX_DECIMAL_DIGITS + OCTET_COUNTING_SEPARATOR + OCTET_COUNTING_NULL_TERMINATOR
 };
 
-static bool               Connect(struct SolidSyslogTcpSender* tcp);
-static void               CreateSocket(struct SolidSyslogTcpSender* tcp);
-static void               Disconnect(struct SolidSyslogTcpSender* tcp);
-static bool               EnsureConnected(struct SolidSyslogTcpSender* tcp);
-static size_t             FormatOctetCountingPrefix(char* prefix, size_t prefixSize, size_t messageSize);
-static bool               Send(struct SolidSyslogSender* self, const void* buffer, size_t size);
-static bool               SendData(struct SolidSyslogTcpSender* tcp, const void* data, size_t len);
-static struct sockaddr_in BuildAddress(const struct addrinfo* resolved, int port);
-static struct sockaddr_in ResolveAddress(const struct SolidSyslogTcpSenderConfig* config);
-static void               EnableTcpNoDelay(int fd);
+static bool                         Connect(struct SolidSyslogTcpSender* tcp);
+static void                         CreateSocket(struct SolidSyslogTcpSender* tcp);
+static void                         Disconnect(struct SolidSyslogTcpSender* tcp);
+static bool                         EnsureConnected(struct SolidSyslogTcpSender* tcp);
+static struct SolidSyslogFormatter* FormatOctetCountingPrefix(SolidSyslogFormatterStorage* storage, size_t messageSize);
+static bool                         Send(struct SolidSyslogSender* self, const void* buffer, size_t size);
+static bool                         SendData(struct SolidSyslogTcpSender* tcp, const void* data, size_t len);
+static struct sockaddr_in           BuildAddress(const struct addrinfo* resolved, int port);
+static struct sockaddr_in           ResolveAddress(const struct SolidSyslogTcpSenderConfig* config);
+static void                         EnableTcpNoDelay(int fd);
 
 struct SolidSyslogSender* SolidSyslogTcpSender_Create(const struct SolidSyslogTcpSenderConfig* config)
 {
@@ -66,10 +66,10 @@ static bool Send(struct SolidSyslogSender* self, const void* buffer, size_t size
 
     if (EnsureConnected(tcp))
     {
-        char   prefix[OCTET_COUNTING_PREFIX_CAPACITY];
-        size_t prefixLen = FormatOctetCountingPrefix(prefix, sizeof(prefix), size);
+        SolidSyslogFormatterStorage  prefixStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(OCTET_COUNTING_PREFIX_CAPACITY)];
+        struct SolidSyslogFormatter* prefix = FormatOctetCountingPrefix(prefixStorage, size);
 
-        sent = SendData(tcp, prefix, prefixLen) && SendData(tcp, buffer, size);
+        sent = SendData(tcp, SolidSyslogFormatter_Data(prefix), SolidSyslogFormatter_Length(prefix)) && SendData(tcp, buffer, size);
     }
 
     return sent;
@@ -149,14 +149,12 @@ static void Disconnect(struct SolidSyslogTcpSender* tcp)
     tcp->connected = false;
 }
 
-// NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- prefixSize is the buffer capacity, messageSize is the value to format; distinct semantics
-static size_t FormatOctetCountingPrefix(char* prefix, size_t prefixSize, size_t messageSize)
+static struct SolidSyslogFormatter* FormatOctetCountingPrefix(SolidSyslogFormatterStorage* storage, size_t messageSize)
 {
-    struct SolidSyslogFormatter f;
-    SolidSyslogFormatter_Create(&f, prefix, prefixSize);
-    SolidSyslogFormatter_Uint32(&f, (uint32_t) messageSize);
-    SolidSyslogFormatter_Character(&f, ' ');
-    return f.position;
+    struct SolidSyslogFormatter* f = SolidSyslogFormatter_Create(storage, OCTET_COUNTING_PREFIX_CAPACITY);
+    SolidSyslogFormatter_Uint32(f, (uint32_t) messageSize);
+    SolidSyslogFormatter_Character(f, ' ');
+    return f;
 }
 
 static bool SendData(struct SolidSyslogTcpSender* tcp, const void* data, size_t len)
