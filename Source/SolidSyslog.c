@@ -320,8 +320,7 @@ static inline int16_t AbsoluteInt16(int16_t value)
 
 static inline void FormatStringField(struct SolidSyslogFormatter* f, SolidSyslogStringFunction fn, size_t maxSize)
 {
-    size_t len = fn(SolidSyslogFormatter_WritePointer(f), maxSize);
-    SolidSyslogFormatter_Advance(f, len);
+    size_t len = SolidSyslogFormatter_Callback(f, fn, maxSize);
 
     if (len == 0)
     {

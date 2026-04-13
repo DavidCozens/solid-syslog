@@ -20,9 +20,9 @@ EXTERN_C_BEGIN
     size_t SolidSyslogFormatter_BoundedString(struct SolidSyslogFormatter * formatter, const char* source, size_t maxLength);
     size_t SolidSyslogFormatter_Uint32(struct SolidSyslogFormatter * formatter, uint32_t value);
     size_t SolidSyslogFormatter_PaddedUint32(struct SolidSyslogFormatter * formatter, uint32_t value, size_t width);
-    char*  SolidSyslogFormatter_WritePointer(struct SolidSyslogFormatter * formatter);
+    typedef size_t (*SolidSyslogFormatterCallback)(char* buffer, size_t size);
+    size_t SolidSyslogFormatter_Callback(struct SolidSyslogFormatter * formatter, SolidSyslogFormatterCallback fn, size_t maxSize);
     size_t SolidSyslogFormatter_Remaining(struct SolidSyslogFormatter * formatter);
-    void   SolidSyslogFormatter_Advance(struct SolidSyslogFormatter * formatter, size_t count);
 
 EXTERN_C_END
 

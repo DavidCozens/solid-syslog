@@ -1,6 +1,6 @@
 #include "SolidSyslogPosixMessageQueueBuffer.h"
 #include "SolidSyslogBufferDefinition.h"
-#include "SolidSyslogFormat.h"
+#include "SolidSyslogFormatter.h"
 #include "SolidSyslogPosixProcessId.h"
 
 #include <mqueue.h>
@@ -24,10 +24,10 @@ struct SolidSyslogBuffer* SolidSyslogPosixMessageQueueBuffer_Create(size_t maxMe
 {
     instance = (struct SolidSyslogPosixMessageQueueBuffer) {0};
 
-    size_t nameLen = 0;
-    nameLen += SolidSyslogFormat_BoundedString(instance.name + nameLen, "/solidsyslog_", sizeof(instance.name) - nameLen);
-    nameLen += SolidSyslogPosixProcessId_Get(instance.name + nameLen, sizeof(instance.name) - nameLen);
-    (void) nameLen;
+    struct SolidSyslogFormatter nameFormatter;
+    SolidSyslogFormatter_Create(&nameFormatter, instance.name, sizeof(instance.name));
+    SolidSyslogFormatter_BoundedString(&nameFormatter, "/solidsyslog_", 13);
+    SolidSyslogFormatter_Callback(&nameFormatter, SolidSyslogPosixProcessId_Get, SolidSyslogFormatter_Remaining(&nameFormatter));
 
     struct mq_attr attr = {0};
     attr.mq_maxmsg      = maxMessages;

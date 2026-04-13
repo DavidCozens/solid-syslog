@@ -124,11 +124,22 @@ TEST(SolidSyslogFormatter, PaddedUint32ZeroPadsToFullWidth)
     STRCMP_EQUAL("00", buffer);
 }
 
-TEST(SolidSyslogFormatter, WritePointerReturnsBufferAtCurrentPosition)
+static size_t StubWriteHello(char* buf, size_t size)
 {
-    SolidSyslogFormatter_Character(&formatter, 'A');
+    (void) size;
+    const char* text = "hello";
+    size_t      len  = 5;
+    memcpy(buf, text, len + 1);
+    return len;
+}
 
-    POINTERS_EQUAL(buffer + 1, SolidSyslogFormatter_WritePointer(&formatter));
+TEST(SolidSyslogFormatter, CallbackInvokesFunction)
+{
+    SolidSyslogFormatter_Character(&formatter, '<');
+    size_t written = SolidSyslogFormatter_Callback(&formatter, StubWriteHello, 10);
+
+    LONGS_EQUAL(5, written);
+    STRCMP_EQUAL("<hello", buffer);
 }
 
 TEST(SolidSyslogFormatter, RemainingReturnsSpaceLeft)
@@ -138,12 +149,4 @@ TEST(SolidSyslogFormatter, RemainingReturnsSpaceLeft)
     SolidSyslogFormatter_Character(&formatter, 'A');
 
     LONGS_EQUAL(63, SolidSyslogFormatter_Remaining(&formatter));
-}
-
-TEST(SolidSyslogFormatter, AdvanceMovesPositionForward)
-{
-    SolidSyslogFormatter_Advance(&formatter, 5);
-
-    POINTERS_EQUAL(buffer + 5, SolidSyslogFormatter_WritePointer(&formatter));
-    LONGS_EQUAL(59, SolidSyslogFormatter_Remaining(&formatter));
 }

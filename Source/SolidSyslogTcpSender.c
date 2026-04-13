@@ -1,5 +1,5 @@
 #include "SolidSyslogTcpSender.h"
-#include "SolidSyslogFormat.h"
+#include "SolidSyslogFormatter.h"
 #include "SolidSyslogSenderDefinition.h"
 
 #include <arpa/inet.h>
@@ -32,7 +32,7 @@ static bool               Connect(struct SolidSyslogTcpSender* tcp);
 static void               CreateSocket(struct SolidSyslogTcpSender* tcp);
 static void               Disconnect(struct SolidSyslogTcpSender* tcp);
 static bool               EnsureConnected(struct SolidSyslogTcpSender* tcp);
-static size_t             FormatOctetCountingPrefix(char* prefix, size_t messageSize);
+static size_t             FormatOctetCountingPrefix(char* prefix, size_t prefixSize, size_t messageSize);
 static bool               Send(struct SolidSyslogSender* self, const void* buffer, size_t size);
 static bool               SendData(struct SolidSyslogTcpSender* tcp, const void* data, size_t len);
 static struct sockaddr_in BuildAddress(const struct addrinfo* resolved, int port);
@@ -67,7 +67,7 @@ static bool Send(struct SolidSyslogSender* self, const void* buffer, size_t size
     if (EnsureConnected(tcp))
     {
         char   prefix[OCTET_COUNTING_PREFIX_CAPACITY];
-        size_t prefixLen = FormatOctetCountingPrefix(prefix, size);
+        size_t prefixLen = FormatOctetCountingPrefix(prefix, sizeof(prefix), size);
 
         sent = SendData(tcp, prefix, prefixLen) && SendData(tcp, buffer, size);
     }
@@ -149,11 +149,14 @@ static void Disconnect(struct SolidSyslogTcpSender* tcp)
     tcp->connected = false;
 }
 
-static size_t FormatOctetCountingPrefix(char* prefix, size_t messageSize)
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- prefixSize is the buffer capacity, messageSize is the value to format; distinct semantics
+static size_t FormatOctetCountingPrefix(char* prefix, size_t prefixSize, size_t messageSize)
 {
-    size_t len = SolidSyslogFormat_Uint32(prefix, (uint32_t) messageSize);
-    len += SolidSyslogFormat_Character(prefix + len, ' ');
-    return len;
+    struct SolidSyslogFormatter f;
+    SolidSyslogFormatter_Create(&f, prefix, prefixSize);
+    SolidSyslogFormatter_Uint32(&f, (uint32_t) messageSize);
+    SolidSyslogFormatter_Character(&f, ' ');
+    return f.position;
 }
 
 static bool SendData(struct SolidSyslogTcpSender* tcp, const void* data, size_t len)

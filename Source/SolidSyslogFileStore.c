@@ -1,7 +1,7 @@
 #include "SolidSyslogFileStore.h"
 #include "SolidSyslog.h"
 #include "SolidSyslogFile.h"
-#include "SolidSyslogFormat.h"
+#include "SolidSyslogFormatter.h"
 #include "SolidSyslogNullSecurityPolicy.h"
 #include "SolidSyslogStoreDefinition.h"
 
@@ -198,26 +198,12 @@ static inline bool IsRecordSent(size_t recordStart, uint16_t length)
 
 static inline void FormatFilename(uint8_t sequence)
 {
-    enum
-    {
-        TENS_DIVISOR = 10
-    };
+    struct SolidSyslogFormatter f;
+    SolidSyslogFormatter_Create(&f, instance.filename, MAX_PATH_SIZE);
 
-    size_t len = 0;
-    len += SolidSyslogFormat_BoundedString(instance.filename + len, instance.pathPrefix, MAX_PATH_SIZE - len);
-
-    if ((len + 1) < MAX_PATH_SIZE)
-    {
-        len += SolidSyslogFormat_Character(instance.filename + len, SolidSyslogFormat_DigitToChar(sequence / TENS_DIVISOR));
-    }
-
-    if ((len + 1) < MAX_PATH_SIZE)
-    {
-        len += SolidSyslogFormat_Character(instance.filename + len, SolidSyslogFormat_DigitToChar(sequence % TENS_DIVISOR));
-    }
-
-    len += SolidSyslogFormat_BoundedString(instance.filename + len, ".log", MAX_PATH_SIZE - len);
-    instance.filename[len] = '\0';
+    SolidSyslogFormatter_BoundedString(&f, instance.pathPrefix, MAX_PATH_SIZE);
+    SolidSyslogFormatter_PaddedUint32(&f, sequence, 2);
+    SolidSyslogFormatter_BoundedString(&f, ".log", 4);
 }
 
 static inline uint8_t NextSequence(uint8_t current)

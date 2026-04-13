@@ -1,7 +1,10 @@
 #include "StringFake.h"
-#include "SolidSyslogFormat.h"
-
 #include <string.h>
+
+static inline size_t MinSize(size_t a, size_t b)
+{
+    return (a < b) ? a : b;
+}
 
 static const char* fakeHostname;
 static const char* fakeAppName;
@@ -59,5 +62,5 @@ static size_t CopyBounded(char* buffer, size_t size, const char* source)
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- length and bufferSize are semantically distinct
 static size_t ClampToBufferSize(size_t length, size_t bufferSize)
 {
-    return SolidSyslogFormat_MinSize(length, bufferSize - 1);
+    return MinSize(length, bufferSize - 1);
 }

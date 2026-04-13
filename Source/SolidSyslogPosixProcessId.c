@@ -1,10 +1,12 @@
 #include "SolidSyslogPosixProcessId.h"
-#include "SolidSyslogFormat.h"
+#include "SolidSyslogFormatter.h"
 
 #include <unistd.h>
 
 size_t SolidSyslogPosixProcessId_Get(char* buffer, size_t size)
 {
-    (void) size;
-    return SolidSyslogFormat_Uint32(buffer, (uint32_t) getpid());
+    struct SolidSyslogFormatter f;
+    SolidSyslogFormatter_Create(&f, buffer, size);
+    SolidSyslogFormatter_Uint32(&f, (uint32_t) getpid());
+    return f.position;
 }

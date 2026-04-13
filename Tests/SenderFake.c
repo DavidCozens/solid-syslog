@@ -1,8 +1,12 @@
 #include "SenderFake.h"
-#include "SolidSyslogFormat.h"
 #include "SolidSyslogSenderDefinition.h"
 
 #include <string.h>
+
+static inline size_t MinSize(size_t a, size_t b)
+{
+    return (a < b) ? a : b;
+}
 
 enum
 {
@@ -18,7 +22,7 @@ static struct SolidSyslogSender sender;
 static bool Send(struct SolidSyslogSender* self, const void* buffer, size_t size)
 {
     (void) self;
-    size_t copySize = SolidSyslogFormat_MinSize(size, sizeof(lastBuffer) - 1);
+    size_t copySize = MinSize(size, sizeof(lastBuffer) - 1);
     // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memcpy with bounded copySize; memcpy_s is not portable
     memcpy(lastBuffer, buffer, copySize);
     lastBuffer[copySize] = '\0';
