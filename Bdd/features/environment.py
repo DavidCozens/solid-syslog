@@ -19,10 +19,9 @@ def wait_for_tcp_port_open(host="syslog-ng", port=5514, timeout=5):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.settimeout(0.5)
-            s.connect((host, port))
-            s.close()
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(0.5)
+                s.connect((host, port))
             return
         except (ConnectionRefusedError, OSError):
             time.sleep(0.1)
