@@ -124,24 +124,6 @@ TEST(SolidSyslogFormatter, PaddedUint32ZeroPadsToFullWidth)
     STRCMP_EQUAL("00", buffer);
 }
 
-static size_t StubWriteHello(char* buf, size_t size)
-{
-    (void) size;
-    const char* text = "hello";
-    size_t      len  = 5;
-    memcpy(buf, text, len + 1);
-    return len;
-}
-
-TEST(SolidSyslogFormatter, CallbackInvokesFunction)
-{
-    SolidSyslogFormatter_Character(&formatter, '<');
-    size_t written = SolidSyslogFormatter_Callback(&formatter, StubWriteHello, 10);
-
-    LONGS_EQUAL(5, written);
-    STRCMP_EQUAL("<hello", buffer);
-}
-
 TEST(SolidSyslogFormatter, RemainingReturnsSpaceLeft)
 {
     LONGS_EQUAL(64, SolidSyslogFormatter_Remaining(&formatter));

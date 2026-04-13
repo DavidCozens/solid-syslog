@@ -3,10 +3,7 @@
 
 #include <unistd.h>
 
-size_t SolidSyslogPosixProcessId_Get(char* buffer, size_t size)
+void SolidSyslogPosixProcessId_Get(struct SolidSyslogFormatter* formatter)
 {
-    struct SolidSyslogFormatter f;
-    SolidSyslogFormatter_Create(&f, buffer, size);
-    SolidSyslogFormatter_Uint32(&f, (uint32_t) getpid());
-    return f.position;
+    SolidSyslogFormatter_Uint32(formatter, (uint32_t) getpid());
 }

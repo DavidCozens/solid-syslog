@@ -37,7 +37,7 @@ static inline void    FormatUtcOffset(struct SolidSyslogFormatter* f, int16_t of
 static inline bool    IsServiceEnabled(void);
 static inline uint8_t MakePrival(const struct SolidSyslogMessage* message);
 static void           NilClock(struct SolidSyslogTimestamp* ts);
-static size_t         NilStringFunction(char* buffer, size_t size);
+static void           NilStringFunction(struct SolidSyslogFormatter* formatter);
 static inline bool    PrivalComponentsAreValid(uint8_t facility, uint8_t severity);
 static void           ProcessMessages(void);
 static inline bool    ReceiveFromBufferIntoStore(char* buf, size_t maxSize, size_t* len);
@@ -70,12 +70,9 @@ static void NilClock(struct SolidSyslogTimestamp* ts)
     (void) ts;
 }
 
-// NOLINTNEXTLINE(readability-non-const-parameter) -- must match SolidSyslogStringFunction signature
-static size_t NilStringFunction(char* buffer, size_t size)
+static void NilStringFunction(struct SolidSyslogFormatter* formatter)
 {
-    (void) buffer;
-    (void) size;
-    return 0;
+    (void) formatter;
 }
 
 void SolidSyslog_Create(const struct SolidSyslogConfig* config)
@@ -320,9 +317,20 @@ static inline int16_t AbsoluteInt16(int16_t value)
 
 static inline void FormatStringField(struct SolidSyslogFormatter* f, SolidSyslogStringFunction fn, size_t maxSize)
 {
-    size_t len = SolidSyslogFormatter_Callback(f, fn, maxSize);
+    size_t maxChars       = maxSize - 1;
+    size_t positionBefore = f->position;
 
-    if (len == 0)
+    fn(f);
+
+    size_t written = f->position - positionBefore;
+
+    if (written > maxChars)
+    {
+        f->position            = positionBefore + maxChars;
+        f->buffer[f->position] = '\0';
+    }
+
+    if (f->position == positionBefore)
     {
         FormatNilvalue(f);
     }

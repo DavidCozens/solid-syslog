@@ -27,7 +27,7 @@ struct SolidSyslogBuffer* SolidSyslogPosixMessageQueueBuffer_Create(size_t maxMe
     struct SolidSyslogFormatter nameFormatter;
     SolidSyslogFormatter_Create(&nameFormatter, instance.name, sizeof(instance.name));
     SolidSyslogFormatter_BoundedString(&nameFormatter, "/solidsyslog_", 13);
-    SolidSyslogFormatter_Callback(&nameFormatter, SolidSyslogPosixProcessId_Get, SolidSyslogFormatter_Remaining(&nameFormatter));
+    SolidSyslogPosixProcessId_Get(&nameFormatter);
 
     struct mq_attr attr = {0};
     attr.mq_maxmsg      = maxMessages;

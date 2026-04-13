@@ -1,8 +1,20 @@
 #include "SolidSyslogFormatter.h"
 
+static inline void WriteChar(struct SolidSyslogFormatter* formatter, char value);
+static inline void NullTerminate(struct SolidSyslogFormatter* formatter);
 static inline char DigitToChar(uint32_t value);
 static size_t      CountDigits(uint32_t value);
-static void        FormatDigitsReverse(char* buffer, uint32_t value, size_t count);
+
+static inline void WriteChar(struct SolidSyslogFormatter* formatter, char value)
+{
+    formatter->buffer[formatter->position] = value;
+    formatter->position++;
+}
+
+static inline void NullTerminate(struct SolidSyslogFormatter* formatter)
+{
+    formatter->buffer[formatter->position] = '\0';
+}
 
 void SolidSyslogFormatter_Create(struct SolidSyslogFormatter* formatter, char* buffer, size_t size)
 {
@@ -13,9 +25,8 @@ void SolidSyslogFormatter_Create(struct SolidSyslogFormatter* formatter, char* b
 
 size_t SolidSyslogFormatter_Character(struct SolidSyslogFormatter* formatter, char value)
 {
-    formatter->buffer[formatter->position] = value;
-    formatter->position++;
-    formatter->buffer[formatter->position] = '\0';
+    WriteChar(formatter, value);
+    NullTerminate(formatter);
     return 1;
 }
 
@@ -25,22 +36,31 @@ size_t SolidSyslogFormatter_BoundedString(struct SolidSyslogFormatter* formatter
 
     while ((len < maxLength) && (source[len] != '\0'))
     {
-        formatter->buffer[formatter->position] = source[len];
-        formatter->position++;
+        WriteChar(formatter, source[len]);
         len++;
     }
-    formatter->buffer[formatter->position] = '\0';
+    NullTerminate(formatter);
 
     return len;
 }
 
 size_t SolidSyslogFormatter_Uint32(struct SolidSyslogFormatter* formatter, uint32_t value)
 {
-    size_t digits = CountDigits(value);
+    size_t   digits  = CountDigits(value);
+    uint32_t divisor = 1;
 
-    FormatDigitsReverse(formatter->buffer + formatter->position, value, digits);
-    formatter->position += digits;
-    formatter->buffer[formatter->position] = '\0';
+    for (size_t i = 1; i < digits; i++)
+    {
+        divisor *= 10U;
+    }
+
+    for (size_t i = 0; i < digits; i++)
+    {
+        WriteChar(formatter, DigitToChar(value / divisor));
+        value %= divisor;
+        divisor /= 10U;
+    }
+    NullTerminate(formatter);
 
     return digits;
 }
@@ -53,22 +73,12 @@ size_t SolidSyslogFormatter_PaddedUint32(struct SolidSyslogFormatter* formatter,
 
     for (size_t i = 0; i < padding; i++)
     {
-        formatter->buffer[formatter->position] = '0';
-        formatter->position++;
+        WriteChar(formatter, '0');
     }
 
-    FormatDigitsReverse(formatter->buffer + formatter->position, value, digits);
-    formatter->position += digits;
-    formatter->buffer[formatter->position] = '\0';
+    SolidSyslogFormatter_Uint32(formatter, value);
 
     return padding + digits;
-}
-
-size_t SolidSyslogFormatter_Callback(struct SolidSyslogFormatter* formatter, SolidSyslogFormatterCallback fn, size_t maxSize)
-{
-    size_t len = fn(formatter->buffer + formatter->position, maxSize);
-    formatter->position += len;
-    return len;
 }
 
 size_t SolidSyslogFormatter_Remaining(struct SolidSyslogFormatter* formatter)
@@ -92,17 +102,4 @@ static size_t CountDigits(uint32_t value)
     }
 
     return count;
-}
-
-// NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- value is the number to format, count is the digit width; distinct semantics
-static void FormatDigitsReverse(char* buffer, uint32_t value, size_t count)
-{
-    size_t i = count;
-
-    while (i > 0)
-    {
-        i--;
-        buffer[i] = DigitToChar(value);
-        value /= 10U;
-    }
 }

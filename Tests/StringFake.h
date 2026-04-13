@@ -5,13 +5,13 @@
 
 EXTERN_C_BEGIN
 
-    void   StringFake_Reset(void);
-    void   StringFake_SetHostname(const char* hostname);
-    size_t StringFake_GetHostname(char* buffer, size_t size);
-    void   StringFake_SetAppName(const char* appName);
-    size_t StringFake_GetAppName(char* buffer, size_t size);
-    void   StringFake_SetProcessId(const char* procId);
-    size_t StringFake_GetProcessId(char* buffer, size_t size);
+    void StringFake_Reset(void);
+    void StringFake_SetHostname(const char* hostname);
+    void StringFake_GetHostname(struct SolidSyslogFormatter * formatter);
+    void StringFake_SetAppName(const char* appName);
+    void StringFake_GetAppName(struct SolidSyslogFormatter * formatter);
+    void StringFake_SetProcessId(const char* procId);
+    void StringFake_GetProcessId(struct SolidSyslogFormatter * formatter);
 
 EXTERN_C_END
 

@@ -1,18 +1,21 @@
 #include "SolidSyslogPosixHostname.h"
+#include "SolidSyslogFormatter.h"
 
 #include <string.h>
 #include <unistd.h>
 
-size_t SolidSyslogPosixHostname_Get(char* buffer, size_t size)
+enum
 {
-    size_t len = 0;
+    MAX_HOSTNAME_SIZE = 256
+};
 
-    if (gethostname(buffer, size) == 0)
+void SolidSyslogPosixHostname_Get(struct SolidSyslogFormatter* formatter)
+{
+    char hostname[MAX_HOSTNAME_SIZE];
+
+    if (gethostname(hostname, sizeof(hostname)) == 0)
     {
-        buffer[size - 1] = '\0';
-        len              = strlen(buffer);
+        hostname[sizeof(hostname) - 1] = '\0';
+        SolidSyslogFormatter_BoundedString(formatter, hostname, sizeof(hostname));
     }
-
-    buffer[len] = '\0';
-    return len;
 }
