@@ -5,9 +5,11 @@
 
 EXTERN_C_BEGIN
 
+    struct SolidSyslogFormatter;
+
     struct SolidSyslogStructuredData
     {
-        size_t (*Format)(struct SolidSyslogStructuredData* self, char* buffer, size_t size);
+        void (*Format)(struct SolidSyslogStructuredData* self, struct SolidSyslogFormatter* formatter);
     };
 
 EXTERN_C_END

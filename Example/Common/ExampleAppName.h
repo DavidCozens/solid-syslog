@@ -2,12 +2,13 @@
 #define EXAMPLEAPPNAME_H
 
 #include "ExternC.h"
-#include <stddef.h>
 
 EXTERN_C_BEGIN
 
-    void   ExampleAppName_Set(const char* argv0);
-    size_t ExampleAppName_Get(char* buffer, size_t size);
+    struct SolidSyslogFormatter;
+
+    void ExampleAppName_Set(const char* argv0);
+    void ExampleAppName_Get(struct SolidSyslogFormatter * formatter);
 
 EXTERN_C_END
 

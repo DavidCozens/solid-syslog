@@ -1,14 +1,11 @@
 #include "StringFake.h"
-#include "SolidSyslogFormat.h"
+#include "SolidSyslogFormatter.h"
 
 #include <string.h>
 
 static const char* fakeHostname;
 static const char* fakeAppName;
 static const char* fakeProcessId;
-
-static size_t ClampToBufferSize(size_t length, size_t bufferSize);
-static size_t CopyBounded(char* buffer, size_t size, const char* source);
 
 void StringFake_Reset(void)
 {
@@ -22,9 +19,9 @@ void StringFake_SetHostname(const char* hostname)
     fakeHostname = hostname;
 }
 
-size_t StringFake_GetHostname(char* buffer, size_t size)
+void StringFake_GetHostname(struct SolidSyslogFormatter* formatter)
 {
-    return CopyBounded(buffer, size, fakeHostname);
+    SolidSyslogFormatter_BoundedString(formatter, fakeHostname, strlen(fakeHostname));
 }
 
 void StringFake_SetAppName(const char* appName)
@@ -32,9 +29,9 @@ void StringFake_SetAppName(const char* appName)
     fakeAppName = appName;
 }
 
-size_t StringFake_GetAppName(char* buffer, size_t size)
+void StringFake_GetAppName(struct SolidSyslogFormatter* formatter)
 {
-    return CopyBounded(buffer, size, fakeAppName);
+    SolidSyslogFormatter_BoundedString(formatter, fakeAppName, strlen(fakeAppName));
 }
 
 void StringFake_SetProcessId(const char* procId)
@@ -42,22 +39,7 @@ void StringFake_SetProcessId(const char* procId)
     fakeProcessId = procId;
 }
 
-size_t StringFake_GetProcessId(char* buffer, size_t size)
+void StringFake_GetProcessId(struct SolidSyslogFormatter* formatter)
 {
-    return CopyBounded(buffer, size, fakeProcessId);
-}
-
-static size_t CopyBounded(char* buffer, size_t size, const char* source)
-{
-    size_t len = ClampToBufferSize(strlen(source), size);
-    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memcpy with bounded len
-    memcpy(buffer, source, len);
-    buffer[len] = '\0';
-    return len;
-}
-
-// NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- length and bufferSize are semantically distinct
-static size_t ClampToBufferSize(size_t length, size_t bufferSize)
-{
-    return SolidSyslogFormat_MinSize(length, bufferSize - 1);
+    SolidSyslogFormatter_BoundedString(formatter, fakeProcessId, strlen(fakeProcessId));
 }

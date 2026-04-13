@@ -1,7 +1,15 @@
 #include "CppUTest/TestHarness.h"
 #include "SolidSyslogAtomicCounter.h"
+#include "SolidSyslogFormatter.h"
 #include "SolidSyslogMetaSd.h"
 #include "SolidSyslogStructuredData.h"
+
+#include <cstring>
+
+enum
+{
+    TEST_BUFFER_SIZE = 256
+};
 
 // clang-format off
 TEST_GROUP(SolidSyslogMetaSd)
@@ -10,10 +18,13 @@ TEST_GROUP(SolidSyslogMetaSd)
     SolidSyslogAtomicCounter* counter;
     // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
     SolidSyslogStructuredData* sd;
-    char buffer[256];
+    SolidSyslogFormatterStorage storage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(TEST_BUFFER_SIZE)];
+    // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
+    SolidSyslogFormatter* formatter;
 
     void setup() override
     {
+        formatter = SolidSyslogFormatter_Create(storage, TEST_BUFFER_SIZE);
         counter = SolidSyslogAtomicCounter_Create();
         sd = SolidSyslogMetaSd_Create(counter);
     }
@@ -24,9 +35,14 @@ TEST_GROUP(SolidSyslogMetaSd)
         SolidSyslogAtomicCounter_Destroy();
     }
 
-    size_t format()
+    void format() const
     {
-        return SolidSyslogStructuredData_Format(sd, buffer, sizeof(buffer));
+        SolidSyslogStructuredData_Format(sd, formatter);
+    }
+
+    void resetFormatter()
+    {
+        formatter = SolidSyslogFormatter_Create(storage, TEST_BUFFER_SIZE);
     }
 };
 
@@ -40,28 +56,32 @@ TEST(SolidSyslogMetaSd, CreateReturnsNonNull)
 TEST(SolidSyslogMetaSd, FirstFormatProducesSequenceId1)
 {
     format();
-    STRCMP_EQUAL("[meta sequenceId=\"1\"]", buffer);
+    STRCMP_EQUAL("[meta sequenceId=\"1\"]", SolidSyslogFormatter_Data(formatter));
 }
 
 TEST(SolidSyslogMetaSd, SecondFormatProducesSequenceId2)
 {
     format();
+    resetFormatter();
     format();
-    STRCMP_EQUAL("[meta sequenceId=\"2\"]", buffer);
+    STRCMP_EQUAL("[meta sequenceId=\"2\"]", SolidSyslogFormatter_Data(formatter));
 }
 
 TEST(SolidSyslogMetaSd, ThirdFormatProducesSequenceId3)
 {
     format();
     format();
+    resetFormatter();
     format();
-    STRCMP_EQUAL("[meta sequenceId=\"3\"]", buffer);
+    STRCMP_EQUAL("[meta sequenceId=\"3\"]", SolidSyslogFormatter_Data(formatter));
 }
 
-TEST(SolidSyslogMetaSd, FormatReturnsLengthOfFormattedString)
+TEST(SolidSyslogMetaSd, FormatAdvancesFormatterLength)
 {
-    size_t len = format();
-    LONGS_EQUAL(strlen(buffer), len);
+    LONGS_EQUAL(0, SolidSyslogFormatter_Length(formatter));
+    format();
+    CHECK(SolidSyslogFormatter_Length(formatter) > 0);
+    LONGS_EQUAL(strlen(SolidSyslogFormatter_Data(formatter)), SolidSyslogFormatter_Length(formatter));
 }
 
 TEST(SolidSyslogMetaSd, DestroyDoesNotCrash)

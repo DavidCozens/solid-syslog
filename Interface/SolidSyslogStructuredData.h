@@ -2,13 +2,13 @@
 #define SOLIDSYSLOGSTRUCTUREDDATA_H
 
 #include "ExternC.h"
-#include <stddef.h>
 
 EXTERN_C_BEGIN
 
+    struct SolidSyslogFormatter;
     struct SolidSyslogStructuredData;
 
-    size_t SolidSyslogStructuredData_Format(struct SolidSyslogStructuredData * sd, char* buffer, size_t size);
+    void SolidSyslogStructuredData_Format(struct SolidSyslogStructuredData * sd, struct SolidSyslogFormatter * formatter);
 
 EXTERN_C_END
 

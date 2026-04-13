@@ -1,7 +1,7 @@
 #include "SolidSyslogFileStore.h"
 #include "SolidSyslog.h"
 #include "SolidSyslogFile.h"
-#include "SolidSyslogFormat.h"
+#include "SolidSyslogFormatter.h"
 #include "SolidSyslogNullSecurityPolicy.h"
 #include "SolidSyslogStoreDefinition.h"
 
@@ -84,7 +84,6 @@ struct SolidSyslogFileStore
     struct SolidSyslogFile*           writeFile;
     struct SolidSyslogSecurityPolicy* securityPolicy;
     const char*                       pathPrefix;
-    char                              filename[MAX_PATH_SIZE];
     size_t                            maxFileSize;
     size_t                            maxFiles;
     enum SolidSyslogDiscardPolicy     discardPolicy;
@@ -196,28 +195,17 @@ static inline bool IsRecordSent(size_t recordStart, uint16_t length)
     return flag == SENT_FLAG_SENT;
 }
 
-static inline void FormatFilename(uint8_t sequence)
+static const char FILE_EXTENSION[] = ".log";
+
+static inline const char* FormatFilename(SolidSyslogFormatterStorage* storage, uint8_t sequence)
 {
-    enum
-    {
-        TENS_DIVISOR = 10
-    };
+    struct SolidSyslogFormatter* f = SolidSyslogFormatter_Create(storage, MAX_PATH_SIZE);
 
-    size_t len = 0;
-    len += SolidSyslogFormat_BoundedString(instance.filename + len, instance.pathPrefix, MAX_PATH_SIZE - len);
+    SolidSyslogFormatter_BoundedString(f, instance.pathPrefix, MAX_PATH_SIZE);
+    SolidSyslogFormatter_PaddedUint32(f, sequence, 2);
+    SolidSyslogFormatter_BoundedString(f, FILE_EXTENSION, sizeof(FILE_EXTENSION) - 1);
 
-    if ((len + 1) < MAX_PATH_SIZE)
-    {
-        len += SolidSyslogFormat_Character(instance.filename + len, SolidSyslogFormat_DigitToChar(sequence / TENS_DIVISOR));
-    }
-
-    if ((len + 1) < MAX_PATH_SIZE)
-    {
-        len += SolidSyslogFormat_Character(instance.filename + len, SolidSyslogFormat_DigitToChar(sequence % TENS_DIVISOR));
-    }
-
-    len += SolidSyslogFormat_BoundedString(instance.filename + len, ".log", MAX_PATH_SIZE - len);
-    instance.filename[len] = '\0';
+    return SolidSyslogFormatter_Data(f);
 }
 
 static inline uint8_t NextSequence(uint8_t current)
@@ -296,12 +284,14 @@ struct SolidSyslogStore* SolidSyslogFileStore_Create(const struct SolidSyslogFil
 
     ScanForExistingFiles();
 
-    FormatFilename(instance.writeSequence);
+    SolidSyslogFormatterStorage writeNameStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(MAX_PATH_SIZE)];
+    const char*                 writeName = FormatFilename(writeNameStorage, instance.writeSequence);
 
-    if (OpenWriteFile(instance.filename))
+    if (OpenWriteFile(writeName))
     {
-        FormatFilename(instance.readSequence);
-        OpenReadFile(instance.filename);
+        SolidSyslogFormatterStorage readNameStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(MAX_PATH_SIZE)];
+        const char*                 readName = FormatFilename(readNameStorage, instance.readSequence);
+        OpenReadFile(readName);
         ResumeFromExistingFile();
     }
 
@@ -369,9 +359,10 @@ static void ScanForExistingFiles(void)
 
     for (int seq = 0; seq < MAX_SEQUENCE; seq++)
     {
-        FormatFilename((uint8_t) seq);
+        SolidSyslogFormatterStorage nameStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(MAX_PATH_SIZE)];
+        const char*                 name = FormatFilename(nameStorage, (uint8_t) seq);
 
-        if (SolidSyslogFile_Exists(instance.writeFile, instance.filename))
+        if (SolidSyslogFile_Exists(instance.writeFile, name))
         {
             if (!foundFirst)
             {
@@ -542,8 +533,9 @@ static void RotateToNextFile(void)
     instance.writeSequence    = NextSequence(instance.writeSequence);
     instance.writePosition    = 0;
     instance.writeFileCorrupt = false;
-    FormatFilename(instance.writeSequence);
-    OpenWriteFile(instance.filename);
+    SolidSyslogFormatterStorage nameStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(MAX_PATH_SIZE)];
+    const char*                 name = FormatFilename(nameStorage, instance.writeSequence);
+    OpenWriteFile(name);
 
     if (FileCount() > instance.maxFiles)
     {
@@ -553,8 +545,9 @@ static void RotateToNextFile(void)
 
 static void DeleteOldestFile(void)
 {
-    FormatFilename(instance.oldestSequence);
-    SolidSyslogFile_Delete(instance.writeFile, instance.filename);
+    SolidSyslogFormatterStorage nameStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(MAX_PATH_SIZE)];
+    const char*                 name = FormatFilename(nameStorage, instance.oldestSequence);
+    SolidSyslogFile_Delete(instance.writeFile, name);
     instance.oldestSequence = NextSequence(instance.oldestSequence);
 }
 
@@ -564,8 +557,9 @@ static void SwitchReadFile(uint8_t newSequence)
     instance.readSequence  = newSequence;
     instance.readCursor    = 0;
     instance.hasReadRecord = false;
-    FormatFilename(instance.readSequence);
-    OpenReadFile(instance.filename);
+    SolidSyslogFormatterStorage nameStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(MAX_PATH_SIZE)];
+    const char*                 name = FormatFilename(nameStorage, instance.readSequence);
+    OpenReadFile(name);
 }
 
 static void ResetReadToOldestFile(void)

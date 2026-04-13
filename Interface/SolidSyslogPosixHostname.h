@@ -5,7 +5,7 @@
 
 EXTERN_C_BEGIN
 
-    size_t SolidSyslogPosixHostname_Get(char* buffer, size_t size);
+    void SolidSyslogPosixHostname_Get(struct SolidSyslogFormatter * formatter);
 
 EXTERN_C_END
 

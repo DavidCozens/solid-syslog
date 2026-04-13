@@ -6,6 +6,7 @@
 #include "SolidSyslogTimeQualitySd.h"
 #include "SolidSyslogNullBuffer.h"
 #include "SolidSyslogNullStore.h"
+#include "SolidSyslogFormatter.h"
 #include "SolidSyslogStructuredDataDefinition.h"
 #include "BufferFake.h"
 #include "StoreFake.h"
@@ -92,29 +93,25 @@ static const int TIMESTAMP_OFFSET_OFFSET       = 26;
 
 // NOLINTEND(cppcoreguidelines-macro-usage)
 
-static size_t SdSpyFormat(struct SolidSyslogStructuredData* /* self */, char* buffer, size_t /* size */)
+static const char SD_SPY_TEXT[]  = "[spy]";
+static const char SD_SPY2_TEXT[] = "[spy2]";
+
+static void SdSpyFormat(struct SolidSyslogStructuredData* /* self */, struct SolidSyslogFormatter* formatter)
 {
-    const char* text = "[spy]";
-    size_t      len  = strlen(text);
-    memcpy(buffer, text, len + 1);
-    return len;
+    SolidSyslogFormatter_BoundedString(formatter, SD_SPY_TEXT, sizeof(SD_SPY_TEXT) - 1);
 }
 
 static struct SolidSyslogStructuredData sdSpy = {SdSpyFormat};
 
-static size_t SdSpyFormat2(struct SolidSyslogStructuredData* /* self */, char* buffer, size_t /* size */)
+static void SdSpyFormat2(struct SolidSyslogStructuredData* /* self */, struct SolidSyslogFormatter* formatter)
 {
-    const char* text = "[spy2]";
-    size_t      len  = strlen(text);
-    memcpy(buffer, text, len + 1);
-    return len;
+    SolidSyslogFormatter_BoundedString(formatter, SD_SPY2_TEXT, sizeof(SD_SPY2_TEXT) - 1);
 }
 
 static struct SolidSyslogStructuredData sdSpy2 = {SdSpyFormat2};
 
-static size_t SdFailFormat(struct SolidSyslogStructuredData* /* self */, char* /* buffer */, size_t /* size */)
+static void SdFailFormat(struct SolidSyslogStructuredData* /* self */, struct SolidSyslogFormatter* /* formatter */)
 {
-    return 0;
 }
 
 static struct SolidSyslogStructuredData sdFail = {SdFailFormat};

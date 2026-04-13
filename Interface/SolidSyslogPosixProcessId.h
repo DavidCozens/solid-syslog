@@ -5,7 +5,7 @@
 
 EXTERN_C_BEGIN
 
-    size_t SolidSyslogPosixProcessId_Get(char* buffer, size_t size);
+    void SolidSyslogPosixProcessId_Get(struct SolidSyslogFormatter * formatter);
 
 EXTERN_C_END
 

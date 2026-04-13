@@ -1,6 +1,6 @@
 #include "SolidSyslogStructuredDataDefinition.h"
 
-size_t SolidSyslogStructuredData_Format(struct SolidSyslogStructuredData* sd, char* buffer, size_t size)
+void SolidSyslogStructuredData_Format(struct SolidSyslogStructuredData* sd, struct SolidSyslogFormatter* formatter)
 {
-    return sd->Format(sd, buffer, size);
+    sd->Format(sd, formatter);
 }

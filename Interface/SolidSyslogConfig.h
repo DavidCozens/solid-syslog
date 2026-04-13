@@ -9,11 +9,12 @@
 EXTERN_C_BEGIN
 
     struct SolidSyslogBuffer;
+    struct SolidSyslogFormatter;
     struct SolidSyslogSender;
     struct SolidSyslogStore;
     struct SolidSyslogStructuredData;
 
-    typedef size_t (*SolidSyslogStringFunction)(char* buffer, size_t size);
+    typedef void (*SolidSyslogStringFunction)(struct SolidSyslogFormatter* formatter);
 
     struct SolidSyslogConfig
     {
