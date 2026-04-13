@@ -112,6 +112,60 @@ TEST(ExampleCommandLine, InvalidDiscardPolicyReturnsOne)
     LONGS_EQUAL(1, Parse(3, argv));
 }
 
+TEST(ExampleCommandLine, NegativeMaxFilesReturnsOne)
+{
+    char  arg0[] = "test";
+    char  arg1[] = "--max-files";
+    char  arg2[] = "-1";
+    char* argv[] = {arg0, arg1, arg2, nullptr};
+    LONGS_EQUAL(1, Parse(3, argv));
+}
+
+TEST(ExampleCommandLine, NonNumericMaxFilesReturnsOne)
+{
+    char  arg0[] = "test";
+    char  arg1[] = "--max-files";
+    char  arg2[] = "abc";
+    char* argv[] = {arg0, arg1, arg2, nullptr};
+    LONGS_EQUAL(1, Parse(3, argv));
+}
+
+TEST(ExampleCommandLine, TrailingTextMaxFilesReturnsOne)
+{
+    char  arg0[] = "test";
+    char  arg1[] = "--max-files";
+    char  arg2[] = "5abc";
+    char* argv[] = {arg0, arg1, arg2, nullptr};
+    LONGS_EQUAL(1, Parse(3, argv));
+}
+
+TEST(ExampleCommandLine, NegativeMaxFileSizeReturnsOne)
+{
+    char  arg0[] = "test";
+    char  arg1[] = "--max-file-size";
+    char  arg2[] = "-1";
+    char* argv[] = {arg0, arg1, arg2, nullptr};
+    LONGS_EQUAL(1, Parse(3, argv));
+}
+
+TEST(ExampleCommandLine, NonNumericMaxFileSizeReturnsOne)
+{
+    char  arg0[] = "test";
+    char  arg1[] = "--max-file-size";
+    char  arg2[] = "abc";
+    char* argv[] = {arg0, arg1, arg2, nullptr};
+    LONGS_EQUAL(1, Parse(3, argv));
+}
+
+TEST(ExampleCommandLine, TrailingTextMaxFileSizeReturnsOne)
+{
+    char  arg0[] = "test";
+    char  arg1[] = "--max-file-size";
+    char  arg2[] = "1024abc";
+    char* argv[] = {arg0, arg1, arg2, nullptr};
+    LONGS_EQUAL(1, Parse(3, argv));
+}
+
 TEST(ExampleCommandLine, NoSdFlag)
 {
     char  arg0[] = "test";

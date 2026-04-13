@@ -15,6 +15,20 @@ enum
     OPT_HALT_EXIT         = 260
 };
 
+static bool ParsePositiveNumber(const char* str, size_t* result)
+{
+    char* end   = NULL;
+    long  value = strtol(str, &end, 10);
+
+    if ((*str == '\0') || (*end != '\0') || (value < 0))
+    {
+        return false;
+    }
+
+    *result = (size_t) value;
+    return true;
+}
+
 static bool IsValidDiscardPolicy(const char* policy)
 {
     return (strcmp(policy, "oldest") == 0) || (strcmp(policy, "newest") == 0) || (strcmp(policy, "halt") == 0);
@@ -81,10 +95,16 @@ int ExampleCommandLine_Parse(int argc, char* argv[], struct ExampleOptions* opti
                 options->store = optarg;
                 break;
             case OPT_MAX_FILES:
-                options->maxFiles = (size_t) strtol(optarg, NULL, 10);
+                if (!ParsePositiveNumber(optarg, &options->maxFiles))
+                {
+                    return 1;
+                }
                 break;
             case OPT_MAX_FILE_SIZE:
-                options->maxFileSize = (size_t) strtol(optarg, NULL, 10);
+                if (!ParsePositiveNumber(optarg, &options->maxFileSize))
+                {
+                    return 1;
+                }
                 break;
             case OPT_DISCARD_POLICY:
                 if (!IsValidDiscardPolicy(optarg))
