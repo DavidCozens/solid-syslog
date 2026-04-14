@@ -28,7 +28,7 @@ static struct SolidSyslogPosixMessageQueueBuffer instance;
 
 static inline const char* QueueName(void)
 {
-    return SolidSyslogFormatter_Data(SolidSyslogFormatter_FromStorage(instance.nameStorage));
+    return SolidSyslogFormatter_AsString(SolidSyslogFormatter_FromStorage(instance.nameStorage));
 }
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- distinct semantic meaning; struct wrapper would over-engineer

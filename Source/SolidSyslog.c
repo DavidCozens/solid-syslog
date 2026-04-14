@@ -162,7 +162,7 @@ void SolidSyslog_Log(const struct SolidSyslogMessage* message)
     struct SolidSyslogFormatter* f = SolidSyslogFormatter_Create(storage, SOLIDSYSLOG_MAX_MESSAGE_SIZE);
 
     FormatMessage(f, message);
-    SolidSyslogBuffer_Write(instance.buffer, SolidSyslogFormatter_Data(f), SolidSyslogFormatter_Length(f));
+    SolidSyslogBuffer_Write(instance.buffer, SolidSyslogFormatter_AsString(f), SolidSyslogFormatter_Length(f));
 }
 
 static inline void FormatMessage(struct SolidSyslogFormatter* f, const struct SolidSyslogMessage* message)
@@ -323,7 +323,7 @@ static inline void FormatStringField(struct SolidSyslogFormatter* f, SolidSyslog
 
     if (fieldLength > 0)
     {
-        SolidSyslogFormatter_BoundedString(f, SolidSyslogFormatter_Data(field), fieldLength);
+        SolidSyslogFormatter_BoundedString(f, SolidSyslogFormatter_AsString(field), fieldLength);
     }
     else
     {

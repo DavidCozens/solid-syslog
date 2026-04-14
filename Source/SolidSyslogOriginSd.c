@@ -52,5 +52,5 @@ static void Format(struct SolidSyslogStructuredData* self, struct SolidSyslogFor
     struct SolidSyslogOriginSd*  origin    = (struct SolidSyslogOriginSd*) self;
     struct SolidSyslogFormatter* preformat = SolidSyslogFormatter_FromStorage(origin->formattedStorage);
 
-    SolidSyslogFormatter_BoundedString(formatter, SolidSyslogFormatter_Data(preformat), SolidSyslogFormatter_Length(preformat));
+    SolidSyslogFormatter_BoundedString(formatter, SolidSyslogFormatter_AsString(preformat), SolidSyslogFormatter_Length(preformat));
 }

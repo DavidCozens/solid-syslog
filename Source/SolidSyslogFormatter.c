@@ -100,7 +100,7 @@ void SolidSyslogFormatter_PaddedUint32(struct SolidSyslogFormatter* formatter, u
     SolidSyslogFormatter_Uint32(formatter, value);
 }
 
-const char* SolidSyslogFormatter_Data(const struct SolidSyslogFormatter* formatter)
+const char* SolidSyslogFormatter_AsString(const struct SolidSyslogFormatter* formatter)
 {
     return formatter->buffer;
 }

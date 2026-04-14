@@ -69,7 +69,7 @@ static bool Send(struct SolidSyslogSender* self, const void* buffer, size_t size
         SolidSyslogFormatterStorage  prefixStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(OCTET_COUNTING_PREFIX_CAPACITY)];
         struct SolidSyslogFormatter* prefix = FormatOctetCountingPrefix(prefixStorage, size);
 
-        sent = SendData(tcp, SolidSyslogFormatter_Data(prefix), SolidSyslogFormatter_Length(prefix)) && SendData(tcp, buffer, size);
+        sent = SendData(tcp, SolidSyslogFormatter_AsString(prefix), SolidSyslogFormatter_Length(prefix)) && SendData(tcp, buffer, size);
     }
 
     return sent;

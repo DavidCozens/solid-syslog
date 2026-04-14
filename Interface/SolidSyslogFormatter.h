@@ -31,7 +31,7 @@ EXTERN_C_BEGIN
     void                         SolidSyslogFormatter_BoundedString(struct SolidSyslogFormatter * formatter, const char* source, size_t maxLength);
     void                         SolidSyslogFormatter_Uint32(struct SolidSyslogFormatter * formatter, uint32_t value);
     void                         SolidSyslogFormatter_PaddedUint32(struct SolidSyslogFormatter * formatter, uint32_t value, size_t width);
-    const char*                  SolidSyslogFormatter_Data(const struct SolidSyslogFormatter* formatter);
+    const char*                  SolidSyslogFormatter_AsString(const struct SolidSyslogFormatter* formatter);
     size_t                       SolidSyslogFormatter_Length(const struct SolidSyslogFormatter* formatter);
 
 EXTERN_C_END
