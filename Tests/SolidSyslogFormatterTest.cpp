@@ -7,8 +7,8 @@
 
 #define CREATE_FORMATTER(bufferSize) formatter = SolidSyslogFormatter_Create(storage, bufferSize)
 
-#define CHECK_FORMATTED(expected)                                              \
-    STRCMP_EQUAL(expected, SolidSyslogFormatter_AsString(formatter));            \
+#define CHECK_FORMATTED(expected)                                     \
+    STRCMP_EQUAL(expected, SolidSyslogFormatter_AsString(formatter)); \
     LONGS_EQUAL(strlen(expected), SolidSyslogFormatter_Length(formatter))
 
 #define CHECK_LENGTH(expected) LONGS_EQUAL(expected, SolidSyslogFormatter_Length(formatter))
@@ -33,13 +33,14 @@ TEST_GROUP(SolidSyslogFormatter)
         CREATE_FORMATTER(TEST_BUFFER_SIZE);
     }
 
-    void FormatCharacter(char value) { SolidSyslogFormatter_Character(formatter, value); }
-    void FormatBoundedString(const char* source, size_t maxLength) { SolidSyslogFormatter_BoundedString(formatter, source, maxLength); }
-    void FormatUint32(uint32_t value) { SolidSyslogFormatter_Uint32(formatter, value); }
-    void FormatTwoDigit(uint32_t value) { SolidSyslogFormatter_TwoDigit(formatter, value); }
-    void FormatFourDigit(uint32_t value) { SolidSyslogFormatter_FourDigit(formatter, value); }
-    void FormatSixDigit(uint32_t value) { SolidSyslogFormatter_SixDigit(formatter, value); }
+    void FormatCharacter(char value) const { SolidSyslogFormatter_Character(formatter, value); }
+    void FormatBoundedString(const char* source, size_t maxLength) const { SolidSyslogFormatter_BoundedString(formatter, source, maxLength); }
+    void FormatUint32(uint32_t value) const { SolidSyslogFormatter_Uint32(formatter, value); }
+    void FormatTwoDigit(uint32_t value) const { SolidSyslogFormatter_TwoDigit(formatter, value); }
+    void FormatFourDigit(uint32_t value) const { SolidSyslogFormatter_FourDigit(formatter, value); }
+    void FormatSixDigit(uint32_t value) const { SolidSyslogFormatter_SixDigit(formatter, value); }
 };
+
 // clang-format on
 
 TEST(SolidSyslogFormatter, CharacterWritesIntoBuffer)
@@ -303,4 +304,3 @@ TEST(SolidSyslogFormatter, Uint32FitsExactly)
 
     CHECK_FORMATTED("123");
 }
-
