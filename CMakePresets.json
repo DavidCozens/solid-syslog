@@ -70,6 +70,24 @@
                 "CMAKE_CXX_COMPILER": "clang++",
                 "CMAKE_EXE_LINKER_FLAGS": "-no-pie"
             }
+        },
+        {
+            "name": "msvc-base",
+            "hidden": true,
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            }
+        },
+        {
+            "name": "msvc-debug",
+            "displayName": "MSVC Debug",
+            "inherits": "msvc-base"
         }
     ],
     "buildPresets": [
@@ -79,7 +97,8 @@
         { "name": "coverage",    "configurePreset": "coverage" },
         { "name": "tidy",        "configurePreset": "tidy" },
         { "name": "cppcheck",    "configurePreset": "cppcheck" },
-        { "name": "clang-debug", "configurePreset": "clang-debug" }
+        { "name": "clang-debug", "configurePreset": "clang-debug" },
+        { "name": "msvc-debug",  "configurePreset": "msvc-debug", "configuration": "Debug" }
     ],
     "testPresets": [
         {
@@ -100,6 +119,12 @@
         {
             "name": "clang-debug",
             "configurePreset": "clang-debug",
+            "output": { "outputOnFailure": true }
+        },
+        {
+            "name": "msvc-debug",
+            "configurePreset": "msvc-debug",
+            "configuration": "Debug",
             "output": { "outputOnFailure": true }
         }
     ]

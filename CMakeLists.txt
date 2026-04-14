@@ -7,8 +7,13 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(CppUTest REQUIRED)
+find_package(Threads REQUIRED)
 
-add_compile_options(-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Werror)
+if(MSVC)
+    add_compile_options(/W4 /WX)
+else()
+    add_compile_options(-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Werror)
+endif()
 
 option(SANITIZE "Enable AddressSanitizer and UndefinedBehaviourSanitizer" OFF)
 if(SANITIZE)

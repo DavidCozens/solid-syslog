@@ -17,7 +17,7 @@ target_include_directories(SolidSyslogExample PRIVATE
 
 # Threaded example: PosixMessageQueueBuffer, two pthreads (requires POSIX threads and mqueue)
 add_executable(SolidSyslogThreadedExample Threaded/main.c ${COMMON_SOURCES})
-target_link_libraries(SolidSyslogThreadedExample PRIVATE ${PROJECT_NAME} pthread)
+target_link_libraries(SolidSyslogThreadedExample PRIVATE ${PROJECT_NAME} Threads::Threads)
 target_include_directories(SolidSyslogThreadedExample PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/Common
 )

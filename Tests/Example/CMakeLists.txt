@@ -7,7 +7,7 @@ set(EXAMPLE_TEST_SOURCES
 
 add_executable(ExampleTests ${EXAMPLE_TEST_SOURCES})
 
-target_link_libraries(ExampleTests PRIVATE ${PROJECT_NAME} PosixFakes CppUTest CppUTestExt pthread)
+target_link_libraries(ExampleTests PRIVATE ${PROJECT_NAME} PosixFakes CppUTest CppUTestExt Threads::Threads)
 
 target_include_directories(ExampleTests PRIVATE
     ${CMAKE_SOURCE_DIR}/Example/SingleTask
