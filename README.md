@@ -50,6 +50,11 @@ Two example programs demonstrate usage:
 - **`Example/SingleTask/`** — NullBuffer, single-task bare-metal model
 - **`Example/Threaded/`** — PosixMessageQueueBuffer, two pthreads (logger + service), `--transport udp|tcp`
 
+## Compliance
+
+- [IEC 62443 Compliance Guide](docs/iec62443.md) — component selection by Security Level (SL1–SL4) for industrial control systems
+- [RFC Compliance Matrix](docs/rfc-compliance.md) — sender-side coverage of RFC 5424, 5426, 6587, and 5425
+
 ## CI pipeline
 
 See [CI pipeline](docs/ci.md).
