@@ -51,19 +51,19 @@ TEST(SolidSyslogOriginSd, CreateReturnsNonNull)
 TEST(SolidSyslogOriginSd, FormatContainsSoftwareName)
 {
     format();
-    CHECK(strstr(SolidSyslogFormatter_Data(formatter), "software=\"TestSoftware\"") != nullptr);
+    CHECK(strstr(SolidSyslogFormatter_AsString(formatter), "software=\"TestSoftware\"") != nullptr);
 }
 
 TEST(SolidSyslogOriginSd, FormatContainsSwVersion)
 {
     format();
-    CHECK(strstr(SolidSyslogFormatter_Data(formatter), "swVersion=\"9.8.7\"") != nullptr);
+    CHECK(strstr(SolidSyslogFormatter_AsString(formatter), "swVersion=\"9.8.7\"") != nullptr);
 }
 
 TEST(SolidSyslogOriginSd, FormatProducesCompleteOriginSd)
 {
     format();
-    STRCMP_EQUAL("[origin software=\"TestSoftware\" swVersion=\"9.8.7\"]", SolidSyslogFormatter_Data(formatter));
+    STRCMP_EQUAL("[origin software=\"TestSoftware\" swVersion=\"9.8.7\"]", SolidSyslogFormatter_AsString(formatter));
 }
 
 TEST(SolidSyslogOriginSd, FormatAdvancesFormatterLength)
@@ -71,7 +71,7 @@ TEST(SolidSyslogOriginSd, FormatAdvancesFormatterLength)
     LONGS_EQUAL(0, SolidSyslogFormatter_Length(formatter));
     format();
     CHECK(SolidSyslogFormatter_Length(formatter) > 0);
-    LONGS_EQUAL(strlen(SolidSyslogFormatter_Data(formatter)), SolidSyslogFormatter_Length(formatter));
+    LONGS_EQUAL(strlen(SolidSyslogFormatter_AsString(formatter)), SolidSyslogFormatter_Length(formatter));
 }
 
 TEST(SolidSyslogOriginSd, DifferentValuesProduceDifferentOutput)
@@ -81,7 +81,7 @@ TEST(SolidSyslogOriginSd, DifferentValuesProduceDifferentOutput)
 
     resetFormatter();
     format();
-    STRCMP_EQUAL("[origin software=\"OtherSoft\" swVersion=\"1.2.3\"]", SolidSyslogFormatter_Data(formatter));
+    STRCMP_EQUAL("[origin software=\"OtherSoft\" swVersion=\"1.2.3\"]", SolidSyslogFormatter_AsString(formatter));
 }
 
 TEST(SolidSyslogOriginSd, SoftwareAtMaxLength)
@@ -91,7 +91,7 @@ TEST(SolidSyslogOriginSd, SoftwareAtMaxLength)
 
     resetFormatter();
     format();
-    CHECK(strstr(SolidSyslogFormatter_Data(formatter), "software=\"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijkl\"") != nullptr);
+    CHECK(strstr(SolidSyslogFormatter_AsString(formatter), "software=\"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijkl\"") != nullptr);
 }
 
 TEST(SolidSyslogOriginSd, SoftwareTruncatedBeyondMaxLength)
@@ -101,7 +101,7 @@ TEST(SolidSyslogOriginSd, SoftwareTruncatedBeyondMaxLength)
 
     resetFormatter();
     format();
-    STRCMP_EQUAL("[origin software=\"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijkl\" swVersion=\"1.0\"]", SolidSyslogFormatter_Data(formatter));
+    STRCMP_EQUAL("[origin software=\"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijkl\" swVersion=\"1.0\"]", SolidSyslogFormatter_AsString(formatter));
 }
 
 TEST(SolidSyslogOriginSd, SwVersionAtMaxLength)
@@ -111,7 +111,7 @@ TEST(SolidSyslogOriginSd, SwVersionAtMaxLength)
 
     resetFormatter();
     format();
-    CHECK(strstr(SolidSyslogFormatter_Data(formatter), "swVersion=\"ABCDEFGHIJKLMNOPQRSTUVWXYZ012345\"") != nullptr);
+    CHECK(strstr(SolidSyslogFormatter_AsString(formatter), "swVersion=\"ABCDEFGHIJKLMNOPQRSTUVWXYZ012345\"") != nullptr);
 }
 
 TEST(SolidSyslogOriginSd, SwVersionTruncatedBeyondMaxLength)
@@ -121,7 +121,7 @@ TEST(SolidSyslogOriginSd, SwVersionTruncatedBeyondMaxLength)
 
     resetFormatter();
     format();
-    STRCMP_EQUAL("[origin software=\"S\" swVersion=\"ABCDEFGHIJKLMNOPQRSTUVWXYZ012345\"]", SolidSyslogFormatter_Data(formatter));
+    STRCMP_EQUAL("[origin software=\"S\" swVersion=\"ABCDEFGHIJKLMNOPQRSTUVWXYZ012345\"]", SolidSyslogFormatter_AsString(formatter));
 }
 
 TEST(SolidSyslogOriginSd, EmptySoftwareString)
@@ -131,7 +131,7 @@ TEST(SolidSyslogOriginSd, EmptySoftwareString)
 
     resetFormatter();
     format();
-    STRCMP_EQUAL("[origin software=\"\" swVersion=\"1.0\"]", SolidSyslogFormatter_Data(formatter));
+    STRCMP_EQUAL("[origin software=\"\" swVersion=\"1.0\"]", SolidSyslogFormatter_AsString(formatter));
 }
 
 TEST(SolidSyslogOriginSd, EmptySwVersionString)
@@ -141,7 +141,7 @@ TEST(SolidSyslogOriginSd, EmptySwVersionString)
 
     resetFormatter();
     format();
-    STRCMP_EQUAL("[origin software=\"S\" swVersion=\"\"]", SolidSyslogFormatter_Data(formatter));
+    STRCMP_EQUAL("[origin software=\"S\" swVersion=\"\"]", SolidSyslogFormatter_AsString(formatter));
 }
 
 TEST(SolidSyslogOriginSd, NullSoftwareReturnsNull)

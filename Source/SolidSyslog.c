@@ -162,7 +162,7 @@ void SolidSyslog_Log(const struct SolidSyslogMessage* message)
     struct SolidSyslogFormatter* f = SolidSyslogFormatter_Create(storage, SOLIDSYSLOG_MAX_MESSAGE_SIZE);
 
     FormatMessage(f, message);
-    SolidSyslogBuffer_Write(instance.buffer, SolidSyslogFormatter_Data(f), SolidSyslogFormatter_Length(f));
+    SolidSyslogBuffer_Write(instance.buffer, SolidSyslogFormatter_AsString(f), SolidSyslogFormatter_Length(f));
 }
 
 static inline void FormatMessage(struct SolidSyslogFormatter* f, const struct SolidSyslogMessage* message)
@@ -262,19 +262,19 @@ static inline bool TimestampIsValid(const struct SolidSyslogTimestamp* ts)
 
 static inline void FormatCapturedTimestamp(struct SolidSyslogFormatter* f, const struct SolidSyslogTimestamp* ts)
 {
-    SolidSyslogFormatter_PaddedUint32(f, ts->year, 4);
+    SolidSyslogFormatter_FourDigit(f, ts->year);
     SolidSyslogFormatter_Character(f, '-');
-    SolidSyslogFormatter_PaddedUint32(f, ts->month, 2);
+    SolidSyslogFormatter_TwoDigit(f, ts->month);
     SolidSyslogFormatter_Character(f, '-');
-    SolidSyslogFormatter_PaddedUint32(f, ts->day, 2);
+    SolidSyslogFormatter_TwoDigit(f, ts->day);
     SolidSyslogFormatter_Character(f, 'T');
-    SolidSyslogFormatter_PaddedUint32(f, ts->hour, 2);
+    SolidSyslogFormatter_TwoDigit(f, ts->hour);
     SolidSyslogFormatter_Character(f, ':');
-    SolidSyslogFormatter_PaddedUint32(f, ts->minute, 2);
+    SolidSyslogFormatter_TwoDigit(f, ts->minute);
     SolidSyslogFormatter_Character(f, ':');
-    SolidSyslogFormatter_PaddedUint32(f, ts->second, 2);
+    SolidSyslogFormatter_TwoDigit(f, ts->second);
     SolidSyslogFormatter_Character(f, '.');
-    SolidSyslogFormatter_PaddedUint32(f, ts->microsecond, 6);
+    SolidSyslogFormatter_SixDigit(f, ts->microsecond);
     FormatUtcOffset(f, ts->utcOffsetMinutes);
 }
 
@@ -295,9 +295,9 @@ static inline void FormatNonZeroUtcOffset(struct SolidSyslogFormatter* f, int16_
     int16_t absoluteMinutes = AbsoluteInt16(offsetMinutes);
 
     SolidSyslogFormatter_Character(f, (offsetMinutes > 0) ? '+' : '-');
-    SolidSyslogFormatter_PaddedUint32(f, (uint32_t) (absoluteMinutes / 60), 2);
+    SolidSyslogFormatter_TwoDigit(f, (uint32_t) (absoluteMinutes / 60));
     SolidSyslogFormatter_Character(f, ':');
-    SolidSyslogFormatter_PaddedUint32(f, (uint32_t) (absoluteMinutes % 60), 2);
+    SolidSyslogFormatter_TwoDigit(f, (uint32_t) (absoluteMinutes % 60));
 }
 
 static inline int16_t AbsoluteInt16(int16_t value)
@@ -323,7 +323,7 @@ static inline void FormatStringField(struct SolidSyslogFormatter* f, SolidSyslog
 
     if (fieldLength > 0)
     {
-        SolidSyslogFormatter_BoundedString(f, SolidSyslogFormatter_Data(field), fieldLength);
+        SolidSyslogFormatter_BoundedString(f, SolidSyslogFormatter_AsString(field), fieldLength);
     }
     else
     {
@@ -333,14 +333,14 @@ static inline void FormatStringField(struct SolidSyslogFormatter* f, SolidSyslog
 
 static inline void FormatMsgId(struct SolidSyslogFormatter* f, const char* messageId)
 {
-    size_t len = 0;
+    size_t lengthBefore = SolidSyslogFormatter_Length(f);
 
     if (StringIsValid(messageId))
     {
-        len = SolidSyslogFormatter_BoundedString(f, messageId, SOLIDSYSLOG_MAX_MSGID_SIZE - 1);
+        SolidSyslogFormatter_BoundedString(f, messageId, SOLIDSYSLOG_MAX_MSGID_SIZE - 1);
     }
 
-    if (len == 0)
+    if (SolidSyslogFormatter_Length(f) == lengthBefore)
     {
         FormatNilvalue(f);
     }
@@ -371,7 +371,7 @@ static inline void FormatMsg(struct SolidSyslogFormatter* f, const char* msg)
     if (StringIsValid(msg))
     {
         SolidSyslogFormatter_Character(f, ' ');
-        SolidSyslogFormatter_BoundedString(f, msg, SolidSyslogFormatter_Remaining(f) - 1);
+        SolidSyslogFormatter_BoundedString(f, msg, SOLIDSYSLOG_MAX_MESSAGE_SIZE);
     }
 }
 

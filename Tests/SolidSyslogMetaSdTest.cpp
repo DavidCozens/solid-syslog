@@ -56,7 +56,7 @@ TEST(SolidSyslogMetaSd, CreateReturnsNonNull)
 TEST(SolidSyslogMetaSd, FirstFormatProducesSequenceId1)
 {
     format();
-    STRCMP_EQUAL("[meta sequenceId=\"1\"]", SolidSyslogFormatter_Data(formatter));
+    STRCMP_EQUAL("[meta sequenceId=\"1\"]", SolidSyslogFormatter_AsString(formatter));
 }
 
 TEST(SolidSyslogMetaSd, SecondFormatProducesSequenceId2)
@@ -64,7 +64,7 @@ TEST(SolidSyslogMetaSd, SecondFormatProducesSequenceId2)
     format();
     resetFormatter();
     format();
-    STRCMP_EQUAL("[meta sequenceId=\"2\"]", SolidSyslogFormatter_Data(formatter));
+    STRCMP_EQUAL("[meta sequenceId=\"2\"]", SolidSyslogFormatter_AsString(formatter));
 }
 
 TEST(SolidSyslogMetaSd, ThirdFormatProducesSequenceId3)
@@ -73,7 +73,7 @@ TEST(SolidSyslogMetaSd, ThirdFormatProducesSequenceId3)
     format();
     resetFormatter();
     format();
-    STRCMP_EQUAL("[meta sequenceId=\"3\"]", SolidSyslogFormatter_Data(formatter));
+    STRCMP_EQUAL("[meta sequenceId=\"3\"]", SolidSyslogFormatter_AsString(formatter));
 }
 
 TEST(SolidSyslogMetaSd, FormatAdvancesFormatterLength)
@@ -81,7 +81,7 @@ TEST(SolidSyslogMetaSd, FormatAdvancesFormatterLength)
     LONGS_EQUAL(0, SolidSyslogFormatter_Length(formatter));
     format();
     CHECK(SolidSyslogFormatter_Length(formatter) > 0);
-    LONGS_EQUAL(strlen(SolidSyslogFormatter_Data(formatter)), SolidSyslogFormatter_Length(formatter));
+    LONGS_EQUAL(strlen(SolidSyslogFormatter_AsString(formatter)), SolidSyslogFormatter_Length(formatter));
 }
 
 TEST(SolidSyslogMetaSd, DestroyDoesNotCrash)

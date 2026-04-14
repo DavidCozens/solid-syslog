@@ -49,14 +49,13 @@ struct SolidSyslogFormatter* SolidSyslogFormatter_Create(SolidSyslogFormatterSto
     return formatter;
 }
 
-size_t SolidSyslogFormatter_Character(struct SolidSyslogFormatter* formatter, char value)
+void SolidSyslogFormatter_Character(struct SolidSyslogFormatter* formatter, char value)
 {
     WriteChar(formatter, value);
     NullTerminate(formatter);
-    return 1;
 }
 
-size_t SolidSyslogFormatter_BoundedString(struct SolidSyslogFormatter* formatter, const char* source, size_t maxLength)
+void SolidSyslogFormatter_BoundedString(struct SolidSyslogFormatter* formatter, const char* source, size_t maxLength)
 {
     size_t len = 0;
 
@@ -66,11 +65,9 @@ size_t SolidSyslogFormatter_BoundedString(struct SolidSyslogFormatter* formatter
         len++;
     }
     NullTerminate(formatter);
-
-    return len;
 }
 
-size_t SolidSyslogFormatter_Uint32(struct SolidSyslogFormatter* formatter, uint32_t value)
+void SolidSyslogFormatter_Uint32(struct SolidSyslogFormatter* formatter, uint32_t value)
 {
     size_t   digits  = CountDigits(value);
     uint32_t divisor = 1;
@@ -87,32 +84,36 @@ size_t SolidSyslogFormatter_Uint32(struct SolidSyslogFormatter* formatter, uint3
         divisor /= 10U;
     }
     NullTerminate(formatter);
-
-    return digits;
 }
 
-// NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- value is the number, width is the output field width; distinct semantics
-size_t SolidSyslogFormatter_PaddedUint32(struct SolidSyslogFormatter* formatter, uint32_t value, size_t width)
+void SolidSyslogFormatter_TwoDigit(struct SolidSyslogFormatter* formatter, uint32_t value)
 {
-    size_t digits  = CountDigits(value);
-    size_t padding = (width > digits) ? width - digits : 0;
-
-    for (size_t i = 0; i < padding; i++)
-    {
-        WriteChar(formatter, '0');
-    }
-
-    SolidSyslogFormatter_Uint32(formatter, value);
-
-    return padding + digits;
+    WriteChar(formatter, DigitToChar(value / 10U));
+    WriteChar(formatter, DigitToChar(value));
+    NullTerminate(formatter);
 }
 
-size_t SolidSyslogFormatter_Remaining(const struct SolidSyslogFormatter* formatter)
+void SolidSyslogFormatter_FourDigit(struct SolidSyslogFormatter* formatter, uint32_t value)
 {
-    return formatter->size - formatter->position;
+    WriteChar(formatter, DigitToChar(value / 1000U));
+    WriteChar(formatter, DigitToChar(value / 100U));
+    WriteChar(formatter, DigitToChar(value / 10U));
+    WriteChar(formatter, DigitToChar(value));
+    NullTerminate(formatter);
 }
 
-const char* SolidSyslogFormatter_Data(const struct SolidSyslogFormatter* formatter)
+void SolidSyslogFormatter_SixDigit(struct SolidSyslogFormatter* formatter, uint32_t value)
+{
+    WriteChar(formatter, DigitToChar(value / 100000U));
+    WriteChar(formatter, DigitToChar(value / 10000U));
+    WriteChar(formatter, DigitToChar(value / 1000U));
+    WriteChar(formatter, DigitToChar(value / 100U));
+    WriteChar(formatter, DigitToChar(value / 10U));
+    WriteChar(formatter, DigitToChar(value));
+    NullTerminate(formatter);
+}
+
+const char* SolidSyslogFormatter_AsString(const struct SolidSyslogFormatter* formatter)
 {
     return formatter->buffer;
 }

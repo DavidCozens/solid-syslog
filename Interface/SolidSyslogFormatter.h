@@ -27,12 +27,13 @@ EXTERN_C_BEGIN
     }
 
     struct SolidSyslogFormatter* SolidSyslogFormatter_Create(SolidSyslogFormatterStorage * storage, size_t bufferSize);
-    size_t                       SolidSyslogFormatter_Character(struct SolidSyslogFormatter * formatter, char value);
-    size_t                       SolidSyslogFormatter_BoundedString(struct SolidSyslogFormatter * formatter, const char* source, size_t maxLength);
-    size_t                       SolidSyslogFormatter_Uint32(struct SolidSyslogFormatter * formatter, uint32_t value);
-    size_t                       SolidSyslogFormatter_PaddedUint32(struct SolidSyslogFormatter * formatter, uint32_t value, size_t width);
-    size_t                       SolidSyslogFormatter_Remaining(const struct SolidSyslogFormatter* formatter);
-    const char*                  SolidSyslogFormatter_Data(const struct SolidSyslogFormatter* formatter);
+    void                         SolidSyslogFormatter_Character(struct SolidSyslogFormatter * formatter, char value);
+    void                         SolidSyslogFormatter_BoundedString(struct SolidSyslogFormatter * formatter, const char* source, size_t maxLength);
+    void                         SolidSyslogFormatter_Uint32(struct SolidSyslogFormatter * formatter, uint32_t value);
+    void                         SolidSyslogFormatter_TwoDigit(struct SolidSyslogFormatter * formatter, uint32_t value);
+    void                         SolidSyslogFormatter_FourDigit(struct SolidSyslogFormatter * formatter, uint32_t value);
+    void                         SolidSyslogFormatter_SixDigit(struct SolidSyslogFormatter * formatter, uint32_t value);
+    const char*                  SolidSyslogFormatter_AsString(const struct SolidSyslogFormatter* formatter);
     size_t                       SolidSyslogFormatter_Length(const struct SolidSyslogFormatter* formatter);
 
 EXTERN_C_END
