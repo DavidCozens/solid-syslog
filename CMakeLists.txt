@@ -10,7 +10,7 @@ find_package(CppUTest REQUIRED)
 find_package(Threads REQUIRED)
 
 if(MSVC)
-    add_compile_options(/W4 /WX)
+    add_compile_options(/W4 /WX /wd4200)
 else()
     add_compile_options(-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Werror)
 endif()
