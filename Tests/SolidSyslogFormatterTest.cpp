@@ -36,7 +36,9 @@ TEST_GROUP(SolidSyslogFormatter)
     void FormatCharacter(char value) { SolidSyslogFormatter_Character(formatter, value); }
     void FormatBoundedString(const char* source, size_t maxLength) { SolidSyslogFormatter_BoundedString(formatter, source, maxLength); }
     void FormatUint32(uint32_t value) { SolidSyslogFormatter_Uint32(formatter, value); }
-    void FormatPaddedUint32(uint32_t value, size_t width) { SolidSyslogFormatter_PaddedUint32(formatter, value, width); }
+    void FormatTwoDigit(uint32_t value) { SolidSyslogFormatter_TwoDigit(formatter, value); }
+    void FormatFourDigit(uint32_t value) { SolidSyslogFormatter_FourDigit(formatter, value); }
+    void FormatSixDigit(uint32_t value) { SolidSyslogFormatter_SixDigit(formatter, value); }
 };
 // clang-format on
 
@@ -106,41 +108,6 @@ TEST(SolidSyslogFormatter, Uint32AppendsAfterCharacter)
     CHECK_FORMATTED("<42");
 }
 
-TEST(SolidSyslogFormatter, PaddedUint32PadsSingleDigitToWidth2)
-{
-    FormatPaddedUint32(5, 2);
-
-    CHECK_FORMATTED("05");
-}
-
-TEST(SolidSyslogFormatter, PaddedUint32NoPaddingWhenValueFillsWidth)
-{
-    FormatPaddedUint32(12, 2);
-
-    CHECK_FORMATTED("12");
-}
-
-TEST(SolidSyslogFormatter, PaddedUint32PadsYearToWidth4)
-{
-    FormatPaddedUint32(2009, 4);
-
-    CHECK_FORMATTED("2009");
-}
-
-TEST(SolidSyslogFormatter, PaddedUint32PadsMicrosecondsToWidth6)
-{
-    FormatPaddedUint32(123, 6);
-
-    CHECK_FORMATTED("000123");
-}
-
-TEST(SolidSyslogFormatter, PaddedUint32ZeroPadsToFullWidth)
-{
-    FormatPaddedUint32(0, 2);
-
-    CHECK_FORMATTED("00");
-}
-
 TEST(SolidSyslogFormatter, LengthStartsAtZero)
 {
     CHECK_LENGTH(0);
@@ -194,6 +161,90 @@ TEST(SolidSyslogFormatter, OneByteBufferHoldsOnlyNullTerminator)
     FormatCharacter('X');
 
     CHECK_FORMATTED("");
+}
+
+TEST(SolidSyslogFormatter, TwoDigitFormatsAllDigits)
+{
+    FormatTwoDigit(59);
+
+    CHECK_FORMATTED("59");
+}
+
+TEST(SolidSyslogFormatter, TwoDigitFormatsZero)
+{
+    FormatTwoDigit(0);
+
+    CHECK_FORMATTED("00");
+}
+
+TEST(SolidSyslogFormatter, TwoDigitFormatsMax)
+{
+    FormatTwoDigit(99);
+
+    CHECK_FORMATTED("99");
+}
+
+TEST(SolidSyslogFormatter, TwoDigitBeyondMaxFormatsLeastSignificant)
+{
+    FormatTwoDigit(123);
+
+    CHECK_FORMATTED("23");
+}
+
+TEST(SolidSyslogFormatter, FourDigitFormatsAllDigits)
+{
+    FormatFourDigit(2009);
+
+    CHECK_FORMATTED("2009");
+}
+
+TEST(SolidSyslogFormatter, FourDigitFormatsZero)
+{
+    FormatFourDigit(0);
+
+    CHECK_FORMATTED("0000");
+}
+
+TEST(SolidSyslogFormatter, FourDigitFormatsMax)
+{
+    FormatFourDigit(9999);
+
+    CHECK_FORMATTED("9999");
+}
+
+TEST(SolidSyslogFormatter, FourDigitBeyondMaxFormatsLeastSignificant)
+{
+    FormatFourDigit(12345);
+
+    CHECK_FORMATTED("2345");
+}
+
+TEST(SolidSyslogFormatter, SixDigitFormatsAllDigits)
+{
+    FormatSixDigit(123456);
+
+    CHECK_FORMATTED("123456");
+}
+
+TEST(SolidSyslogFormatter, SixDigitFormatsZero)
+{
+    FormatSixDigit(0);
+
+    CHECK_FORMATTED("000000");
+}
+
+TEST(SolidSyslogFormatter, SixDigitFormatsMax)
+{
+    FormatSixDigit(999999);
+
+    CHECK_FORMATTED("999999");
+}
+
+TEST(SolidSyslogFormatter, SixDigitBeyondMaxFormatsLeastSignificant)
+{
+    FormatSixDigit(1234567);
+
+    CHECK_FORMATTED("234567");
 }
 
 TEST(SolidSyslogFormatter, BoundedStringStopsAtBufferCapacity)
@@ -253,20 +304,3 @@ TEST(SolidSyslogFormatter, Uint32FitsExactly)
     CHECK_FORMATTED("123");
 }
 
-TEST(SolidSyslogFormatter, PaddedUint32TruncatedWhenBufferTooSmall)
-{
-    CREATE_FORMATTER(3);
-
-    FormatPaddedUint32(5, 4);
-
-    CHECK_FORMATTED("00");
-}
-
-TEST(SolidSyslogFormatter, PaddedUint32FitsExactly)
-{
-    CREATE_FORMATTER(5);
-
-    FormatPaddedUint32(9, 4);
-
-    CHECK_FORMATTED("0009");
-}

@@ -209,7 +209,7 @@ static inline const char* FormatFilename(SolidSyslogFormatterStorage* storage, u
     struct SolidSyslogFormatter* f = SolidSyslogFormatter_Create(storage, MAX_PATH_SIZE);
 
     SolidSyslogFormatter_BoundedString(f, instance.pathPrefix, MAX_PREFIX_LENGTH);
-    SolidSyslogFormatter_PaddedUint32(f, sequence, SEQUENCE_DIGITS);
+    SolidSyslogFormatter_TwoDigit(f, sequence);
     SolidSyslogFormatter_BoundedString(f, FILE_EXTENSION, sizeof(FILE_EXTENSION) - 1);
 
     return SolidSyslogFormatter_AsString(f);

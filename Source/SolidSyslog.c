@@ -262,19 +262,19 @@ static inline bool TimestampIsValid(const struct SolidSyslogTimestamp* ts)
 
 static inline void FormatCapturedTimestamp(struct SolidSyslogFormatter* f, const struct SolidSyslogTimestamp* ts)
 {
-    SolidSyslogFormatter_PaddedUint32(f, ts->year, 4);
+    SolidSyslogFormatter_FourDigit(f, ts->year);
     SolidSyslogFormatter_Character(f, '-');
-    SolidSyslogFormatter_PaddedUint32(f, ts->month, 2);
+    SolidSyslogFormatter_TwoDigit(f, ts->month);
     SolidSyslogFormatter_Character(f, '-');
-    SolidSyslogFormatter_PaddedUint32(f, ts->day, 2);
+    SolidSyslogFormatter_TwoDigit(f, ts->day);
     SolidSyslogFormatter_Character(f, 'T');
-    SolidSyslogFormatter_PaddedUint32(f, ts->hour, 2);
+    SolidSyslogFormatter_TwoDigit(f, ts->hour);
     SolidSyslogFormatter_Character(f, ':');
-    SolidSyslogFormatter_PaddedUint32(f, ts->minute, 2);
+    SolidSyslogFormatter_TwoDigit(f, ts->minute);
     SolidSyslogFormatter_Character(f, ':');
-    SolidSyslogFormatter_PaddedUint32(f, ts->second, 2);
+    SolidSyslogFormatter_TwoDigit(f, ts->second);
     SolidSyslogFormatter_Character(f, '.');
-    SolidSyslogFormatter_PaddedUint32(f, ts->microsecond, 6);
+    SolidSyslogFormatter_SixDigit(f, ts->microsecond);
     FormatUtcOffset(f, ts->utcOffsetMinutes);
 }
 
@@ -295,9 +295,9 @@ static inline void FormatNonZeroUtcOffset(struct SolidSyslogFormatter* f, int16_
     int16_t absoluteMinutes = AbsoluteInt16(offsetMinutes);
 
     SolidSyslogFormatter_Character(f, (offsetMinutes > 0) ? '+' : '-');
-    SolidSyslogFormatter_PaddedUint32(f, (uint32_t) (absoluteMinutes / 60), 2);
+    SolidSyslogFormatter_TwoDigit(f, (uint32_t) (absoluteMinutes / 60));
     SolidSyslogFormatter_Character(f, ':');
-    SolidSyslogFormatter_PaddedUint32(f, (uint32_t) (absoluteMinutes % 60), 2);
+    SolidSyslogFormatter_TwoDigit(f, (uint32_t) (absoluteMinutes % 60));
 }
 
 static inline int16_t AbsoluteInt16(int16_t value)
