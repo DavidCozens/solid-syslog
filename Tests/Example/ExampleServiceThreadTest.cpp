@@ -4,6 +4,7 @@
 #include "SolidSyslog.h"
 #include "SolidSyslogConfig.h"
 #include "SolidSyslogPosixMessageQueueBuffer.h"
+#include "SolidSyslogGetAddrInfoResolver.h"
 #include "SolidSyslogUdpSender.h"
 #include "SolidSyslogNullStore.h"
 #include "SocketFake.h"
@@ -25,7 +26,7 @@ TEST_GROUP(ExampleServiceThread)
         ClockFake_SetTime(1743768600, 0);
         shutdown = true;
 
-        SolidSyslogUdpSenderConfig udpConfig = {ExampleUdpConfig_GetPort, ExampleUdpConfig_GetHost};
+        SolidSyslogUdpSenderConfig udpConfig = {SolidSyslogGetAddrInfoResolver_Create(ExampleUdpConfig_GetHost, ExampleUdpConfig_GetPort)};
         sender = SolidSyslogUdpSender_Create(&udpConfig);
         buffer = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
         store  = SolidSyslogNullStore_Create();
@@ -40,6 +41,7 @@ TEST_GROUP(ExampleServiceThread)
         SolidSyslogNullStore_Destroy();
         SolidSyslogPosixMessageQueueBuffer_Destroy();
         SolidSyslogUdpSender_Destroy();
+        SolidSyslogGetAddrInfoResolver_Destroy();
     }
 
     static void Log()

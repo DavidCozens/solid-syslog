@@ -4,6 +4,7 @@
 #include "ExampleInteractive.h"
 #include "ExampleUdpConfig.h"
 #include "SolidSyslog.h"
+#include "SolidSyslogGetAddrInfoResolver.h"
 #include "SolidSyslogAtomicCounter.h"
 #include "SolidSyslogConfig.h"
 #include "SolidSyslogMetaSd.h"
@@ -33,10 +34,8 @@ int SolidSyslogExample_Run(int argc, char* argv[])
         return 1;
     }
 
-    struct SolidSyslogUdpSenderConfig udpConfig = {
-        .getPort = ExampleUdpConfig_GetPort,
-        .getHost = ExampleUdpConfig_GetHost,
-    };
+    struct SolidSyslogResolver*       resolver    = SolidSyslogGetAddrInfoResolver_Create(ExampleUdpConfig_GetHost, ExampleUdpConfig_GetPort);
+    struct SolidSyslogUdpSenderConfig udpConfig   = {.resolver = resolver};
     struct SolidSyslogSender*         sender      = SolidSyslogUdpSender_Create(&udpConfig);
     struct SolidSyslogBuffer*         buffer      = SolidSyslogNullBuffer_Create(sender);
     struct SolidSyslogStore*          store       = SolidSyslogNullStore_Create();
@@ -77,6 +76,7 @@ int SolidSyslogExample_Run(int argc, char* argv[])
     SolidSyslogNullStore_Destroy();
     SolidSyslogNullBuffer_Destroy();
     SolidSyslogUdpSender_Destroy();
+    SolidSyslogGetAddrInfoResolver_Destroy();
 
     return 0;
 }
