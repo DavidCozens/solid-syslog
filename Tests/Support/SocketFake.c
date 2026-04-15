@@ -55,6 +55,7 @@ static char lastAddrString[INET_ADDRSTRLEN];
 
 static int                getAddrInfoCallCount;
 static char               lastGetAddrInfoHostname[256];
+static int                lastGetAddrInfoSocktype;
 static struct sockaddr_in fakeResolvedAddr;
 static struct addrinfo    fakeAddrInfo;
 
@@ -96,6 +97,7 @@ void SocketFake_Reset(void)
 
     getAddrInfoCallCount        = 0;
     lastGetAddrInfoHostname[0]  = '\0';
+    lastGetAddrInfoSocktype     = 0;
     fakeResolvedAddr            = (struct sockaddr_in) {0};
     fakeResolvedAddr.sin_family = AF_INET;
     fakeAddrInfo                = (struct addrinfo) {0};
@@ -306,6 +308,11 @@ const char* SocketFake_LastGetAddrInfoHostname(void)
     return lastGetAddrInfoHostname;
 }
 
+int SocketFake_LastGetAddrInfoSocktype(void)
+{
+    return lastGetAddrInfoSocktype;
+}
+
 /* POSIX strong-symbol fakes */
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- POSIX API; signature is fixed
@@ -394,8 +401,8 @@ int getaddrinfo(const char* node, const char* service, const struct addrinfo* hi
 // clang-format on
 {
     (void) service;
-    (void) hints;
     getAddrInfoCallCount++;
+    lastGetAddrInfoSocktype = hints ? hints->ai_socktype : 0;
     SafeString_Copy(lastGetAddrInfoHostname, sizeof(lastGetAddrInfoHostname), node ? node : "");
     inet_pton(AF_INET, node, &fakeResolvedAddr.sin_addr);
     *res = &fakeAddrInfo;

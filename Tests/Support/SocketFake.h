@@ -63,6 +63,7 @@ EXTERN_C_BEGIN
     /* getaddrinfo accessors */
     int         SocketFake_GetAddrInfoCallCount(void);
     const char* SocketFake_LastGetAddrInfoHostname(void);
+    int         SocketFake_LastGetAddrInfoSocktype(void);
 
 EXTERN_C_END
 

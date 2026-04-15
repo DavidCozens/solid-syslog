@@ -4,6 +4,7 @@
 #include "SocketFake.h"
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <sys/socket.h>
 
 // clang-format off
 static const char* const TEST_HOST           = "127.0.0.1";
@@ -100,4 +101,16 @@ TEST(SolidSyslogGetAddrInfoResolver, AlternatePortResolvesCorrectly)
     resolver = SolidSyslogGetAddrInfoResolver_Create(GetHost, GetAlternatePort);
     Resolve();
     LONGS_EQUAL(TEST_ALTERNATE_PORT, ntohs(result.sin_port));
+}
+
+TEST(SolidSyslogGetAddrInfoResolver, UdpTransportPassesDatagramSocktype)
+{
+    resolver->Resolve(resolver, SOLIDSYSLOG_TRANSPORT_UDP, &result);
+    LONGS_EQUAL(SOCK_DGRAM, SocketFake_LastGetAddrInfoSocktype());
+}
+
+TEST(SolidSyslogGetAddrInfoResolver, TcpTransportPassesStreamSocktype)
+{
+    resolver->Resolve(resolver, SOLIDSYSLOG_TRANSPORT_TCP, &result);
+    LONGS_EQUAL(SOCK_STREAM, SocketFake_LastGetAddrInfoSocktype());
 }

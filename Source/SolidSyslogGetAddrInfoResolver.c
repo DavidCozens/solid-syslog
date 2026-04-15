@@ -51,8 +51,14 @@ static void Resolve(struct SolidSyslogResolver* self,
 
 static int MapTransport(enum SolidSyslogTransport transport)
 {
-    (void) transport;
-    return SOCK_DGRAM;
+    int socktype = SOCK_DGRAM;
+
+    if (transport == SOLIDSYSLOG_TRANSPORT_TCP)
+    {
+        socktype = SOCK_STREAM;
+    }
+
+    return socktype;
 }
 
 void SolidSyslogGetAddrInfoResolver_Destroy(void)
