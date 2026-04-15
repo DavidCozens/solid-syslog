@@ -55,7 +55,7 @@ static const char* SpyGetHost()
 TEST_GROUP(SolidSyslogTcpSender)
 {
     struct SolidSyslogResolver* resolver = nullptr;
-    struct SolidSyslogTcpSenderConfig config = {};
+    struct SolidSyslogTcpSenderConfig config;
     // cppcheck-suppress constVariablePointer -- Send requires non-const self; false positive from macro expansion
     // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
     struct SolidSyslogSender* sender = nullptr;
@@ -113,13 +113,13 @@ TEST(SolidSyslogTcpSender, FirstSendSetsTcpNoDelay)
 TEST_GROUP(SolidSyslogTcpSenderDestroy)
 {
     struct SolidSyslogResolver* resolver = nullptr;
-    // cppcheck-suppress unreadVariable -- used in test bodies; cppcheck does not model CppUTest macros
-    struct SolidSyslogTcpSenderConfig config = {};
+    struct SolidSyslogTcpSenderConfig config;
 
     void setup() override
     {
         SocketFake_Reset();
         resolver = SolidSyslogGetAddrInfoResolver_Create(GetHost, GetPort);
+        // cppcheck-suppress unreadVariable -- used in test bodies; cppcheck does not model CppUTest macros
         config = {resolver};
     }
 
@@ -316,7 +316,7 @@ TEST(SolidSyslogTcpSenderConfig, GetAddrInfoCalledWithHostname)
 TEST_GROUP(SolidSyslogTcpSenderFailure)
 {
     struct SolidSyslogResolver* resolver = nullptr;
-    struct SolidSyslogTcpSenderConfig config = {};
+    struct SolidSyslogTcpSenderConfig config;
     // cppcheck-suppress constVariablePointer -- Send requires non-const self; false positive from macro expansion
     // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
     struct SolidSyslogSender* sender = nullptr;
