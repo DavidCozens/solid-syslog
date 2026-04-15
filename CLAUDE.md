@@ -206,3 +206,22 @@ When updating an image:
 2. Update the SHA tag in all files that reference it (see [`docs/containers.md`](docs/containers.md) for the full list)
 3. Rebuild the devcontainer and verify the new tooling works locally
 4. Then commit — use `chore: bump container image to <sha>`
+
+---
+
+## Banned API Policy (Microsoft SDL)
+
+Production code must never use Microsoft SDL banned functions (`strncpy`, `sprintf`, `sscanf`,
+`strtok`, etc.). The library uses `SolidSyslogFormatter` for string building and `strtol` for
+parsing — this is deliberate and must be maintained.
+
+Test code uses the `SafeString` abstraction (`Tests/Support/SafeString.h`) instead of calling
+`strncpy` directly. CMake selects the platform implementation at build time:
+
+- **Windows** (`SafeStringWindows.c`): wraps `strncpy_s` with `_TRUNCATE`
+- **Default** (`SafeStringStandard.c`): wraps `strncpy` + null-terminate
+
+SafeString is compiled into test executables only — never linked into the production library.
+
+`_CRT_SECURE_NO_WARNINGS` was removed from CMakeLists.txt and must not be re-added.
+`memset`, `memcpy`, and `strcmp` are not SDL-banned and do not trigger MSVC C4996.

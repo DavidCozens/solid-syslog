@@ -30,6 +30,12 @@ set(TEST_SOURCES
     main.cpp
 )
 
+if(MSVC)
+    list(APPEND TEST_SOURCES Support/SafeStringWindows.c)
+else()
+    list(APPEND TEST_SOURCES Support/SafeStringStandard.c)
+endif()
+
 if(HAVE_ATOMIC_COUNTER)
     list(APPEND TEST_SOURCES
         SolidSyslogAtomicCounterTest.cpp
@@ -51,7 +57,7 @@ endif()
 add_executable(${PROJECT_NAME}Tests ${TEST_SOURCES})
 
 target_link_libraries(${PROJECT_NAME}Tests PRIVATE ${PROJECT_NAME} CppUTest CppUTestExt Threads::Threads)
-target_include_directories(${PROJECT_NAME}Tests PRIVATE ${CMAKE_SOURCE_DIR}/Source)
+target_include_directories(${PROJECT_NAME}Tests PRIVATE ${CMAKE_SOURCE_DIR}/Source ${CMAKE_CURRENT_SOURCE_DIR}/Support)
 
 if(SOLIDSYSLOG_POSIX)
     target_link_libraries(${PROJECT_NAME}Tests PRIVATE PosixFakes)

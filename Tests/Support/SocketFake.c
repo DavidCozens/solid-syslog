@@ -1,4 +1,5 @@
 #include "SocketFake.h"
+#include "SafeString.h"
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -395,9 +396,7 @@ int getaddrinfo(const char* node, const char* service, const struct addrinfo* hi
     (void) service;
     (void) hints;
     getAddrInfoCallCount++;
-    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- bounded; null-term below
-    strncpy(lastGetAddrInfoHostname, node ? node : "", sizeof(lastGetAddrInfoHostname) - 1);
-    lastGetAddrInfoHostname[sizeof(lastGetAddrInfoHostname) - 1] = '\0';
+    SafeString_Copy(lastGetAddrInfoHostname, sizeof(lastGetAddrInfoHostname), node ? node : "");
     inet_pton(AF_INET, node, &fakeResolvedAddr.sin_addr);
     *res = &fakeAddrInfo;
     return 0;

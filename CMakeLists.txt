@@ -14,7 +14,6 @@ if(MSVC)
     # /wd4297: test infrastructure throws C++ exceptions from extern "C" functions
     # to propagate assertion failures from C fakes through CppUTest. Permanent suppression.
     add_compile_options(/W4 /WX /wd4200 /wd4297)
-    add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 else()
     add_compile_options(-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Werror)
 endif()
