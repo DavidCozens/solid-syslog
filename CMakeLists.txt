@@ -10,6 +10,9 @@ find_package(CppUTest REQUIRED)
 find_package(Threads REQUIRED)
 
 if(MSVC)
+    # /wd4200: char buffer[] (C99 flexible array member) — valid C99, MSVC warns as nonstandard extension
+    # /wd4297: test infrastructure throws C++ exceptions from extern "C" functions
+    # to propagate assertion failures from C fakes through CppUTest. Permanent suppression.
     add_compile_options(/W4 /WX /wd4200 /wd4297)
     add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 else()

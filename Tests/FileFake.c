@@ -1,5 +1,6 @@
 #include "FileFake.h"
 #include "SolidSyslogFileDefinition.h"
+#include "SolidSyslogMacros.h"
 #include "TestAssert.h"
 
 #include <string.h>
@@ -53,7 +54,7 @@ struct FileFake
     bool                   failNextRead;
 };
 
-_Static_assert(sizeof(struct FileFake) == sizeof(struct FileFakeStorage), "FileFakeStorage size does not match struct FileFake");
+SOLIDSYSLOG_STATIC_ASSERT(sizeof(struct FileFake) == sizeof(struct FileFakeStorage), "FileFakeStorage size does not match struct FileFake");
 
 /* shared in-memory filesystem */
 static struct FileEntry filesystem[FILEFAKE_MAX_FILES];

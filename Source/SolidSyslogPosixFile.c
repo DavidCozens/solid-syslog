@@ -1,5 +1,6 @@
 #include "SolidSyslogPosixFile.h"
 #include "SolidSyslogFileDefinition.h"
+#include "SolidSyslogMacros.h"
 
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -30,8 +31,8 @@ struct SolidSyslogPosixFile
     int                    fd;
 };
 
-_Static_assert(sizeof(struct SolidSyslogPosixFile) == sizeof(struct SolidSyslogPosixFileStorage),
-               "SolidSyslogPosixFileStorage size does not match struct SolidSyslogPosixFile");
+SOLIDSYSLOG_STATIC_ASSERT(sizeof(struct SolidSyslogPosixFile) == sizeof(struct SolidSyslogPosixFileStorage),
+                          "SolidSyslogPosixFileStorage size does not match struct SolidSyslogPosixFile");
 
 static const struct SolidSyslogPosixFile DEFAULT_INSTANCE = {
     {Open, Close, IsOpen, Read, Write, SeekTo, Size, Truncate, Exists, Delete},

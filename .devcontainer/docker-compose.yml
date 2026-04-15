@@ -3,9 +3,9 @@ services:
     image: ghcr.io/davidcozens/cpputest:sha-6acaccf
     volumes:
       - ..:/workspaces/SolidSyslog:cached
-      - ${SSH_AUTH_SOCK}:/ssh-agent
-      - ${HOME}/.claude:/home/developer/.claude
-      - ${HOME}/.config/gh:/home/developer/.config/gh
+      - ${SSH_AUTH_SOCK:-/dev/null}:/ssh-agent
+      - ${HOME:-/tmp}/.claude:/home/developer/.claude
+      - ${HOME:-/tmp}/.config/gh:/home/developer/.config/gh
     cap_add:
       - SYS_PTRACE
     security_opt:
@@ -49,9 +49,9 @@ services:
       - ..:/workspaces/SolidSyslog:cached
       - ../Bdd/output:/workspaces/SolidSyslog/Bdd/output
       - syslog-ng-ctl:/var/lib/syslog-ng
-      - ${SSH_AUTH_SOCK}:/ssh-agent
-      - ${HOME}/.claude:/home/developer/.claude
-      - ${HOME}/.config/gh:/home/developer/.config/gh
+      - ${SSH_AUTH_SOCK:-/dev/null}:/ssh-agent
+      - ${HOME:-/tmp}/.claude:/home/developer/.claude
+      - ${HOME:-/tmp}/.config/gh:/home/developer/.config/gh
     environment:
       - SSH_AUTH_SOCK=/ssh-agent
     user: developer
@@ -64,9 +64,9 @@ services:
     image: ghcr.io/davidcozens/cpputest-clang:sha-6ea3f95
     volumes:
       - ..:/workspaces/SolidSyslog:cached
-      - ${SSH_AUTH_SOCK}:/ssh-agent
-      - ${HOME}/.claude:/home/developer/.claude
-      - ${HOME}/.config/gh:/home/developer/.config/gh
+      - ${SSH_AUTH_SOCK:-/dev/null}:/ssh-agent
+      - ${HOME:-/tmp}/.claude:/home/developer/.claude
+      - ${HOME:-/tmp}/.config/gh:/home/developer/.config/gh
     cap_add:
       - SYS_PTRACE
     security_opt:

@@ -1,4 +1,5 @@
 #include "SolidSyslogFormatter.h"
+#include "SolidSyslogMacros.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -10,8 +11,8 @@ struct SolidSyslogFormatter
     char   buffer[];
 };
 
-_Static_assert(sizeof(struct SolidSyslogFormatter) == SOLIDSYSLOG_FORMATTER_OVERHEAD * sizeof(SolidSyslogFormatterStorage),
-               "SOLIDSYSLOG_FORMATTER_OVERHEAD does not match struct layout");
+SOLIDSYSLOG_STATIC_ASSERT(sizeof(struct SolidSyslogFormatter) == SOLIDSYSLOG_FORMATTER_OVERHEAD * sizeof(SolidSyslogFormatterStorage),
+                          "SOLIDSYSLOG_FORMATTER_OVERHEAD does not match struct layout");
 
 static inline void WriteChar(struct SolidSyslogFormatter* formatter, char value);
 static inline void NullTerminate(struct SolidSyslogFormatter* formatter);
