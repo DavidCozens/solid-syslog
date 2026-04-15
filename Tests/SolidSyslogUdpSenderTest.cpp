@@ -1,4 +1,5 @@
 #include "CppUTest/TestHarness.h"
+#include "SolidSyslogGetAddrInfoResolver.h"
 #include "SolidSyslogUdpSender.h"
 #include "SolidSyslogSender.h"
 #include "SocketFake.h"
@@ -49,7 +50,8 @@ static int SpyGetPort()
 // clang-format off
 TEST_GROUP(SolidSyslogUdpSender)
 {
-    struct SolidSyslogUdpSenderConfig config = {GetDefaultPort, GetDefaultHost};
+    struct SolidSyslogResolver* resolver = nullptr;
+    struct SolidSyslogUdpSenderConfig config = {};
     // cppcheck-suppress constVariablePointer -- Send requires non-const self; false positive from macro expansion
     // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
     struct SolidSyslogSender* sender = nullptr;
@@ -57,6 +59,8 @@ TEST_GROUP(SolidSyslogUdpSender)
     void setup() override
     {
         SocketFake_Reset();
+        resolver = SolidSyslogGetAddrInfoResolver_Create();
+        config = {resolver, GetDefaultPort, GetDefaultHost};
         // cppcheck-suppress unreadVariable -- read by teardown and tests; cppcheck does not model CppUTest lifecycle
         sender = SolidSyslogUdpSender_Create(&config);
     }
@@ -64,6 +68,7 @@ TEST_GROUP(SolidSyslogUdpSender)
     void teardown() override
     {
         SolidSyslogUdpSender_Destroy();
+        SolidSyslogGetAddrInfoResolver_Destroy();
     }
 
     void Send() const
@@ -184,11 +189,21 @@ IGNORE_TEST(SolidSyslogUdpSender, HappyPathOnly)
 // clang-format off
 TEST_GROUP(SolidSyslogUdpSenderDestroy)
 {
+    struct SolidSyslogResolver* resolver = nullptr;
     // cppcheck-suppress unreadVariable -- used in test bodies; cppcheck does not model CppUTest macros
-    struct SolidSyslogUdpSenderConfig config = {GetDefaultPort, GetDefaultHost};
+    struct SolidSyslogUdpSenderConfig config = {};
 
-    void setup() override { SocketFake_Reset(); }
-    void teardown() override {}
+    void setup() override
+    {
+        SocketFake_Reset();
+        resolver = SolidSyslogGetAddrInfoResolver_Create();
+        config = {resolver, GetDefaultPort, GetDefaultHost};
+    }
+
+    void teardown() override
+    {
+        SolidSyslogGetAddrInfoResolver_Destroy();
+    }
 
     void CreateAndDestroy() const
     {
@@ -229,8 +244,9 @@ TEST(SolidSyslogUdpSenderDestroy, SimpleScenario)
 // clang-format off
 TEST_GROUP(SolidSyslogUdpSenderConfig)
 {
+    struct SolidSyslogResolver* resolver = nullptr;
     // cppcheck-suppress unreadVariable -- assigned in CreateSender and used via SolidSyslogUdpSender_Create; cppcheck does not model CppUTest macros
-    struct SolidSyslogUdpSenderConfig config = {GetDefaultPort, GetDefaultHost};
+    struct SolidSyslogUdpSenderConfig config = {};
     // cppcheck-suppress constVariablePointer -- Send requires non-const self; false positive from macro expansion
     // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
     struct SolidSyslogSender* sender = nullptr;
@@ -240,11 +256,14 @@ TEST_GROUP(SolidSyslogUdpSenderConfig)
         SocketFake_Reset();
         getPortCallCount = 0;
         getHostCallCount = 0;
+        resolver = SolidSyslogGetAddrInfoResolver_Create();
+        config = {resolver, GetDefaultPort, GetDefaultHost};
     }
 
     void teardown() override
     {
         SolidSyslogUdpSender_Destroy();
+        SolidSyslogGetAddrInfoResolver_Destroy();
     }
 
     void CreateSender()
