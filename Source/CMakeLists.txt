@@ -18,9 +18,9 @@ set(SOURCES
 )
 
 if(HAVE_STDATOMIC_H)
-    list(APPEND SOURCES
-        SolidSyslogAtomicCounter.c
-    )
+    list(APPEND SOURCES SolidSyslogAtomicCounter.c)
+elseif(HAVE_WINDOWS_INTERLOCKED)
+    list(APPEND SOURCES SolidSyslogWindowsAtomicCounter.c)
 endif()
 
 if(SOLIDSYSLOG_POSIX)

@@ -66,6 +66,11 @@ option(SOLIDSYSLOG_POSIX "Include POSIX UDP sender" ${HAVE_POSIX_SOCKETS})
 
 include(CheckIncludeFile)
 check_include_file(stdatomic.h HAVE_STDATOMIC_H)
+check_symbol_exists(InterlockedIncrement "windows.h" HAVE_WINDOWS_INTERLOCKED)
+
+if(HAVE_STDATOMIC_H OR HAVE_WINDOWS_INTERLOCKED)
+    set(HAVE_ATOMIC_COUNTER TRUE)
+endif()
 
 add_subdirectory(Source)
 

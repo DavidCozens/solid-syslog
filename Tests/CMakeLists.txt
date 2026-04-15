@@ -30,7 +30,7 @@ set(TEST_SOURCES
     main.cpp
 )
 
-if(HAVE_STDATOMIC_H)
+if(HAVE_ATOMIC_COUNTER)
     list(APPEND TEST_SOURCES
         SolidSyslogAtomicCounterTest.cpp
     )
