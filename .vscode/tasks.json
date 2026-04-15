@@ -8,6 +8,9 @@
             "label": "build and test",
             "type": "shell",
             "command": "if [ -z \"$BUILD_PRESET\" ]; then behave Bdd/features/; else cmake --build --preset $BUILD_PRESET && ctest --preset $BUILD_PRESET --verbose; fi",
+            "windows": {
+                "command": "cmake --preset msvc-debug; if ($?) { cmake --build --preset msvc-debug }; if ($?) { ctest --preset msvc-debug --verbose }"
+            },
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -19,22 +22,30 @@
             }
         },
         {
-            "label": "test (junit)",
+            "label": "configure",
             "type": "shell",
             "command": "cmake",
-            "args": ["--build", "--preset", "${env:BUILD_PRESET}", "--target", "junit"],
-            "group": "test",
+            "args": ["--preset", "${env:BUILD_PRESET}"],
+            "windows": {
+                "command": "cmake",
+                "args": ["--preset", "msvc-debug"]
+            },
+            "group": "build",
             "presentation": {
                 "reveal": "always",
                 "panel": "shared"
             }
         },
         {
-            "label": "configure",
+            "label": "test (junit)",
             "type": "shell",
             "command": "cmake",
-            "args": ["--preset", "${env:BUILD_PRESET}"],
-            "group": "build",
+            "args": ["--build", "--preset", "${env:BUILD_PRESET}", "--target", "junit"],
+            "windows": {
+                "command": "cmake",
+                "args": ["--build", "--preset", "msvc-debug", "--target", "junit"]
+            },
+            "group": "test",
             "presentation": {
                 "reveal": "always",
                 "panel": "shared"
@@ -45,6 +56,10 @@
             "type": "shell",
             "command": "cmake",
             "args": ["--build", "--preset", "${env:BUILD_PRESET}", "--target", "clean"],
+            "windows": {
+                "command": "cmake",
+                "args": ["--build", "--preset", "msvc-debug", "--target", "clean"]
+            },
             "group": "build",
             "presentation": {
                 "reveal": "always",
@@ -53,3 +68,4 @@
         }
     ]
 }
+
