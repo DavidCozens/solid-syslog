@@ -10,13 +10,13 @@ All changes to `main` must go via a pull request — direct pushes are blocked b
 becomes the single commit message — so the PR title must follow Conventional Commits format (see below).
 
 **Before raising a PR:**
-- All CI checks must pass: build-and-test, clang-build-and-test, sanitize, coverage, tidy, cppcheck, format, bdd
+- All CI checks must pass: build-and-test, clang-build-and-test, sanitize, coverage, tidy, cppcheck, format, bdd, windows-build-and-test
 - Commits on the branch can be informal (work-in-progress messages are fine)
 - The PR title is what matters — it becomes the permanent commit message on `main`
 
 **Branch protection rules (configured on GitHub):**
 - Direct pushes to `main` are blocked
-- PRs require all status checks to pass before merging: build-and-test, clang-build-and-test, sanitize, coverage, tidy, cppcheck, format, bdd
+- PRs require all status checks to pass before merging: build-and-test, clang-build-and-test, sanitize, coverage, tidy, cppcheck, format, bdd, windows-build-and-test
 - Squash merge only — other merge strategies are disabled
 - Branches are deleted automatically after merge
 
@@ -99,6 +99,7 @@ yourself needing one, discuss the design first.
 | `coverage` | lcov/genhtml — 100% line and branch required |
 | `tidy` | clang-tidy — all warnings treated as errors |
 | `cppcheck` | cppcheck static analysis |
+| `msvc-debug` | MSVC build — Windows portability check (requires vcpkg) |
 | `release` | Release build — optimisations enabled, no instrumentation |
 
 Build and test: `cmake --preset <name> && cmake --build --preset <name> --target junit`

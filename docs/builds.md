@@ -68,6 +68,24 @@ cmake --preset cppcheck
 cmake --build --preset cppcheck
 ```
 
+## Windows build — `msvc-debug`
+
+Builds with MSVC as a portability check against GCC and Clang. Requires a Windows
+environment with MSVC, CMake 3.25+, and vcpkg with CppUTest installed. The `VCPKG_ROOT`
+environment variable must point to the vcpkg installation.
+
+```bash
+cmake --preset msvc-debug
+cmake --build --preset msvc-debug --target junit
+```
+
+On GitHub Actions (`windows-latest`), CppUTest is installed via `vcpkg install cpputest`
+and `VCPKG_ROOT` is set automatically.
+
+POSIX-specific code (senders, message queue buffer, clock, hostname, PID) is excluded
+by the existing `SOLIDSYSLOG_POSIX` CMake guards. The core library and portable tests
+build and pass with MSVC.
+
 ## Release — `release`
 
 Optimised build with no instrumentation. Used for the install target.
