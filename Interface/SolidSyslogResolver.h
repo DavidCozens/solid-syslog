@@ -2,6 +2,7 @@
 #define SOLIDSYSLOGRESOLVER_H
 
 #include "ExternC.h"
+#include "SolidSyslogTransport.h"
 #include <netinet/in.h>
 
 EXTERN_C_BEGIN
@@ -9,8 +10,7 @@ EXTERN_C_BEGIN
     struct SolidSyslogResolver;
 
     void SolidSyslogResolver_Resolve(struct SolidSyslogResolver* resolver,
-                                      const char* host,
-                                      int socktype,
+                                      enum SolidSyslogTransport transport,
                                       struct sockaddr_in* result);
 
 EXTERN_C_END

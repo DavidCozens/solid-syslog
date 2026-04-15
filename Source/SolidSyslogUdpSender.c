@@ -23,8 +23,7 @@ struct SolidSyslogSender* SolidSyslogUdpSender_Create(const struct SolidSyslogUd
     instance.base.Send = Send;
     instance.fd        = socket(AF_INET, SOCK_DGRAM, 0);
 
-    config->resolver->Resolve(config->resolver, config->getHost(), SOCK_DGRAM, &instance.addr);
-    instance.addr.sin_port = htons((uint16_t) config->getPort());
+    config->resolver->Resolve(config->resolver, SOLIDSYSLOG_TRANSPORT_UDP, &instance.addr);
 
     return &instance.base;
 }

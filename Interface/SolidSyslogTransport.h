@@ -1,0 +1,9 @@
+#ifndef SOLIDSYSLOGTRANSPORT_H
+#define SOLIDSYSLOGTRANSPORT_H
+
+enum SolidSyslogTransport
+{
+    SOLIDSYSLOG_TRANSPORT_UDP
+};
+
+#endif /* SOLIDSYSLOGTRANSPORT_H */

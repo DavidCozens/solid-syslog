@@ -2,14 +2,14 @@
 #define SOLIDSYSLOGRESOLVERDEFINITION_H
 
 #include "SolidSyslogResolver.h"
+#include "SolidSyslogTransport.h"
 
 EXTERN_C_BEGIN
 
     struct SolidSyslogResolver
     {
         void (*Resolve)(struct SolidSyslogResolver* self,
-                        const char* host,
-                        int socktype,
+                        enum SolidSyslogTransport transport,
                         struct sockaddr_in* result);
     };
 

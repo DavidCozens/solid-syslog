@@ -12,38 +12,16 @@ static const char* const TEST_MESSAGE          = "hello";
 static const size_t      TEST_MESSAGE_LEN      = 5;
 static const char* const TEST_DEFAULT_HOST     = "127.0.0.1";
 static const int         TEST_DEFAULT_PORT     = 514;
-static const int         TEST_ALTERNATE_PORT   = 9999;
 static const size_t      TEST_MAX_MESSAGE_SIZE = 1024;
 // clang-format on
-
-static int GetDefaultPort()
-{
-    return TEST_DEFAULT_PORT;
-}
-
-static int GetAlternatePort()
-{
-    return TEST_ALTERNATE_PORT;
-}
 
 static const char* GetDefaultHost()
 {
     return TEST_DEFAULT_HOST;
 }
 
-static int getHostCallCount;
-
-static const char* SpyGetHost()
+static int GetDefaultPort()
 {
-    getHostCallCount++;
-    return TEST_DEFAULT_HOST;
-}
-
-static int getPortCallCount;
-
-static int SpyGetPort()
-{
-    getPortCallCount++;
     return TEST_DEFAULT_PORT;
 }
 
@@ -59,8 +37,8 @@ TEST_GROUP(SolidSyslogUdpSender)
     void setup() override
     {
         SocketFake_Reset();
-        resolver = SolidSyslogGetAddrInfoResolver_Create();
-        config = {resolver, GetDefaultPort, GetDefaultHost};
+        resolver = SolidSyslogGetAddrInfoResolver_Create(GetDefaultHost, GetDefaultPort);
+        config = {resolver};
         // cppcheck-suppress unreadVariable -- read by teardown and tests; cppcheck does not model CppUTest lifecycle
         sender = SolidSyslogUdpSender_Create(&config);
     }
@@ -196,8 +174,8 @@ TEST_GROUP(SolidSyslogUdpSenderDestroy)
     void setup() override
     {
         SocketFake_Reset();
-        resolver = SolidSyslogGetAddrInfoResolver_Create();
-        config = {resolver, GetDefaultPort, GetDefaultHost};
+        resolver = SolidSyslogGetAddrInfoResolver_Create(GetDefaultHost, GetDefaultPort);
+        config = {resolver};
     }
 
     void teardown() override
@@ -239,83 +217,4 @@ TEST(SolidSyslogUdpSenderDestroy, SimpleScenario)
     LONGS_EQUAL(AF_INET, SocketFake_LastAddrFamily());
     LONGS_EQUAL(TEST_DEFAULT_PORT, SocketFake_LastPort());
     LONGS_EQUAL(1, SocketFake_CloseCallCount());
-}
-
-// clang-format off
-TEST_GROUP(SolidSyslogUdpSenderConfig)
-{
-    struct SolidSyslogResolver* resolver = nullptr;
-    // cppcheck-suppress unreadVariable -- assigned in CreateSender and used via SolidSyslogUdpSender_Create; cppcheck does not model CppUTest macros
-    struct SolidSyslogUdpSenderConfig config = {};
-    // cppcheck-suppress constVariablePointer -- Send requires non-const self; false positive from macro expansion
-    // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-    struct SolidSyslogSender* sender = nullptr;
-
-    void setup() override
-    {
-        SocketFake_Reset();
-        getPortCallCount = 0;
-        getHostCallCount = 0;
-        resolver = SolidSyslogGetAddrInfoResolver_Create();
-        config = {resolver, GetDefaultPort, GetDefaultHost};
-    }
-
-    void teardown() override
-    {
-        SolidSyslogUdpSender_Destroy();
-        SolidSyslogGetAddrInfoResolver_Destroy();
-    }
-
-    void CreateSender()
-    {
-        sender = SolidSyslogUdpSender_Create(&config);
-    }
-
-    void Send() const
-    {
-        SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN);
-    }
-};
-
-// clang-format on
-
-TEST(SolidSyslogUdpSenderConfig, GetPortCalledOnCreate)
-{
-    config.getPort = SpyGetPort;
-    CreateSender();
-    LONGS_EQUAL(1, getPortCallCount);
-    Send();
-    LONGS_EQUAL(1, getPortCallCount);
-}
-
-TEST(SolidSyslogUdpSenderConfig, SendtoCalledWithConfiguredPort)
-{
-    config.getPort = GetAlternatePort;
-    CreateSender();
-    Send();
-    LONGS_EQUAL(TEST_ALTERNATE_PORT, SocketFake_LastPort());
-}
-
-TEST(SolidSyslogUdpSenderConfig, GetHostCalledOnCreate)
-{
-    config.getHost = SpyGetHost;
-    CreateSender();
-    LONGS_EQUAL(1, getHostCallCount);
-    Send();
-    LONGS_EQUAL(1, getHostCallCount);
-}
-
-TEST(SolidSyslogUdpSenderConfig, GetAddrInfoCalledWithHostnameFromGetHost)
-{
-    config.getHost = SpyGetHost;
-    CreateSender();
-    LONGS_EQUAL(1, SocketFake_GetAddrInfoCallCount());
-    STRCMP_EQUAL(TEST_DEFAULT_HOST, SocketFake_LastGetAddrInfoHostname());
-}
-
-TEST(SolidSyslogUdpSenderConfig, SendtoCalledWithResolvedAddress)
-{
-    CreateSender();
-    Send();
-    STRCMP_EQUAL(TEST_DEFAULT_HOST, SocketFake_LastAddrAsString());
 }

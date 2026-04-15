@@ -1,9 +1,8 @@
 #include "SolidSyslogResolverDefinition.h"
 
 void SolidSyslogResolver_Resolve(struct SolidSyslogResolver* resolver,
-                                  const char* host,
-                                  int socktype,
+                                  enum SolidSyslogTransport transport,
                                   struct sockaddr_in* result)
 {
-    resolver->Resolve(resolver, host, socktype, result);
+    resolver->Resolve(resolver, transport, result);
 }
