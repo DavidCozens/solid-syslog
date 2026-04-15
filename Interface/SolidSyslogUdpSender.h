@@ -1,6 +1,7 @@
 #ifndef SOLIDSYSLOGUDPSENDER_H
 #define SOLIDSYSLOGUDPSENDER_H
 
+#include "SolidSyslogResolver.h"
 #include "SolidSyslogSender.h"
 
 enum
@@ -12,8 +13,7 @@ EXTERN_C_BEGIN
 
     struct SolidSyslogUdpSenderConfig
     {
-        int (*getPort)(void);         // NOLINT(modernize-redundant-void-arg) -- C idiom; void is required in C to mean "no parameters"
-        const char* (*getHost)(void); // NOLINT(modernize-redundant-void-arg) -- C idiom; void is required in C to mean "no parameters"
+        struct SolidSyslogResolver* resolver;
     };
 
     struct SolidSyslogSender* SolidSyslogUdpSender_Create(const struct SolidSyslogUdpSenderConfig* config);

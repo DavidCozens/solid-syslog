@@ -29,6 +29,8 @@ if(SOLIDSYSLOG_POSIX)
         SolidSyslogPosixHostname.c
         SolidSyslogPosixMessageQueueBuffer.c
         SolidSyslogPosixProcessId.c
+        SolidSyslogResolver.c
+        SolidSyslogGetAddrInfoResolver.c
         SolidSyslogUdpSender.c
         SolidSyslogTcpSender.c
         SolidSyslogPosixFile.c

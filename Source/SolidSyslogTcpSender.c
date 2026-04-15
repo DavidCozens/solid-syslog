@@ -2,9 +2,6 @@
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogSenderDefinition.h"
 
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <stdbool.h>
 #include <sys/socket.h>
@@ -35,8 +32,6 @@ static bool                         EnsureConnected(struct SolidSyslogTcpSender*
 static struct SolidSyslogFormatter* FormatOctetCountingPrefix(SolidSyslogFormatterStorage* storage, size_t messageSize);
 static bool                         Send(struct SolidSyslogSender* self, const void* buffer, size_t size);
 static bool                         SendData(struct SolidSyslogTcpSender* tcp, const void* data, size_t len);
-static struct sockaddr_in           BuildAddress(const struct addrinfo* resolved, int port);
-static struct sockaddr_in           ResolveAddress(const struct SolidSyslogTcpSenderConfig* config);
 static void                         EnableTcpNoDelay(int fd);
 
 struct SolidSyslogSender* SolidSyslogTcpSender_Create(const struct SolidSyslogTcpSenderConfig* config)
@@ -91,7 +86,8 @@ static bool Connect(struct SolidSyslogTcpSender* tcp)
 {
     CreateSocket(tcp);
 
-    struct sockaddr_in addr = ResolveAddress(&tcp->config);
+    struct sockaddr_in addr;
+    SolidSyslogResolver_Resolve(tcp->config.resolver, SOLIDSYSLOG_TRANSPORT_TCP, &addr);
     // NOLINTNEXTLINE(clang-analyzer-unix.StdCLibraryFunctions) -- socket() failure handling deferred to error handling epic
     bool connected = connect(tcp->fd, (struct sockaddr*) &addr, sizeof(addr)) == 0;
 
@@ -117,29 +113,6 @@ static void EnableTcpNoDelay(int fd)
 {
     int enable = 1;
     setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &enable, sizeof(enable));
-}
-
-static struct sockaddr_in ResolveAddress(const struct SolidSyslogTcpSenderConfig* config)
-{
-    struct addrinfo  hints  = {0};
-    struct addrinfo* result = NULL;
-    hints.ai_family         = AF_INET;
-    hints.ai_socktype       = SOCK_STREAM;
-
-    // NOLINTNEXTLINE(bugprone-unused-return-value) -- error handling deferred to error handling phase
-    getaddrinfo(config->getHost(), NULL, &hints, &result);
-
-    struct sockaddr_in addr = BuildAddress(result, config->getPort());
-    freeaddrinfo(result);
-
-    return addr;
-}
-
-static struct sockaddr_in BuildAddress(const struct addrinfo* resolved, int port)
-{
-    struct sockaddr_in addr = *(struct sockaddr_in*) resolved->ai_addr;
-    addr.sin_port           = htons((uint16_t) port);
-    return addr;
 }
 
 static void Disconnect(struct SolidSyslogTcpSender* tcp)

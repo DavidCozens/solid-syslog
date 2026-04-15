@@ -18,6 +18,7 @@
 #include "SolidSyslogPosixHostname.h"
 #include "SolidSyslogPosixMessageQueueBuffer.h"
 #include "SolidSyslogPosixProcessId.h"
+#include "SolidSyslogGetAddrInfoResolver.h"
 #include "SolidSyslogTcpSender.h"
 #include "SolidSyslogUdpSender.h"
 
@@ -52,14 +53,12 @@ static struct SolidSyslogSender* CreateSender(const struct ExampleOptions* optio
     if (useTcp)
     {
         static struct SolidSyslogTcpSenderConfig tcpConfig = {0};
-        tcpConfig.getPort                                  = ExampleTcpConfig_GetPort;
-        tcpConfig.getHost                                  = ExampleTcpConfig_GetHost;
+        tcpConfig.resolver                                 = SolidSyslogGetAddrInfoResolver_Create(ExampleTcpConfig_GetHost, ExampleTcpConfig_GetPort);
         return SolidSyslogTcpSender_Create(&tcpConfig);
     }
 
     static struct SolidSyslogUdpSenderConfig udpConfig = {0};
-    udpConfig.getPort                                  = ExampleUdpConfig_GetPort;
-    udpConfig.getHost                                  = ExampleUdpConfig_GetHost;
+    udpConfig.resolver                                 = SolidSyslogGetAddrInfoResolver_Create(ExampleUdpConfig_GetHost, ExampleUdpConfig_GetPort);
     return SolidSyslogUdpSender_Create(&udpConfig);
 }
 
@@ -124,6 +123,7 @@ static void DestroySender(const struct ExampleOptions* options)
     {
         SolidSyslogUdpSender_Destroy();
     }
+    SolidSyslogGetAddrInfoResolver_Destroy();
 }
 
 static void DestroyStore(const struct ExampleOptions* options)
