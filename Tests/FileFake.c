@@ -1,4 +1,5 @@
 #include "FileFake.h"
+#include "SafeString.h"
 #include "SolidSyslogFileDefinition.h"
 #include "SolidSyslogMacros.h"
 #include "TestAssert.h"
@@ -270,9 +271,7 @@ static inline bool IsSlotFree(const struct FileEntry* entry)
 static inline void InitialiseEntry(struct FileEntry* entry, const char* path)
 {
     entry->inUse = true;
-    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- strncpy with bounded size; strncpy_s is not portable
-    strncpy(entry->path, path, FILEFAKE_MAX_PATH - 1);
-    entry->path[FILEFAKE_MAX_PATH - 1] = '\0';
+    SafeString_Copy(entry->path, FILEFAKE_MAX_PATH, path);
 }
 
 /* ------------------------------------------------------------------

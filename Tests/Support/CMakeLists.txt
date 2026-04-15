@@ -1,5 +1,6 @@
 set(POSIX_FAKES_SOURCES
     ClockFake.c
+    SafeStringStandard.c
     SocketFake.c
 )
 
