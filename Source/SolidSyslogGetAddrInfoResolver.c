@@ -35,7 +35,7 @@ static void Resolve(struct SolidSyslogResolver* self, enum SolidSyslogTransport 
     hints.ai_family           = AF_INET;
     hints.ai_socktype         = MapTransport(transport);
 
-    // NOLINTNEXTLINE(bugprone-unused-return-value) -- error handling deferred to error handling phase
+    // NOLINTNEXTLINE(bugprone-unused-return-value) -- error handling deferred to Epic #31
     getaddrinfo(resolver->getHost(), NULL, &hints, &resolved);
 
     *result          = *(struct sockaddr_in*) resolved->ai_addr;

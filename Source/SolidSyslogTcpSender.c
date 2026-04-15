@@ -1,6 +1,5 @@
 #include "SolidSyslogTcpSender.h"
 #include "SolidSyslogFormatter.h"
-#include "SolidSyslogResolverDefinition.h"
 #include "SolidSyslogSenderDefinition.h"
 
 #include <netinet/tcp.h>
@@ -88,7 +87,7 @@ static bool Connect(struct SolidSyslogTcpSender* tcp)
     CreateSocket(tcp);
 
     struct sockaddr_in addr;
-    tcp->config.resolver->Resolve(tcp->config.resolver, SOLIDSYSLOG_TRANSPORT_TCP, &addr);
+    SolidSyslogResolver_Resolve(tcp->config.resolver, SOLIDSYSLOG_TRANSPORT_TCP, &addr);
     // NOLINTNEXTLINE(clang-analyzer-unix.StdCLibraryFunctions) -- socket() failure handling deferred to error handling epic
     bool connected = connect(tcp->fd, (struct sockaddr*) &addr, sizeof(addr)) == 0;
 
