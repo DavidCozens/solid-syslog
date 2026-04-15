@@ -7,8 +7,14 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(CppUTest REQUIRED)
+find_package(Threads REQUIRED)
 
-add_compile_options(-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Werror)
+if(MSVC)
+    add_compile_options(/W4 /WX /wd4200 /wd4297)
+    add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+else()
+    add_compile_options(-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Werror)
+endif()
 
 option(SANITIZE "Enable AddressSanitizer and UndefinedBehaviourSanitizer" OFF)
 if(SANITIZE)
@@ -60,6 +66,11 @@ option(SOLIDSYSLOG_POSIX "Include POSIX UDP sender" ${HAVE_POSIX_SOCKETS})
 
 include(CheckIncludeFile)
 check_include_file(stdatomic.h HAVE_STDATOMIC_H)
+check_symbol_exists(InterlockedIncrement "windows.h" HAVE_WINDOWS_INTERLOCKED)
+
+if(HAVE_STDATOMIC_H OR HAVE_WINDOWS_INTERLOCKED)
+    set(HAVE_ATOMIC_COUNTER TRUE)
+endif()
 
 add_subdirectory(Source)
 
