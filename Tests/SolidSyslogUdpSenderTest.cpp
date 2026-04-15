@@ -245,9 +245,9 @@ TEST(SolidSyslogUdpSenderDestroy, SimpleScenario)
 TEST_GROUP(SolidSyslogUdpSenderConfig)
 {
     // cppcheck-suppress unreadVariable -- assigned in CreateSender; cppcheck does not model CppUTest macros
-    const char* (*getHostFn)(void) = GetDefaultHost;
+    const char* (*getHostFn)(void) = GetDefaultHost; // NOLINT(modernize-redundant-void-arg) -- C idiom
     // cppcheck-suppress unreadVariable -- assigned in CreateSender; cppcheck does not model CppUTest macros
-    int (*getPortFn)(void) = GetDefaultPort;
+    int (*getPortFn)(void) = GetDefaultPort; // NOLINT(modernize-redundant-void-arg) -- C idiom
     // cppcheck-suppress constVariablePointer -- Send requires non-const self; false positive from macro expansion
     // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
     struct SolidSyslogSender* sender = nullptr;

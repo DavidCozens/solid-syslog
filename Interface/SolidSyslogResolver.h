@@ -9,9 +9,7 @@ EXTERN_C_BEGIN
 
     struct SolidSyslogResolver;
 
-    void SolidSyslogResolver_Resolve(struct SolidSyslogResolver* resolver,
-                                      enum SolidSyslogTransport transport,
-                                      struct sockaddr_in* result);
+    void SolidSyslogResolver_Resolve(struct SolidSyslogResolver * resolver, enum SolidSyslogTransport transport, struct sockaddr_in * result);
 
 EXTERN_C_END
 

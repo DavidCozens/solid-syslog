@@ -5,9 +5,7 @@
 #include <stddef.h>
 #include <sys/socket.h>
 
-static void Resolve(struct SolidSyslogResolver* self,
-                    enum SolidSyslogTransport transport,
-                    struct sockaddr_in* result);
+static void Resolve(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, struct sockaddr_in* result);
 
 static int MapTransport(enum SolidSyslogTransport transport);
 
@@ -20,9 +18,7 @@ struct SolidSyslogGetAddrInfoResolver
 
 static struct SolidSyslogGetAddrInfoResolver instance;
 
-struct SolidSyslogResolver* SolidSyslogGetAddrInfoResolver_Create(
-    const char* (*getHost)(void),
-    int (*getPort)(void))
+struct SolidSyslogResolver* SolidSyslogGetAddrInfoResolver_Create(const char* (*getHost)(void), int (*getPort)(void))
 {
     instance.base.Resolve = Resolve;
     instance.getHost      = getHost;
@@ -30,13 +26,11 @@ struct SolidSyslogResolver* SolidSyslogGetAddrInfoResolver_Create(
     return &instance.base;
 }
 
-static void Resolve(struct SolidSyslogResolver* self,
-                    enum SolidSyslogTransport transport,
-                    struct sockaddr_in* result)
+static void Resolve(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, struct sockaddr_in* result)
 {
     struct SolidSyslogGetAddrInfoResolver* resolver = (struct SolidSyslogGetAddrInfoResolver*) self;
 
-    struct addrinfo  hints  = {0};
+    struct addrinfo  hints    = {0};
     struct addrinfo* resolved = NULL;
     hints.ai_family           = AF_INET;
     hints.ai_socktype         = MapTransport(transport);
@@ -44,7 +38,7 @@ static void Resolve(struct SolidSyslogResolver* self,
     // NOLINTNEXTLINE(bugprone-unused-return-value) -- error handling deferred to error handling phase
     getaddrinfo(resolver->getHost(), NULL, &hints, &resolved);
 
-    *result = *(struct sockaddr_in*) resolved->ai_addr;
+    *result          = *(struct sockaddr_in*) resolved->ai_addr;
     result->sin_port = htons((uint16_t) resolver->getPort());
     freeaddrinfo(resolved);
 }
