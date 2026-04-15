@@ -51,6 +51,7 @@ if(SOLIDSYSLOG_POSIX)
         SolidSyslogTcpSenderTest.cpp
         SolidSyslogPosixFileTest.cpp
         SolidSyslogFileStorePosixTest.cpp
+        SolidSyslogGetAddrInfoResolverTest.cpp
     )
 endif()
 
