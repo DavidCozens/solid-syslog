@@ -2,15 +2,15 @@
 #define SOLIDSYSLOGRESOLVER_H
 
 #include "ExternC.h"
+#include "SolidSyslogAddress.h"
 #include "SolidSyslogTransport.h"
-#include <netinet/in.h>
 #include <stdbool.h>
 
 EXTERN_C_BEGIN
 
     struct SolidSyslogResolver;
 
-    bool SolidSyslogResolver_Resolve(struct SolidSyslogResolver * resolver, enum SolidSyslogTransport transport, struct sockaddr_in * result);
+    bool SolidSyslogResolver_Resolve(struct SolidSyslogResolver * resolver, enum SolidSyslogTransport transport, struct SolidSyslogAddress * result);
 
 EXTERN_C_END
 

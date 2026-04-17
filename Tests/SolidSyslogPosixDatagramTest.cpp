@@ -3,6 +3,7 @@
 #include "SolidSyslogPosixDatagram.h"
 #include "SocketFake.h"
 #include <arpa/inet.h>
+#include <cstdint>
 #include <cstring>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -17,17 +18,21 @@ TEST_GROUP(SolidSyslogPosixDatagram)
 {
     // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
     struct SolidSyslogDatagram* datagram = nullptr;
-    struct sockaddr_in          addr{};
+    SolidSyslogAddressStorage   addrStorage{};
+    // cppcheck-suppress unreadVariable -- assigned in setup; cppcheck does not model CppUTest macros
+    struct SolidSyslogAddress* addr = nullptr;
 
     void setup() override
     {
         SocketFake_Reset();
         // cppcheck-suppress unreadVariable -- used in tests; cppcheck does not model CppUTest macros
-        datagram = SolidSyslogPosixDatagram_Create();
-        std::memset(&addr, 0, sizeof(addr));
-        addr.sin_family = AF_INET;
-        addr.sin_port   = htons(TEST_PORT);
-        inet_pton(AF_INET, TEST_ADDRESS, &addr.sin_addr);
+        datagram       = SolidSyslogPosixDatagram_Create();
+        auto* bytes    = reinterpret_cast<std::uint8_t*>(&addrStorage);
+        auto* sin      = reinterpret_cast<struct sockaddr_in*>(bytes);
+        sin->sin_family = AF_INET;
+        sin->sin_port   = htons(TEST_PORT);
+        inet_pton(AF_INET, TEST_ADDRESS, &sin->sin_addr);
+        addr = SolidSyslogAddress_FromStorage(&addrStorage);
     }
 
     void teardown() override
@@ -74,70 +79,70 @@ TEST(SolidSyslogPosixDatagram, OpenReturnsTrueOnSuccess)
 TEST(SolidSyslogPosixDatagram, SendToCallsSendtoOnce)
 {
     SolidSyslogDatagram_Open(datagram);
-    SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, &addr);
+    SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr);
     LONGS_EQUAL(1, SocketFake_SendtoCallCount());
 }
 
 TEST(SolidSyslogPosixDatagram, SendToPassesBuffer)
 {
     SolidSyslogDatagram_Open(datagram);
-    SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, &addr);
+    SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr);
     STRCMP_EQUAL(TEST_MESSAGE, SocketFake_LastBufAsString());
 }
 
 TEST(SolidSyslogPosixDatagram, SendToPassesLength)
 {
     SolidSyslogDatagram_Open(datagram);
-    SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, &addr);
+    SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr);
     LONGS_EQUAL(TEST_MESSAGE_LEN, SocketFake_LastLen());
 }
 
 TEST(SolidSyslogPosixDatagram, SendToPassesFlagsZero)
 {
     SolidSyslogDatagram_Open(datagram);
-    SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, &addr);
+    SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr);
     LONGS_EQUAL(0, SocketFake_LastFlags());
 }
 
 TEST(SolidSyslogPosixDatagram, SendToPassesSocketFd)
 {
     SolidSyslogDatagram_Open(datagram);
-    SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, &addr);
+    SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr);
     LONGS_EQUAL(SocketFake_SocketFd(), SocketFake_LastSendtoFd());
 }
 
 TEST(SolidSyslogPosixDatagram, SendToPassesAddressPort)
 {
     SolidSyslogDatagram_Open(datagram);
-    SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, &addr);
+    SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr);
     LONGS_EQUAL(TEST_PORT, SocketFake_LastPort());
 }
 
 TEST(SolidSyslogPosixDatagram, SendToPassesAddressHost)
 {
     SolidSyslogDatagram_Open(datagram);
-    SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, &addr);
+    SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr);
     STRCMP_EQUAL(TEST_ADDRESS, SocketFake_LastAddrAsString());
 }
 
 TEST(SolidSyslogPosixDatagram, SendToPassesAddrlenOfSockaddrIn)
 {
     SolidSyslogDatagram_Open(datagram);
-    SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, &addr);
+    SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr);
     LONGS_EQUAL(sizeof(struct sockaddr_in), SocketFake_LastAddrLen());
 }
 
 TEST(SolidSyslogPosixDatagram, SendToReturnsTrueOnSuccess)
 {
     SolidSyslogDatagram_Open(datagram);
-    CHECK_TRUE(SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, &addr));
+    CHECK_TRUE(SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr));
 }
 
 TEST(SolidSyslogPosixDatagram, SendToReturnsFalseOnSendtoFailure)
 {
     SolidSyslogDatagram_Open(datagram);
     SocketFake_SetSendtoFails(true);
-    CHECK_FALSE(SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, &addr));
+    CHECK_FALSE(SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr));
 }
 
 TEST(SolidSyslogPosixDatagram, CloseCallsCloseOnce)

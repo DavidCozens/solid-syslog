@@ -1,6 +1,6 @@
 #include "SolidSyslogStreamDefinition.h"
 
-bool SolidSyslogStream_Open(struct SolidSyslogStream* stream, const struct sockaddr_in* addr)
+bool SolidSyslogStream_Open(struct SolidSyslogStream* stream, const struct SolidSyslogAddress* addr)
 {
     return stream->Open(stream, addr);
 }

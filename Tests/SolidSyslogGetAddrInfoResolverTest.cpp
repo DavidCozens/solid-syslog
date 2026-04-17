@@ -1,8 +1,10 @@
 #include "CppUTest/TestHarness.h"
+#include "SolidSyslogAddress.h"
 #include "SolidSyslogGetAddrInfoResolver.h"
 #include "SolidSyslogResolverDefinition.h"
 #include "SocketFake.h"
 #include <arpa/inet.h>
+#include <cstdint>
 #include <netinet/in.h>
 #include <sys/socket.h>
 
@@ -37,7 +39,7 @@ static int GetAlternatePort()
 TEST_GROUP(SolidSyslogGetAddrInfoResolver)
 {
     struct SolidSyslogResolver* resolver = nullptr;
-    struct sockaddr_in result = {};
+    SolidSyslogAddressStorage   resultStorage{};
 
     void setup() override
     {
@@ -50,9 +52,17 @@ TEST_GROUP(SolidSyslogGetAddrInfoResolver)
         SolidSyslogGetAddrInfoResolver_Destroy();
     }
 
-    void Resolve()
+    bool Resolve(enum SolidSyslogTransport transport = SOLIDSYSLOG_TRANSPORT_UDP)
     {
-        resolver->Resolve(resolver, SOLIDSYSLOG_TRANSPORT_UDP, &result);
+        struct SolidSyslogAddress* address = SolidSyslogAddress_FromStorage(&resultStorage);
+        return resolver->Resolve(resolver, transport, address);
+    }
+
+    // Test-only peek: the resolver fills the storage per the POSIX sockaddr_in layout.
+    const struct sockaddr_in* Result() const
+    {
+        const auto* bytes = reinterpret_cast<const std::uint8_t*>(&resultStorage);
+        return reinterpret_cast<const struct sockaddr_in*>(bytes);
     }
 };
 
@@ -65,21 +75,21 @@ TEST(SolidSyslogGetAddrInfoResolver, CreateDestroyWorksWithoutCrashing)
 TEST(SolidSyslogGetAddrInfoResolver, ResolvePopulatesAddressFamily)
 {
     Resolve();
-    LONGS_EQUAL(AF_INET, result.sin_family);
+    LONGS_EQUAL(AF_INET, Result()->sin_family);
 }
 
 TEST(SolidSyslogGetAddrInfoResolver, ResolvePopulatesResolvedAddress)
 {
     Resolve();
     char addrString[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &result.sin_addr, addrString, sizeof(addrString));
+    inet_ntop(AF_INET, &Result()->sin_addr, addrString, sizeof(addrString));
     STRCMP_EQUAL(TEST_HOST, addrString);
 }
 
 TEST(SolidSyslogGetAddrInfoResolver, ResolvePopulatesPort)
 {
     Resolve();
-    LONGS_EQUAL(TEST_PORT, ntohs(result.sin_port));
+    LONGS_EQUAL(TEST_PORT, ntohs(Result()->sin_port));
 }
 
 TEST(SolidSyslogGetAddrInfoResolver, GetAddrInfoCalledWithHostname)
@@ -100,41 +110,41 @@ TEST(SolidSyslogGetAddrInfoResolver, AlternatePortResolvesCorrectly)
 {
     resolver = SolidSyslogGetAddrInfoResolver_Create(GetHost, GetAlternatePort);
     Resolve();
-    LONGS_EQUAL(TEST_ALTERNATE_PORT, ntohs(result.sin_port));
+    LONGS_EQUAL(TEST_ALTERNATE_PORT, ntohs(Result()->sin_port));
 }
 
 TEST(SolidSyslogGetAddrInfoResolver, UdpTransportPassesDatagramSocktype)
 {
-    resolver->Resolve(resolver, SOLIDSYSLOG_TRANSPORT_UDP, &result);
+    Resolve(SOLIDSYSLOG_TRANSPORT_UDP);
     LONGS_EQUAL(SOCK_DGRAM, SocketFake_LastGetAddrInfoSocktype());
 }
 
 TEST(SolidSyslogGetAddrInfoResolver, TcpTransportPassesStreamSocktype)
 {
-    resolver->Resolve(resolver, SOLIDSYSLOG_TRANSPORT_TCP, &result);
+    Resolve(SOLIDSYSLOG_TRANSPORT_TCP);
     LONGS_EQUAL(SOCK_STREAM, SocketFake_LastGetAddrInfoSocktype());
 }
 
 TEST(SolidSyslogGetAddrInfoResolver, ResolveReturnsFalseWhenGetAddrInfoFails)
 {
     SocketFake_SetGetAddrInfoFails(true);
-    CHECK_FALSE(resolver->Resolve(resolver, SOLIDSYSLOG_TRANSPORT_UDP, &result));
+    CHECK_FALSE(Resolve());
 }
 
 TEST(SolidSyslogGetAddrInfoResolver, ResolveReturnsTrueOnSuccess)
 {
-    CHECK_TRUE(resolver->Resolve(resolver, SOLIDSYSLOG_TRANSPORT_UDP, &result));
+    CHECK_TRUE(Resolve());
 }
 
 TEST(SolidSyslogGetAddrInfoResolver, ResolveDoesNotFreeAddrInfoWhenGetAddrInfoFails)
 {
     SocketFake_SetGetAddrInfoFails(true);
-    resolver->Resolve(resolver, SOLIDSYSLOG_TRANSPORT_UDP, &result);
+    Resolve();
     LONGS_EQUAL(0, SocketFake_FreeAddrInfoCallCount());
 }
 
 TEST(SolidSyslogGetAddrInfoResolver, ResolveFreesAddrInfoOnSuccess)
 {
-    resolver->Resolve(resolver, SOLIDSYSLOG_TRANSPORT_UDP, &result);
+    Resolve();
     LONGS_EQUAL(1, SocketFake_FreeAddrInfoCallCount());
 }

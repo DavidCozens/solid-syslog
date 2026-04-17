@@ -8,7 +8,7 @@ EXTERN_C_BEGIN
 
     struct SolidSyslogResolver
     {
-        bool (*Resolve)(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, struct sockaddr_in* result);
+        bool (*Resolve)(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, struct SolidSyslogAddress* result);
     };
 
 EXTERN_C_END

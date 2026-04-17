@@ -1,4 +1,5 @@
 #include "SolidSyslogPosixTcpStream.h"
+#include "SolidSyslogAddressInternal.h"
 #include "SolidSyslogStreamDefinition.h"
 
 #include <netinet/tcp.h>
@@ -11,7 +12,7 @@ enum
     INVALID_FD = -1
 };
 
-static bool        Open(struct SolidSyslogStream* self, const struct sockaddr_in* addr);
+static bool        Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr);
 static bool        Send(struct SolidSyslogStream* self, const void* buffer, size_t size);
 static void        Close(struct SolidSyslogStream* self);
 static void        EnableTcpNoDelay(int fd);
@@ -40,15 +41,16 @@ void SolidSyslogPosixTcpStream_Destroy(void)
     instance.base.Close = NULL;
 }
 
-static bool Open(struct SolidSyslogStream* self, const struct sockaddr_in* addr)
+static bool Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr)
 {
     struct SolidSyslogPosixTcpStream* stream = (struct SolidSyslogPosixTcpStream*) self;
+    const struct sockaddr_in*         sin    = SolidSyslogAddress_AsConstSockaddrIn(addr);
 
     stream->fd = socket(AF_INET, SOCK_STREAM, 0);
     EnableTcpNoDelay(stream->fd);
 
     // NOLINTNEXTLINE(clang-analyzer-unix.StdCLibraryFunctions) -- socket() failure handling deferred to error handling epic
-    bool connected = connect(stream->fd, (const struct sockaddr*) addr, sizeof(*addr)) == 0;
+    bool connected = connect(stream->fd, (const struct sockaddr*) sin, sizeof(*sin)) == 0;
 
     if (!connected)
     {

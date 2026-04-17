@@ -1,9 +1,10 @@
 #include "CppUTest/TestHarness.h"
+#include "SolidSyslogAddress.h"
 #include "SolidSyslogPosixTcpStream.h"
 #include "SolidSyslogStream.h"
 #include "SocketFake.h"
 #include <arpa/inet.h>
-#include <cstring>
+#include <cstdint>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
@@ -18,17 +19,21 @@ TEST_GROUP(SolidSyslogPosixTcpStream)
 {
     // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
     struct SolidSyslogStream* stream = nullptr;
-    struct sockaddr_in        addr{};
+    SolidSyslogAddressStorage addrStorage{};
+    // cppcheck-suppress unreadVariable -- assigned in setup; cppcheck does not model CppUTest macros
+    struct SolidSyslogAddress* addr = nullptr;
 
     void setup() override
     {
         SocketFake_Reset();
         // cppcheck-suppress unreadVariable -- used in tests; cppcheck does not model CppUTest macros
-        stream = SolidSyslogPosixTcpStream_Create();
-        std::memset(&addr, 0, sizeof(addr));
-        addr.sin_family = AF_INET;
-        addr.sin_port   = htons(TEST_PORT);
-        inet_pton(AF_INET, TEST_ADDRESS, &addr.sin_addr);
+        stream          = SolidSyslogPosixTcpStream_Create();
+        auto* bytes     = reinterpret_cast<std::uint8_t*>(&addrStorage);
+        auto* sin       = reinterpret_cast<struct sockaddr_in*>(bytes);
+        sin->sin_family = AF_INET;
+        sin->sin_port   = htons(TEST_PORT);
+        inet_pton(AF_INET, TEST_ADDRESS, &sin->sin_addr);
+        addr = SolidSyslogAddress_FromStorage(&addrStorage);
     }
 
     void teardown() override
@@ -45,25 +50,25 @@ TEST(SolidSyslogPosixTcpStream, CreateDestroyWorksWithoutCrashing)
 
 TEST(SolidSyslogPosixTcpStream, OpenCallsSocketOnce)
 {
-    SolidSyslogStream_Open(stream, &addr);
+    SolidSyslogStream_Open(stream, addr);
     LONGS_EQUAL(1, SocketFake_SocketCallCount());
 }
 
 TEST(SolidSyslogPosixTcpStream, OpenCallsSocketWithAF_INET)
 {
-    SolidSyslogStream_Open(stream, &addr);
+    SolidSyslogStream_Open(stream, addr);
     LONGS_EQUAL(AF_INET, SocketFake_SocketDomain());
 }
 
 TEST(SolidSyslogPosixTcpStream, OpenCallsSocketWithSOCK_STREAM)
 {
-    SolidSyslogStream_Open(stream, &addr);
+    SolidSyslogStream_Open(stream, addr);
     LONGS_EQUAL(SOCK_STREAM, SocketFake_SocketType());
 }
 
 TEST(SolidSyslogPosixTcpStream, OpenEnablesTcpNoDelay)
 {
-    SolidSyslogStream_Open(stream, &addr);
+    SolidSyslogStream_Open(stream, addr);
     LONGS_EQUAL(1, SocketFake_SetSockOptCallCount());
     LONGS_EQUAL(IPPROTO_TCP, SocketFake_LastSetSockOptLevel());
     LONGS_EQUAL(TCP_NODELAY, SocketFake_LastSetSockOptOptname());
@@ -71,95 +76,95 @@ TEST(SolidSyslogPosixTcpStream, OpenEnablesTcpNoDelay)
 
 TEST(SolidSyslogPosixTcpStream, OpenCallsConnectWithSocketFd)
 {
-    SolidSyslogStream_Open(stream, &addr);
+    SolidSyslogStream_Open(stream, addr);
     LONGS_EQUAL(1, SocketFake_ConnectCallCount());
     LONGS_EQUAL(SocketFake_SocketFd(), SocketFake_LastConnectFd());
 }
 
 TEST(SolidSyslogPosixTcpStream, OpenCallsConnectWithProvidedAddress)
 {
-    SolidSyslogStream_Open(stream, &addr);
+    SolidSyslogStream_Open(stream, addr);
     LONGS_EQUAL(TEST_PORT, SocketFake_LastConnectPort());
     STRCMP_EQUAL(TEST_ADDRESS, SocketFake_LastConnectAddrAsString());
 }
 
 TEST(SolidSyslogPosixTcpStream, OpenReturnsTrueOnSuccess)
 {
-    CHECK_TRUE(SolidSyslogStream_Open(stream, &addr));
+    CHECK_TRUE(SolidSyslogStream_Open(stream, addr));
 }
 
 TEST(SolidSyslogPosixTcpStream, OpenReturnsFalseOnConnectFailure)
 {
     SocketFake_SetConnectFails(true);
-    CHECK_FALSE(SolidSyslogStream_Open(stream, &addr));
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
 }
 
 TEST(SolidSyslogPosixTcpStream, OpenClosesSocketOnConnectFailure)
 {
     SocketFake_SetConnectFails(true);
-    SolidSyslogStream_Open(stream, &addr);
+    SolidSyslogStream_Open(stream, addr);
     LONGS_EQUAL(1, SocketFake_CloseCallCount());
     LONGS_EQUAL(SocketFake_SocketFd(), SocketFake_LastClosedFd());
 }
 
 TEST(SolidSyslogPosixTcpStream, SendCallsSendOnce)
 {
-    SolidSyslogStream_Open(stream, &addr);
+    SolidSyslogStream_Open(stream, addr);
     SolidSyslogStream_Send(stream, TEST_MESSAGE, TEST_MESSAGE_LEN);
     LONGS_EQUAL(1, SocketFake_SendCallCount());
 }
 
 TEST(SolidSyslogPosixTcpStream, SendPassesBuffer)
 {
-    SolidSyslogStream_Open(stream, &addr);
+    SolidSyslogStream_Open(stream, addr);
     SolidSyslogStream_Send(stream, TEST_MESSAGE, TEST_MESSAGE_LEN);
     STRCMP_EQUAL(TEST_MESSAGE, SocketFake_SendBufAsString(0));
 }
 
 TEST(SolidSyslogPosixTcpStream, SendPassesLength)
 {
-    SolidSyslogStream_Open(stream, &addr);
+    SolidSyslogStream_Open(stream, addr);
     SolidSyslogStream_Send(stream, TEST_MESSAGE, TEST_MESSAGE_LEN);
     LONGS_EQUAL(TEST_MESSAGE_LEN, SocketFake_SendLen(0));
 }
 
 TEST(SolidSyslogPosixTcpStream, SendPassesMSG_NOSIGNALFlag)
 {
-    SolidSyslogStream_Open(stream, &addr);
+    SolidSyslogStream_Open(stream, addr);
     SolidSyslogStream_Send(stream, TEST_MESSAGE, TEST_MESSAGE_LEN);
     LONGS_EQUAL(MSG_NOSIGNAL, SocketFake_SendFlags(0));
 }
 
 TEST(SolidSyslogPosixTcpStream, SendPassesSocketFd)
 {
-    SolidSyslogStream_Open(stream, &addr);
+    SolidSyslogStream_Open(stream, addr);
     SolidSyslogStream_Send(stream, TEST_MESSAGE, TEST_MESSAGE_LEN);
     LONGS_EQUAL(SocketFake_SocketFd(), SocketFake_LastSendFd());
 }
 
 TEST(SolidSyslogPosixTcpStream, SendReturnsTrueOnSuccess)
 {
-    SolidSyslogStream_Open(stream, &addr);
+    SolidSyslogStream_Open(stream, addr);
     CHECK_TRUE(SolidSyslogStream_Send(stream, TEST_MESSAGE, TEST_MESSAGE_LEN));
 }
 
 TEST(SolidSyslogPosixTcpStream, SendReturnsFalseOnSendFailure)
 {
-    SolidSyslogStream_Open(stream, &addr);
+    SolidSyslogStream_Open(stream, addr);
     SocketFake_SetSendFails(true);
     CHECK_FALSE(SolidSyslogStream_Send(stream, TEST_MESSAGE, TEST_MESSAGE_LEN));
 }
 
 TEST(SolidSyslogPosixTcpStream, CloseCallsCloseOnce)
 {
-    SolidSyslogStream_Open(stream, &addr);
+    SolidSyslogStream_Open(stream, addr);
     SolidSyslogStream_Close(stream);
     LONGS_EQUAL(1, SocketFake_CloseCallCount());
 }
 
 TEST(SolidSyslogPosixTcpStream, CloseCalledWithSocketFd)
 {
-    SolidSyslogStream_Open(stream, &addr);
+    SolidSyslogStream_Open(stream, addr);
     SolidSyslogStream_Close(stream);
     LONGS_EQUAL(SocketFake_SocketFd(), SocketFake_LastClosedFd());
 }
