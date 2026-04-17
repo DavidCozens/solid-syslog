@@ -25,6 +25,9 @@ EXTERN_C_BEGIN
     socklen_t   SocketFake_LastAddrLen(void);
     int         SocketFake_LastSendtoFd(void);
 
+    /* socket configuration */
+    void SocketFake_SetSocketFails(bool fails);
+
     /* socket accessors */
     int SocketFake_SocketCallCount(void);
     int SocketFake_SocketFd(void);

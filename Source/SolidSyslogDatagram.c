@@ -1,8 +1,8 @@
 #include "SolidSyslogDatagramDefinition.h"
 
-void SolidSyslogDatagram_Open(struct SolidSyslogDatagram* datagram)
+bool SolidSyslogDatagram_Open(struct SolidSyslogDatagram* datagram)
 {
-    datagram->Open(datagram);
+    return datagram->Open(datagram);
 }
 
 bool SolidSyslogDatagram_SendTo(struct SolidSyslogDatagram* datagram, const void* buffer, size_t size, const struct sockaddr_in* addr)

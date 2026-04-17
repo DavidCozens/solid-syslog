@@ -20,10 +20,11 @@ static struct sockaddr_in lastAddr;
 static socklen_t          lastAddrLen;
 static int                lastSendtoFd;
 
-static int socketCallCount;
-static int socketFd;
-static int lastSocketDomain;
-static int lastSocketType;
+static bool socketFails;
+static int  socketCallCount;
+static int  socketFd;
+static int  lastSocketDomain;
+static int  lastSocketType;
 
 enum
 {
@@ -89,6 +90,7 @@ void SocketFake_Reset(void)
     setSockOptCallCount      = 0;
     lastSetSockOptLevel      = 0;
     lastSetSockOptOptname    = 0;
+    socketFails              = false;
     socketCallCount          = 0;
     socketFd                 = -1;
     lastSocketDomain         = 0;
@@ -166,6 +168,13 @@ socklen_t SocketFake_LastAddrLen(void)
 int SocketFake_LastSendtoFd(void)
 {
     return lastSendtoFd;
+}
+
+/* socket configuration */
+
+void SocketFake_SetSocketFails(bool fails)
+{
+    socketFails = fails;
 }
 
 /* socket accessors */
@@ -340,7 +349,14 @@ int socket(int domain, int type, int protocol)
     socketCallCount++;
     lastSocketDomain = domain;
     lastSocketType   = type;
-    socketFd         = socketCallCount; /* deterministic fake fd */
+    if (socketFails)
+    {
+        socketFd = -1;
+    }
+    else
+    {
+        socketFd = socketCallCount; /* deterministic fake fd */
+    }
     return socketFd;
 }
 
