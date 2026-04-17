@@ -7,8 +7,25 @@
 #include <stddef.h>
 #include <stdint.h>
 
-WinsockGetAddrInfoFn  Winsock_getaddrinfo  = getaddrinfo;
-WinsockFreeAddrInfoFn Winsock_freeaddrinfo = freeaddrinfo;
+/* File-local forwarders. Taking the address of a __declspec(dllimport)
+   Winsock function for static initialisation triggers MSVC C4232 (the address
+   isn't a compile-time constant); forwarding through a static function whose
+   address IS a compile-time constant avoids the warning without a suppression. */
+static int WSAAPI  CallGetAddrInfo(const char* node, const char* service, const struct addrinfo* hints, struct addrinfo** res);
+static void WSAAPI CallFreeAddrInfo(struct addrinfo* res);
+
+WinsockGetAddrInfoFn  Winsock_getaddrinfo  = CallGetAddrInfo;
+WinsockFreeAddrInfoFn Winsock_freeaddrinfo = CallFreeAddrInfo;
+
+static int WSAAPI CallGetAddrInfo(const char* node, const char* service, const struct addrinfo* hints, struct addrinfo** res)
+{
+    return getaddrinfo(node, service, hints, res);
+}
+
+static void WSAAPI CallFreeAddrInfo(struct addrinfo* res)
+{
+    freeaddrinfo(res);
+}
 
 enum
 {

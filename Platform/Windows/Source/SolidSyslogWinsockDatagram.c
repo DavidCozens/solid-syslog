@@ -6,9 +6,32 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-WinsockSocketFn      Winsock_socket      = socket;
-WinsockSendToFn      Winsock_sendto      = sendto;
-WinsockCloseSocketFn Winsock_closesocket = closesocket;
+/* File-local forwarders. Taking the address of a __declspec(dllimport)
+   Winsock function for static initialisation triggers MSVC C4232 (the address
+   isn't a compile-time constant); forwarding through a static function whose
+   address IS a compile-time constant avoids the warning without a suppression. */
+static SOCKET WSAAPI CallSocket(int af, int type, int protocol);
+static int WSAAPI    CallSendTo(SOCKET s, const char* buf, int len, int flags, const struct sockaddr* to, int tolen);
+static int WSAAPI    CallCloseSocket(SOCKET s);
+
+WinsockSocketFn      Winsock_socket      = CallSocket;
+WinsockSendToFn      Winsock_sendto      = CallSendTo;
+WinsockCloseSocketFn Winsock_closesocket = CallCloseSocket;
+
+static SOCKET WSAAPI CallSocket(int af, int type, int protocol)
+{
+    return socket(af, type, protocol);
+}
+
+static int WSAAPI CallSendTo(SOCKET s, const char* buf, int len, int flags, const struct sockaddr* to, int tolen)
+{
+    return sendto(s, buf, len, flags, to, tolen);
+}
+
+static int WSAAPI CallCloseSocket(SOCKET s)
+{
+    return closesocket(s);
+}
 
 static bool        Open(struct SolidSyslogDatagram* self);
 static bool        SendTo(struct SolidSyslogDatagram* self, const void* buffer, size_t size, const struct SolidSyslogAddress* addr);
