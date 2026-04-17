@@ -1,6 +1,7 @@
 #ifndef SOLIDSYSLOGUDPSENDER_H
 #define SOLIDSYSLOGUDPSENDER_H
 
+#include "SolidSyslogDatagram.h"
 #include "SolidSyslogResolver.h"
 #include "SolidSyslogSender.h"
 
@@ -14,6 +15,7 @@ EXTERN_C_BEGIN
     struct SolidSyslogUdpSenderConfig
     {
         struct SolidSyslogResolver* resolver;
+        struct SolidSyslogDatagram* datagram;
     };
 
     struct SolidSyslogSender* SolidSyslogUdpSender_Create(const struct SolidSyslogUdpSenderConfig* config);

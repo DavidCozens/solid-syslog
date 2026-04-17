@@ -1,5 +1,6 @@
 #include "CppUTest/TestHarness.h"
 #include "SolidSyslogGetAddrInfoResolver.h"
+#include "SolidSyslogPosixDatagram.h"
 #include "SolidSyslogUdpSender.h"
 #include "SolidSyslogSender.h"
 #include "SocketFake.h"
@@ -51,6 +52,7 @@ static int SpyGetPort()
 TEST_GROUP(SolidSyslogUdpSender)
 {
     struct SolidSyslogResolver* resolver = nullptr;
+    struct SolidSyslogDatagram* datagram = nullptr;
     struct SolidSyslogUdpSenderConfig config;
     // cppcheck-suppress constVariablePointer -- Send requires non-const self; false positive from macro expansion
     // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
@@ -60,7 +62,8 @@ TEST_GROUP(SolidSyslogUdpSender)
     {
         SocketFake_Reset();
         resolver = SolidSyslogGetAddrInfoResolver_Create(GetDefaultHost, GetDefaultPort);
-        config = {resolver};
+        datagram = SolidSyslogPosixDatagram_Create();
+        config = {resolver, datagram};
         // cppcheck-suppress unreadVariable -- read by teardown and tests; cppcheck does not model CppUTest lifecycle
         sender = SolidSyslogUdpSender_Create(&config);
     }
@@ -68,6 +71,7 @@ TEST_GROUP(SolidSyslogUdpSender)
     void teardown() override
     {
         SolidSyslogUdpSender_Destroy();
+        SolidSyslogPosixDatagram_Destroy();
         SolidSyslogGetAddrInfoResolver_Destroy();
     }
 
@@ -190,18 +194,21 @@ IGNORE_TEST(SolidSyslogUdpSender, HappyPathOnly)
 TEST_GROUP(SolidSyslogUdpSenderDestroy)
 {
     struct SolidSyslogResolver* resolver = nullptr;
+    struct SolidSyslogDatagram* datagram = nullptr;
     struct SolidSyslogUdpSenderConfig config;
 
     void setup() override
     {
         SocketFake_Reset();
         resolver = SolidSyslogGetAddrInfoResolver_Create(GetDefaultHost, GetDefaultPort);
+        datagram = SolidSyslogPosixDatagram_Create();
         // cppcheck-suppress unreadVariable -- used in test bodies; cppcheck does not model CppUTest macros
-        config = {resolver};
+        config = {resolver, datagram};
     }
 
     void teardown() override
     {
+        SolidSyslogPosixDatagram_Destroy();
         SolidSyslogGetAddrInfoResolver_Destroy();
     }
 
@@ -262,13 +269,15 @@ TEST_GROUP(SolidSyslogUdpSenderConfig)
     void teardown() override
     {
         SolidSyslogUdpSender_Destroy();
+        SolidSyslogPosixDatagram_Destroy();
         SolidSyslogGetAddrInfoResolver_Destroy();
     }
 
     void CreateSender()
     {
         struct SolidSyslogResolver* resolver = SolidSyslogGetAddrInfoResolver_Create(getHostFn, getPortFn);
-        struct SolidSyslogUdpSenderConfig config = {resolver};
+        struct SolidSyslogDatagram* datagram = SolidSyslogPosixDatagram_Create();
+        struct SolidSyslogUdpSenderConfig config = {resolver, datagram};
         sender = SolidSyslogUdpSender_Create(&config);
     }
 
