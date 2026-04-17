@@ -19,31 +19,24 @@ set(SOURCES
 
 if(HAVE_STDATOMIC_H)
     list(APPEND SOURCES SolidSyslogAtomicCounter.c)
-elseif(HAVE_WINDOWS_INTERLOCKED)
-    list(APPEND SOURCES SolidSyslogWindowsAtomicCounter.c)
 endif()
 
 if(SOLIDSYSLOG_POSIX)
     list(APPEND SOURCES
-        SolidSyslogPosixClock.c
-        SolidSyslogPosixHostname.c
-        SolidSyslogPosixMessageQueueBuffer.c
-        SolidSyslogPosixProcessId.c
         SolidSyslogResolver.c
-        SolidSyslogGetAddrInfoResolver.c
         SolidSyslogDatagram.c
-        SolidSyslogPosixDatagram.c
         SolidSyslogStream.c
-        SolidSyslogPosixTcpStream.c
         SolidSyslogUdpSender.c
         SolidSyslogTcpSender.c
-        SolidSyslogPosixFile.c
     )
 endif()
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/Interface)
+target_include_directories(${PROJECT_NAME}
+    PUBLIC  ${CMAKE_SOURCE_DIR}/Interface
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
+)
 
 if(SOLIDSYSLOG_POSIX)
     target_link_libraries(${PROJECT_NAME} PUBLIC rt)

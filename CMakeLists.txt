@@ -77,6 +77,14 @@ endif()
 add_subdirectory(Source)
 
 if(SOLIDSYSLOG_POSIX)
+    add_subdirectory(Platform/Posix)
+endif()
+
+if(HAVE_WINDOWS_INTERLOCKED)
+    add_subdirectory(Platform/Windows)
+endif()
+
+if(SOLIDSYSLOG_POSIX)
     add_subdirectory(Example)
 endif()
 
