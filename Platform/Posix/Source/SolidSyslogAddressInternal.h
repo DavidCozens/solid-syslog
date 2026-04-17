@@ -2,9 +2,13 @@
 #define SOLIDSYSLOGADDRESSINTERNAL_H
 
 #include "SolidSyslogAddress.h"
+#include "SolidSyslogMacros.h"
 
 #include <netinet/in.h>
 #include <stdint.h>
+
+SOLIDSYSLOG_STATIC_ASSERT(sizeof(struct sockaddr_in) <= SOLIDSYSLOG_ADDRESS_SIZE,
+                          SolidSyslogAddressStorage_too_small_for_sockaddr_in);
 
 static inline struct sockaddr_in* SolidSyslogAddress_AsSockaddrIn(struct SolidSyslogAddress* address)
 {
