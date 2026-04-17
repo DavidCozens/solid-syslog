@@ -99,6 +99,7 @@ if(COVERAGE)
                 --rc branch_coverage=1
             COMMAND ${LCOV_EXECUTABLE} --extract ${CMAKE_BINARY_DIR}/coverage.info
                 "${CMAKE_SOURCE_DIR}/Source/*"
+                "${CMAKE_SOURCE_DIR}/Platform/*/Source/*"
                 --output-file ${CMAKE_BINARY_DIR}/coverage.filtered.info
                 --rc branch_coverage=1
             COMMAND ${GENHTML_EXECUTABLE} ${CMAKE_BINARY_DIR}/coverage.filtered.info
