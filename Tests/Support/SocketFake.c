@@ -53,11 +53,13 @@ static int lastClosedFd;
 
 static char lastAddrString[INET_ADDRSTRLEN];
 
+static bool               getAddrInfoFails;
 static int                getAddrInfoCallCount;
 static char               lastGetAddrInfoHostname[256];
 static int                lastGetAddrInfoSocktype;
 static struct sockaddr_in fakeResolvedAddr;
 static struct addrinfo    fakeAddrInfo;
+static int                freeAddrInfoCallCount;
 
 void SocketFake_Reset(void)
 {
@@ -95,9 +97,11 @@ void SocketFake_Reset(void)
     lastClosedFd             = -1;
     lastAddrString[0]        = '\0';
 
+    getAddrInfoFails            = false;
     getAddrInfoCallCount        = 0;
     lastGetAddrInfoHostname[0]  = '\0';
     lastGetAddrInfoSocktype     = 0;
+    freeAddrInfoCallCount       = 0;
     fakeResolvedAddr            = (struct sockaddr_in) {0};
     fakeResolvedAddr.sin_family = AF_INET;
     fakeAddrInfo                = (struct addrinfo) {0};
@@ -296,6 +300,13 @@ int SocketFake_LastClosedFd(void)
     return lastClosedFd;
 }
 
+/* getaddrinfo configuration */
+
+void SocketFake_SetGetAddrInfoFails(bool fails)
+{
+    getAddrInfoFails = fails;
+}
+
 /* getaddrinfo accessors */
 
 int SocketFake_GetAddrInfoCallCount(void)
@@ -311,6 +322,13 @@ const char* SocketFake_LastGetAddrInfoHostname(void)
 int SocketFake_LastGetAddrInfoSocktype(void)
 {
     return lastGetAddrInfoSocktype;
+}
+
+/* freeaddrinfo accessors */
+
+int SocketFake_FreeAddrInfoCallCount(void)
+{
+    return freeAddrInfoCallCount;
 }
 
 /* POSIX strong-symbol fakes */
@@ -404,6 +422,10 @@ int getaddrinfo(const char* node, const char* service, const struct addrinfo* hi
     getAddrInfoCallCount++;
     lastGetAddrInfoSocktype = hints ? hints->ai_socktype : 0;
     SafeString_Copy(lastGetAddrInfoHostname, sizeof(lastGetAddrInfoHostname), node ? node : "");
+    if (getAddrInfoFails)
+    {
+        return EAI_FAIL;
+    }
     inet_pton(AF_INET, node, &fakeResolvedAddr.sin_addr);
     *res = &fakeAddrInfo;
     return 0;
@@ -413,4 +435,5 @@ int getaddrinfo(const char* node, const char* service, const struct addrinfo* hi
 void freeaddrinfo(struct addrinfo* res)
 {
     (void) res;
+    freeAddrInfoCallCount++;
 }

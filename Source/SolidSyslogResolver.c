@@ -1,6 +1,6 @@
 #include "SolidSyslogResolverDefinition.h"
 
-void SolidSyslogResolver_Resolve(struct SolidSyslogResolver* resolver, enum SolidSyslogTransport transport, struct sockaddr_in* result)
+bool SolidSyslogResolver_Resolve(struct SolidSyslogResolver* resolver, enum SolidSyslogTransport transport, struct sockaddr_in* result)
 {
-    resolver->Resolve(resolver, transport, result);
+    return resolver->Resolve(resolver, transport, result);
 }

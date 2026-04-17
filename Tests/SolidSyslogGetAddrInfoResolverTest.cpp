@@ -114,3 +114,27 @@ TEST(SolidSyslogGetAddrInfoResolver, TcpTransportPassesStreamSocktype)
     resolver->Resolve(resolver, SOLIDSYSLOG_TRANSPORT_TCP, &result);
     LONGS_EQUAL(SOCK_STREAM, SocketFake_LastGetAddrInfoSocktype());
 }
+
+TEST(SolidSyslogGetAddrInfoResolver, ResolveReturnsFalseWhenGetAddrInfoFails)
+{
+    SocketFake_SetGetAddrInfoFails(true);
+    CHECK_FALSE(resolver->Resolve(resolver, SOLIDSYSLOG_TRANSPORT_UDP, &result));
+}
+
+TEST(SolidSyslogGetAddrInfoResolver, ResolveReturnsTrueOnSuccess)
+{
+    CHECK_TRUE(resolver->Resolve(resolver, SOLIDSYSLOG_TRANSPORT_UDP, &result));
+}
+
+TEST(SolidSyslogGetAddrInfoResolver, ResolveDoesNotFreeAddrInfoWhenGetAddrInfoFails)
+{
+    SocketFake_SetGetAddrInfoFails(true);
+    resolver->Resolve(resolver, SOLIDSYSLOG_TRANSPORT_UDP, &result);
+    LONGS_EQUAL(0, SocketFake_FreeAddrInfoCallCount());
+}
+
+TEST(SolidSyslogGetAddrInfoResolver, ResolveFreesAddrInfoOnSuccess)
+{
+    resolver->Resolve(resolver, SOLIDSYSLOG_TRANSPORT_UDP, &result);
+    LONGS_EQUAL(1, SocketFake_FreeAddrInfoCallCount());
+}

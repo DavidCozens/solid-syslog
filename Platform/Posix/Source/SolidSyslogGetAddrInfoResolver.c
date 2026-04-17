@@ -2,10 +2,16 @@
 #include "SolidSyslogResolverDefinition.h"
 
 #include <netdb.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <sys/socket.h>
 
-static void Resolve(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, struct sockaddr_in* result);
+enum
+{
+    GETADDRINFO_SUCCESS = 0
+};
+
+static bool Resolve(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, struct sockaddr_in* result);
 
 static int MapTransport(enum SolidSyslogTransport transport);
 
@@ -26,21 +32,26 @@ struct SolidSyslogResolver* SolidSyslogGetAddrInfoResolver_Create(const char* (*
     return &instance.base;
 }
 
-static void Resolve(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, struct sockaddr_in* result)
+static bool Resolve(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, struct sockaddr_in* result)
 {
     struct SolidSyslogGetAddrInfoResolver* resolver = (struct SolidSyslogGetAddrInfoResolver*) self;
 
-    struct addrinfo  hints    = {0};
-    struct addrinfo* resolved = NULL;
-    hints.ai_family           = AF_INET;
-    hints.ai_socktype         = MapTransport(transport);
+    struct addrinfo hints = {0};
+    hints.ai_family       = AF_INET;
+    hints.ai_socktype     = MapTransport(transport);
 
-    // NOLINTNEXTLINE(bugprone-unused-return-value) -- error handling deferred to Epic #31
-    getaddrinfo(resolver->getHost(), NULL, &hints, &resolved);
+    struct addrinfo* info     = NULL;
+    bool             resolved = false;
 
-    *result          = *(struct sockaddr_in*) resolved->ai_addr;
-    result->sin_port = htons((uint16_t) resolver->getPort());
-    freeaddrinfo(resolved);
+    if (getaddrinfo(resolver->getHost(), NULL, &hints, &info) == GETADDRINFO_SUCCESS)
+    {
+        *result          = *(struct sockaddr_in*) info->ai_addr;
+        result->sin_port = htons((uint16_t) resolver->getPort());
+        freeaddrinfo(info);
+        resolved = true;
+    }
+
+    return resolved;
 }
 
 static int MapTransport(enum SolidSyslogTransport transport)
