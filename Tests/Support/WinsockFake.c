@@ -222,14 +222,25 @@ SOCKET WSAAPI WinsockFake_socket(int af, int type, int protocol)
 int WSAAPI WinsockFake_sendto(SOCKET s, const char* buf, int len, int flags, const struct sockaddr* to, int tolen)
 {
     sendtoCallCount++;
-    lastSendtoFd    = s;
-    size_t copySize = (size_t) len < sizeof(lastBufCopy) - 1 ? (size_t) len : sizeof(lastBufCopy) - 1;
-    memcpy(lastBufCopy, buf, copySize);
-    lastBufCopy[copySize] = '\0';
-    lastLen               = (size_t) len;
-    lastFlags             = flags;
-    lastAddr              = *(const struct sockaddr_in*) to;
-    lastAddrLen           = tolen;
+    lastSendtoFd = s;
+    lastFlags    = flags;
+    lastAddrLen  = tolen;
+    if (buf != NULL && len >= 0)
+    {
+        size_t copySize = (size_t) len < sizeof(lastBufCopy) - 1 ? (size_t) len : sizeof(lastBufCopy) - 1;
+        memcpy(lastBufCopy, buf, copySize);
+        lastBufCopy[copySize] = '\0';
+        lastLen               = (size_t) len;
+    }
+    else
+    {
+        lastBufCopy[0] = '\0';
+        lastLen        = 0;
+    }
+    if (to != NULL && tolen >= (int) sizeof(struct sockaddr_in))
+    {
+        lastAddr = *(const struct sockaddr_in*) to;
+    }
     return sendtoFails ? SOCKET_ERROR : len;
 }
 
