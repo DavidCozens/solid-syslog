@@ -344,6 +344,7 @@ TEST_GROUP(SolidSyslogTcpSenderFailure)
     void teardown() override
     {
         SolidSyslogTcpSender_Destroy();
+        SolidSyslogPosixTcpStream_Destroy();
         SolidSyslogGetAddrInfoResolver_Destroy();
     }
 
