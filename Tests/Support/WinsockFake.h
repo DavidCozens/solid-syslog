@@ -54,7 +54,7 @@ EXTERN_C_BEGIN
     int WSAAPI    WinsockFake_sendto(SOCKET s, const char* buf, int len, int flags, const struct sockaddr* to, int tolen);
     int WSAAPI    WinsockFake_closesocket(SOCKET s);
     int WSAAPI    WinsockFake_getaddrinfo(const char* node, const char* service, const struct addrinfo* hints, struct addrinfo** res);
-    void WSAAPI   WinsockFake_freeaddrinfo(struct addrinfo* res);
+    void WSAAPI   WinsockFake_freeaddrinfo(struct addrinfo * res);
 
 EXTERN_C_END
 

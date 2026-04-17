@@ -22,6 +22,7 @@ TEST_GROUP(WinsockFake)
         inet_pton(AF_INET, TEST_HOST, &destination.sin_addr);
     }
 };
+
 // clang-format on
 
 TEST(WinsockFake, SocketRecordsCall)
@@ -60,15 +61,13 @@ TEST(WinsockFake, SendtoRecordsBufferAndAddress)
 TEST(WinsockFake, SendtoReturnsSocketErrorWhenFailing)
 {
     WinsockFake_SetSendtoFails(true);
-    int result = WinsockFake_sendto(INVALID_SOCKET, TEST_MESSAGE, TEST_MESSAGE_LEN, 0,
-                                    (const struct sockaddr*) &destination, sizeof(destination));
+    int result = WinsockFake_sendto(INVALID_SOCKET, TEST_MESSAGE, TEST_MESSAGE_LEN, 0, (const struct sockaddr*) &destination, sizeof(destination));
     LONGS_EQUAL(SOCKET_ERROR, result);
 }
 
 TEST(WinsockFake, SendtoReturnsLengthOnSuccess)
 {
-    int result = WinsockFake_sendto(INVALID_SOCKET, TEST_MESSAGE, TEST_MESSAGE_LEN, 0,
-                                    (const struct sockaddr*) &destination, sizeof(destination));
+    int result = WinsockFake_sendto(INVALID_SOCKET, TEST_MESSAGE, TEST_MESSAGE_LEN, 0, (const struct sockaddr*) &destination, sizeof(destination));
     LONGS_EQUAL(TEST_MESSAGE_LEN, result);
 }
 
@@ -82,9 +81,9 @@ TEST(WinsockFake, ClosesocketRecordsCall)
 
 TEST(WinsockFake, GetAddrInfoRecordsHostnameAndSocktype)
 {
-    struct addrinfo  hints = {0, 0, 0, 0, 0, nullptr, nullptr, nullptr};
-    hints.ai_socktype      = SOCK_DGRAM;
-    struct addrinfo* res   = nullptr;
+    struct addrinfo hints = {0, 0, 0, 0, 0, nullptr, nullptr, nullptr};
+    hints.ai_socktype     = SOCK_DGRAM;
+    struct addrinfo* res  = nullptr;
     WinsockFake_getaddrinfo(TEST_HOST, nullptr, &hints, &res);
     LONGS_EQUAL(1, WinsockFake_GetAddrInfoCallCount());
     STRCMP_EQUAL(TEST_HOST, WinsockFake_LastGetAddrInfoHostname());
