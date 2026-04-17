@@ -42,6 +42,7 @@ static bool Open(struct SolidSyslogStream* self, const struct sockaddr_in* addr)
     stream->fd = socket(AF_INET, SOCK_STREAM, 0);
     EnableTcpNoDelay(stream->fd);
 
+    // NOLINTNEXTLINE(clang-analyzer-unix.StdCLibraryFunctions) -- socket() failure handling deferred to error handling epic
     bool connected = connect(stream->fd, (const struct sockaddr*) addr, sizeof(*addr)) == 0;
 
     if (!connected)
