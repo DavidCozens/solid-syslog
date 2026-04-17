@@ -7,7 +7,7 @@ EXTERN_C_BEGIN
 
     struct SolidSyslogStream
     {
-        bool (*Open)(struct SolidSyslogStream* self, const struct sockaddr_in* addr);
+        bool (*Open)(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr);
         bool (*Send)(struct SolidSyslogStream* self, const void* buffer, size_t size);
         void (*Close)(struct SolidSyslogStream* self);
     };

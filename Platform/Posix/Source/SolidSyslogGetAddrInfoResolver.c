@@ -1,4 +1,5 @@
 #include "SolidSyslogGetAddrInfoResolver.h"
+#include "SolidSyslogAddressInternal.h"
 #include "SolidSyslogResolverDefinition.h"
 
 #include <netdb.h>
@@ -11,7 +12,7 @@ enum
     GETADDRINFO_SUCCESS = 0
 };
 
-static bool Resolve(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, struct sockaddr_in* result);
+static bool Resolve(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, struct SolidSyslogAddress* result);
 
 static int MapTransport(enum SolidSyslogTransport transport);
 
@@ -32,7 +33,7 @@ struct SolidSyslogResolver* SolidSyslogGetAddrInfoResolver_Create(const char* (*
     return &instance.base;
 }
 
-static bool Resolve(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, struct sockaddr_in* result)
+static bool Resolve(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, struct SolidSyslogAddress* result)
 {
     struct SolidSyslogGetAddrInfoResolver* resolver = (struct SolidSyslogGetAddrInfoResolver*) self;
 
@@ -45,8 +46,9 @@ static bool Resolve(struct SolidSyslogResolver* self, enum SolidSyslogTransport 
 
     if (getaddrinfo(resolver->getHost(), NULL, &hints, &info) == GETADDRINFO_SUCCESS)
     {
-        *result          = *(struct sockaddr_in*) info->ai_addr;
-        result->sin_port = htons((uint16_t) resolver->getPort());
+        struct sockaddr_in* sin = SolidSyslogAddress_AsSockaddrIn(result);
+        *sin                    = *(struct sockaddr_in*) info->ai_addr;
+        sin->sin_port           = htons((uint16_t) resolver->getPort());
         freeaddrinfo(info);
         resolved = true;
     }

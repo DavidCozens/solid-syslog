@@ -5,7 +5,7 @@ bool SolidSyslogDatagram_Open(struct SolidSyslogDatagram* datagram)
     return datagram->Open(datagram);
 }
 
-bool SolidSyslogDatagram_SendTo(struct SolidSyslogDatagram* datagram, const void* buffer, size_t size, const struct sockaddr_in* addr)
+bool SolidSyslogDatagram_SendTo(struct SolidSyslogDatagram* datagram, const void* buffer, size_t size, const struct SolidSyslogAddress* addr)
 {
     return datagram->SendTo(datagram, buffer, size, addr);
 }

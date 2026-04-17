@@ -77,11 +77,12 @@ static bool EnsureConnected(struct SolidSyslogTcpSender* tcp)
 
 static bool Connect(struct SolidSyslogTcpSender* tcp)
 {
-    struct sockaddr_in addr;
+    SolidSyslogAddressStorage  addrStorage = {0};
+    struct SolidSyslogAddress* addr        = SolidSyslogAddress_FromStorage(&addrStorage);
 
-    if (SolidSyslogResolver_Resolve(tcp->config.resolver, SOLIDSYSLOG_TRANSPORT_TCP, &addr))
+    if (SolidSyslogResolver_Resolve(tcp->config.resolver, SOLIDSYSLOG_TRANSPORT_TCP, addr))
     {
-        tcp->connected = SolidSyslogStream_Open(tcp->config.stream, &addr);
+        tcp->connected = SolidSyslogStream_Open(tcp->config.stream, addr);
     }
 
     return tcp->connected;

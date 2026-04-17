@@ -1,4 +1,5 @@
 #include "SolidSyslogPosixDatagram.h"
+#include "SolidSyslogAddressInternal.h"
 #include "SolidSyslogDatagramDefinition.h"
 
 #include <stdbool.h>
@@ -12,7 +13,7 @@ enum
 };
 
 static bool        Open(struct SolidSyslogDatagram* self);
-static bool        SendTo(struct SolidSyslogDatagram* self, const void* buffer, size_t size, const struct sockaddr_in* addr);
+static bool        SendTo(struct SolidSyslogDatagram* self, const void* buffer, size_t size, const struct SolidSyslogAddress* addr);
 static void        Close(struct SolidSyslogDatagram* self);
 static inline bool IsFileDescriptorValid(int fd);
 
@@ -51,10 +52,11 @@ static inline bool IsFileDescriptorValid(int fd)
     return fd >= 0;
 }
 
-static bool SendTo(struct SolidSyslogDatagram* self, const void* buffer, size_t size, const struct sockaddr_in* addr)
+static bool SendTo(struct SolidSyslogDatagram* self, const void* buffer, size_t size, const struct SolidSyslogAddress* addr)
 {
     struct SolidSyslogPosixDatagram* datagram = (struct SolidSyslogPosixDatagram*) self;
-    return sendto(datagram->fd, buffer, size, 0, (const struct sockaddr*) addr, sizeof(*addr)) >= 0;
+    const struct sockaddr_in*        sin      = SolidSyslogAddress_AsConstSockaddrIn(addr);
+    return sendto(datagram->fd, buffer, size, 0, (const struct sockaddr*) sin, sizeof(*sin)) >= 0;
 }
 
 static void Close(struct SolidSyslogDatagram* self)

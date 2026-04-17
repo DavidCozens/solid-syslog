@@ -8,7 +8,7 @@ EXTERN_C_BEGIN
     struct SolidSyslogDatagram
     {
         bool (*Open)(struct SolidSyslogDatagram* self);
-        bool (*SendTo)(struct SolidSyslogDatagram* self, const void* buffer, size_t size, const struct sockaddr_in* addr);
+        bool (*SendTo)(struct SolidSyslogDatagram* self, const void* buffer, size_t size, const struct SolidSyslogAddress* addr);
         void (*Close)(struct SolidSyslogDatagram* self);
     };
 
