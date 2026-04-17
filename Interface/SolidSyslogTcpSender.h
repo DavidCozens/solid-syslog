@@ -2,6 +2,7 @@
 #define SOLIDSYSLOG_TCP_SENDER_H
 
 #include "SolidSyslogResolver.h"
+#include "SolidSyslogStream.h"
 
 struct SolidSyslogSender;
 
@@ -13,6 +14,7 @@ enum
 struct SolidSyslogTcpSenderConfig
 {
     struct SolidSyslogResolver* resolver;
+    struct SolidSyslogStream*   stream;
 };
 
 EXTERN_C_BEGIN

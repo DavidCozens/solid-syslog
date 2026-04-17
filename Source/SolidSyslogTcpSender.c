@@ -2,20 +2,17 @@
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogSenderDefinition.h"
 
-#include <netinet/tcp.h>
 #include <stdbool.h>
-#include <sys/socket.h>
-#include <unistd.h>
+#include <stddef.h>
 
 struct SolidSyslogTcpSender
 {
     struct SolidSyslogSender          base;
-    int                               fd;
     struct SolidSyslogTcpSenderConfig config;
     bool                              connected;
 };
 
-static struct SolidSyslogTcpSender instance = {.fd = -1};
+static struct SolidSyslogTcpSender instance;
 
 enum
 {
@@ -26,32 +23,28 @@ enum
 };
 
 static bool                         Connect(struct SolidSyslogTcpSender* tcp);
-static void                         CreateSocket(struct SolidSyslogTcpSender* tcp);
-static void                         Disconnect(struct SolidSyslogTcpSender* tcp);
 static bool                         EnsureConnected(struct SolidSyslogTcpSender* tcp);
 static struct SolidSyslogFormatter* FormatOctetCountingPrefix(SolidSyslogFormatterStorage* storage, size_t messageSize);
 static bool                         Send(struct SolidSyslogSender* self, const void* buffer, size_t size);
 static bool                         SendData(struct SolidSyslogTcpSender* tcp, const void* data, size_t len);
-static void                         EnableTcpNoDelay(int fd);
 
 struct SolidSyslogSender* SolidSyslogTcpSender_Create(const struct SolidSyslogTcpSenderConfig* config)
 {
     instance.config    = *config;
     instance.base.Send = Send;
     instance.connected = false;
-    instance.fd        = -1;
     return &instance.base;
 }
 
 void SolidSyslogTcpSender_Destroy(void)
 {
-    if (instance.fd >= 0)
+    if (instance.connected && instance.config.stream != NULL)
     {
-        close(instance.fd);
+        SolidSyslogStream_Close(instance.config.stream);
     }
-    instance.fd        = -1;
     instance.base.Send = NULL;
     instance.connected = false;
+    instance.config    = (struct SolidSyslogTcpSenderConfig) {0};
 }
 
 static bool Send(struct SolidSyslogSender* self, const void* buffer, size_t size)
@@ -84,42 +77,12 @@ static bool EnsureConnected(struct SolidSyslogTcpSender* tcp)
 
 static bool Connect(struct SolidSyslogTcpSender* tcp)
 {
-    CreateSocket(tcp);
-
     struct sockaddr_in addr;
     SolidSyslogResolver_Resolve(tcp->config.resolver, SOLIDSYSLOG_TRANSPORT_TCP, &addr);
-    // NOLINTNEXTLINE(clang-analyzer-unix.StdCLibraryFunctions) -- socket() failure handling deferred to error handling epic
-    bool connected = connect(tcp->fd, (struct sockaddr*) &addr, sizeof(addr)) == 0;
 
-    if (connected)
-    {
-        tcp->connected = true;
-    }
-    else
-    {
-        Disconnect(tcp);
-    }
+    tcp->connected = SolidSyslogStream_Open(tcp->config.stream, &addr);
 
-    return connected;
-}
-
-static void CreateSocket(struct SolidSyslogTcpSender* tcp)
-{
-    tcp->fd = socket(AF_INET, SOCK_STREAM, 0);
-    EnableTcpNoDelay(tcp->fd);
-}
-
-static void EnableTcpNoDelay(int fd)
-{
-    int enable = 1;
-    setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &enable, sizeof(enable));
-}
-
-static void Disconnect(struct SolidSyslogTcpSender* tcp)
-{
-    close(tcp->fd);
-    tcp->fd        = -1;
-    tcp->connected = false;
+    return tcp->connected;
 }
 
 static struct SolidSyslogFormatter* FormatOctetCountingPrefix(SolidSyslogFormatterStorage* storage, size_t messageSize)
@@ -132,11 +95,12 @@ static struct SolidSyslogFormatter* FormatOctetCountingPrefix(SolidSyslogFormatt
 
 static bool SendData(struct SolidSyslogTcpSender* tcp, const void* data, size_t len)
 {
-    bool sent = send(tcp->fd, data, len, MSG_NOSIGNAL) >= 0;
+    bool sent = SolidSyslogStream_Send(tcp->config.stream, data, len);
 
     if (!sent)
     {
-        Disconnect(tcp);
+        SolidSyslogStream_Close(tcp->config.stream);
+        tcp->connected = false;
     }
 
     return sent;
