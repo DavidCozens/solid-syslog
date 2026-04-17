@@ -66,6 +66,9 @@ include(CheckSymbolExists)
 check_symbol_exists(sendto "sys/socket.h" HAVE_POSIX_SOCKETS)
 option(SOLIDSYSLOG_POSIX "Include POSIX UDP sender" ${HAVE_POSIX_SOCKETS})
 
+check_symbol_exists(sendto "winsock2.h" HAVE_WINSOCK)
+option(SOLIDSYSLOG_WINSOCK "Include Winsock UDP sender" ${HAVE_WINSOCK})
+
 include(CheckIncludeFile)
 check_include_file(stdatomic.h HAVE_STDATOMIC_H)
 check_symbol_exists(InterlockedIncrement "windows.h" HAVE_WINDOWS_INTERLOCKED)
@@ -80,7 +83,7 @@ if(SOLIDSYSLOG_POSIX)
     add_subdirectory(Platform/Posix)
 endif()
 
-if(HAVE_WINDOWS_INTERLOCKED)
+if(HAVE_WINDOWS_INTERLOCKED OR SOLIDSYSLOG_WINSOCK)
     add_subdirectory(Platform/Windows)
 endif()
 
