@@ -1,5 +1,8 @@
-if(SOLIDSYSLOG_POSIX)
+if(SOLIDSYSLOG_POSIX OR SOLIDSYSLOG_WINSOCK)
     add_subdirectory(Support)
+endif()
+
+if(SOLIDSYSLOG_POSIX)
     add_subdirectory(Example)
 endif()
 
@@ -54,7 +57,18 @@ if(SOLIDSYSLOG_POSIX)
         SolidSyslogGetAddrInfoResolverTest.cpp
         SolidSyslogPosixDatagramTest.cpp
         SolidSyslogPosixTcpStreamTest.cpp
-        SolidSyslogAddressTest.cpp
+    )
+endif()
+
+if(SOLIDSYSLOG_POSIX OR SOLIDSYSLOG_WINSOCK)
+    list(APPEND TEST_SOURCES SolidSyslogAddressTest.cpp)
+endif()
+
+if(SOLIDSYSLOG_WINSOCK)
+    list(APPEND TEST_SOURCES
+        WinsockFakeTest.cpp
+        SolidSyslogWinsockResolverTest.cpp
+        SolidSyslogWinsockDatagramTest.cpp
     )
 endif()
 
@@ -65,6 +79,11 @@ target_include_directories(${PROJECT_NAME}Tests PRIVATE ${CMAKE_SOURCE_DIR}/Sour
 
 if(SOLIDSYSLOG_POSIX)
     target_link_libraries(${PROJECT_NAME}Tests PRIVATE PosixFakes)
+endif()
+
+if(SOLIDSYSLOG_WINSOCK)
+    target_link_libraries(${PROJECT_NAME}Tests PRIVATE WinsockFakes)
+    target_include_directories(${PROJECT_NAME}Tests PRIVATE ${CMAKE_SOURCE_DIR}/Platform/Windows/Source)
 endif()
 
 # Standard CppUTest console output via ctest -V
