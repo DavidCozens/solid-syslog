@@ -25,6 +25,9 @@ EXTERN_C_BEGIN
     socklen_t   SocketFake_LastAddrLen(void);
     int         SocketFake_LastSendtoFd(void);
 
+    /* socket configuration */
+    void SocketFake_SetSocketFails(bool fails);
+
     /* socket accessors */
     int SocketFake_SocketCallCount(void);
     int SocketFake_SocketFd(void);
@@ -60,10 +63,16 @@ EXTERN_C_BEGIN
     int SocketFake_CloseCallCount(void);
     int SocketFake_LastClosedFd(void);
 
+    /* getaddrinfo configuration */
+    void SocketFake_SetGetAddrInfoFails(bool fails);
+
     /* getaddrinfo accessors */
     int         SocketFake_GetAddrInfoCallCount(void);
     const char* SocketFake_LastGetAddrInfoHostname(void);
     int         SocketFake_LastGetAddrInfoSocktype(void);
+
+    /* freeaddrinfo accessors */
+    int SocketFake_FreeAddrInfoCallCount(void);
 
 EXTERN_C_END
 

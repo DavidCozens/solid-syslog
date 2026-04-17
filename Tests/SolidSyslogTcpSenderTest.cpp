@@ -473,3 +473,22 @@ TEST(SolidSyslogTcpSenderFailure, BodySendFailureClosesSocket)
     Send();
     LONGS_EQUAL(1, SocketFake_CloseCallCount());
 }
+
+TEST(SolidSyslogTcpSenderFailure, SendReturnsFalseWhenResolverFails)
+{
+    SocketFake_SetGetAddrInfoFails(true);
+    CHECK_FALSE(Send());
+}
+
+TEST(SolidSyslogTcpSenderFailure, SendDoesNotOpenStreamWhenResolverFails)
+{
+    SocketFake_SetGetAddrInfoFails(true);
+    Send();
+    LONGS_EQUAL(0, SocketFake_SocketCallCount());
+    LONGS_EQUAL(0, SocketFake_ConnectCallCount());
+}
+
+TEST(SolidSyslogTcpSenderFailure, SendReturnsTrueWhenResolverSucceeds)
+{
+    CHECK_TRUE(Send());
+}

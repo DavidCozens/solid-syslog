@@ -329,3 +329,72 @@ TEST(SolidSyslogUdpSenderConfig, SendtoCalledWithResolvedAddress)
     Send();
     STRCMP_EQUAL(TEST_DEFAULT_HOST, SocketFake_LastAddrAsString());
 }
+
+// clang-format off
+TEST_GROUP(SolidSyslogUdpSenderFailure)
+{
+    struct SolidSyslogResolver*       resolver = nullptr;
+    struct SolidSyslogDatagram*       datagram = nullptr;
+    struct SolidSyslogUdpSenderConfig config;
+    // cppcheck-suppress constVariablePointer -- Send requires non-const self; false positive from macro expansion
+    // cppcheck-suppress unreadVariable -- assigned in CreateSender; cppcheck does not model CppUTest macros
+    struct SolidSyslogSender*         sender = nullptr;
+
+    void setup() override
+    {
+        SocketFake_Reset();
+    }
+
+    void teardown() override
+    {
+        SolidSyslogUdpSender_Destroy();
+        SolidSyslogPosixDatagram_Destroy();
+        SolidSyslogGetAddrInfoResolver_Destroy();
+    }
+
+    void CreateSender()
+    {
+        resolver = SolidSyslogGetAddrInfoResolver_Create(GetDefaultHost, GetDefaultPort);
+        datagram = SolidSyslogPosixDatagram_Create();
+        config   = {resolver, datagram};
+        // cppcheck-suppress unreadVariable -- read by tests; cppcheck does not model CppUTest macros
+        sender   = SolidSyslogUdpSender_Create(&config);
+    }
+};
+
+// clang-format on
+
+TEST(SolidSyslogUdpSenderFailure, SendReturnsFalseWhenResolverFailedAtCreate)
+{
+    SocketFake_SetGetAddrInfoFails(true);
+    CreateSender();
+    CHECK_FALSE(SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN));
+}
+
+TEST(SolidSyslogUdpSenderFailure, SendReturnsFalseWhenSocketFailedAtCreate)
+{
+    SocketFake_SetSocketFails(true);
+    CreateSender();
+    CHECK_FALSE(SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN));
+}
+
+TEST(SolidSyslogUdpSenderFailure, DoesNotResolveWhenSocketFailedAtCreate)
+{
+    SocketFake_SetSocketFails(true);
+    CreateSender();
+    LONGS_EQUAL(0, SocketFake_GetAddrInfoCallCount());
+}
+
+TEST(SolidSyslogUdpSenderFailure, SendDoesNotCallSendtoWhenResolverFailed)
+{
+    SocketFake_SetGetAddrInfoFails(true);
+    CreateSender();
+    SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN);
+    LONGS_EQUAL(0, SocketFake_SendtoCallCount());
+}
+
+TEST(SolidSyslogUdpSenderFailure, SendReturnsTrueWhenResolverAndSocketSucceed)
+{
+    CreateSender();
+    CHECK_TRUE(SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN));
+}

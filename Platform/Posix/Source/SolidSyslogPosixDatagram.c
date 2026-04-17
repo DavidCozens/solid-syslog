@@ -6,9 +6,15 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-static void Open(struct SolidSyslogDatagram* self);
-static bool SendTo(struct SolidSyslogDatagram* self, const void* buffer, size_t size, const struct sockaddr_in* addr);
-static void Close(struct SolidSyslogDatagram* self);
+enum
+{
+    INVALID_FD = -1
+};
+
+static bool        Open(struct SolidSyslogDatagram* self);
+static bool        SendTo(struct SolidSyslogDatagram* self, const void* buffer, size_t size, const struct sockaddr_in* addr);
+static void        Close(struct SolidSyslogDatagram* self);
+static inline bool IsFileDescriptorValid(int fd);
 
 struct SolidSyslogPosixDatagram
 {
@@ -16,7 +22,7 @@ struct SolidSyslogPosixDatagram
     int                        fd;
 };
 
-static struct SolidSyslogPosixDatagram instance = {.fd = -1};
+static struct SolidSyslogPosixDatagram instance = {.fd = INVALID_FD};
 
 struct SolidSyslogDatagram* SolidSyslogPosixDatagram_Create(void)
 {
@@ -33,10 +39,16 @@ void SolidSyslogPosixDatagram_Destroy(void)
     instance.base.Close  = NULL;
 }
 
-static void Open(struct SolidSyslogDatagram* self)
+static bool Open(struct SolidSyslogDatagram* self)
 {
     struct SolidSyslogPosixDatagram* datagram = (struct SolidSyslogPosixDatagram*) self;
     datagram->fd                              = socket(AF_INET, SOCK_DGRAM, 0);
+    return IsFileDescriptorValid(datagram->fd);
+}
+
+static inline bool IsFileDescriptorValid(int fd)
+{
+    return fd >= 0;
 }
 
 static bool SendTo(struct SolidSyslogDatagram* self, const void* buffer, size_t size, const struct sockaddr_in* addr)
@@ -48,9 +60,9 @@ static bool SendTo(struct SolidSyslogDatagram* self, const void* buffer, size_t 
 static void Close(struct SolidSyslogDatagram* self)
 {
     struct SolidSyslogPosixDatagram* datagram = (struct SolidSyslogPosixDatagram*) self;
-    if (datagram->fd >= 0)
+    if (IsFileDescriptorValid(datagram->fd))
     {
         close(datagram->fd);
-        datagram->fd = -1;
+        datagram->fd = INVALID_FD;
     }
 }

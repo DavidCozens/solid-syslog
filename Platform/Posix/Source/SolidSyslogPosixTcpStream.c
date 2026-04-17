@@ -6,11 +6,16 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-static bool Open(struct SolidSyslogStream* self, const struct sockaddr_in* addr);
-static bool Send(struct SolidSyslogStream* self, const void* buffer, size_t size);
-static void Close(struct SolidSyslogStream* self);
+enum
+{
+    INVALID_FD = -1
+};
 
-static void EnableTcpNoDelay(int fd);
+static bool        Open(struct SolidSyslogStream* self, const struct sockaddr_in* addr);
+static bool        Send(struct SolidSyslogStream* self, const void* buffer, size_t size);
+static void        Close(struct SolidSyslogStream* self);
+static void        EnableTcpNoDelay(int fd);
+static inline bool IsFileDescriptorValid(int fd);
 
 struct SolidSyslogPosixTcpStream
 {
@@ -18,7 +23,7 @@ struct SolidSyslogPosixTcpStream
     int                      fd;
 };
 
-static struct SolidSyslogPosixTcpStream instance = {.fd = -1};
+static struct SolidSyslogPosixTcpStream instance = {.fd = INVALID_FD};
 
 struct SolidSyslogStream* SolidSyslogPosixTcpStream_Create(void)
 {
@@ -48,10 +53,16 @@ static bool Open(struct SolidSyslogStream* self, const struct sockaddr_in* addr)
     if (!connected)
     {
         close(stream->fd);
-        stream->fd = -1;
+        stream->fd = INVALID_FD;
     }
 
     return connected;
+}
+
+static void EnableTcpNoDelay(int fd)
+{
+    int enable = 1;
+    setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &enable, sizeof(enable));
 }
 
 static bool Send(struct SolidSyslogStream* self, const void* buffer, size_t size)
@@ -63,15 +74,14 @@ static bool Send(struct SolidSyslogStream* self, const void* buffer, size_t size
 static void Close(struct SolidSyslogStream* self)
 {
     struct SolidSyslogPosixTcpStream* stream = (struct SolidSyslogPosixTcpStream*) self;
-    if (stream->fd >= 0)
+    if (IsFileDescriptorValid(stream->fd))
     {
         close(stream->fd);
-        stream->fd = -1;
+        stream->fd = INVALID_FD;
     }
 }
 
-static void EnableTcpNoDelay(int fd)
+static inline bool IsFileDescriptorValid(int fd)
 {
-    int enable = 1;
-    setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &enable, sizeof(enable));
+    return fd >= 0;
 }

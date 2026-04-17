@@ -60,6 +60,17 @@ TEST(SolidSyslogPosixDatagram, OpenCallsSocketWithSOCK_DGRAM)
     LONGS_EQUAL(SOCK_DGRAM, SocketFake_SocketType());
 }
 
+TEST(SolidSyslogPosixDatagram, OpenReturnsFalseWhenSocketFails)
+{
+    SocketFake_SetSocketFails(true);
+    CHECK_FALSE(SolidSyslogDatagram_Open(datagram));
+}
+
+TEST(SolidSyslogPosixDatagram, OpenReturnsTrueOnSuccess)
+{
+    CHECK_TRUE(SolidSyslogDatagram_Open(datagram));
+}
+
 TEST(SolidSyslogPosixDatagram, SendToCallsSendtoOnce)
 {
     SolidSyslogDatagram_Open(datagram);

@@ -10,7 +10,7 @@ EXTERN_C_BEGIN
 
     struct SolidSyslogDatagram;
 
-    void SolidSyslogDatagram_Open(struct SolidSyslogDatagram * datagram);
+    bool SolidSyslogDatagram_Open(struct SolidSyslogDatagram * datagram);
     bool SolidSyslogDatagram_SendTo(struct SolidSyslogDatagram * datagram, const void* buffer, size_t size, const struct sockaddr_in* addr);
     void SolidSyslogDatagram_Close(struct SolidSyslogDatagram * datagram);
 

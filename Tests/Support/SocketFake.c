@@ -20,10 +20,11 @@ static struct sockaddr_in lastAddr;
 static socklen_t          lastAddrLen;
 static int                lastSendtoFd;
 
-static int socketCallCount;
-static int socketFd;
-static int lastSocketDomain;
-static int lastSocketType;
+static bool socketFails;
+static int  socketCallCount;
+static int  socketFd;
+static int  lastSocketDomain;
+static int  lastSocketType;
 
 enum
 {
@@ -53,11 +54,13 @@ static int lastClosedFd;
 
 static char lastAddrString[INET_ADDRSTRLEN];
 
+static bool               getAddrInfoFails;
 static int                getAddrInfoCallCount;
 static char               lastGetAddrInfoHostname[256];
 static int                lastGetAddrInfoSocktype;
 static struct sockaddr_in fakeResolvedAddr;
 static struct addrinfo    fakeAddrInfo;
+static int                freeAddrInfoCallCount;
 
 void SocketFake_Reset(void)
 {
@@ -87,6 +90,7 @@ void SocketFake_Reset(void)
     setSockOptCallCount      = 0;
     lastSetSockOptLevel      = 0;
     lastSetSockOptOptname    = 0;
+    socketFails              = false;
     socketCallCount          = 0;
     socketFd                 = -1;
     lastSocketDomain         = 0;
@@ -95,9 +99,11 @@ void SocketFake_Reset(void)
     lastClosedFd             = -1;
     lastAddrString[0]        = '\0';
 
+    getAddrInfoFails            = false;
     getAddrInfoCallCount        = 0;
     lastGetAddrInfoHostname[0]  = '\0';
     lastGetAddrInfoSocktype     = 0;
+    freeAddrInfoCallCount       = 0;
     fakeResolvedAddr            = (struct sockaddr_in) {0};
     fakeResolvedAddr.sin_family = AF_INET;
     fakeAddrInfo                = (struct addrinfo) {0};
@@ -162,6 +168,13 @@ socklen_t SocketFake_LastAddrLen(void)
 int SocketFake_LastSendtoFd(void)
 {
     return lastSendtoFd;
+}
+
+/* socket configuration */
+
+void SocketFake_SetSocketFails(bool fails)
+{
+    socketFails = fails;
 }
 
 /* socket accessors */
@@ -296,6 +309,13 @@ int SocketFake_LastClosedFd(void)
     return lastClosedFd;
 }
 
+/* getaddrinfo configuration */
+
+void SocketFake_SetGetAddrInfoFails(bool fails)
+{
+    getAddrInfoFails = fails;
+}
+
 /* getaddrinfo accessors */
 
 int SocketFake_GetAddrInfoCallCount(void)
@@ -313,6 +333,13 @@ int SocketFake_LastGetAddrInfoSocktype(void)
     return lastGetAddrInfoSocktype;
 }
 
+/* freeaddrinfo accessors */
+
+int SocketFake_FreeAddrInfoCallCount(void)
+{
+    return freeAddrInfoCallCount;
+}
+
 /* POSIX strong-symbol fakes */
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- POSIX API; signature is fixed
@@ -322,7 +349,14 @@ int socket(int domain, int type, int protocol)
     socketCallCount++;
     lastSocketDomain = domain;
     lastSocketType   = type;
-    socketFd         = socketCallCount; /* deterministic fake fd */
+    if (socketFails)
+    {
+        socketFd = -1;
+    }
+    else
+    {
+        socketFd = socketCallCount; /* deterministic fake fd */
+    }
     return socketFd;
 }
 
@@ -404,6 +438,10 @@ int getaddrinfo(const char* node, const char* service, const struct addrinfo* hi
     getAddrInfoCallCount++;
     lastGetAddrInfoSocktype = hints ? hints->ai_socktype : 0;
     SafeString_Copy(lastGetAddrInfoHostname, sizeof(lastGetAddrInfoHostname), node ? node : "");
+    if (getAddrInfoFails)
+    {
+        return EAI_FAIL;
+    }
     inet_pton(AF_INET, node, &fakeResolvedAddr.sin_addr);
     *res = &fakeAddrInfo;
     return 0;
@@ -413,4 +451,5 @@ int getaddrinfo(const char* node, const char* service, const struct addrinfo* hi
 void freeaddrinfo(struct addrinfo* res)
 {
     (void) res;
+    freeAddrInfoCallCount++;
 }
