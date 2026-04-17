@@ -27,12 +27,15 @@ TEST_GROUP(SolidSyslogPosixTcpStream)
     {
         SocketFake_Reset();
         // cppcheck-suppress unreadVariable -- used in tests; cppcheck does not model CppUTest macros
-        stream          = SolidSyslogPosixTcpStream_Create();
-        auto* bytes     = reinterpret_cast<std::uint8_t*>(&addrStorage);
+        stream = SolidSyslogPosixTcpStream_Create();
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) -- char-type aliasing, legal and necessary
+        auto* bytes = reinterpret_cast<std::uint8_t*>(&addrStorage);
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) -- reinterpret to platform layout, storage is intptr_t-aligned
         auto* sin       = reinterpret_cast<struct sockaddr_in*>(bytes);
         sin->sin_family = AF_INET;
         sin->sin_port   = htons(TEST_PORT);
         inet_pton(AF_INET, TEST_ADDRESS, &sin->sin_addr);
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
         addr = SolidSyslogAddress_FromStorage(&addrStorage);
     }
 

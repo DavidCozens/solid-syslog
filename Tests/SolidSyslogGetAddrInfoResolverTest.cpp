@@ -59,9 +59,12 @@ TEST_GROUP(SolidSyslogGetAddrInfoResolver)
     }
 
     // Test-only peek: the resolver fills the storage per the POSIX sockaddr_in layout.
+    // NOLINTNEXTLINE(modernize-use-nodiscard) -- used through the accessor syntax in tests
     const struct sockaddr_in* Result() const
     {
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) -- char-type aliasing, legal and necessary
         const auto* bytes = reinterpret_cast<const std::uint8_t*>(&resultStorage);
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) -- reinterpret to platform layout, storage is intptr_t-aligned
         return reinterpret_cast<const struct sockaddr_in*>(bytes);
     }
 };

@@ -41,10 +41,10 @@ void SolidSyslogUdpSender_Destroy(void)
     {
         SolidSyslogDatagram_Close(instance.config.datagram);
     }
-    instance.base.Send = NULL;
+    instance.base.Send   = NULL;
     instance.addrStorage = (SolidSyslogAddressStorage) {0};
-    instance.config    = (struct SolidSyslogUdpSenderConfig) {0};
-    instance.ready     = false;
+    instance.config      = (struct SolidSyslogUdpSenderConfig) {0};
+    instance.ready       = false;
 }
 
 static bool Send(struct SolidSyslogSender* self, const void* buffer, size_t size)
@@ -55,7 +55,7 @@ static bool Send(struct SolidSyslogSender* self, const void* buffer, size_t size
     if (udpSender->ready)
     {
         struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&udpSender->addrStorage);
-        sent = SolidSyslogDatagram_SendTo(udpSender->config.datagram, buffer, size, addr);
+        sent                            = SolidSyslogDatagram_SendTo(udpSender->config.datagram, buffer, size, addr);
     }
 
     return sent;

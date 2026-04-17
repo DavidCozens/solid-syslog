@@ -18,7 +18,7 @@ EXTERN_C_BEGIN
 
     struct SolidSyslogAddress;
 
-    struct SolidSyslogAddress* SolidSyslogAddress_FromStorage(SolidSyslogAddressStorage* storage);
+    struct SolidSyslogAddress* SolidSyslogAddress_FromStorage(SolidSyslogAddressStorage * storage);
 
 EXTERN_C_END
 
