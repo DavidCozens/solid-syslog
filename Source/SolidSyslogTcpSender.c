@@ -78,9 +78,11 @@ static bool EnsureConnected(struct SolidSyslogTcpSender* tcp)
 static bool Connect(struct SolidSyslogTcpSender* tcp)
 {
     struct sockaddr_in addr;
-    SolidSyslogResolver_Resolve(tcp->config.resolver, SOLIDSYSLOG_TRANSPORT_TCP, &addr);
 
-    tcp->connected = SolidSyslogStream_Open(tcp->config.stream, &addr);
+    if (SolidSyslogResolver_Resolve(tcp->config.resolver, SOLIDSYSLOG_TRANSPORT_TCP, &addr))
+    {
+        tcp->connected = SolidSyslogStream_Open(tcp->config.stream, &addr);
+    }
 
     return tcp->connected;
 }
