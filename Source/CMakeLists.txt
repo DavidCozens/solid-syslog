@@ -31,6 +31,8 @@ if(SOLIDSYSLOG_POSIX)
         SolidSyslogPosixProcessId.c
         SolidSyslogResolver.c
         SolidSyslogGetAddrInfoResolver.c
+        SolidSyslogDatagram.c
+        SolidSyslogPosixDatagram.c
         SolidSyslogUdpSender.c
         SolidSyslogTcpSender.c
         SolidSyslogPosixFile.c
