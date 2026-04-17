@@ -10,6 +10,7 @@ struct SolidSyslogUdpSender
     struct SolidSyslogSender          base;
     struct SolidSyslogUdpSenderConfig config;
     struct sockaddr_in                addr;
+    bool                              ready;
 };
 
 static struct SolidSyslogUdpSender instance;
@@ -19,8 +20,10 @@ struct SolidSyslogSender* SolidSyslogUdpSender_Create(const struct SolidSyslogUd
     instance.config    = *config;
     instance.base.Send = Send;
 
-    SolidSyslogDatagram_Open(config->datagram);
-    SolidSyslogResolver_Resolve(config->resolver, SOLIDSYSLOG_TRANSPORT_UDP, &instance.addr);
+    bool opened   = SolidSyslogDatagram_Open(config->datagram);
+    bool resolved = SolidSyslogResolver_Resolve(config->resolver, SOLIDSYSLOG_TRANSPORT_UDP, &instance.addr);
+
+    instance.ready = opened && resolved;
 
     return &instance.base;
 }
@@ -34,10 +37,18 @@ void SolidSyslogUdpSender_Destroy(void)
     instance.base.Send = NULL;
     instance.addr      = (struct sockaddr_in) {0};
     instance.config    = (struct SolidSyslogUdpSenderConfig) {0};
+    instance.ready     = false;
 }
 
 static bool Send(struct SolidSyslogSender* self, const void* buffer, size_t size)
 {
     struct SolidSyslogUdpSender* udpSender = (struct SolidSyslogUdpSender*) self;
-    return SolidSyslogDatagram_SendTo(udpSender->config.datagram, buffer, size, &udpSender->addr);
+    bool                         sent      = false;
+
+    if (udpSender->ready)
+    {
+        sent = SolidSyslogDatagram_SendTo(udpSender->config.datagram, buffer, size, &udpSender->addr);
+    }
+
+    return sent;
 }
