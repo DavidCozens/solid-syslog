@@ -60,6 +60,7 @@ TEST_GROUP(SolidSyslogWindowsClock)
 
     static void setFileTimeFromSystemTime(WORD year, WORD month, WORD day, WORD hour, WORD minute, WORD second)
     {
+        useRawFileTime               = false;
         fakeSystemTime.wYear         = year;
         fakeSystemTime.wMonth        = month;
         fakeSystemTime.wDay          = day;
