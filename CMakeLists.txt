@@ -76,6 +76,7 @@ option(SOLIDSYSLOG_WINSOCK "Include Winsock UDP sender" ${HAVE_WINSOCK})
 include(CheckIncludeFile)
 check_include_file(stdatomic.h HAVE_STDATOMIC_H)
 check_symbol_exists(InterlockedIncrement "windows.h" HAVE_WINDOWS_INTERLOCKED)
+check_symbol_exists(GetSystemTimeAsFileTime "windows.h" HAVE_WINDOWS_PLATFORM)
 
 if(HAVE_STDATOMIC_H OR HAVE_WINDOWS_INTERLOCKED)
     set(HAVE_ATOMIC_COUNTER TRUE)
@@ -87,7 +88,7 @@ if(SOLIDSYSLOG_POSIX)
     add_subdirectory(Platform/Posix)
 endif()
 
-if(HAVE_WINDOWS_INTERLOCKED OR SOLIDSYSLOG_WINSOCK)
+if(HAVE_WINDOWS_INTERLOCKED OR HAVE_WINDOWS_PLATFORM OR SOLIDSYSLOG_WINSOCK)
     add_subdirectory(Platform/Windows)
 endif()
 

@@ -1,0 +1,33 @@
+#include "SolidSyslogWindowsHostname.h"
+#include "SolidSyslogFormatter.h"
+#include "SolidSyslogWindowsHostnameInternal.h"
+
+/* File-local forwarder. Taking the address of an imported Windows API
+   for static initialisation may trigger MSVC C4232 in some configurations;
+   forwarding through a static function whose address IS a compile-time
+   constant avoids the warning without a suppression. */
+static BOOL WINAPI CallGetComputerNameExA(COMPUTER_NAME_FORMAT nameType, LPSTR buffer, LPDWORD size);
+
+WindowsGetComputerNameExAFn WindowsHostname_GetComputerNameExA = CallGetComputerNameExA;
+
+static BOOL WINAPI CallGetComputerNameExA(COMPUTER_NAME_FORMAT nameType, LPSTR buffer, LPDWORD size)
+{
+    return GetComputerNameExA(nameType, buffer, size);
+}
+
+enum
+{
+    MAX_HOSTNAME_SIZE = 256
+};
+
+void SolidSyslogWindowsHostname_Get(struct SolidSyslogFormatter* formatter)
+{
+    char  hostname[MAX_HOSTNAME_SIZE];
+    DWORD size = sizeof(hostname);
+
+    if (WindowsHostname_GetComputerNameExA(ComputerNamePhysicalDnsHostname, hostname, &size))
+    {
+        hostname[sizeof(hostname) - 1] = '\0';
+        SolidSyslogFormatter_BoundedString(formatter, hostname, sizeof(hostname));
+    }
+}
