@@ -19,6 +19,7 @@
 #include "SolidSyslogPosixMessageQueueBuffer.h"
 #include "SolidSyslogPosixProcessId.h"
 #include "SolidSyslogGetAddrInfoResolver.h"
+#include "SolidSyslogPosixDatagram.h"
 #include "SolidSyslogTcpSender.h"
 #include "SolidSyslogUdpSender.h"
 
@@ -59,6 +60,7 @@ static struct SolidSyslogSender* CreateSender(const struct ExampleOptions* optio
 
     static struct SolidSyslogUdpSenderConfig udpConfig = {0};
     udpConfig.resolver                                 = SolidSyslogGetAddrInfoResolver_Create(ExampleUdpConfig_GetHost, ExampleUdpConfig_GetPort);
+    udpConfig.datagram                                 = SolidSyslogPosixDatagram_Create();
     return SolidSyslogUdpSender_Create(&udpConfig);
 }
 
@@ -122,6 +124,7 @@ static void DestroySender(const struct ExampleOptions* options)
     else
     {
         SolidSyslogUdpSender_Destroy();
+        SolidSyslogPosixDatagram_Destroy();
     }
     SolidSyslogGetAddrInfoResolver_Destroy();
 }
