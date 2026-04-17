@@ -9,7 +9,6 @@ EXTERN_C_BEGIN
     {
         bool (*Open)(struct SolidSyslogDatagram* self);
         bool (*SendTo)(struct SolidSyslogDatagram* self, const void* buffer, size_t size, const struct sockaddr_in* addr);
-        /* void return: failure reporting deferred to Epic #31 (error handling) */
         void (*Close)(struct SolidSyslogDatagram* self);
     };
 

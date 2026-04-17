@@ -378,6 +378,13 @@ TEST(SolidSyslogUdpSenderFailure, SendReturnsFalseWhenSocketFailedAtCreate)
     CHECK_FALSE(SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN));
 }
 
+TEST(SolidSyslogUdpSenderFailure, DoesNotResolveWhenSocketFailedAtCreate)
+{
+    SocketFake_SetSocketFails(true);
+    CreateSender();
+    LONGS_EQUAL(0, SocketFake_GetAddrInfoCallCount());
+}
+
 TEST(SolidSyslogUdpSenderFailure, SendDoesNotCallSendtoWhenResolverFailed)
 {
     SocketFake_SetGetAddrInfoFails(true);

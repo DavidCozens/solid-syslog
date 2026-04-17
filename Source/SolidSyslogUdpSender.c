@@ -21,7 +21,12 @@ struct SolidSyslogSender* SolidSyslogUdpSender_Create(const struct SolidSyslogUd
     instance.base.Send = Send;
 
     bool opened   = SolidSyslogDatagram_Open(config->datagram);
-    bool resolved = SolidSyslogResolver_Resolve(config->resolver, SOLIDSYSLOG_TRANSPORT_UDP, &instance.addr);
+    bool resolved = false;
+
+    if (opened)
+    {
+        resolved = SolidSyslogResolver_Resolve(config->resolver, SOLIDSYSLOG_TRANSPORT_UDP, &instance.addr);
+    }
 
     instance.ready = opened && resolved;
 
