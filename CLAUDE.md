@@ -155,6 +155,9 @@ Headers in `Interface/` are split by audience — each user includes only what t
 | `SolidSyslogPosixClock.h` | System setup code using POSIX clock | `SolidSyslogPosixClock_GetTimestamp` |
 | `SolidSyslogPosixHostname.h` | String callback implementor using POSIX hostname | `SolidSyslogPosixHostname_Get` (writes into `SolidSyslogFormatter*`) |
 | `SolidSyslogPosixProcessId.h` | String callback implementor using POSIX process ID | `SolidSyslogPosixProcessId_Get` (writes into `SolidSyslogFormatter*`) |
+| `SolidSyslogWindowsClock.h` | System setup code using Windows clock | `SolidSyslogWindowsClock_GetTimestamp` |
+| `SolidSyslogWindowsHostname.h` | String callback implementor using Windows hostname | `SolidSyslogWindowsHostname_Get` (writes into `SolidSyslogFormatter*`) |
+| `SolidSyslogWindowsProcessId.h` | String callback implementor using Windows process ID | `SolidSyslogWindowsProcessId_Get` (writes into `SolidSyslogFormatter*`) |
 | `SolidSyslogStructuredData.h` | Library internals (SD dispatch) | `SolidSyslogStructuredData_Format` (writes into `SolidSyslogFormatter*`) |
 | `SolidSyslogStructuredDataDefinition.h` | SD implementors (extension point) | `SolidSyslogStructuredData` vtable struct (Format takes `SolidSyslogFormatter*`) |
 | `SolidSyslogMetaSd.h` | System setup code using sequenceId SD | `SolidSyslogMetaSd_Create`, `_Destroy` |

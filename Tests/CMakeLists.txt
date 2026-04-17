@@ -64,6 +64,14 @@ if(SOLIDSYSLOG_POSIX OR SOLIDSYSLOG_WINSOCK)
     list(APPEND TEST_SOURCES SolidSyslogAddressTest.cpp)
 endif()
 
+if(HAVE_WINDOWS_PLATFORM)
+    list(APPEND TEST_SOURCES
+        SolidSyslogWindowsClockTest.cpp
+        SolidSyslogWindowsHostnameTest.cpp
+        SolidSyslogWindowsProcessIdTest.cpp
+    )
+endif()
+
 if(SOLIDSYSLOG_WINSOCK)
     list(APPEND TEST_SOURCES
         WinsockFakeTest.cpp
@@ -81,9 +89,12 @@ if(SOLIDSYSLOG_POSIX)
     target_link_libraries(${PROJECT_NAME}Tests PRIVATE PosixFakes)
 endif()
 
+if(HAVE_WINDOWS_PLATFORM OR SOLIDSYSLOG_WINSOCK)
+    target_include_directories(${PROJECT_NAME}Tests PRIVATE ${CMAKE_SOURCE_DIR}/Platform/Windows/Source)
+endif()
+
 if(SOLIDSYSLOG_WINSOCK)
     target_link_libraries(${PROJECT_NAME}Tests PRIVATE WinsockFakes)
-    target_include_directories(${PROJECT_NAME}Tests PRIVATE ${CMAKE_SOURCE_DIR}/Platform/Windows/Source)
 endif()
 
 # Standard CppUTest console output via ctest -V
