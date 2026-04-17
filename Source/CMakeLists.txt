@@ -33,6 +33,8 @@ if(SOLIDSYSLOG_POSIX)
         SolidSyslogGetAddrInfoResolver.c
         SolidSyslogDatagram.c
         SolidSyslogPosixDatagram.c
+        SolidSyslogStream.c
+        SolidSyslogPosixTcpStream.c
         SolidSyslogUdpSender.c
         SolidSyslogTcpSender.c
         SolidSyslogPosixFile.c
