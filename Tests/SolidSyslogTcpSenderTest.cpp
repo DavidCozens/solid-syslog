@@ -1,5 +1,6 @@
 #include "CppUTest/TestHarness.h"
 #include "SolidSyslogGetAddrInfoResolver.h"
+#include "SolidSyslogPosixTcpStream.h"
 #include "SolidSyslogSender.h"
 #include "SolidSyslogTcpSender.h"
 #include "SocketFake.h"
@@ -55,6 +56,7 @@ static const char* SpyGetHost()
 TEST_GROUP(SolidSyslogTcpSender)
 {
     struct SolidSyslogResolver* resolver = nullptr;
+    struct SolidSyslogStream*   stream   = nullptr;
     struct SolidSyslogTcpSenderConfig config;
     // cppcheck-suppress constVariablePointer -- Send requires non-const self; false positive from macro expansion
     // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
@@ -64,7 +66,8 @@ TEST_GROUP(SolidSyslogTcpSender)
     {
         SocketFake_Reset();
         resolver = SolidSyslogGetAddrInfoResolver_Create(GetHost, GetPort);
-        config = {resolver};
+        stream   = SolidSyslogPosixTcpStream_Create();
+        config = {resolver, stream};
         // cppcheck-suppress unreadVariable -- read by teardown and tests; cppcheck does not model CppUTest lifecycle
         sender = SolidSyslogTcpSender_Create(&config);
     }
@@ -72,6 +75,7 @@ TEST_GROUP(SolidSyslogTcpSender)
     void teardown() override
     {
         SolidSyslogTcpSender_Destroy();
+        SolidSyslogPosixTcpStream_Destroy();
         SolidSyslogGetAddrInfoResolver_Destroy();
     }
 
@@ -113,18 +117,21 @@ TEST(SolidSyslogTcpSender, FirstSendSetsTcpNoDelay)
 TEST_GROUP(SolidSyslogTcpSenderDestroy)
 {
     struct SolidSyslogResolver* resolver = nullptr;
+    struct SolidSyslogStream*   stream   = nullptr;
     struct SolidSyslogTcpSenderConfig config;
 
     void setup() override
     {
         SocketFake_Reset();
         resolver = SolidSyslogGetAddrInfoResolver_Create(GetHost, GetPort);
+        stream   = SolidSyslogPosixTcpStream_Create();
         // cppcheck-suppress unreadVariable -- used in test bodies; cppcheck does not model CppUTest macros
-        config = {resolver};
+        config = {resolver, stream};
     }
 
     void teardown() override
     {
+        SolidSyslogPosixTcpStream_Destroy();
         SolidSyslogGetAddrInfoResolver_Destroy();
     }
 
@@ -233,13 +240,15 @@ TEST_GROUP(SolidSyslogTcpSenderConfig)
     void teardown() override
     {
         SolidSyslogTcpSender_Destroy();
+        SolidSyslogPosixTcpStream_Destroy();
         SolidSyslogGetAddrInfoResolver_Destroy();
     }
 
     void CreateSender()
     {
         struct SolidSyslogResolver* resolver = SolidSyslogGetAddrInfoResolver_Create(getHostFn, getPortFn);
-        struct SolidSyslogTcpSenderConfig config = {resolver};
+        struct SolidSyslogStream*   stream   = SolidSyslogPosixTcpStream_Create();
+        struct SolidSyslogTcpSenderConfig config = {resolver, stream};
         // cppcheck-suppress unreadVariable -- read by teardown and tests; cppcheck does not model CppUTest lifecycle
         sender = SolidSyslogTcpSender_Create(&config);
     }
@@ -316,6 +325,7 @@ TEST(SolidSyslogTcpSenderConfig, GetAddrInfoCalledWithHostname)
 TEST_GROUP(SolidSyslogTcpSenderFailure)
 {
     struct SolidSyslogResolver* resolver = nullptr;
+    struct SolidSyslogStream*   stream   = nullptr;
     struct SolidSyslogTcpSenderConfig config;
     // cppcheck-suppress constVariablePointer -- Send requires non-const self; false positive from macro expansion
     // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
@@ -325,7 +335,8 @@ TEST_GROUP(SolidSyslogTcpSenderFailure)
     {
         SocketFake_Reset();
         resolver = SolidSyslogGetAddrInfoResolver_Create(GetHost, GetPort);
-        config = {resolver};
+        stream   = SolidSyslogPosixTcpStream_Create();
+        config = {resolver, stream};
         // cppcheck-suppress unreadVariable -- read by teardown and tests; cppcheck does not model CppUTest lifecycle
         sender = SolidSyslogTcpSender_Create(&config);
     }
@@ -333,6 +344,7 @@ TEST_GROUP(SolidSyslogTcpSenderFailure)
     void teardown() override
     {
         SolidSyslogTcpSender_Destroy();
+        SolidSyslogPosixTcpStream_Destroy();
         SolidSyslogGetAddrInfoResolver_Destroy();
     }
 

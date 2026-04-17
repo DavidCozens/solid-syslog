@@ -20,6 +20,7 @@
 #include "SolidSyslogPosixProcessId.h"
 #include "SolidSyslogGetAddrInfoResolver.h"
 #include "SolidSyslogPosixDatagram.h"
+#include "SolidSyslogPosixTcpStream.h"
 #include "SolidSyslogTcpSender.h"
 #include "SolidSyslogUdpSender.h"
 
@@ -55,6 +56,7 @@ static struct SolidSyslogSender* CreateSender(const struct ExampleOptions* optio
     {
         static struct SolidSyslogTcpSenderConfig tcpConfig = {0};
         tcpConfig.resolver                                 = SolidSyslogGetAddrInfoResolver_Create(ExampleTcpConfig_GetHost, ExampleTcpConfig_GetPort);
+        tcpConfig.stream                                   = SolidSyslogPosixTcpStream_Create();
         return SolidSyslogTcpSender_Create(&tcpConfig);
     }
 
@@ -120,6 +122,7 @@ static void DestroySender(const struct ExampleOptions* options)
     if (useTcp)
     {
         SolidSyslogTcpSender_Destroy();
+        SolidSyslogPosixTcpStream_Destroy();
     }
     else
     {
