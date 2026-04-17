@@ -261,7 +261,14 @@ int WSAAPI WinsockFake_getaddrinfo(const char* node, const char* service, const 
     {
         return EAI_FAIL;
     }
-    inet_pton(AF_INET, node, &fakeResolvedAddr.sin_addr);
+    if (node == NULL || res == NULL)
+    {
+        return EAI_FAIL;
+    }
+    if (inet_pton(AF_INET, node, &fakeResolvedAddr.sin_addr) != 1)
+    {
+        return EAI_FAIL;
+    }
     *res = &fakeAddrInfo;
     return 0;
 }
