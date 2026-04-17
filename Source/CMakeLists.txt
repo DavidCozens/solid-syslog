@@ -21,10 +21,15 @@ if(HAVE_STDATOMIC_H)
     list(APPEND SOURCES SolidSyslogAtomicCounter.c)
 endif()
 
-if(SOLIDSYSLOG_POSIX)
+if(SOLIDSYSLOG_POSIX OR SOLIDSYSLOG_WINSOCK)
     list(APPEND SOURCES
         SolidSyslogResolver.c
         SolidSyslogDatagram.c
+    )
+endif()
+
+if(SOLIDSYSLOG_POSIX)
+    list(APPEND SOURCES
         SolidSyslogStream.c
         SolidSyslogUdpSender.c
         SolidSyslogTcpSender.c
