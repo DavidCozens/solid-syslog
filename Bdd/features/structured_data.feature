@@ -1,3 +1,4 @@
+@udp @windows_wip
 Feature: Structured data — sequence ID
   The library includes an auto-incrementing sequence ID in structured data.
 

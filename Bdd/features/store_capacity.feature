@@ -1,3 +1,4 @@
+@tcp @buffered
 Feature: Store capacity limit and discard policy
   The file store uses rotating files with a configurable capacity.
   When the store is full, the discard policy determines whether
