@@ -22,9 +22,7 @@ if(SOLIDSYSLOG_POSIX)
     target_include_directories(SolidSyslogThreadedExample PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/Common
     )
-endif()
-
-if(SOLIDSYSLOG_WINSOCK AND HAVE_WINDOWS_PLATFORM)
+elseif(SOLIDSYSLOG_WINSOCK AND HAVE_WINDOWS_PLATFORM)
     # Windows example: NullBuffer + Winsock UDP + Windows clock/hostname/process-id.
     # Output binary is named SolidSyslogExample.exe so BDD scenarios remain platform-agnostic.
     add_executable(SolidSyslogWindowsExample
