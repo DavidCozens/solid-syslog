@@ -1,6 +1,7 @@
 #include "SolidSyslogWindowsExample.h"
 #include "ExampleAppName.h"
 #include "ExampleInteractive.h"
+#include "ExampleWindowsCommandLine.h"
 #include "SolidSyslog.h"
 #include "SolidSyslogAtomicCounter.h"
 #include "SolidSyslogConfig.h"
@@ -8,7 +9,6 @@
 #include "SolidSyslogNullBuffer.h"
 #include "SolidSyslogNullStore.h"
 #include "SolidSyslogOriginSd.h"
-#include "SolidSyslogPrival.h"
 #include "SolidSyslogTimeQualitySd.h"
 #include "SolidSyslogUdpSender.h"
 #include "SolidSyslogWindowsClock.h"
@@ -44,8 +44,6 @@ static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
 
 int SolidSyslogWindowsExample_Run(int argc, char* argv[])
 {
-    (void) argc;
-
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
     {
@@ -53,6 +51,9 @@ int SolidSyslogWindowsExample_Run(int argc, char* argv[])
     }
 
     ExampleAppName_Set(argv[0]);
+
+    struct WindowsExampleOptions options;
+    ExampleWindowsCommandLine_Parse(argc, argv, &options);
 
     struct SolidSyslogResolver*       resolver    = SolidSyslogWinsockResolver_Create(GetHost, GetPort);
     struct SolidSyslogDatagram*       datagram    = SolidSyslogWinsockDatagram_Create();
@@ -81,10 +82,10 @@ int SolidSyslogWindowsExample_Run(int argc, char* argv[])
     SolidSyslog_Create(&config);
 
     struct SolidSyslogMessage message = {
-        .facility  = SOLIDSYSLOG_FACILITY_LOCAL0,
-        .severity  = SOLIDSYSLOG_SEVERITY_INFO,
-        .messageId = NULL,
-        .msg       = NULL,
+        .facility  = options.facility,
+        .severity  = options.severity,
+        .messageId = options.messageId,
+        .msg       = options.msg,
     };
 
     ExampleInteractive_Run(&message, stdin);

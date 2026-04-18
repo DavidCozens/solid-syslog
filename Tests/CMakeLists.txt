@@ -2,7 +2,7 @@ if(SOLIDSYSLOG_POSIX OR SOLIDSYSLOG_WINSOCK)
     add_subdirectory(Support)
 endif()
 
-if(SOLIDSYSLOG_POSIX)
+if(SOLIDSYSLOG_POSIX OR (SOLIDSYSLOG_WINSOCK AND HAVE_WINDOWS_PLATFORM))
     add_subdirectory(Example)
 endif()
 
