@@ -89,12 +89,10 @@ def parse_otel_jsonl_line(line):
     """Parse one JSON line from the OTel Collector file exporter into the
     same flat dict shape as parse_syslog_ng_line.
 
-    Walking-skeleton scope only: PRIORITY/TIMESTAMP/HOSTNAME/APP_NAME/PROCID.
-    MSG and STRUCTURED_DATA are not yet extracted — added when the
-    message_fields and structured_data scenarios are promoted out of
-    @windows_wip (OTel's body field carries the whole raw RFC 5424 line for
-    message-less records, so MSG extraction needs verifying against a real
-    bodied message).
+    Maps OTel's parsed RFC 5424 attributes (independent oracle, same role
+    syslog-ng plays on Linux) into the flat field dict. STRUCTURED_DATA
+    re-rendering is added when the structured_data / origin / time_quality
+    scenarios are promoted out of @windows_wip.
     """
     record = json.loads(line)
     log = record["resourceLogs"][0]["scopeLogs"][0]["logRecords"][0]
@@ -113,6 +111,12 @@ def parse_otel_jsonl_line(line):
     proc_id = _otel_attribute(attrs, "proc_id")
     if proc_id is not None:
         fields["PROCID"] = proc_id
+    msg_id = _otel_attribute(attrs, "msg_id")
+    if msg_id is not None:
+        fields["MSGID"] = msg_id
+    msg = _otel_attribute(attrs, "message")
+    if msg is not None:
+        fields["MSG"] = msg
 
     # timeUnixNano → ISO 8601 string compatible with datetime.fromisoformat
     time_ns = log.get("timeUnixNano")

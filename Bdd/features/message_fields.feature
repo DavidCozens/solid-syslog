@@ -1,4 +1,4 @@
-@udp @windows_wip
+@udp
 Feature: Message ID and message body
   The library includes message ID and message body in the RFC 5424 message.
 

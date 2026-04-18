@@ -28,6 +28,7 @@ elseif(SOLIDSYSLOG_WINSOCK AND HAVE_WINDOWS_PLATFORM)
     add_executable(SolidSyslogWindowsExample
         Windows/main.c
         Windows/SolidSyslogWindowsExample.c
+        Windows/ExampleWindowsCommandLine.c
         Common/ExampleAppName.c
         Common/ExampleInteractive.c
     )
