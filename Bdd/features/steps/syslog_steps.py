@@ -43,6 +43,61 @@ def read_new_lines(path, skip):
     return [line.strip() for line in lines[skip:] if line.strip()]
 
 
+def _split_otel_line_into_records(line):
+    """OTel's file exporter emits one JSON object per write but each object
+    can carry multiple log records when messages arrive close together.
+    Yield one single-record envelope (still parse_otel_jsonl_line-compatible)
+    per logical record."""
+    parent = json.loads(line)
+    for resource_log in parent.get("resourceLogs", []):
+        for scope_log in resource_log.get("scopeLogs", []):
+            for log_record in scope_log.get("logRecords", []):
+                yield json.dumps({
+                    "resourceLogs": [{
+                        "resource": resource_log.get("resource", {}),
+                        "scopeLogs": [{
+                            "scope": scope_log.get("scope", {}),
+                            "logRecords": [log_record],
+                        }],
+                    }]
+                })
+
+
+def oracle_record_count(path, oracle_format):
+    """Total number of logical oracle records in the file. For syslog-ng each
+    line is one record; for OTel JSONL each line may carry several."""
+    if not os.path.exists(path):
+        return 0
+    if oracle_format != "otel-jsonl":
+        return line_count(path)
+    count = 0
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            count += sum(1 for _ in _split_otel_line_into_records(line))
+    return count
+
+
+def read_new_oracle_records(path, oracle_format, skip):
+    """Return all logical oracle records after the first 'skip', each as a
+    string ready for parse_oracle_line."""
+    if not os.path.exists(path):
+        return []
+    records = []
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            if oracle_format != "otel-jsonl":
+                records.append(line)
+            else:
+                records.extend(_split_otel_line_into_records(line))
+    return records[skip:]
+
+
 def read_last_line(path):
     """Return the last non-empty line from a file."""
     with open(path) as f:
@@ -82,7 +137,38 @@ def _otel_attribute(attrs, key):
                 return value["stringValue"]
             if "intValue" in value:
                 return str(value["intValue"])
+            return value
     return None
+
+
+def _render_otel_structured_data(sd_value):
+    """Render OTel's nested kvlist structured-data attribute back into the
+    syslog-ng `[sd-id k1="v1" k2="v2"]...` text form, so the existing
+    regex-based Then steps don't need per-oracle branching.
+
+    OTel shape (from the syslog receiver in rfc5424 mode):
+      {"kvlistValue":{"values":[
+        {"key":"meta", "value":{"kvlistValue":{"values":[
+          {"key":"sequenceId", "value":{"stringValue":"1"}}]}}},
+        ...
+      ]}}
+    """
+    elements = sd_value.get("kvlistValue", {}).get("values", [])
+    out = []
+    for sd_element in elements:
+        sd_id = sd_element.get("key", "")
+        params = sd_element.get("value", {}).get("kvlistValue", {}).get("values", [])
+        rendered_params = []
+        for param in params:
+            param_name = param.get("key", "")
+            param_val = param.get("value", {})
+            param_str = param_val.get("stringValue") or str(param_val.get("intValue", ""))
+            rendered_params.append(f'{param_name}="{param_str}"')
+        if rendered_params:
+            out.append(f"[{sd_id} {' '.join(rendered_params)}]")
+        else:
+            out.append(f"[{sd_id}]")
+    return "".join(out)
 
 
 def parse_otel_jsonl_line(line):
@@ -90,9 +176,7 @@ def parse_otel_jsonl_line(line):
     same flat dict shape as parse_syslog_ng_line.
 
     Maps OTel's parsed RFC 5424 attributes (independent oracle, same role
-    syslog-ng plays on Linux) into the flat field dict. STRUCTURED_DATA
-    re-rendering is added when the structured_data / origin / time_quality
-    scenarios are promoted out of @windows_wip.
+    syslog-ng plays on Linux) into the flat field dict.
     """
     record = json.loads(line)
     log = record["resourceLogs"][0]["scopeLogs"][0]["logRecords"][0]
@@ -117,6 +201,10 @@ def parse_otel_jsonl_line(line):
     msg = _otel_attribute(attrs, "message")
     if msg is not None:
         fields["MSG"] = msg
+
+    sd = _otel_attribute(attrs, "structured_data")
+    if isinstance(sd, dict):
+        fields["STRUCTURED_DATA"] = _render_otel_structured_data(sd)
 
     # timeUnixNano → ISO 8601 string compatible with datetime.fromisoformat
     time_ns = log.get("timeUnixNano")
@@ -168,21 +256,24 @@ def send_command(process, command):
 
 
 def wait_for_messages(context, expected_messages):
-    """Wait for the oracle to flush the expected number of new lines."""
+    """Wait for the oracle to flush the expected number of new records.
+    Counts logical records (not raw file lines) so OTel's batch-per-line
+    write behaviour doesn't undercount."""
     received_log = context.received_log
+    oracle_format = context.oracle_format
     expected_total = context.lines_before + expected_messages
     deadline = time.monotonic() + 5
-    while line_count(received_log) < expected_total:
+    while oracle_record_count(received_log, oracle_format) < expected_total:
         if time.monotonic() > deadline:
-            actual = line_count(received_log) - context.lines_before
+            actual = oracle_record_count(received_log, oracle_format) - context.lines_before
             raise AssertionError(
                 f"oracle received {actual} of {expected_messages} "
                 f"messages within 5 seconds"
             )
         time.sleep(0.1)
 
-    context.all_lines = read_new_lines(received_log, context.lines_before)
-    context.fields = parse_oracle_line(context.all_lines[-1], context.oracle_format)
+    context.all_lines = read_new_oracle_records(received_log, oracle_format, context.lines_before)
+    context.fields = parse_oracle_line(context.all_lines[-1], oracle_format)
     context.message_count = len(context.all_lines)
 
 
@@ -301,8 +392,10 @@ def step_syslog_ng_is_running(context):
             f"syslog-ng control socket not found at {SYSLOG_NG_CTL}"
         )
 
-    # Record current line count so we can detect the new message
-    context.lines_before = line_count(context.received_log)
+    # Record current logical-record count so we can detect the new message.
+    # Field name kept (`lines_before`) for legacy callers, but for OTel one
+    # JSONL file line may carry several records.
+    context.lines_before = oracle_record_count(context.received_log, context.oracle_format)
 
 
 def build_threaded_command(context, transport, no_sd=False):
@@ -584,9 +677,9 @@ def step_check_message_count(context, count):
 
 @then("syslog-ng receives no more messages")
 def step_check_no_more_messages(context):
-    before = line_count(context.received_log)
+    before = oracle_record_count(context.received_log, context.oracle_format)
     time.sleep(5)
-    after = line_count(context.received_log)
+    after = oracle_record_count(context.received_log, context.oracle_format)
     assert after == before, (
         f"Expected no more messages, but received {after - before} additional"
     )
@@ -658,7 +751,7 @@ def step_check_sequential_ids(context, count):
         f"Expected {count} messages, got {context.message_count}"
     )
     for i, line in enumerate(context.all_lines, start=1):
-        fields = parse_syslog_ng_line(line)
+        fields = parse_oracle_line(line, context.oracle_format)
         sd = fields.get("STRUCTURED_DATA", "")
         match = re.search(r'sequenceId="(\d+)"', sd)
         assert match, (
