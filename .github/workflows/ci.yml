@@ -392,29 +392,19 @@ jobs:
         run: mkdir -p Bdd/output Bdd/junit
 
       - name: Start OTel Collector
-        shell: pwsh
+        # Use bash `&` backgrounding (what works locally) rather than pwsh
+        # Start-Process — the latter launched silently on windows-2025 with
+        # empty redirect files and no UDP bind, suggesting the child was
+        # either killed with the parent console or never actually executed.
         run: |
-          # Use absolute paths for everything — Start-Process on pwsh does not
-          # reliably propagate $PWD to the child's cwd or to the redirect file
-          # resolution, so relative paths here caused the collector's config
-          # lookup and redirects to land unpredictably on windows-2025.
-          $repo   = (Get-Location).Path
-          $exe    = Join-Path $repo 'Bdd/otel/bin/otelcol-contrib.exe'
-          $config = Join-Path $repo 'Bdd/otel/config.yaml'
-          $outLog = Join-Path $repo 'Bdd/output/otelcol.out'
-          $errLog = Join-Path $repo 'Bdd/output/otelcol.err'
-          Start-Process -FilePath $exe `
-                        -ArgumentList "--config=$config" `
-                        -WorkingDirectory $repo `
-                        -RedirectStandardOutput $outLog `
-                        -RedirectStandardError  $errLog `
-                        -WindowStyle Hidden
+          nohup ./Bdd/otel/bin/otelcol-contrib.exe \
+            --config=Bdd/otel/config.yaml \
+            > Bdd/output/otelcol.out 2> Bdd/output/otelcol.err &
+          echo "otelcol backgrounded with PID $!"
 
       - name: Wait for oracle to bind UDP 5514
         shell: pwsh
         run: |
-          # Poll until otelcol is listening on UDP 5514, instead of blind-sleeping.
-          # Dumps collector logs on timeout so a silent start failure surfaces.
           $deadline = (Get-Date).AddSeconds(30)
           while ((Get-Date) -lt $deadline) {
               if (Get-NetUDPEndpoint -LocalPort 5514 -ErrorAction SilentlyContinue) {
@@ -424,6 +414,12 @@ jobs:
               Start-Sleep -Milliseconds 500
           }
           Write-Host "otelcol did not bind UDP 5514 within 30 seconds"
+          Write-Host "--- tasklist otelcol-contrib ---"
+          tasklist /FI "IMAGENAME eq otelcol-contrib.exe"
+          Write-Host "--- UDP endpoints (top 20) ---"
+          Get-NetUDPEndpoint | Select-Object -First 20 | Format-Table -AutoSize
+          Write-Host "--- Bdd/output contents ---"
+          Get-ChildItem Bdd/output -ErrorAction SilentlyContinue | Format-Table
           Write-Host "--- otelcol.out ---"
           Get-Content Bdd/output/otelcol.out -ErrorAction SilentlyContinue
           Write-Host "--- otelcol.err ---"
