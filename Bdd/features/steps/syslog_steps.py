@@ -1,4 +1,5 @@
 import glob
+import json
 import os
 import re
 import shutil
@@ -11,8 +12,9 @@ from datetime import datetime, timezone
 from behave import given, when, then
 from environment import STORE_FILE_PATH, STORE_PATH_PREFIX
 
-RECEIVED_LOG = "Bdd/output/received.log"
-EXAMPLE_BINARY = "build/debug/Example/SolidSyslogExample"
+# POSIX-only paths used by the @buffered/threaded scenarios. The cross-platform
+# scenarios use context.example_binary / context.received_log instead, set in
+# environment.before_all from EXAMPLE_BINARY / RECEIVED_LOG / ORACLE_FORMAT.
 THREADED_BINARY = "build/debug/Example/SolidSyslogThreadedExample"
 SYSLOG_NG_CTL = "/var/lib/syslog-ng/syslog-ng.ctl"
 SYSLOG_NG_CONF = "Bdd/syslog-ng/syslog-ng.conf"
@@ -51,7 +53,7 @@ def read_last_line(path):
     return ""
 
 
-def parse_syslog_line(line):
+def parse_syslog_ng_line(line):
     """Parse a syslog-ng key=value template line into a dict."""
     fields = {}
     for match in re.finditer(r"(\w+)=(\S+)", line):
@@ -69,6 +71,61 @@ def parse_syslog_line(line):
         fields["MSG"] = msg_match.group(1)
 
     return fields
+
+
+def _otel_attribute(attrs, key):
+    """Pull a single attribute value (str/int) out of the OTel attribute list."""
+    for attr in attrs:
+        if attr.get("key") == key:
+            value = attr.get("value", {})
+            if "stringValue" in value:
+                return value["stringValue"]
+            if "intValue" in value:
+                return str(value["intValue"])
+    return None
+
+
+def parse_otel_jsonl_line(line):
+    """Parse one JSON line from the OTel Collector file exporter into the
+    same flat dict shape as parse_syslog_ng_line.
+
+    Walking-skeleton scope only: PRIORITY/TIMESTAMP/HOSTNAME/APP_NAME/PROCID
+    plus MSG. STRUCTURED_DATA is not yet rendered back into syslog-ng's
+    `[name key="value"]` text form — to be added when promoting the
+    structured_data scenarios out of @windows_wip.
+    """
+    record = json.loads(line)
+    log = record["resourceLogs"][0]["scopeLogs"][0]["logRecords"][0]
+    attrs = log.get("attributes", [])
+
+    fields = {}
+    priority = _otel_attribute(attrs, "priority")
+    if priority is not None:
+        fields["PRIORITY"] = priority
+    hostname = _otel_attribute(attrs, "hostname")
+    if hostname is not None:
+        fields["HOSTNAME"] = hostname
+    appname = _otel_attribute(attrs, "appname")
+    if appname is not None:
+        fields["APP_NAME"] = appname
+    proc_id = _otel_attribute(attrs, "proc_id")
+    if proc_id is not None:
+        fields["PROCID"] = proc_id
+
+    # timeUnixNano → ISO 8601 string compatible with datetime.fromisoformat
+    time_ns = log.get("timeUnixNano")
+    if time_ns is not None:
+        seconds = int(time_ns) / 1e9
+        fields["TIMESTAMP"] = datetime.fromtimestamp(seconds, tz=timezone.utc).isoformat()
+
+    return fields
+
+
+def parse_oracle_line(line, oracle_format):
+    """Dispatch to the right parser based on the active oracle."""
+    if oracle_format == "otel-jsonl":
+        return parse_otel_jsonl_line(line)
+    return parse_syslog_ng_line(line)
 
 
 def wait_for_prompt(process, timeout=30):
@@ -105,28 +162,78 @@ def send_command(process, command):
 
 
 def wait_for_messages(context, expected_messages):
-    """Wait for syslog-ng to flush the expected number of new lines."""
+    """Wait for the oracle to flush the expected number of new lines."""
+    received_log = context.received_log
     expected_total = context.lines_before + expected_messages
     deadline = time.monotonic() + 5
-    while line_count(RECEIVED_LOG) < expected_total:
+    while line_count(received_log) < expected_total:
         if time.monotonic() > deadline:
-            actual = line_count(RECEIVED_LOG) - context.lines_before
+            actual = line_count(received_log) - context.lines_before
             raise AssertionError(
-                f"syslog-ng received {actual} of {expected_messages} "
+                f"oracle received {actual} of {expected_messages} "
                 f"messages within 5 seconds"
             )
         time.sleep(0.1)
 
-    context.all_lines = read_new_lines(RECEIVED_LOG, context.lines_before)
-    context.fields = parse_syslog_line(context.all_lines[-1])
+    context.all_lines = read_new_lines(received_log, context.lines_before)
+    context.fields = parse_oracle_line(context.all_lines[-1], context.oracle_format)
     context.message_count = len(context.all_lines)
 
 
 def run_example(context, extra_args=None, binary=None, expected_messages=1):
-    """Run an example binary, send messages via stdin, wait for delivery."""
-    binary = binary or EXAMPLE_BINARY
+    """Run the single-task example as a one-shot: write all stdin upfront,
+    wait for clean exit, then assert the oracle saw the messages.
+
+    Portable across Linux and Windows — no select.select on a pipe fd (which
+    Windows doesn't support). Single-task example only: every Log call is
+    synchronous (NullBuffer + Datagram), so "quit" cannot arrive before the
+    UDP packets have left the socket.
+    """
+    binary = binary or context.example_binary
     assert os.path.exists(binary), (
         f"Example binary not found at {binary} — build with cmake first"
+    )
+
+    # Windows CreateProcess needs an absolute path (or one resolvable via PATH);
+    # forward-slash relative paths from a bash-launched behave fail otherwise.
+    cmd = [os.path.abspath(binary)]
+    if extra_args:
+        cmd.extend(extra_args)
+
+    process = subprocess.Popen(
+        cmd,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    context.example_pid = process.pid
+
+    try:
+        process.communicate(input=f"send {expected_messages}\nquit\n", timeout=15)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait()
+        raise
+
+    assert process.returncode == 0, (
+        f"Example binary failed with exit code {process.returncode}"
+    )
+
+    wait_for_messages(context, expected_messages)
+
+
+def run_threaded_example(context, extra_args=None, expected_messages=1):
+    """Run the threaded example using the prompt-based protocol so that the
+    service thread has time to drain the buffer between "send N" and "quit".
+
+    POSIX-only — uses select.select on a pipe fd, which Windows does not
+    support. All threaded scenarios are tagged @buffered and excluded from
+    the Windows runner.
+    """
+    binary = THREADED_BINARY
+    assert os.path.exists(binary), (
+        f"Threaded binary not found at {binary} — build with cmake first"
     )
 
     cmd = [os.path.join(".", binary)]
@@ -142,21 +249,15 @@ def run_example(context, extra_args=None, binary=None, expected_messages=1):
     )
     context.example_pid = process.pid
 
-    # Wait for initial prompt
     wait_for_prompt(process)
-
-    # Send messages and wait for confirmation
     send_command(process, f"send {expected_messages}")
-
-    # Wait for syslog-ng to receive the messages before quitting
     wait_for_messages(context, expected_messages)
 
-    # Clean shutdown — write quit, don't wait for prompt (process exits)
     process.stdin.write("quit\n")
     process.stdin.flush()
     process.wait(timeout=10)
     assert process.returncode == 0, (
-        f"Example binary failed with exit code {process.returncode}"
+        f"Threaded example failed with exit code {process.returncode}"
     )
 
 
@@ -179,12 +280,16 @@ def syslog_ng_swap_config(config_path):
 
 @given("syslog-ng is running")
 def step_syslog_ng_is_running(context):
-    assert os.path.exists(SYSLOG_NG_CTL), (
-        f"syslog-ng control socket not found at {SYSLOG_NG_CTL}"
-    )
+    # Only assert the syslog-ng control socket when syslog-ng is actually the
+    # active oracle. Other runners (e.g. the OTel Collector on Windows) reuse
+    # this step text but expose no such socket.
+    if context.oracle_format == "syslog-ng":
+        assert os.path.exists(SYSLOG_NG_CTL), (
+            f"syslog-ng control socket not found at {SYSLOG_NG_CTL}"
+        )
 
     # Record current line count so we can detect the new message
-    context.lines_before = line_count(RECEIVED_LOG)
+    context.lines_before = line_count(context.received_log)
 
 
 def build_threaded_command(context, transport, no_sd=False):
@@ -339,17 +444,17 @@ def step_example_sends_message(context):
 
 @when("the threaded example sends a syslog message")
 def step_threaded_sends_message(context):
-    run_example(context, binary=THREADED_BINARY)
+    run_threaded_example(context)
 
 
 @when("the threaded example sends a syslog message with transport {transport}")
 def step_threaded_sends_with_transport(context, transport):
-    run_example(context, ["--transport", transport], binary=THREADED_BINARY)
+    run_threaded_example(context, ["--transport", transport])
 
 
 @when("the threaded example sends {count:d} syslog messages")
 def step_threaded_sends_multiple(context, count):
-    run_example(context, binary=THREADED_BINARY, expected_messages=count)
+    run_threaded_example(context, expected_messages=count)
 
 
 @when("the example program sends a message with facility {facility:d} and severity {severity:d}")
@@ -466,9 +571,9 @@ def step_check_message_count(context, count):
 
 @then("syslog-ng receives no more messages")
 def step_check_no_more_messages(context):
-    before = line_count(RECEIVED_LOG)
+    before = line_count(context.received_log)
     time.sleep(5)
-    after = line_count(RECEIVED_LOG)
+    after = line_count(context.received_log)
     assert after == before, (
         f"Expected no more messages, but received {after - before} additional"
     )
@@ -540,7 +645,7 @@ def step_check_sequential_ids(context, count):
         f"Expected {count} messages, got {context.message_count}"
     )
     for i, line in enumerate(context.all_lines, start=1):
-        fields = parse_syslog_line(line)
+        fields = parse_syslog_ng_line(line)
         sd = fields.get("STRUCTURED_DATA", "")
         match = re.search(r'sequenceId="(\d+)"', sd)
         assert match, (
@@ -586,7 +691,7 @@ def step_client_is_killed(context):
 def step_check_contiguous_sequence_ids(context):
     ids = []
     for line in context.all_lines:
-        fields = parse_syslog_line(line)
+        fields = parse_syslog_ng_line(line)
         sd = fields.get("STRUCTURED_DATA", "")
         match = re.search(r'sequenceId="(\d+)"', sd)
         assert match, (
@@ -607,7 +712,7 @@ def step_check_last_n_contiguous_ids(context, count, start):
     )
     last_n = context.all_lines[-count:]
     for i, line in enumerate(last_n):
-        fields = parse_syslog_line(line)
+        fields = parse_syslog_ng_line(line)
         sd = fields.get("STRUCTURED_DATA", "")
         match = re.search(r'sequenceId="(\d+)"', sd)
         assert match, (
@@ -632,7 +737,7 @@ def step_check_replayed_sequence_ids(context, id_list):
     # from the previous session (already verified)
     replayed = context.all_lines[-len(expected):]
     for i, line in enumerate(replayed):
-        fields = parse_syslog_line(line)
+        fields = parse_syslog_ng_line(line)
         sd = fields.get("STRUCTURED_DATA", "")
         match = re.search(r'sequenceId="(\d+)"', sd)
         assert match, (
@@ -648,7 +753,7 @@ def step_check_replayed_sequence_ids(context, id_list):
 @then("the last message has sequenceId {value:d}")
 def step_check_last_sequence_id(context, value):
     assert context.all_lines, "No messages received to check last sequenceId"
-    fields = parse_syslog_line(context.all_lines[-1])
+    fields = parse_syslog_ng_line(context.all_lines[-1])
     sd = fields.get("STRUCTURED_DATA", "")
     match = re.search(r'sequenceId="(\d+)"', sd)
     assert match, (

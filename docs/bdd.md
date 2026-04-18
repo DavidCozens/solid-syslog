@@ -131,7 +131,51 @@ Runner tag filters:
 | Runner | Filter |
 | --- | --- |
 | Linux (syslog-ng) | `not @wip` |
-| Windows (planned) | `not @wip and not @windows_wip and not @buffered` |
+| Windows (OTel Collector) | `not @wip and not @windows_wip and not @buffered` |
+
+## Two oracles, one step file
+
+Step definitions read the active oracle from `ORACLE_FORMAT`:
+
+| Oracle | `ORACLE_FORMAT` | `RECEIVED_LOG` default | Runs on |
+| --- | --- | --- | --- |
+| syslog-ng (key=value text) | `syslog-ng` | `Bdd/output/received.log` | Linux container |
+| OTel Collector Contrib (JSON Lines) | `otel-jsonl` | `Bdd/output/received.jsonl` | Windows native |
+
+`parse_oracle_line` dispatches to the right parser; both produce the same flat field dict
+(`PRIORITY`, `TIMESTAMP`, `HOSTNAME`, `APP_NAME`, `PROCID`, ...) so the `Then` steps don't
+need to know which oracle is in use. Walking-skeleton scope only — `STRUCTURED_DATA`
+re-rendering for the OTel parser is added when the structured-data scenarios are
+promoted out of `@windows_wip`.
+
+## Local Windows BDD setup
+
+Prerequisites: Python 3.13+ on `PATH` (`winget install Python.Python.3.13`), MSVC + vcpkg
+for the `msvc-debug` build.
+
+```pwsh
+# 1. Install behave (pinned version matches the Linux container image)
+pip install -r Bdd/requirements.txt
+
+# 2. Download otelcol-contrib (pinned version, SHA-256 verified)
+powershell -ExecutionPolicy Bypass -File Bdd/otel/Install-OtelCollector.ps1
+
+# 3. Build the Windows example
+cmake --preset msvc-debug
+cmake --build --preset msvc-debug --target SolidSyslogWindowsExample
+
+# 4. Start the OTel oracle (binds 127.0.0.1:5514)
+./Bdd/otel/bin/otelcol-contrib.exe --config=Bdd/otel/config.yaml &
+
+# 5. Run the Windows-eligible scenarios
+EXAMPLE_BINARY=build/msvc-debug/Example/Debug/SolidSyslogExample.exe \
+RECEIVED_LOG=Bdd/output/received.jsonl \
+ORACLE_FORMAT=otel-jsonl \
+behave --tags='not @wip and not @windows_wip and not @buffered' Bdd/features/
+```
+
+If port 5514 is busy, stop the dev-container's syslog-ng:
+`docker compose -f .devcontainer/docker-compose.yml stop syslog-ng`
 
 ## Test isolation
 

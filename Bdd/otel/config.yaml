@@ -1,0 +1,28 @@
+# OpenTelemetry Collector Contrib config — Windows BDD oracle.
+# Receives RFC 5424 syslog over UDP on 127.0.0.1:5514 and writes each
+# parsed log record as a JSON line to Bdd/output/received.jsonl.
+#
+# Used by the bdd-windows runner as a Windows-native replacement for
+# syslog-ng (no WSL/Wine/Docker needed).
+
+receivers:
+  syslog:
+    udp:
+      listen_address: "127.0.0.1:5514"
+    protocol: rfc5424
+
+exporters:
+  file:
+    path: "Bdd/output/received.jsonl"
+    rotation:
+      max_megabytes: 10
+      max_backups: 1
+
+service:
+  telemetry:
+    logs:
+      level: warn
+  pipelines:
+    logs:
+      receivers: [syslog]
+      exporters: [file]
