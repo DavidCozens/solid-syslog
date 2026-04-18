@@ -332,7 +332,7 @@ jobs:
         run: cmake --preset msvc-debug
 
       - name: Build and test
-        run: cmake --build --preset msvc-debug --target junit
+        run: cmake --build --preset msvc-debug --target junit SolidSyslogWindowsExample
 
       - name: Test Report
         uses: dorny/test-reporter@v3
@@ -349,6 +349,116 @@ jobs:
           name: junit-msvc
           path: build/msvc-debug/cpputest_*.xml
           retention-days: 1
+
+      - name: Upload Windows example binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: solid-syslog-windows-example
+          path: build/msvc-debug/Example/Debug/SolidSyslogExample.exe
+          retention-days: 1
+          compression-level: 0
+
+  bdd-windows:
+    needs: windows-build-and-test
+    runs-on: windows-2025
+    permissions:
+      contents: read
+      checks: write
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: solid-syslog-windows-example
+          path: build/msvc-debug/Example/Debug/
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: '3.13'
+
+      - name: Install behave
+        run: pip install -r Bdd/requirements.txt
+
+      - name: Install otelcol-contrib
+        shell: pwsh
+        run: ./Bdd/otel/Install-OtelCollector.ps1
+
+      - name: Prepare BDD directories
+        run: mkdir -p Bdd/output Bdd/junit
+
+      - name: Start OTel Collector
+        # Use bash `&` backgrounding (what works locally) rather than pwsh
+        # Start-Process — the latter launched silently on windows-2025 with
+        # empty redirect files and no UDP bind, suggesting the child was
+        # either killed with the parent console or never actually executed.
+        run: |
+          nohup ./Bdd/otel/bin/otelcol-contrib.exe \
+            --config=Bdd/otel/config.yaml \
+            > Bdd/output/otelcol.out 2> Bdd/output/otelcol.err &
+          echo "otelcol backgrounded with PID $!"
+
+      - name: Wait for oracle to bind UDP 5514
+        shell: pwsh
+        run: |
+          $deadline = (Get-Date).AddSeconds(30)
+          while ((Get-Date) -lt $deadline) {
+              if (Get-NetUDPEndpoint -LocalPort 5514 -ErrorAction SilentlyContinue) {
+                  Write-Host "otelcol is listening on UDP 5514"
+                  exit 0
+              }
+              Start-Sleep -Milliseconds 500
+          }
+          Write-Host "otelcol did not bind UDP 5514 within 30 seconds"
+          Write-Host "--- tasklist otelcol-contrib ---"
+          tasklist /FI "IMAGENAME eq otelcol-contrib.exe"
+          Write-Host "--- UDP endpoints (top 20) ---"
+          Get-NetUDPEndpoint | Select-Object -First 20 | Format-Table -AutoSize
+          Write-Host "--- Bdd/output contents ---"
+          Get-ChildItem Bdd/output -ErrorAction SilentlyContinue | Format-Table
+          Write-Host "--- otelcol.out ---"
+          Get-Content Bdd/output/otelcol.out -ErrorAction SilentlyContinue
+          Write-Host "--- otelcol.err ---"
+          Get-Content Bdd/output/otelcol.err -ErrorAction SilentlyContinue
+          exit 1
+
+      - name: Run BDD tests
+        env:
+          EXAMPLE_BINARY: build/msvc-debug/Example/Debug/SolidSyslogExample.exe
+          RECEIVED_LOG: Bdd/output/received.jsonl
+          ORACLE_FORMAT: otel-jsonl
+        run: >
+          behave --junit --junit-directory Bdd/junit
+          --tags='not @wip and not @windows_wip and not @buffered'
+          Bdd/features/
+
+      - name: BDD Test Report (Windows)
+        uses: dorny/test-reporter@v3
+        if: success() || failure()
+        with:
+          name: Test Results (BDD Windows)
+          path: Bdd/junit/TESTS-*.xml
+          reporter: java-junit
+
+      - name: Upload JUnit XML
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-bdd-windows
+          path: Bdd/junit/TESTS-*.xml
+          retention-days: 1
+
+      - name: OTel collector logs on failure
+        if: failure()
+        run: |
+          echo "--- otelcol.out ---"
+          cat Bdd/output/otelcol.out || true
+          echo "--- otelcol.err ---"
+          cat Bdd/output/otelcol.err || true
 
   bdd:
     needs: build-and-test
@@ -398,7 +508,7 @@ jobs:
 
   quality-summary:
     if: always() && github.event_name == 'pull_request'
-    needs: [build-and-test, clang-build-and-test, sanitize, coverage, tidy, cppcheck, format, bdd, windows-build-and-test]
+    needs: [build-and-test, clang-build-and-test, sanitize, coverage, tidy, cppcheck, format, bdd, windows-build-and-test, bdd-windows]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -455,8 +565,13 @@ jobs:
                   },
                   {
                     "id": "junit",
-                    "name": "BDD Tests",
+                    "name": "BDD Tests (Linux)",
                     "pattern": "**/junit-bdd/TESTS-*.xml"
+                  },
+                  {
+                    "id": "junit",
+                    "name": "BDD Tests (Windows)",
+                    "pattern": "**/junit-bdd-windows/TESTS-*.xml"
                   },
                   {
                     "id": "junit",
