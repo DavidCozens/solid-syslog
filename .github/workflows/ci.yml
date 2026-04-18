@@ -394,14 +394,41 @@ jobs:
       - name: Start OTel Collector
         shell: pwsh
         run: |
-          Start-Process -FilePath ./Bdd/otel/bin/otelcol-contrib.exe `
-                        -ArgumentList "--config=Bdd/otel/config.yaml" `
-                        -RedirectStandardOutput Bdd/output/otelcol.out `
-                        -RedirectStandardError  Bdd/output/otelcol.err `
+          # Use absolute paths for everything — Start-Process on pwsh does not
+          # reliably propagate $PWD to the child's cwd or to the redirect file
+          # resolution, so relative paths here caused the collector's config
+          # lookup and redirects to land unpredictably on windows-2025.
+          $repo   = (Get-Location).Path
+          $exe    = Join-Path $repo 'Bdd/otel/bin/otelcol-contrib.exe'
+          $config = Join-Path $repo 'Bdd/otel/config.yaml'
+          $outLog = Join-Path $repo 'Bdd/output/otelcol.out'
+          $errLog = Join-Path $repo 'Bdd/output/otelcol.err'
+          Start-Process -FilePath $exe `
+                        -ArgumentList "--config=$config" `
+                        -WorkingDirectory $repo `
+                        -RedirectStandardOutput $outLog `
+                        -RedirectStandardError  $errLog `
                         -WindowStyle Hidden
 
       - name: Wait for oracle to bind UDP 5514
-        run: sleep 3
+        shell: pwsh
+        run: |
+          # Poll until otelcol is listening on UDP 5514, instead of blind-sleeping.
+          # Dumps collector logs on timeout so a silent start failure surfaces.
+          $deadline = (Get-Date).AddSeconds(30)
+          while ((Get-Date) -lt $deadline) {
+              if (Get-NetUDPEndpoint -LocalPort 5514 -ErrorAction SilentlyContinue) {
+                  Write-Host "otelcol is listening on UDP 5514"
+                  exit 0
+              }
+              Start-Sleep -Milliseconds 500
+          }
+          Write-Host "otelcol did not bind UDP 5514 within 30 seconds"
+          Write-Host "--- otelcol.out ---"
+          Get-Content Bdd/output/otelcol.out -ErrorAction SilentlyContinue
+          Write-Host "--- otelcol.err ---"
+          Get-Content Bdd/output/otelcol.err -ErrorAction SilentlyContinue
+          exit 1
 
       - name: Run BDD tests
         env:
