@@ -153,6 +153,11 @@ promoted out of `@windows_wip`.
 Prerequisites: Python 3.13+ on `PATH` (`winget install Python.Python.3.13`), MSVC + vcpkg
 for the `msvc-debug` build.
 
+> **Shell:** the recipe below uses bash syntax (background `&`, inline `VAR=value command`).
+> Run it from **Git Bash for Windows**, which ships with the Git installer that's already
+> required for this repo. PowerShell users either translate (`Start-Process` for backgrounding,
+> `$env:VAR = "..."` for env vars) or invoke `bash -c "..."`.
+
 ```pwsh
 # 1. Install behave (pinned version matches the Linux container image)
 pip install -r Bdd/requirements.txt

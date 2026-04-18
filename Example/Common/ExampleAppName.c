@@ -5,18 +5,18 @@
 #include <stdbool.h>
 #include <string.h>
 
+/* Length of ".exe" — used to recognise and strip the Windows executable
+   extension so the syslog app name omits it regardless of build platform. */
+enum
+{
+    EXE_SUFFIX_LENGTH = 4
+};
+
 static const char* appName;
 static size_t      appNameLength;
 
 static bool EndsWithDotExe(const char* name, size_t length)
 {
-    /* Strips a trailing ".exe"/".EXE" so the syslog app name omits the
-       Windows executable extension regardless of the build platform. */
-    enum
-    {
-        EXE_SUFFIX_LENGTH = 4
-    };
-
     if (length < EXE_SUFFIX_LENGTH)
     {
         return false;
@@ -53,7 +53,7 @@ void ExampleAppName_Set(const char* argv0)
 
     if (EndsWithDotExe(appName, appNameLength))
     {
-        appNameLength -= 4;
+        appNameLength -= EXE_SUFFIX_LENGTH;
     }
 }
 

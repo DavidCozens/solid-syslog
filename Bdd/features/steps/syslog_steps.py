@@ -89,10 +89,12 @@ def parse_otel_jsonl_line(line):
     """Parse one JSON line from the OTel Collector file exporter into the
     same flat dict shape as parse_syslog_ng_line.
 
-    Walking-skeleton scope only: PRIORITY/TIMESTAMP/HOSTNAME/APP_NAME/PROCID
-    plus MSG. STRUCTURED_DATA is not yet rendered back into syslog-ng's
-    `[name key="value"]` text form — to be added when promoting the
-    structured_data scenarios out of @windows_wip.
+    Walking-skeleton scope only: PRIORITY/TIMESTAMP/HOSTNAME/APP_NAME/PROCID.
+    MSG and STRUCTURED_DATA are not yet extracted — added when the
+    message_fields and structured_data scenarios are promoted out of
+    @windows_wip (OTel's body field carries the whole raw RFC 5424 line for
+    message-less records, so MSG extraction needs verifying against a real
+    bodied message).
     """
     record = json.loads(line)
     log = record["resourceLogs"][0]["scopeLogs"][0]["logRecords"][0]
@@ -249,16 +251,23 @@ def run_threaded_example(context, extra_args=None, expected_messages=1):
     )
     context.example_pid = process.pid
 
-    wait_for_prompt(process)
-    send_command(process, f"send {expected_messages}")
-    wait_for_messages(context, expected_messages)
+    try:
+        wait_for_prompt(process)
+        send_command(process, f"send {expected_messages}")
+        wait_for_messages(context, expected_messages)
 
-    process.stdin.write("quit\n")
-    process.stdin.flush()
-    process.wait(timeout=10)
-    assert process.returncode == 0, (
-        f"Threaded example failed with exit code {process.returncode}"
-    )
+        process.stdin.write("quit\n")
+        process.stdin.flush()
+        process.wait(timeout=10)
+        assert process.returncode == 0, (
+            f"Threaded example failed with exit code {process.returncode}"
+        )
+    finally:
+        # Don't let an intermediate exception leak the helper into later
+        # scenarios — kill if it's still running after the assertions above.
+        if process.poll() is None:
+            process.kill()
+            process.wait(timeout=5)
 
 
 def syslog_ng_reload():

@@ -19,10 +19,16 @@ if ([string]::IsNullOrEmpty($BinDir))
     $BinDir = Join-Path $PSScriptRoot 'bin'
 }
 
-$exePath = Join-Path $BinDir 'otelcol-contrib.exe'
-if (Test-Path $exePath)
+$exePath       = Join-Path $BinDir 'otelcol-contrib.exe'
+$versionMarker = Join-Path $BinDir 'otelcol-contrib.version'
+
+# Fast-path only when both the exe and a matching version marker exist;
+# otherwise re-download so a stale or hand-replaced binary can't silently
+# bypass the pinned $Version / $Sha256.
+if ((Test-Path $exePath) -and (Test-Path $versionMarker) -and
+    ((Get-Content $versionMarker -Raw).Trim() -eq $Version))
 {
-    Write-Host "otelcol-contrib already installed at $exePath"
+    Write-Host "otelcol-contrib v$Version already installed at $exePath"
     return
 }
 
@@ -54,4 +60,5 @@ if (-not (Test-Path $exePath))
 }
 
 Remove-Item $tarballDst -Force
+Set-Content -Path $versionMarker -Value $Version -NoNewline
 Write-Host "Installed otelcol-contrib v$Version at $exePath"
