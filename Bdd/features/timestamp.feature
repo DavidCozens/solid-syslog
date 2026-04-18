@@ -1,4 +1,4 @@
-@udp @windows_wip
+@udp
 Feature: Timestamp encoding
   The library captures the timestamp at raise-time via an injected clock
   and formats it as RFC 5424 FULL-DATE "T" FULL-TIME.
