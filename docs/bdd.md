@@ -106,6 +106,33 @@ sock.close()
 This will be needed when BDD scenarios require different syslog-ng source configurations —
 for example, switching from UDP to TLS transport in E3.
 
+## Feature tags
+
+Features are tagged by **capability** — what the system under test must provide for the
+scenario to be meaningful. Runners declare which capabilities they have by excluding the
+tags they lack. This lets us add new runners (Windows, bare-metal RTOS, TLS-only client,
+etc.) without rewriting feature tags.
+
+| Tag | Meaning |
+| --- | --- |
+| `@udp` | Needs UDP transport |
+| `@tcp` | Needs TCP transport (RFC 6587 framing) |
+| `@buffered` | Drives the long-running threaded example (interactive process protocol — buffer + service thread; transitively covers store-and-forward, oracle reload, signal-kill scenarios) |
+
+Two rollout markers are also used (temporary; remove once the scenario passes):
+
+| Tag | Meaning |
+| --- | --- |
+| `@wip` | Skip everywhere — work in progress |
+| `@windows_wip` | Skip on Windows only — should work but not yet verified |
+
+Runner tag filters:
+
+| Runner | Filter |
+| --- | --- |
+| Linux (syslog-ng) | `not @wip` |
+| Windows (planned) | `not @wip and not @windows_wip and not @buffered` |
+
 ## Test isolation
 
 Behave uses line-count tracking for test isolation. The `Given` step records the current line

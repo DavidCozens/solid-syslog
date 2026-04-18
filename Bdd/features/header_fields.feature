@@ -1,3 +1,4 @@
+@udp @windows_wip
 Feature: Message header fields
   The library includes hostname, app-name, and process ID in the
   RFC 5424 message header.

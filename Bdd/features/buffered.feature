@@ -1,3 +1,4 @@
+@udp @buffered
 Feature: Buffered message delivery
   The threaded example sends messages via a PosixMessageQueueBuffer.
   A service thread drains the buffer and sends via UDP to syslog-ng.

@@ -1,3 +1,4 @@
+@tcp @buffered
 Feature: TCP message delivery
   The threaded example sends messages via TCP transport with
   RFC 6587 octet-counting framing to syslog-ng.
