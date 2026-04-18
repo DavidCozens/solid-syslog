@@ -30,9 +30,9 @@ TEST_GROUP(ExampleAppName)
 
 TEST(ExampleAppName, BackslashSeparatorExtractsBaseName)
 {
-    ExampleAppName_Set("dir\\binary.exe");
+    ExampleAppName_Set("dir\\binary");
     ExampleAppName_Get(formatter);
-    STRCMP_EQUAL("binary.exe", formatted());
+    STRCMP_EQUAL("binary", formatted());
 }
 
 TEST(ExampleAppName, ForwardSlashSeparatorExtractsBaseName)
@@ -51,7 +51,35 @@ TEST(ExampleAppName, NoSeparatorReturnsWholeArgument)
 
 TEST(ExampleAppName, MixedSeparatorsUseRightmost)
 {
-    ExampleAppName_Set("C:\\msys64\\home/user/example.exe");
+    ExampleAppName_Set("C:\\msys64\\home/user/example");
     ExampleAppName_Get(formatter);
-    STRCMP_EQUAL("example.exe", formatted());
+    STRCMP_EQUAL("example", formatted());
+}
+
+TEST(ExampleAppName, ExeExtensionIsStripped)
+{
+    ExampleAppName_Set("app.exe");
+    ExampleAppName_Get(formatter);
+    STRCMP_EQUAL("app", formatted());
+}
+
+TEST(ExampleAppName, UpperCaseExeExtensionIsStripped)
+{
+    ExampleAppName_Set("APP.EXE");
+    ExampleAppName_Get(formatter);
+    STRCMP_EQUAL("APP", formatted());
+}
+
+TEST(ExampleAppName, ExeWithPathSeparatorIsStripped)
+{
+    ExampleAppName_Set("C:\\bin\\SolidSyslogExample.exe");
+    ExampleAppName_Get(formatter);
+    STRCMP_EQUAL("SolidSyslogExample", formatted());
+}
+
+TEST(ExampleAppName, NonExeExtensionIsKept)
+{
+    ExampleAppName_Set("data.txt");
+    ExampleAppName_Get(formatter);
+    STRCMP_EQUAL("data.txt", formatted());
 }

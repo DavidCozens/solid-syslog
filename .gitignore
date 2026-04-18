@@ -47,11 +47,14 @@ cpputest_*.xml
 # compile_commands.json copied to workspace root by CMake Tools extension
 compile_commands.json
 
-# BDD output (syslog-ng writes here at runtime)
+# BDD output (syslog-ng or OTel collector writes here at runtime)
 Bdd/output/*
 !Bdd/output/.gitkeep
 Bdd/junit/*
 !Bdd/junit/.gitkeep
+
+# OTel Collector binary downloaded by Bdd/otel/Install-OtelCollector.ps1
+Bdd/otel/bin/
 
 # Python bytecode (BDD steps)
 __pycache__/

@@ -1,4 +1,4 @@
-@udp @windows_wip
+@udp
 Feature: Walking skeleton end-to-end
   The example program sends an RFC 5424 message via UDP.
   syslog-ng receives it and writes the parsed fields to a log file.

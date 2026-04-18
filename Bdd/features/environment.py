@@ -29,9 +29,16 @@ def wait_for_tcp_port_open(host="syslog-ng", port=5514, timeout=5):
 
 
 def before_all(context):
+    # Configurable via env so the same step code drives Linux (syslog-ng) and
+    # Windows (OTel Collector) runners with different binary paths and oracle
+    # output formats.
     context.example_binary = os.environ.get(
-        "EXAMPLE_BINARY", "build/debug/Example/ExampleProgram"
+        "EXAMPLE_BINARY", "build/debug/Example/SolidSyslogExample"
     )
+    context.received_log = os.environ.get(
+        "RECEIVED_LOG", "Bdd/output/received.log"
+    )
+    context.oracle_format = os.environ.get("ORACLE_FORMAT", "syslog-ng")
 
 
 def after_scenario(context, scenario):
