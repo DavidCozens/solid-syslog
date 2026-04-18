@@ -1,3 +1,4 @@
+@tcp @buffered
 Feature: TCP reconnection after server outage
   The TCP sender detects connection failure and reconnects when the
   server recovers. Messages sent during the outage are lost (store

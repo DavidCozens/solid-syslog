@@ -1,3 +1,4 @@
+@tcp @buffered
 Feature: Power cycle replay from file store
   After a power cycle, unsent messages persisted in the file store
   are replayed before new messages. The collector sees old-session
