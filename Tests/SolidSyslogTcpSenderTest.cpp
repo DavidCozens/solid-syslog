@@ -159,6 +159,15 @@ TEST(SolidSyslogTcpSenderDestroy, DestroyAfterSendClosesSocket)
     LONGS_EQUAL(SocketFake_SocketFd(), SocketFake_LastClosedFd());
 }
 
+TEST(SolidSyslogTcpSenderDestroy, DestroyAfterDisconnectDoesNotDoubleClose)
+{
+    struct SolidSyslogSender* sender = SolidSyslogTcpSender_Create(&config);
+    SolidSyslogSender_Send(sender, "x", 1);
+    SolidSyslogSender_Disconnect(sender);
+    SolidSyslogTcpSender_Destroy();
+    LONGS_EQUAL(1, SocketFake_CloseCallCount());
+}
+
 TEST(SolidSyslogTcpSender, SendConnectsOnFirstCall)
 {
     Send();
@@ -217,6 +226,43 @@ TEST(SolidSyslogTcpSender, SendUsesSocketFd)
 TEST(SolidSyslogTcpSender, SendReturnsTrueOnSuccess)
 {
     CHECK_TRUE(SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN));
+}
+
+TEST(SolidSyslogTcpSender, DisconnectAfterSendClosesSocket)
+{
+    Send();
+    SolidSyslogSender_Disconnect(sender);
+    LONGS_EQUAL(1, SocketFake_CloseCallCount());
+}
+
+TEST(SolidSyslogTcpSender, DisconnectIsIdempotent)
+{
+    Send();
+    SolidSyslogSender_Disconnect(sender);
+    SolidSyslogSender_Disconnect(sender);
+    LONGS_EQUAL(1, SocketFake_CloseCallCount());
+}
+
+TEST(SolidSyslogTcpSender, SendAfterDisconnectReopensSocket)
+{
+    Send();
+    SolidSyslogSender_Disconnect(sender);
+    Send();
+    LONGS_EQUAL(2, SocketFake_SocketCallCount());
+}
+
+TEST(SolidSyslogTcpSender, SendAfterDisconnectResolves)
+{
+    Send();
+    SolidSyslogSender_Disconnect(sender);
+    Send();
+    LONGS_EQUAL(2, SocketFake_GetAddrInfoCallCount());
+}
+
+TEST(SolidSyslogTcpSender, DisconnectWithoutSendDoesNotClose)
+{
+    SolidSyslogSender_Disconnect(sender);
+    LONGS_EQUAL(0, SocketFake_CloseCallCount());
 }
 
 // clang-format off
