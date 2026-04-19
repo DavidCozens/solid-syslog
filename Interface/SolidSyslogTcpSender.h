@@ -1,6 +1,7 @@
 #ifndef SOLIDSYSLOG_TCP_SENDER_H
 #define SOLIDSYSLOG_TCP_SENDER_H
 
+#include "SolidSyslogEndpoint.h"
 #include "SolidSyslogResolver.h"
 #include "SolidSyslogStream.h"
 
@@ -15,6 +16,7 @@ struct SolidSyslogTcpSenderConfig
 {
     struct SolidSyslogResolver* resolver;
     struct SolidSyslogStream*   stream;
+    SolidSyslogEndpointFunction endpoint; /* optional during cut-over; NULL falls back to legacy resolver path */
 };
 
 EXTERN_C_BEGIN
