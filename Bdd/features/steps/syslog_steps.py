@@ -869,3 +869,35 @@ def step_check_last_sequence_id(context, value):
     assert actual == value, (
         f"Last message: expected sequenceId {value}, got {actual}"
     )
+
+
+# --- S20.1 SwitchingSender scaffolding (Phase 2) --------------------------
+# These steps are wired up in Phase 5 once the threaded example exposes the
+# `switch` command and syslog-ng is configured to split per-transport log
+# output. Until then they raise NotImplementedError so Behave reports the
+# scenario as failed rather than silently passing.
+
+
+@given("the switching example is running with default transport {transport:w}")
+def step_switching_example_running(context, transport):
+    raise NotImplementedError(
+        "S20.1 Phase 5: start threaded example with --transport "
+        f"{transport} wiring SwitchingSender"
+    )
+
+
+@when("the client switches to transport {transport:w}")
+def step_client_switches_transport(context, transport):
+    raise NotImplementedError(
+        "S20.1 Phase 5: send `switch "
+        f"{transport}` command to the interactive example"
+    )
+
+
+@then("syslog-ng receives {count:d} message over {transport:w}")
+@then("syslog-ng receives {count:d} messages over {transport:w}")
+def step_check_per_transport_count(context, count, transport):
+    raise NotImplementedError(
+        "S20.1 Phase 5: count records in the "
+        f"received_{transport}.log oracle file"
+    )
