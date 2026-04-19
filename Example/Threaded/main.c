@@ -58,6 +58,7 @@ static struct SolidSyslogSender* CreateSender(const struct ExampleOptions* optio
         tcpConfig.resolver                                 = SolidSyslogGetAddrInfoResolver_Create();
         tcpConfig.stream                                   = SolidSyslogPosixTcpStream_Create();
         tcpConfig.endpoint                                 = ExampleTcpConfig_GetEndpoint;
+        tcpConfig.endpointVersion                          = ExampleTcpConfig_GetEndpointVersion;
         return SolidSyslogTcpSender_Create(&tcpConfig);
     }
 

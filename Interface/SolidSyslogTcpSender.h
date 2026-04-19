@@ -14,9 +14,10 @@ enum
 
 struct SolidSyslogTcpSenderConfig
 {
-    struct SolidSyslogResolver* resolver;
-    struct SolidSyslogStream*   stream;
-    SolidSyslogEndpointFunction endpoint; /* optional during cut-over; NULL falls back to legacy resolver path */
+    struct SolidSyslogResolver*        resolver;
+    struct SolidSyslogStream*          stream;
+    SolidSyslogEndpointFunction        endpoint;        /* fills host/port; called only on (re)connect */
+    SolidSyslogEndpointVersionFunction endpointVersion; /* polled cheaply on every Send for stale check */
 };
 
 EXTERN_C_BEGIN

@@ -26,3 +26,10 @@ void ExampleTcpConfig_GetEndpoint(struct SolidSyslogEndpoint* endpoint)
     SolidSyslogFormatter_BoundedString(endpoint->host, host, strlen(host));
     endpoint->port = (uint16_t) ExampleTcpConfig_GetPort();
 }
+
+/* Static config — host/port never change, so version stays 0 forever and the
+   sender connects exactly once. */
+uint32_t ExampleTcpConfig_GetEndpointVersion(void)
+{
+    return 0;
+}

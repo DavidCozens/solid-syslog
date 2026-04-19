@@ -6,12 +6,14 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 struct SolidSyslogTcpSender
 {
     struct SolidSyslogSender          base;
     struct SolidSyslogTcpSenderConfig config;
     bool                              connected;
+    uint32_t                          lastEndpointVersion;
 };
 
 enum
@@ -23,6 +25,8 @@ enum
 };
 
 static bool                         Send(struct SolidSyslogSender* self, const void* buffer, size_t size);
+static inline bool                  Reconcile(struct SolidSyslogTcpSender* tcp);
+static inline void                  DisconnectIfStale(struct SolidSyslogTcpSender* tcp);
 static inline bool                  EnsureConnected(struct SolidSyslogTcpSender* tcp);
 static inline bool                  Connected(struct SolidSyslogTcpSender* tcp);
 static bool                         Connect(struct SolidSyslogTcpSender* tcp);
@@ -33,8 +37,9 @@ static bool                         TransmitFramed(struct SolidSyslogTcpSender* 
 static struct SolidSyslogFormatter* FormatOctetCountingPrefix(SolidSyslogFormatterStorage* storage, size_t messageSize);
 static bool                         SendBytes(struct SolidSyslogTcpSender* tcp, const void* data, size_t len);
 static void                         NilEndpoint(struct SolidSyslogEndpoint* endpoint);
+static uint32_t                     NilEndpointVersion(void);
 
-static const struct SolidSyslogTcpSender DEFAULT_INSTANCE = {.config = {.endpoint = NilEndpoint}};
+static const struct SolidSyslogTcpSender DEFAULT_INSTANCE = {.config = {.endpoint = NilEndpoint, .endpointVersion = NilEndpointVersion}};
 static struct SolidSyslogTcpSender       instance;
 
 struct SolidSyslogSender* SolidSyslogTcpSender_Create(const struct SolidSyslogTcpSenderConfig* config)
@@ -43,6 +48,7 @@ struct SolidSyslogSender* SolidSyslogTcpSender_Create(const struct SolidSyslogTc
     instance.config.resolver = config->resolver;
     instance.config.stream   = config->stream;
     ASSIGN_IF_NON_NULL(instance.config.endpoint, config->endpoint);
+    ASSIGN_IF_NON_NULL(instance.config.endpointVersion, config->endpointVersion);
     instance.base.Send       = Send;
     instance.base.Disconnect = Disconnect;
     return &instance.base;
@@ -57,7 +63,24 @@ void SolidSyslogTcpSender_Destroy(void)
 static bool Send(struct SolidSyslogSender* self, const void* buffer, size_t size)
 {
     struct SolidSyslogTcpSender* tcp = (struct SolidSyslogTcpSender*) self;
-    return EnsureConnected(tcp) && TransmitFramed(tcp, buffer, size);
+    return Reconcile(tcp) && TransmitFramed(tcp, buffer, size);
+}
+
+static inline bool Reconcile(struct SolidSyslogTcpSender* tcp)
+{
+    DisconnectIfStale(tcp);
+    return EnsureConnected(tcp);
+}
+
+static inline void DisconnectIfStale(struct SolidSyslogTcpSender* tcp)
+{
+    uint32_t version = tcp->config.endpointVersion();
+
+    if (version != tcp->lastEndpointVersion)
+    {
+        Disconnect(&tcp->base);
+        tcp->lastEndpointVersion = version;
+    }
 }
 
 static inline bool EnsureConnected(struct SolidSyslogTcpSender* tcp)
@@ -142,4 +165,9 @@ static void NilEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
     SolidSyslogFormatter_BoundedString(endpoint->host, "", 0);
     endpoint->port = 0;
+}
+
+static uint32_t NilEndpointVersion(void)
+{
+    return 0;
 }
