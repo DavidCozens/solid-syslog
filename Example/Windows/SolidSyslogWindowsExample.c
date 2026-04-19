@@ -5,6 +5,8 @@
 #include "SolidSyslog.h"
 #include "SolidSyslogAtomicCounter.h"
 #include "SolidSyslogConfig.h"
+#include "SolidSyslogEndpoint.h"
+#include "SolidSyslogFormatter.h"
 #include "SolidSyslogMetaSd.h"
 #include "SolidSyslogNullBuffer.h"
 #include "SolidSyslogNullStore.h"
@@ -17,6 +19,7 @@
 #include "SolidSyslogWinsockDatagram.h"
 #include "SolidSyslogWinsockResolver.h"
 
+#include <stdint.h>
 #include <stdio.h>
 #include <winsock2.h>
 
@@ -33,6 +36,17 @@ static const char* GetHost(void)
 static int GetPort(void)
 {
     return EXAMPLE_UDP_PORT;
+}
+
+static void GetEndpoint(struct SolidSyslogEndpoint* endpoint)
+{
+    SolidSyslogFormatter_BoundedString(endpoint->host, GetHost(), SOLIDSYSLOG_MAX_HOST_SIZE);
+    endpoint->port = (uint16_t) GetPort();
+}
+
+static uint32_t GetEndpointVersion(void)
+{
+    return 0;
 }
 
 static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
@@ -55,14 +69,14 @@ int SolidSyslogWindowsExample_Run(int argc, char* argv[])
     struct WindowsExampleOptions options;
     ExampleWindowsCommandLine_Parse(argc, argv, &options);
 
-    struct SolidSyslogResolver*       resolver    = SolidSyslogWinsockResolver_Create(GetHost, GetPort);
-    struct SolidSyslogDatagram*       datagram    = SolidSyslogWinsockDatagram_Create();
-    struct SolidSyslogUdpSenderConfig udpConfig   = {.resolver = resolver, .datagram = datagram};
-    struct SolidSyslogSender*         sender      = SolidSyslogUdpSender_Create(&udpConfig);
-    struct SolidSyslogBuffer*         buffer      = SolidSyslogNullBuffer_Create(sender);
-    struct SolidSyslogStore*          store       = SolidSyslogNullStore_Create();
-    struct SolidSyslogAtomicCounter*  counter     = SolidSyslogAtomicCounter_Create();
-    struct SolidSyslogStructuredData* metaSd      = SolidSyslogMetaSd_Create(counter);
+    struct SolidSyslogResolver*       resolver  = SolidSyslogWinsockResolver_Create();
+    struct SolidSyslogDatagram*       datagram  = SolidSyslogWinsockDatagram_Create();
+    struct SolidSyslogUdpSenderConfig udpConfig = {.resolver = resolver, .datagram = datagram, .endpoint = GetEndpoint, .endpointVersion = GetEndpointVersion};
+    struct SolidSyslogSender*         sender    = SolidSyslogUdpSender_Create(&udpConfig);
+    struct SolidSyslogBuffer*         buffer    = SolidSyslogNullBuffer_Create(sender);
+    struct SolidSyslogStore*          store     = SolidSyslogNullStore_Create();
+    struct SolidSyslogAtomicCounter*  counter   = SolidSyslogAtomicCounter_Create();
+    struct SolidSyslogStructuredData* metaSd    = SolidSyslogMetaSd_Create(counter);
     struct SolidSyslogStructuredData* timeQuality = SolidSyslogTimeQualitySd_Create(GetTimeQuality);
     struct SolidSyslogStructuredData* originSd    = SolidSyslogOriginSd_Create("SolidSyslogExample", "0.7.0");
 

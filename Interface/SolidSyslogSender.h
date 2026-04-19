@@ -10,6 +10,7 @@ EXTERN_C_BEGIN
     struct SolidSyslogSender;
 
     bool SolidSyslogSender_Send(struct SolidSyslogSender * sender, const void* buffer, size_t size);
+    void SolidSyslogSender_Disconnect(struct SolidSyslogSender * sender);
 
 EXTERN_C_END
 

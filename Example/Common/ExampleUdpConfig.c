@@ -1,4 +1,7 @@
 #include "ExampleUdpConfig.h"
+#include "SolidSyslogFormatter.h"
+
+#include <stdint.h>
 
 /* Unprivileged mirror of SOLIDSYSLOG_UDP_DEFAULT_PORT (514) for BDD containers */
 enum
@@ -14,4 +17,17 @@ const char* ExampleUdpConfig_GetHost(void)
 int ExampleUdpConfig_GetPort(void)
 {
     return EXAMPLE_UDP_PORT;
+}
+
+void ExampleUdpConfig_GetEndpoint(struct SolidSyslogEndpoint* endpoint)
+{
+    SolidSyslogFormatter_BoundedString(endpoint->host, ExampleUdpConfig_GetHost(), SOLIDSYSLOG_MAX_HOST_SIZE);
+    endpoint->port = (uint16_t) ExampleUdpConfig_GetPort();
+}
+
+/* Static config — host/port never change, so version stays 0 forever and the
+   sender connects exactly once. */
+uint32_t ExampleUdpConfig_GetEndpointVersion(void)
+{
+    return 0;
 }

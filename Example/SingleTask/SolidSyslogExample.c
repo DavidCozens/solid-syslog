@@ -35,9 +35,10 @@ int SolidSyslogExample_Run(int argc, char* argv[])
         return 1;
     }
 
-    struct SolidSyslogResolver*       resolver    = SolidSyslogGetAddrInfoResolver_Create(ExampleUdpConfig_GetHost, ExampleUdpConfig_GetPort);
-    struct SolidSyslogDatagram*       datagram    = SolidSyslogPosixDatagram_Create();
-    struct SolidSyslogUdpSenderConfig udpConfig   = {.resolver = resolver, .datagram = datagram};
+    struct SolidSyslogResolver*       resolver  = SolidSyslogGetAddrInfoResolver_Create();
+    struct SolidSyslogDatagram*       datagram  = SolidSyslogPosixDatagram_Create();
+    struct SolidSyslogUdpSenderConfig udpConfig = {
+        .resolver = resolver, .datagram = datagram, .endpoint = ExampleUdpConfig_GetEndpoint, .endpointVersion = ExampleUdpConfig_GetEndpointVersion};
     struct SolidSyslogSender*         sender      = SolidSyslogUdpSender_Create(&udpConfig);
     struct SolidSyslogBuffer*         buffer      = SolidSyslogNullBuffer_Create(sender);
     struct SolidSyslogStore*          store       = SolidSyslogNullStore_Create();

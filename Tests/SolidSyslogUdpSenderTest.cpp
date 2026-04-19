@@ -1,11 +1,12 @@
 #include "CppUTest/TestHarness.h"
+#include "SolidSyslogEndpoint.h"
+#include "SolidSyslogFormatter.h"
 #include "SolidSyslogGetAddrInfoResolver.h"
 #include "SolidSyslogPosixDatagram.h"
 #include "SolidSyslogUdpSender.h"
 #include "SolidSyslogSender.h"
 #include "SocketFake.h"
 #include <array>
-#include <cstring>
 #include <netinet/in.h>
 
 // clang-format off
@@ -48,6 +49,26 @@ static int SpyGetPort()
     return TEST_DEFAULT_PORT;
 }
 
+// Endpoint stubs — delegate to per-test function pointers so existing
+// callback-spy tests in TEST_GROUP(SolidSyslogUdpSenderConfig) keep counting
+// callback invocations through the new endpoint path. endpointVersion is the
+// per-test version reported by TestEndpointVersion; bump it between Sends to
+// drive fingerprint-reconnection tests.
+static const char* (*endpointGetHost)() = GetDefaultHost;
+static int (*endpointGetPort)()         = GetDefaultPort;
+static uint32_t endpointVersion         = 0;
+
+static void TestEndpoint(struct SolidSyslogEndpoint* endpoint)
+{
+    SolidSyslogFormatter_BoundedString(endpoint->host, endpointGetHost(), SOLIDSYSLOG_MAX_HOST_SIZE);
+    endpoint->port = (uint16_t) endpointGetPort();
+}
+
+static uint32_t TestEndpointVersion() // NOLINT(modernize-use-trailing-return-type)
+{
+    return endpointVersion;
+}
+
 // clang-format off
 TEST_GROUP(SolidSyslogUdpSender)
 {
@@ -61,9 +82,12 @@ TEST_GROUP(SolidSyslogUdpSender)
     void setup() override
     {
         SocketFake_Reset();
-        resolver = SolidSyslogGetAddrInfoResolver_Create(GetDefaultHost, GetDefaultPort);
+        endpointGetHost = GetDefaultHost;
+        endpointVersion = 0;
+        endpointGetPort = GetDefaultPort;
+        resolver = SolidSyslogGetAddrInfoResolver_Create();
         datagram = SolidSyslogPosixDatagram_Create();
-        config = {resolver, datagram};
+        config = {resolver, datagram, TestEndpoint, TestEndpointVersion};
         // cppcheck-suppress unreadVariable -- read by teardown and tests; cppcheck does not model CppUTest lifecycle
         sender = SolidSyslogUdpSender_Create(&config);
     }
@@ -90,6 +114,11 @@ TEST_GROUP(SolidSyslogUdpSender)
 
 TEST(SolidSyslogUdpSender, CreateDestroyWorksWithoutCrashing)
 {
+}
+
+TEST(SolidSyslogUdpSender, CreateDoesNotOpenSocket)
+{
+    LONGS_EQUAL(0, SocketFake_SocketCallCount());
 }
 
 TEST(SolidSyslogUdpSender, SendReturnsTrueOnSuccess)
@@ -154,25 +183,92 @@ TEST(SolidSyslogUdpSender, SendtoCalledWithAddrlenOfSockaddrIn)
     LONGS_EQUAL(sizeof(struct sockaddr_in), SocketFake_LastAddrLen());
 }
 
-TEST(SolidSyslogUdpSender, SocketCalledOnCreate)
+TEST(SolidSyslogUdpSender, FirstSendOpensDatagramSocket)
 {
+    Send();
+    LONGS_EQUAL(1, SocketFake_SocketCallCount());
+    LONGS_EQUAL(AF_INET, SocketFake_SocketDomain());
+    LONGS_EQUAL(SOCK_DGRAM, SocketFake_SocketType());
+}
+
+TEST(SolidSyslogUdpSender, FirstSendResolves)
+{
+    Send();
+    LONGS_EQUAL(1, SocketFake_GetAddrInfoCallCount());
+}
+
+TEST(SolidSyslogUdpSender, SecondSendDoesNotReopenSocket)
+{
+    Send();
+    Send();
     LONGS_EQUAL(1, SocketFake_SocketCallCount());
 }
 
-TEST(SolidSyslogUdpSender, SocketCalledWithAF_INET)
+TEST(SolidSyslogUdpSender, SecondSendDoesNotResolve)
 {
-    LONGS_EQUAL(AF_INET, SocketFake_SocketDomain());
-}
-
-TEST(SolidSyslogUdpSender, SocketCalledWithSOCK_DGRAM)
-{
-    LONGS_EQUAL(SOCK_DGRAM, SocketFake_SocketType());
+    Send();
+    Send();
+    LONGS_EQUAL(1, SocketFake_GetAddrInfoCallCount());
 }
 
 TEST(SolidSyslogUdpSender, SendtoCalledWithSocketFd)
 {
     Send();
     LONGS_EQUAL(SocketFake_SocketFd(), SocketFake_LastSendtoFd());
+}
+
+TEST(SolidSyslogUdpSender, DisconnectAfterSendClosesSocket)
+{
+    Send();
+    SolidSyslogSender_Disconnect(sender);
+    LONGS_EQUAL(1, SocketFake_CloseCallCount());
+}
+
+TEST(SolidSyslogUdpSender, DisconnectIsIdempotent)
+{
+    Send();
+    SolidSyslogSender_Disconnect(sender);
+    SolidSyslogSender_Disconnect(sender);
+    LONGS_EQUAL(1, SocketFake_CloseCallCount());
+}
+
+TEST(SolidSyslogUdpSender, SendAfterDisconnectReopensSocket)
+{
+    Send();
+    SolidSyslogSender_Disconnect(sender);
+    Send();
+    LONGS_EQUAL(2, SocketFake_SocketCallCount());
+}
+
+TEST(SolidSyslogUdpSender, SendAfterDisconnectResolves)
+{
+    Send();
+    SolidSyslogSender_Disconnect(sender);
+    Send();
+    LONGS_EQUAL(2, SocketFake_GetAddrInfoCallCount());
+}
+
+TEST(SolidSyslogUdpSender, DisconnectWithoutSendDoesNotClose)
+{
+    SolidSyslogSender_Disconnect(sender);
+    LONGS_EQUAL(0, SocketFake_CloseCallCount());
+}
+
+TEST(SolidSyslogUdpSender, EndpointVersionChangeBetweenSendsTriggersReconnect)
+{
+    Send();
+    endpointVersion = 1;
+    Send();
+    LONGS_EQUAL(2, SocketFake_SocketCallCount());
+}
+
+TEST(SolidSyslogUdpSender, EndpointVersionChangeUsesNewPortOnReconnect)
+{
+    Send();
+    endpointVersion = 1;
+    endpointGetPort = GetAlternatePort;
+    Send();
+    LONGS_EQUAL(TEST_ALTERNATE_PORT, SocketFake_LastPort());
 }
 
 IGNORE_TEST(SolidSyslogUdpSender, HappyPathOnly)
@@ -200,10 +296,13 @@ TEST_GROUP(SolidSyslogUdpSenderDestroy)
     void setup() override
     {
         SocketFake_Reset();
-        resolver = SolidSyslogGetAddrInfoResolver_Create(GetDefaultHost, GetDefaultPort);
-        datagram = SolidSyslogPosixDatagram_Create();
+        endpointGetHost = GetDefaultHost;
+        endpointVersion = 0;
+        endpointGetPort = GetDefaultPort;
+        resolver        = SolidSyslogGetAddrInfoResolver_Create();
+        datagram        = SolidSyslogPosixDatagram_Create();
         // cppcheck-suppress unreadVariable -- used in test bodies; cppcheck does not model CppUTest macros
-        config = {resolver, datagram};
+        config = {resolver, datagram, TestEndpoint, TestEndpointVersion};
     }
 
     void teardown() override
@@ -221,16 +320,28 @@ TEST_GROUP(SolidSyslogUdpSenderDestroy)
 
 // clang-format on
 
-TEST(SolidSyslogUdpSenderDestroy, CloseCalledOnDestroy)
+TEST(SolidSyslogUdpSenderDestroy, DestroyWithoutSendDoesNotClose)
 {
     CreateAndDestroy();
-    LONGS_EQUAL(1, SocketFake_CloseCallCount());
+    LONGS_EQUAL(0, SocketFake_CloseCallCount());
 }
 
-TEST(SolidSyslogUdpSenderDestroy, CloseCalledWithSocketFd)
+TEST(SolidSyslogUdpSenderDestroy, DestroyAfterSendClosesSocket)
 {
-    CreateAndDestroy();
+    struct SolidSyslogSender* sender = SolidSyslogUdpSender_Create(&config);
+    SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN);
+    SolidSyslogUdpSender_Destroy();
+    LONGS_EQUAL(1, SocketFake_CloseCallCount());
     LONGS_EQUAL(SocketFake_SocketFd(), SocketFake_LastClosedFd());
+}
+
+TEST(SolidSyslogUdpSenderDestroy, DestroyAfterDisconnectDoesNotDoubleClose)
+{
+    struct SolidSyslogSender* sender = SolidSyslogUdpSender_Create(&config);
+    SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN);
+    SolidSyslogSender_Disconnect(sender);
+    SolidSyslogUdpSender_Destroy();
+    LONGS_EQUAL(1, SocketFake_CloseCallCount());
 }
 
 TEST(SolidSyslogUdpSenderDestroy, SimpleScenario)
@@ -264,6 +375,9 @@ TEST_GROUP(SolidSyslogUdpSenderConfig)
         SocketFake_Reset();
         getPortCallCount = 0;
         getHostCallCount = 0;
+        endpointGetHost  = GetDefaultHost;
+        endpointVersion  = 0;
+        endpointGetPort  = GetDefaultPort;
     }
 
     void teardown() override
@@ -275,10 +389,12 @@ TEST_GROUP(SolidSyslogUdpSenderConfig)
 
     void CreateSender()
     {
-        struct SolidSyslogResolver* resolver = SolidSyslogGetAddrInfoResolver_Create(getHostFn, getPortFn);
-        struct SolidSyslogDatagram* datagram = SolidSyslogPosixDatagram_Create();
-        struct SolidSyslogUdpSenderConfig config = {resolver, datagram};
-        sender = SolidSyslogUdpSender_Create(&config);
+        endpointGetHost = getHostFn;
+        endpointGetPort = getPortFn;
+        struct SolidSyslogResolver*       resolver = SolidSyslogGetAddrInfoResolver_Create();
+        struct SolidSyslogDatagram*       datagram = SolidSyslogPosixDatagram_Create();
+        struct SolidSyslogUdpSenderConfig config   = {resolver, datagram, TestEndpoint, TestEndpointVersion};
+        sender                                     = SolidSyslogUdpSender_Create(&config);
     }
 
     void Send() const
@@ -289,11 +405,20 @@ TEST_GROUP(SolidSyslogUdpSenderConfig)
 
 // clang-format on
 
-TEST(SolidSyslogUdpSenderConfig, GetPortCalledOnCreate)
+TEST(SolidSyslogUdpSenderConfig, GetPortCalledOnFirstSend)
 {
     getPortFn = SpyGetPort;
     CreateSender();
+    LONGS_EQUAL(0, getPortCallCount);
+    Send();
     LONGS_EQUAL(1, getPortCallCount);
+}
+
+TEST(SolidSyslogUdpSenderConfig, GetPortNotCalledOnSecondSend)
+{
+    getPortFn = SpyGetPort;
+    CreateSender();
+    Send();
     Send();
     LONGS_EQUAL(1, getPortCallCount);
 }
@@ -306,11 +431,20 @@ TEST(SolidSyslogUdpSenderConfig, SendtoCalledWithConfiguredPort)
     LONGS_EQUAL(TEST_ALTERNATE_PORT, SocketFake_LastPort());
 }
 
-TEST(SolidSyslogUdpSenderConfig, GetHostCalledOnCreate)
+TEST(SolidSyslogUdpSenderConfig, GetHostCalledOnFirstSend)
 {
     getHostFn = SpyGetHost;
     CreateSender();
+    LONGS_EQUAL(0, getHostCallCount);
+    Send();
     LONGS_EQUAL(1, getHostCallCount);
+}
+
+TEST(SolidSyslogUdpSenderConfig, GetHostNotCalledOnSecondSend)
+{
+    getHostFn = SpyGetHost;
+    CreateSender();
+    Send();
     Send();
     LONGS_EQUAL(1, getHostCallCount);
 }
@@ -319,6 +453,7 @@ TEST(SolidSyslogUdpSenderConfig, GetAddrInfoCalledWithHostnameFromGetHost)
 {
     getHostFn = SpyGetHost;
     CreateSender();
+    Send();
     LONGS_EQUAL(1, SocketFake_GetAddrInfoCallCount());
     STRCMP_EQUAL(TEST_DEFAULT_HOST, SocketFake_LastGetAddrInfoHostname());
 }
@@ -343,6 +478,9 @@ TEST_GROUP(SolidSyslogUdpSenderFailure)
     void setup() override
     {
         SocketFake_Reset();
+        endpointGetHost = GetDefaultHost;
+        endpointVersion = 0;
+        endpointGetPort = GetDefaultPort;
     }
 
     void teardown() override
@@ -354,9 +492,9 @@ TEST_GROUP(SolidSyslogUdpSenderFailure)
 
     void CreateSender()
     {
-        resolver = SolidSyslogGetAddrInfoResolver_Create(GetDefaultHost, GetDefaultPort);
+        resolver = SolidSyslogGetAddrInfoResolver_Create();
         datagram = SolidSyslogPosixDatagram_Create();
-        config   = {resolver, datagram};
+        config   = {resolver, datagram, TestEndpoint, TestEndpointVersion};
         // cppcheck-suppress unreadVariable -- read by tests; cppcheck does not model CppUTest macros
         sender   = SolidSyslogUdpSender_Create(&config);
     }
@@ -364,24 +502,25 @@ TEST_GROUP(SolidSyslogUdpSenderFailure)
 
 // clang-format on
 
-TEST(SolidSyslogUdpSenderFailure, SendReturnsFalseWhenResolverFailedAtCreate)
+TEST(SolidSyslogUdpSenderFailure, SendReturnsFalseWhenResolverFails)
 {
     SocketFake_SetGetAddrInfoFails(true);
     CreateSender();
     CHECK_FALSE(SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN));
 }
 
-TEST(SolidSyslogUdpSenderFailure, SendReturnsFalseWhenSocketFailedAtCreate)
+TEST(SolidSyslogUdpSenderFailure, SendReturnsFalseWhenSocketFails)
 {
     SocketFake_SetSocketFails(true);
     CreateSender();
     CHECK_FALSE(SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN));
 }
 
-TEST(SolidSyslogUdpSenderFailure, DoesNotResolveWhenSocketFailedAtCreate)
+TEST(SolidSyslogUdpSenderFailure, DoesNotResolveWhenSocketFails)
 {
     SocketFake_SetSocketFails(true);
     CreateSender();
+    SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN);
     LONGS_EQUAL(0, SocketFake_GetAddrInfoCallCount());
 }
 
@@ -397,4 +536,24 @@ TEST(SolidSyslogUdpSenderFailure, SendReturnsTrueWhenResolverAndSocketSucceed)
 {
     CreateSender();
     CHECK_TRUE(SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN));
+}
+
+TEST(SolidSyslogUdpSenderFailure, SendRecoversAfterTransientResolveFailure)
+{
+    SocketFake_SetGetAddrInfoFails(true);
+    CreateSender();
+    CHECK_FALSE(SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN));
+    SocketFake_SetGetAddrInfoFails(false);
+    CHECK_TRUE(SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN));
+}
+
+TEST(SolidSyslogUdpSenderFailure, NoEndpointConfiguredSendsToPortZero)
+{
+    resolver                                           = SolidSyslogGetAddrInfoResolver_Create();
+    datagram                                           = SolidSyslogPosixDatagram_Create();
+    struct SolidSyslogUdpSenderConfig configNoEndpoint = {resolver, datagram, nullptr, nullptr};
+    sender                                             = SolidSyslogUdpSender_Create(&configNoEndpoint);
+    SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN);
+    LONGS_EQUAL(1, SocketFake_SendtoCallCount());
+    LONGS_EQUAL(0, SocketFake_LastPort());
 }
