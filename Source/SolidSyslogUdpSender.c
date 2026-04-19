@@ -15,6 +15,7 @@ static bool                              Send(struct SolidSyslogSender* self, co
 static inline bool                       EnsureConnected(struct SolidSyslogUdpSender* udp);
 static inline bool                       Connected(struct SolidSyslogUdpSender* udp);
 static bool                              Connect(struct SolidSyslogUdpSender* udp);
+static void                              Disconnect(struct SolidSyslogSender* self);
 static inline bool                       OpenSocket(struct SolidSyslogUdpSender* udp);
 static inline bool                       ResolveDestination(struct SolidSyslogUdpSender* udp);
 static inline struct SolidSyslogAddress* Address(struct SolidSyslogUdpSender* udp);
@@ -26,18 +27,16 @@ static struct SolidSyslogUdpSender       instance;
 
 struct SolidSyslogSender* SolidSyslogUdpSender_Create(const struct SolidSyslogUdpSenderConfig* config)
 {
-    instance           = DEFAULT_INSTANCE;
-    instance.config    = *config;
-    instance.base.Send = Send;
+    instance                 = DEFAULT_INSTANCE;
+    instance.config          = *config;
+    instance.base.Send       = Send;
+    instance.base.Disconnect = Disconnect;
     return &instance.base;
 }
 
 void SolidSyslogUdpSender_Destroy(void)
 {
-    if (Connected(&instance))
-    {
-        SolidSyslogDatagram_Close(instance.config.datagram);
-    }
+    Disconnect(&instance.base);
     instance = DEFAULT_INSTANCE;
 }
 
@@ -69,6 +68,16 @@ static bool Connect(struct SolidSyslogUdpSender* udp)
     return Connected(udp);
 }
 
+static void Disconnect(struct SolidSyslogSender* self)
+{
+    struct SolidSyslogUdpSender* udp = (struct SolidSyslogUdpSender*) self;
+
+    if (Connected(udp))
+    {
+        CloseSocket(udp);
+    }
+}
+
 static inline bool OpenSocket(struct SolidSyslogUdpSender* udp)
 {
     return SolidSyslogDatagram_Open(udp->config.datagram);
@@ -87,6 +96,7 @@ static inline struct SolidSyslogAddress* Address(struct SolidSyslogUdpSender* ud
 static inline void CloseSocket(struct SolidSyslogUdpSender* udp)
 {
     SolidSyslogDatagram_Close(udp->config.datagram);
+    udp->connected = false;
 }
 
 static inline bool TransmitDatagram(struct SolidSyslogUdpSender* udp, const void* buffer, size_t size)

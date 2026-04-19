@@ -4,3 +4,8 @@ bool SolidSyslogSender_Send(struct SolidSyslogSender* sender, const void* buffer
 {
     return sender->Send(sender, buffer, size);
 }
+
+void SolidSyslogSender_Disconnect(struct SolidSyslogSender* sender)
+{
+    sender->Disconnect(sender);
+}

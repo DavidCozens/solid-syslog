@@ -193,6 +193,43 @@ TEST(SolidSyslogUdpSender, SendtoCalledWithSocketFd)
     LONGS_EQUAL(SocketFake_SocketFd(), SocketFake_LastSendtoFd());
 }
 
+TEST(SolidSyslogUdpSender, DisconnectAfterSendClosesSocket)
+{
+    Send();
+    SolidSyslogSender_Disconnect(sender);
+    LONGS_EQUAL(1, SocketFake_CloseCallCount());
+}
+
+TEST(SolidSyslogUdpSender, DisconnectIsIdempotent)
+{
+    Send();
+    SolidSyslogSender_Disconnect(sender);
+    SolidSyslogSender_Disconnect(sender);
+    LONGS_EQUAL(1, SocketFake_CloseCallCount());
+}
+
+TEST(SolidSyslogUdpSender, SendAfterDisconnectReopensSocket)
+{
+    Send();
+    SolidSyslogSender_Disconnect(sender);
+    Send();
+    LONGS_EQUAL(2, SocketFake_SocketCallCount());
+}
+
+TEST(SolidSyslogUdpSender, SendAfterDisconnectResolves)
+{
+    Send();
+    SolidSyslogSender_Disconnect(sender);
+    Send();
+    LONGS_EQUAL(2, SocketFake_GetAddrInfoCallCount());
+}
+
+TEST(SolidSyslogUdpSender, DisconnectWithoutSendDoesNotClose)
+{
+    SolidSyslogSender_Disconnect(sender);
+    LONGS_EQUAL(0, SocketFake_CloseCallCount());
+}
+
 IGNORE_TEST(SolidSyslogUdpSender, HappyPathOnly)
 {
     // Error handling not yet implemented — see Epic #31
@@ -252,6 +289,15 @@ TEST(SolidSyslogUdpSenderDestroy, DestroyAfterSendClosesSocket)
     SolidSyslogUdpSender_Destroy();
     LONGS_EQUAL(1, SocketFake_CloseCallCount());
     LONGS_EQUAL(SocketFake_SocketFd(), SocketFake_LastClosedFd());
+}
+
+TEST(SolidSyslogUdpSenderDestroy, DestroyAfterDisconnectDoesNotDoubleClose)
+{
+    struct SolidSyslogSender* sender = SolidSyslogUdpSender_Create(&config);
+    SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN);
+    SolidSyslogSender_Disconnect(sender);
+    SolidSyslogUdpSender_Destroy();
+    LONGS_EQUAL(1, SocketFake_CloseCallCount());
 }
 
 TEST(SolidSyslogUdpSenderDestroy, SimpleScenario)
