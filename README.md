@@ -37,6 +37,9 @@ Public headers are split by audience (Interface Segregation Principle):
 - **`SolidSyslogTcpSender.h`** — TCP transport with RFC 6587 octet-counting framing. Note: RFC 6587
   is a Historic RFC — the IESG recommends TLS (RFC 5425) over plain TCP for new deployments.
   TCP is provided for interoperability with existing infrastructure
+- **`SolidSyslogSwitchingSender.h`** — composition sender delegating to one of several
+  inner senders via an application-supplied selector callback; `Disconnect`s the
+  outgoing inner on every change
 - **`SolidSyslogEndpoint.h`** — destination spec for senders. Application supplies `endpoint`
   (fills host/port on (re)connect) and `endpointVersion` (cheap polled fingerprint); senders
   Disconnect and lazily reopen when the version changes — supports runtime address rotation
@@ -51,7 +54,7 @@ Public headers are split by audience (Interface Segregation Principle):
 
 Two example programs demonstrate usage:
 - **`Example/SingleTask/`** — NullBuffer, single-task bare-metal model
-- **`Example/Threaded/`** — PosixMessageQueueBuffer, two pthreads (logger + service), `--transport udp|tcp`
+- **`Example/Threaded/`** — PosixMessageQueueBuffer, two pthreads (logger + service), SwitchingSender over UDP + TCP; `--transport` sets the initial transport, `switch <name>` flips it at runtime
 
 ## Compliance
 
