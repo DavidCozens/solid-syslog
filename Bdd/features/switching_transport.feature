@@ -12,3 +12,4 @@ Feature: Switch transport at runtime
     When the client switches to transport tcp
     And the client sends a message
     Then syslog-ng receives 1 message over tcp
+    And syslog-ng receives 1 message over udp

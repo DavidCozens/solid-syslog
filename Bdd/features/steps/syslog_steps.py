@@ -900,6 +900,9 @@ def step_switching_example_running(context, transport):
 @when("the client switches to transport {transport:w}")
 def step_client_switches_transport(context, transport):
     send_command(context.interactive_process, f"switch {transport}")
+    # Let any in-flight messages drain before subsequent sends assume the new
+    # selector is live. Matches the settle pattern used after `send`.
+    time.sleep(0.2)
 
 
 def wait_for_per_transport_messages(context, transport, expected):
@@ -926,6 +929,3 @@ def step_check_per_transport_count(context, count, transport):
     assert actual == count, (
         f"Expected {count} {transport} message(s), got {actual} in {path}"
     )
-    # Consume the baseline so subsequent per-transport assertions in the same
-    # scenario count only messages that arrived after this check.
-    context.lines_before_per_transport[transport] = line_count(path)
