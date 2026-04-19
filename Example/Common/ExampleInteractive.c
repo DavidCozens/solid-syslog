@@ -1,5 +1,4 @@
 #include "ExampleInteractive.h"
-#include "ExampleSwitchConfig.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,7 +40,7 @@ static void HandleSend(const char* args, const struct SolidSyslogMessage* messag
     printf("Sent %d message%s\n", count, (count == 1) ? "" : "s");
 }
 
-void ExampleInteractive_Run(const struct SolidSyslogMessage* message, FILE* input)
+void ExampleInteractive_Run(const struct SolidSyslogMessage* message, FILE* input, ExampleInteractiveSwitchHandler onSwitch)
 {
     char line[MAX_LINE_LENGTH];
 
@@ -69,14 +68,14 @@ void ExampleInteractive_Run(const struct SolidSyslogMessage* message, FILE* inpu
             }
             HandleSend(args, message);
         }
-        else if (strncmp(line, "switch", 6) == 0 && (line[6] == ' ' || line[6] == '\0'))
+        else if (strncmp(line, "switch", 6) == 0 && (line[6] == ' ' || line[6] == '\0') && onSwitch != NULL)
         {
             const char* args = line + 6;
             if (*args == ' ')
             {
                 args++;
             }
-            ExampleSwitchConfig_SetByName(args);
+            onSwitch(args);
         }
 
         PrintPrompt();

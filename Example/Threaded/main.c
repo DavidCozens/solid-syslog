@@ -207,7 +207,7 @@ int main(int argc, char* argv[])
         .msg       = options.msg,
     };
 
-    ExampleInteractive_Run(&message, stdin);
+    ExampleInteractive_Run(&message, stdin, ExampleSwitchConfig_SetByName);
 
     shutdown_flag = true;
     pthread_join(serviceThread, NULL);
