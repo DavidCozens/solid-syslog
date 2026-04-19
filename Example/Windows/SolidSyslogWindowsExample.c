@@ -67,7 +67,7 @@ int SolidSyslogWindowsExample_Run(int argc, char* argv[])
     struct WindowsExampleOptions options;
     ExampleWindowsCommandLine_Parse(argc, argv, &options);
 
-    struct SolidSyslogResolver*       resolver    = SolidSyslogWinsockResolver_Create(GetHost, GetPort);
+    struct SolidSyslogResolver*       resolver    = SolidSyslogWinsockResolver_Create();
     struct SolidSyslogDatagram*       datagram    = SolidSyslogWinsockDatagram_Create();
     struct SolidSyslogUdpSenderConfig udpConfig   = {.resolver = resolver, .datagram = datagram, .endpoint = GetEndpoint};
     struct SolidSyslogSender*         sender      = SolidSyslogUdpSender_Create(&udpConfig);

@@ -32,37 +32,28 @@ enum
     GETADDRINFO_SUCCESS = 0
 };
 
-static bool Resolve(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, struct SolidSyslogAddress* result);
-static bool ResolveAt(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, const char* host, uint16_t port,
-                      struct SolidSyslogAddress* result);
-
-static int MapTransport(enum SolidSyslogTransport transport);
+static bool Resolve(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, const char* host, uint16_t port, struct SolidSyslogAddress* result);
+static int  MapTransport(enum SolidSyslogTransport transport);
 
 struct SolidSyslogWinsockResolver
 {
     struct SolidSyslogResolver base;
-    const char* (*getHost)(void);
-    int (*getPort)(void);
 };
 
 static struct SolidSyslogWinsockResolver instance;
 
-struct SolidSyslogResolver* SolidSyslogWinsockResolver_Create(const char* (*getHost)(void), int (*getPort)(void))
+struct SolidSyslogResolver* SolidSyslogWinsockResolver_Create(void)
 {
-    instance.base.Resolve   = Resolve;
-    instance.base.ResolveAt = ResolveAt;
-    instance.getHost        = getHost;
-    instance.getPort        = getPort;
+    instance.base.Resolve = Resolve;
     return &instance.base;
 }
 
-static bool Resolve(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, struct SolidSyslogAddress* result)
+void SolidSyslogWinsockResolver_Destroy(void)
 {
-    struct SolidSyslogWinsockResolver* resolver = (struct SolidSyslogWinsockResolver*) self;
-    return ResolveAt(self, transport, resolver->getHost(), (uint16_t) resolver->getPort(), result);
+    instance.base.Resolve = NULL;
 }
 
-static bool ResolveAt(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, const char* host, uint16_t port, struct SolidSyslogAddress* result)
+static bool Resolve(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, const char* host, uint16_t port, struct SolidSyslogAddress* result)
 {
     (void) self;
 
@@ -95,12 +86,4 @@ static int MapTransport(enum SolidSyslogTransport transport)
     }
 
     return socktype;
-}
-
-void SolidSyslogWinsockResolver_Destroy(void)
-{
-    instance.base.Resolve   = NULL;
-    instance.base.ResolveAt = NULL;
-    instance.getHost        = NULL;
-    instance.getPort        = NULL;
 }

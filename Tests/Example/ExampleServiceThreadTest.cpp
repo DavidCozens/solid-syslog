@@ -38,7 +38,7 @@ TEST_GROUP(ExampleServiceThread)
         ClockFake_SetTime(1743768600, 0);
         shutdown = true;
 
-        SolidSyslogUdpSenderConfig udpConfig = {SolidSyslogGetAddrInfoResolver_Create(ExampleUdpConfig_GetHost, ExampleUdpConfig_GetPort), SolidSyslogPosixDatagram_Create(), ExampleEndpoint};
+        SolidSyslogUdpSenderConfig udpConfig = {SolidSyslogGetAddrInfoResolver_Create(), SolidSyslogPosixDatagram_Create(), ExampleEndpoint};
         sender = SolidSyslogUdpSender_Create(&udpConfig);
         buffer = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
         store  = SolidSyslogNullStore_Create();

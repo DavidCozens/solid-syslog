@@ -12,37 +12,28 @@ enum
     GETADDRINFO_SUCCESS = 0
 };
 
-static bool Resolve(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, struct SolidSyslogAddress* result);
-static bool ResolveAt(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, const char* host, uint16_t port,
-                      struct SolidSyslogAddress* result);
-
-static int MapTransport(enum SolidSyslogTransport transport);
+static bool Resolve(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, const char* host, uint16_t port, struct SolidSyslogAddress* result);
+static int  MapTransport(enum SolidSyslogTransport transport);
 
 struct SolidSyslogGetAddrInfoResolver
 {
     struct SolidSyslogResolver base;
-    const char* (*getHost)(void);
-    int (*getPort)(void);
 };
 
 static struct SolidSyslogGetAddrInfoResolver instance;
 
-struct SolidSyslogResolver* SolidSyslogGetAddrInfoResolver_Create(const char* (*getHost)(void), int (*getPort)(void))
+struct SolidSyslogResolver* SolidSyslogGetAddrInfoResolver_Create(void)
 {
-    instance.base.Resolve   = Resolve;
-    instance.base.ResolveAt = ResolveAt;
-    instance.getHost        = getHost;
-    instance.getPort        = getPort;
+    instance.base.Resolve = Resolve;
     return &instance.base;
 }
 
-static bool Resolve(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, struct SolidSyslogAddress* result)
+void SolidSyslogGetAddrInfoResolver_Destroy(void)
 {
-    struct SolidSyslogGetAddrInfoResolver* resolver = (struct SolidSyslogGetAddrInfoResolver*) self;
-    return ResolveAt(self, transport, resolver->getHost(), (uint16_t) resolver->getPort(), result);
+    instance.base.Resolve = NULL;
 }
 
-static bool ResolveAt(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, const char* host, uint16_t port, struct SolidSyslogAddress* result)
+static bool Resolve(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, const char* host, uint16_t port, struct SolidSyslogAddress* result)
 {
     (void) self;
 
@@ -75,12 +66,4 @@ static int MapTransport(enum SolidSyslogTransport transport)
     }
 
     return socktype;
-}
-
-void SolidSyslogGetAddrInfoResolver_Destroy(void)
-{
-    instance.base.Resolve   = NULL;
-    instance.base.ResolveAt = NULL;
-    instance.getHost        = NULL;
-    instance.getPort        = NULL;
 }

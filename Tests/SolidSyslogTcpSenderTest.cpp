@@ -84,7 +84,7 @@ TEST_GROUP(SolidSyslogTcpSender)
         SocketFake_Reset();
         endpointGetHost = GetHost;
         endpointGetPort = GetPort;
-        resolver        = SolidSyslogGetAddrInfoResolver_Create(GetHost, GetPort);
+        resolver        = SolidSyslogGetAddrInfoResolver_Create();
         stream          = SolidSyslogPosixTcpStream_Create();
         config          = {resolver, stream, TestEndpoint};
         // cppcheck-suppress unreadVariable -- read by teardown and tests; cppcheck does not model CppUTest lifecycle
@@ -144,7 +144,7 @@ TEST_GROUP(SolidSyslogTcpSenderDestroy)
         SocketFake_Reset();
         endpointGetHost = GetHost;
         endpointGetPort = GetPort;
-        resolver        = SolidSyslogGetAddrInfoResolver_Create(GetHost, GetPort);
+        resolver        = SolidSyslogGetAddrInfoResolver_Create();
         stream          = SolidSyslogPosixTcpStream_Create();
         // cppcheck-suppress unreadVariable -- used in test bodies; cppcheck does not model CppUTest macros
         config = {resolver, stream, TestEndpoint};
@@ -317,7 +317,7 @@ TEST_GROUP(SolidSyslogTcpSenderConfig)
     {
         endpointGetHost = getHostFn;
         endpointGetPort = getPortFn;
-        struct SolidSyslogResolver*       resolver = SolidSyslogGetAddrInfoResolver_Create(getHostFn, getPortFn);
+        struct SolidSyslogResolver*       resolver = SolidSyslogGetAddrInfoResolver_Create();
         struct SolidSyslogStream*         stream   = SolidSyslogPosixTcpStream_Create();
         struct SolidSyslogTcpSenderConfig config   = {resolver, stream, TestEndpoint};
         // cppcheck-suppress unreadVariable -- read by teardown and tests; cppcheck does not model CppUTest lifecycle
@@ -407,7 +407,7 @@ TEST_GROUP(SolidSyslogTcpSenderFailure)
         SocketFake_Reset();
         endpointGetHost = GetHost;
         endpointGetPort = GetPort;
-        resolver        = SolidSyslogGetAddrInfoResolver_Create(GetHost, GetPort);
+        resolver        = SolidSyslogGetAddrInfoResolver_Create();
         stream          = SolidSyslogPosixTcpStream_Create();
         config          = {resolver, stream, TestEndpoint};
         // cppcheck-suppress unreadVariable -- read by teardown and tests; cppcheck does not model CppUTest lifecycle
@@ -564,4 +564,13 @@ TEST(SolidSyslogTcpSenderFailure, SendDoesNotOpenStreamWhenResolverFails)
 TEST(SolidSyslogTcpSenderFailure, SendReturnsTrueWhenResolverSucceeds)
 {
     CHECK_TRUE(Send());
+}
+
+TEST(SolidSyslogTcpSenderFailure, NoEndpointConfiguredConnectsToPortZero)
+{
+    SolidSyslogTcpSender_Destroy();
+    struct SolidSyslogTcpSenderConfig configNoEndpoint = {resolver, stream, nullptr};
+    struct SolidSyslogSender*         senderNoEndpoint = SolidSyslogTcpSender_Create(&configNoEndpoint);
+    SolidSyslogSender_Send(senderNoEndpoint, TEST_MESSAGE, TEST_MESSAGE_LEN);
+    LONGS_EQUAL(0, SocketFake_LastConnectPort());
 }

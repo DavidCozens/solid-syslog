@@ -55,14 +55,14 @@ static struct SolidSyslogSender* CreateSender(const struct ExampleOptions* optio
     if (useTcp)
     {
         static struct SolidSyslogTcpSenderConfig tcpConfig = {0};
-        tcpConfig.resolver                                 = SolidSyslogGetAddrInfoResolver_Create(ExampleTcpConfig_GetHost, ExampleTcpConfig_GetPort);
+        tcpConfig.resolver                                 = SolidSyslogGetAddrInfoResolver_Create();
         tcpConfig.stream                                   = SolidSyslogPosixTcpStream_Create();
         tcpConfig.endpoint                                 = ExampleTcpConfig_GetEndpoint;
         return SolidSyslogTcpSender_Create(&tcpConfig);
     }
 
     static struct SolidSyslogUdpSenderConfig udpConfig = {0};
-    udpConfig.resolver                                 = SolidSyslogGetAddrInfoResolver_Create(ExampleUdpConfig_GetHost, ExampleUdpConfig_GetPort);
+    udpConfig.resolver                                 = SolidSyslogGetAddrInfoResolver_Create();
     udpConfig.datagram                                 = SolidSyslogPosixDatagram_Create();
     udpConfig.endpoint                                 = ExampleUdpConfig_GetEndpoint;
     return SolidSyslogUdpSender_Create(&udpConfig);
