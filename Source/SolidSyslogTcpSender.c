@@ -87,7 +87,7 @@ static bool ResolveDestination(struct SolidSyslogTcpSender* tcp, struct SolidSys
 {
     SolidSyslogFormatterStorage  hostStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(SOLIDSYSLOG_MAX_HOST_SIZE)];
     struct SolidSyslogFormatter* hostFormatter = SolidSyslogFormatter_Create(hostStorage, SOLIDSYSLOG_MAX_HOST_SIZE);
-    struct SolidSyslogEndpoint   endpoint      = {.host = hostFormatter, .port = 0, .version = 0};
+    struct SolidSyslogEndpoint   endpoint      = {.host = hostFormatter, .port = 0};
 
     tcp->config.endpoint(&endpoint);
 
@@ -141,6 +141,5 @@ static bool SendBytes(struct SolidSyslogTcpSender* tcp, const void* data, size_t
 static void NilEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
     SolidSyslogFormatter_BoundedString(endpoint->host, "", 0);
-    endpoint->port    = 0;
-    endpoint->version = 0;
+    endpoint->port = 0;
 }

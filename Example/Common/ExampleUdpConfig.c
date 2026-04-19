@@ -24,6 +24,12 @@ void ExampleUdpConfig_GetEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
     const char* host = ExampleUdpConfig_GetHost();
     SolidSyslogFormatter_BoundedString(endpoint->host, host, strlen(host));
-    endpoint->port    = (uint16_t) ExampleUdpConfig_GetPort();
-    endpoint->version = 0;
+    endpoint->port = (uint16_t) ExampleUdpConfig_GetPort();
+}
+
+/* Static config — host/port never change, so version stays 0 forever and the
+   sender connects exactly once. */
+uint32_t ExampleUdpConfig_GetEndpointVersion(void)
+{
+    return 0;
 }

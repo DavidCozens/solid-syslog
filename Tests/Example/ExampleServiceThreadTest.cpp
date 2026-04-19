@@ -18,8 +18,12 @@ static void ExampleEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
     const char* host = ExampleUdpConfig_GetHost();
     SolidSyslogFormatter_BoundedString(endpoint->host, host, strlen(host));
-    endpoint->port    = (uint16_t) ExampleUdpConfig_GetPort();
-    endpoint->version = 0;
+    endpoint->port = (uint16_t) ExampleUdpConfig_GetPort();
+}
+
+static uint32_t ExampleEndpointVersion() // NOLINT(modernize-use-trailing-return-type)
+{
+    return 0;
 }
 
 // clang-format off
@@ -38,7 +42,7 @@ TEST_GROUP(ExampleServiceThread)
         ClockFake_SetTime(1743768600, 0);
         shutdown = true;
 
-        SolidSyslogUdpSenderConfig udpConfig = {SolidSyslogGetAddrInfoResolver_Create(), SolidSyslogPosixDatagram_Create(), ExampleEndpoint};
+        SolidSyslogUdpSenderConfig udpConfig = {SolidSyslogGetAddrInfoResolver_Create(), SolidSyslogPosixDatagram_Create(), ExampleEndpoint, ExampleEndpointVersion};
         sender = SolidSyslogUdpSender_Create(&udpConfig);
         buffer = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
         store  = SolidSyslogNullStore_Create();

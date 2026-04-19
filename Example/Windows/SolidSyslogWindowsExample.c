@@ -43,8 +43,12 @@ static void GetEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
     const char* host = GetHost();
     SolidSyslogFormatter_BoundedString(endpoint->host, host, strlen(host));
-    endpoint->port    = (uint16_t) GetPort();
-    endpoint->version = 0;
+    endpoint->port = (uint16_t) GetPort();
+}
+
+static uint32_t GetEndpointVersion(void)
+{
+    return 0;
 }
 
 static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
@@ -67,14 +71,14 @@ int SolidSyslogWindowsExample_Run(int argc, char* argv[])
     struct WindowsExampleOptions options;
     ExampleWindowsCommandLine_Parse(argc, argv, &options);
 
-    struct SolidSyslogResolver*       resolver    = SolidSyslogWinsockResolver_Create();
-    struct SolidSyslogDatagram*       datagram    = SolidSyslogWinsockDatagram_Create();
-    struct SolidSyslogUdpSenderConfig udpConfig   = {.resolver = resolver, .datagram = datagram, .endpoint = GetEndpoint};
-    struct SolidSyslogSender*         sender      = SolidSyslogUdpSender_Create(&udpConfig);
-    struct SolidSyslogBuffer*         buffer      = SolidSyslogNullBuffer_Create(sender);
-    struct SolidSyslogStore*          store       = SolidSyslogNullStore_Create();
-    struct SolidSyslogAtomicCounter*  counter     = SolidSyslogAtomicCounter_Create();
-    struct SolidSyslogStructuredData* metaSd      = SolidSyslogMetaSd_Create(counter);
+    struct SolidSyslogResolver*       resolver  = SolidSyslogWinsockResolver_Create();
+    struct SolidSyslogDatagram*       datagram  = SolidSyslogWinsockDatagram_Create();
+    struct SolidSyslogUdpSenderConfig udpConfig = {.resolver = resolver, .datagram = datagram, .endpoint = GetEndpoint, .endpointVersion = GetEndpointVersion};
+    struct SolidSyslogSender*         sender    = SolidSyslogUdpSender_Create(&udpConfig);
+    struct SolidSyslogBuffer*         buffer    = SolidSyslogNullBuffer_Create(sender);
+    struct SolidSyslogStore*          store     = SolidSyslogNullStore_Create();
+    struct SolidSyslogAtomicCounter*  counter   = SolidSyslogAtomicCounter_Create();
+    struct SolidSyslogStructuredData* metaSd    = SolidSyslogMetaSd_Create(counter);
     struct SolidSyslogStructuredData* timeQuality = SolidSyslogTimeQualitySd_Create(GetTimeQuality);
     struct SolidSyslogStructuredData* originSd    = SolidSyslogOriginSd_Create("SolidSyslogExample", "0.7.0");
 

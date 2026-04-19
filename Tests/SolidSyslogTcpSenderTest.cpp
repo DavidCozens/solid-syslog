@@ -65,8 +65,7 @@ static void TestEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
     const char* host = endpointGetHost();
     SolidSyslogFormatter_BoundedString(endpoint->host, host, strlen(host));
-    endpoint->port    = (uint16_t) endpointGetPort();
-    endpoint->version = 0;
+    endpoint->port = (uint16_t) endpointGetPort();
 }
 
 // clang-format off

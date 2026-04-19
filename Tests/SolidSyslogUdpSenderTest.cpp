@@ -50,18 +50,25 @@ static int SpyGetPort()
     return TEST_DEFAULT_PORT;
 }
 
-// Endpoint stub — delegates to per-test function pointers so existing
+// Endpoint stubs — delegate to per-test function pointers so existing
 // callback-spy tests in TEST_GROUP(SolidSyslogUdpSenderConfig) keep counting
-// callback invocations through the new endpoint path.
+// callback invocations through the new endpoint path. endpointVersion is the
+// per-test version reported by TestEndpointVersion; bump it between Sends to
+// drive fingerprint-reconnection tests.
 static const char* (*endpointGetHost)() = GetDefaultHost;
 static int (*endpointGetPort)()         = GetDefaultPort;
+static uint32_t endpointVersion         = 0;
 
 static void TestEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
     const char* host = endpointGetHost();
     SolidSyslogFormatter_BoundedString(endpoint->host, host, strlen(host));
-    endpoint->port    = (uint16_t) endpointGetPort();
-    endpoint->version = 0;
+    endpoint->port = (uint16_t) endpointGetPort();
+}
+
+static uint32_t TestEndpointVersion() // NOLINT(modernize-use-trailing-return-type)
+{
+    return endpointVersion;
 }
 
 // clang-format off
@@ -78,10 +85,11 @@ TEST_GROUP(SolidSyslogUdpSender)
     {
         SocketFake_Reset();
         endpointGetHost = GetDefaultHost;
+        endpointVersion = 0;
         endpointGetPort = GetDefaultPort;
         resolver = SolidSyslogGetAddrInfoResolver_Create();
         datagram = SolidSyslogPosixDatagram_Create();
-        config = {resolver, datagram, TestEndpoint};
+        config = {resolver, datagram, TestEndpoint, TestEndpointVersion};
         // cppcheck-suppress unreadVariable -- read by teardown and tests; cppcheck does not model CppUTest lifecycle
         sender = SolidSyslogUdpSender_Create(&config);
     }
@@ -248,6 +256,23 @@ TEST(SolidSyslogUdpSender, DisconnectWithoutSendDoesNotClose)
     LONGS_EQUAL(0, SocketFake_CloseCallCount());
 }
 
+TEST(SolidSyslogUdpSender, EndpointVersionChangeBetweenSendsTriggersReconnect)
+{
+    Send();
+    endpointVersion = 1;
+    Send();
+    LONGS_EQUAL(2, SocketFake_SocketCallCount());
+}
+
+TEST(SolidSyslogUdpSender, EndpointVersionChangeUsesNewPortOnReconnect)
+{
+    Send();
+    endpointVersion = 1;
+    endpointGetPort = GetAlternatePort;
+    Send();
+    LONGS_EQUAL(TEST_ALTERNATE_PORT, SocketFake_LastPort());
+}
+
 IGNORE_TEST(SolidSyslogUdpSender, HappyPathOnly)
 {
     // Error handling not yet implemented — see Epic #31
@@ -274,11 +299,12 @@ TEST_GROUP(SolidSyslogUdpSenderDestroy)
     {
         SocketFake_Reset();
         endpointGetHost = GetDefaultHost;
+        endpointVersion = 0;
         endpointGetPort = GetDefaultPort;
         resolver        = SolidSyslogGetAddrInfoResolver_Create();
         datagram        = SolidSyslogPosixDatagram_Create();
         // cppcheck-suppress unreadVariable -- used in test bodies; cppcheck does not model CppUTest macros
-        config = {resolver, datagram, TestEndpoint};
+        config = {resolver, datagram, TestEndpoint, TestEndpointVersion};
     }
 
     void teardown() override
@@ -352,6 +378,7 @@ TEST_GROUP(SolidSyslogUdpSenderConfig)
         getPortCallCount = 0;
         getHostCallCount = 0;
         endpointGetHost  = GetDefaultHost;
+        endpointVersion  = 0;
         endpointGetPort  = GetDefaultPort;
     }
 
@@ -368,7 +395,7 @@ TEST_GROUP(SolidSyslogUdpSenderConfig)
         endpointGetPort = getPortFn;
         struct SolidSyslogResolver*       resolver = SolidSyslogGetAddrInfoResolver_Create();
         struct SolidSyslogDatagram*       datagram = SolidSyslogPosixDatagram_Create();
-        struct SolidSyslogUdpSenderConfig config   = {resolver, datagram, TestEndpoint};
+        struct SolidSyslogUdpSenderConfig config   = {resolver, datagram, TestEndpoint, TestEndpointVersion};
         sender                                     = SolidSyslogUdpSender_Create(&config);
     }
 
@@ -454,6 +481,7 @@ TEST_GROUP(SolidSyslogUdpSenderFailure)
     {
         SocketFake_Reset();
         endpointGetHost = GetDefaultHost;
+        endpointVersion = 0;
         endpointGetPort = GetDefaultPort;
     }
 
@@ -468,7 +496,7 @@ TEST_GROUP(SolidSyslogUdpSenderFailure)
     {
         resolver = SolidSyslogGetAddrInfoResolver_Create();
         datagram = SolidSyslogPosixDatagram_Create();
-        config   = {resolver, datagram, TestEndpoint};
+        config   = {resolver, datagram, TestEndpoint, TestEndpointVersion};
         // cppcheck-suppress unreadVariable -- read by tests; cppcheck does not model CppUTest macros
         sender   = SolidSyslogUdpSender_Create(&config);
     }
@@ -516,7 +544,7 @@ TEST(SolidSyslogUdpSenderFailure, NoEndpointConfiguredSendsToPortZero)
 {
     resolver                                           = SolidSyslogGetAddrInfoResolver_Create();
     datagram                                           = SolidSyslogPosixDatagram_Create();
-    struct SolidSyslogUdpSenderConfig configNoEndpoint = {resolver, datagram, nullptr};
+    struct SolidSyslogUdpSenderConfig configNoEndpoint = {resolver, datagram, nullptr, nullptr};
     sender                                             = SolidSyslogUdpSender_Create(&configNoEndpoint);
     SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN);
     LONGS_EQUAL(0, SocketFake_LastPort());

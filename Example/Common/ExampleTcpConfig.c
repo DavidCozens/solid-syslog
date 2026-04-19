@@ -24,6 +24,5 @@ void ExampleTcpConfig_GetEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
     const char* host = ExampleTcpConfig_GetHost();
     SolidSyslogFormatter_BoundedString(endpoint->host, host, strlen(host));
-    endpoint->port    = (uint16_t) ExampleTcpConfig_GetPort();
-    endpoint->version = 0;
+    endpoint->port = (uint16_t) ExampleTcpConfig_GetPort();
 }
