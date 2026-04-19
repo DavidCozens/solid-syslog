@@ -5,6 +5,8 @@
 #include "SolidSyslog.h"
 #include "SolidSyslogAtomicCounter.h"
 #include "SolidSyslogConfig.h"
+#include "SolidSyslogEndpoint.h"
+#include "SolidSyslogFormatter.h"
 #include "SolidSyslogMetaSd.h"
 #include "SolidSyslogNullBuffer.h"
 #include "SolidSyslogNullStore.h"
@@ -17,7 +19,9 @@
 #include "SolidSyslogWinsockDatagram.h"
 #include "SolidSyslogWinsockResolver.h"
 
+#include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 #include <winsock2.h>
 
 enum
@@ -33,6 +37,14 @@ static const char* GetHost(void)
 static int GetPort(void)
 {
     return EXAMPLE_UDP_PORT;
+}
+
+static void GetEndpoint(struct SolidSyslogEndpoint* endpoint)
+{
+    const char* host = GetHost();
+    SolidSyslogFormatter_BoundedString(endpoint->host, host, strlen(host));
+    endpoint->port    = (uint16_t) GetPort();
+    endpoint->version = 0;
 }
 
 static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
@@ -57,7 +69,7 @@ int SolidSyslogWindowsExample_Run(int argc, char* argv[])
 
     struct SolidSyslogResolver*       resolver    = SolidSyslogWinsockResolver_Create(GetHost, GetPort);
     struct SolidSyslogDatagram*       datagram    = SolidSyslogWinsockDatagram_Create();
-    struct SolidSyslogUdpSenderConfig udpConfig   = {.resolver = resolver, .datagram = datagram};
+    struct SolidSyslogUdpSenderConfig udpConfig   = {.resolver = resolver, .datagram = datagram, .endpoint = GetEndpoint};
     struct SolidSyslogSender*         sender      = SolidSyslogUdpSender_Create(&udpConfig);
     struct SolidSyslogBuffer*         buffer      = SolidSyslogNullBuffer_Create(sender);
     struct SolidSyslogStore*          store       = SolidSyslogNullStore_Create();

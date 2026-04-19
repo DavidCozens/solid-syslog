@@ -63,6 +63,7 @@ static struct SolidSyslogSender* CreateSender(const struct ExampleOptions* optio
     static struct SolidSyslogUdpSenderConfig udpConfig = {0};
     udpConfig.resolver                                 = SolidSyslogGetAddrInfoResolver_Create(ExampleUdpConfig_GetHost, ExampleUdpConfig_GetPort);
     udpConfig.datagram                                 = SolidSyslogPosixDatagram_Create();
+    udpConfig.endpoint                                 = ExampleUdpConfig_GetEndpoint;
     return SolidSyslogUdpSender_Create(&udpConfig);
 }
 
