@@ -90,18 +90,19 @@ TEST(SolidSyslogPosixMessageQueueBuffer, SecondReadAfterSingleWriteReturnsFalse)
 
 TEST(SolidSyslogPosixMessageQueueBuffer, ServiceSendsMessageWrittenViaLog)
 {
-    SenderFake_Reset();
-    SolidSyslogStore* nullStore = SolidSyslogNullStore_Create();
-    SolidSyslogConfig config    = {buffer, SenderFake_GetSender(), nullptr, nullptr, nullptr, nullptr, nullStore, nullptr, 0};
+    struct SolidSyslogSender* fakeSender = SenderFake_Create();
+    SolidSyslogStore*         nullStore  = SolidSyslogNullStore_Create();
+    SolidSyslogConfig         config     = {buffer, fakeSender, nullptr, nullptr, nullptr, nullptr, nullStore, nullptr, 0};
     SolidSyslog_Create(&config);
 
     SolidSyslogMessage message = {SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO, nullptr, nullptr};
     SolidSyslog_Log(&message);
     SolidSyslog_Service();
-    LONGS_EQUAL(1, SenderFake_CallCount());
+    LONGS_EQUAL(1, SenderFake_SendCount(fakeSender));
 
     SolidSyslog_Destroy();
     SolidSyslogNullStore_Destroy();
+    SenderFake_Destroy(fakeSender);
 }
 
 IGNORE_TEST(SolidSyslogPosixMessageQueueBuffer, HappyPathOnly)

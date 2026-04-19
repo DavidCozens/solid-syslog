@@ -8,6 +8,7 @@ endif()
 
 set(TEST_SOURCES
     SolidSyslogTest.cpp
+    SolidSyslogSwitchingSenderTest.cpp
     SolidSyslogMetaSdTest.cpp
     SolidSyslogTimeQualitySdTest.cpp
     SolidSyslogOriginSdTest.cpp

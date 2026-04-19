@@ -117,7 +117,7 @@ Tests/Support/    — PosixFakes static lib (SocketFake, ClockFake) — shared a
 Tests/Example/    — Example code unit tests (ExampleTests executable).
 Example/Common/   — Shared example code (CLI parsing, app name, UDP/TCP config, service thread).
 Example/SingleTask/ — Single-task example (NullBuffer, bare-metal model). BDD sender.
-Example/Threaded/ — Threaded example (PosixMessageQueueBuffer, two pthreads, --transport udp|tcp). BDD sender.
+Example/Threaded/ — Threaded example (PosixMessageQueueBuffer, two pthreads, SwitchingSender over UDP + TCP; `--transport` sets initial, `switch <name>` flips at runtime). BDD sender.
 Bdd/              — BDD test infrastructure: Gherkin features, step definitions, syslog-ng config.
 ci/               — CI-specific files (e.g. docker-compose.bdd.yml).
 ```
@@ -142,6 +142,7 @@ Headers in `Interface/` are split by audience — each user includes only what t
 | `SolidSyslogResolver.h` | Any code that needs to resolve a destination | `SolidSyslogResolver_Resolve(resolver, transport, host, port, *out)` |
 | `SolidSyslogUdpSender.h` | System setup code using UDP transport | `SolidSyslogUdpSenderConfig` (resolver, datagram, endpoint, endpointVersion), `SolidSyslogUdpSender_Create`, `_Destroy`, `SOLIDSYSLOG_UDP_DEFAULT_PORT` |
 | `SolidSyslogTcpSender.h` | System setup code using TCP transport (RFC 6587) | `SolidSyslogTcpSenderConfig` (resolver, stream, endpoint, endpointVersion), `SolidSyslogTcpSender_Create`, `_Destroy`, `SOLIDSYSLOG_TCP_DEFAULT_PORT` |
+| `SolidSyslogSwitchingSender.h` | System setup code composing multiple inner senders | `SolidSyslogSwitchingSenderConfig` (senders, senderCount, selector), `SolidSyslogSwitchingSenderSelector`, `SolidSyslogSwitchingSender_Create`, `_Destroy` |
 | `SolidSyslogBufferDefinition.h` | Buffer implementors (extension point) | `SolidSyslogBuffer` vtable struct |
 | `SolidSyslogNullBuffer.h` | System setup code (single-task, no buffering) | `SolidSyslogNullBuffer_Create`, `_Destroy` |
 | `SolidSyslogPosixMessageQueueBuffer.h` | System setup code using POSIX message queue buffer | `SolidSyslogPosixMessageQueueBuffer_Create`, `_Destroy` |

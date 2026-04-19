@@ -8,7 +8,9 @@
 
 EXTERN_C_BEGIN
 
-    void ExampleInteractive_Run(const struct SolidSyslogMessage* message, FILE* input);
+    typedef void (*ExampleInteractiveSwitchHandler)(const char* name);
+
+    void ExampleInteractive_Run(const struct SolidSyslogMessage* message, FILE* input, ExampleInteractiveSwitchHandler onSwitch);
 
 EXTERN_C_END
 

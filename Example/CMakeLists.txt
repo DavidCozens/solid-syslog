@@ -6,6 +6,7 @@ if(SOLIDSYSLOG_POSIX)
         Common/ExampleUdpConfig.c
         Common/ExampleTcpConfig.c
         Common/ExampleInteractive.c
+        Common/ExampleSwitchConfig.c
     )
 
     # Single-task example: NullBuffer, direct send, bare-metal model
