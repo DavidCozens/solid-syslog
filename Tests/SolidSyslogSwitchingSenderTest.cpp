@@ -156,8 +156,8 @@ TEST(SolidSyslogSwitchingSender, DisconnectAfterSwitchForwardsToNewActive)
 
 TEST(SolidSyslogSwitchingSender, DisconnectAfterSelectorChangeWithoutSendForwardsToPreviouslyActive)
 {
-    Send("x", 1);              // currentSender becomes innerA
-    selectorReturn = INNER_B;  // selector flips, but no Send yet
+    Send("x", 1);             // currentSender becomes innerA
+    selectorReturn = INNER_B; // selector flips, but no Send yet
     SolidSyslogSender_Disconnect(sender);
     // Disconnect does not re-consult the selector — it forwards to the
     // currently-held sender, so innerA receives the Disconnect.
