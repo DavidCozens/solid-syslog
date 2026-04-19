@@ -33,6 +33,8 @@ enum
 };
 
 static bool Resolve(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, struct SolidSyslogAddress* result);
+static bool ResolveAt(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, const char* host, uint16_t port,
+                      struct SolidSyslogAddress* result);
 
 static int MapTransport(enum SolidSyslogTransport transport);
 
@@ -47,15 +49,22 @@ static struct SolidSyslogWinsockResolver instance;
 
 struct SolidSyslogResolver* SolidSyslogWinsockResolver_Create(const char* (*getHost)(void), int (*getPort)(void))
 {
-    instance.base.Resolve = Resolve;
-    instance.getHost      = getHost;
-    instance.getPort      = getPort;
+    instance.base.Resolve   = Resolve;
+    instance.base.ResolveAt = ResolveAt;
+    instance.getHost        = getHost;
+    instance.getPort        = getPort;
     return &instance.base;
 }
 
 static bool Resolve(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, struct SolidSyslogAddress* result)
 {
     struct SolidSyslogWinsockResolver* resolver = (struct SolidSyslogWinsockResolver*) self;
+    return ResolveAt(self, transport, resolver->getHost(), (uint16_t) resolver->getPort(), result);
+}
+
+static bool ResolveAt(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, const char* host, uint16_t port, struct SolidSyslogAddress* result)
+{
+    (void) self;
 
     struct addrinfo hints = {0};
     hints.ai_family       = AF_INET;
@@ -64,11 +73,11 @@ static bool Resolve(struct SolidSyslogResolver* self, enum SolidSyslogTransport 
     struct addrinfo* info     = NULL;
     bool             resolved = false;
 
-    if (Winsock_getaddrinfo(resolver->getHost(), NULL, &hints, &info) == GETADDRINFO_SUCCESS)
+    if (Winsock_getaddrinfo(host, NULL, &hints, &info) == GETADDRINFO_SUCCESS)
     {
         struct sockaddr_in* sin = SolidSyslogAddress_AsSockaddrIn(result);
         *sin                    = *(struct sockaddr_in*) info->ai_addr;
-        sin->sin_port           = htons((uint16_t) resolver->getPort());
+        sin->sin_port           = htons(port);
         Winsock_freeaddrinfo(info);
         resolved = true;
     }
@@ -90,7 +99,8 @@ static int MapTransport(enum SolidSyslogTransport transport)
 
 void SolidSyslogWinsockResolver_Destroy(void)
 {
-    instance.base.Resolve = NULL;
-    instance.getHost      = NULL;
-    instance.getPort      = NULL;
+    instance.base.Resolve   = NULL;
+    instance.base.ResolveAt = NULL;
+    instance.getHost        = NULL;
+    instance.getPort        = NULL;
 }

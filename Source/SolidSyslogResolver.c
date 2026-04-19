@@ -4,3 +4,9 @@ bool SolidSyslogResolver_Resolve(struct SolidSyslogResolver* resolver, enum Soli
 {
     return resolver->Resolve(resolver, transport, result);
 }
+
+bool SolidSyslogResolver_ResolveAt(struct SolidSyslogResolver* resolver, enum SolidSyslogTransport transport, const char* host, uint16_t port,
+                                   struct SolidSyslogAddress* result)
+{
+    return resolver->ResolveAt(resolver, transport, host, port, result);
+}
