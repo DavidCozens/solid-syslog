@@ -6,7 +6,6 @@
 #include "SolidSyslogSender.h"
 #include "SolidSyslogTcpSender.h"
 #include "SocketFake.h"
-#include <cstring>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 
@@ -66,8 +65,7 @@ static uint32_t endpointVersion         = 0;
 
 static void TestEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
-    const char* host = endpointGetHost();
-    SolidSyslogFormatter_BoundedString(endpoint->host, host, strlen(host));
+    SolidSyslogFormatter_BoundedString(endpoint->host, endpointGetHost(), SOLIDSYSLOG_MAX_HOST_SIZE);
     endpoint->port = (uint16_t) endpointGetPort();
 }
 
@@ -600,5 +598,6 @@ TEST(SolidSyslogTcpSenderFailure, NoEndpointConfiguredConnectsToPortZero)
     struct SolidSyslogTcpSenderConfig configNoEndpoint = {resolver, stream, nullptr, nullptr};
     struct SolidSyslogSender*         senderNoEndpoint = SolidSyslogTcpSender_Create(&configNoEndpoint);
     SolidSyslogSender_Send(senderNoEndpoint, TEST_MESSAGE, TEST_MESSAGE_LEN);
+    LONGS_EQUAL(1, SocketFake_ConnectCallCount());
     LONGS_EQUAL(0, SocketFake_LastConnectPort());
 }

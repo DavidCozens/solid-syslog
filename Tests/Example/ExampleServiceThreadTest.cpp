@@ -12,12 +12,10 @@
 #include "SolidSyslogNullStore.h"
 #include "SocketFake.h"
 #include "ClockFake.h"
-#include <cstring>
 
 static void ExampleEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
-    const char* host = ExampleUdpConfig_GetHost();
-    SolidSyslogFormatter_BoundedString(endpoint->host, host, strlen(host));
+    SolidSyslogFormatter_BoundedString(endpoint->host, ExampleUdpConfig_GetHost(), SOLIDSYSLOG_MAX_HOST_SIZE);
     endpoint->port = (uint16_t) ExampleUdpConfig_GetPort();
 }
 

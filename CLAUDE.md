@@ -139,7 +139,7 @@ Headers in `Interface/` are split by audience — each user includes only what t
 | `SolidSyslogEndpoint.h` | System setup code that supplies destination host/port (and version on changes) | `SolidSyslogEndpoint`, `SolidSyslogEndpointFunction`, `SolidSyslogEndpointVersionFunction`, `SOLIDSYSLOG_MAX_HOST_SIZE` |
 | `SolidSyslogSender.h` | Any code holding a sender handle | `SolidSyslogSender_Send`, `SolidSyslogSender_Disconnect` |
 | `SolidSyslogSenderDefinition.h` | Sender implementors (extension point) | `SolidSyslogSender` vtable struct (`Send`, `Disconnect`) |
-| `SolidSyslogResolver.h` | Any code that needs to resolve a destination | `SolidSyslogResolver_Resolve(transport, host, port, *out)` |
+| `SolidSyslogResolver.h` | Any code that needs to resolve a destination | `SolidSyslogResolver_Resolve(resolver, transport, host, port, *out)` |
 | `SolidSyslogUdpSender.h` | System setup code using UDP transport | `SolidSyslogUdpSenderConfig` (resolver, datagram, endpoint, endpointVersion), `SolidSyslogUdpSender_Create`, `_Destroy`, `SOLIDSYSLOG_UDP_DEFAULT_PORT` |
 | `SolidSyslogTcpSender.h` | System setup code using TCP transport (RFC 6587) | `SolidSyslogTcpSenderConfig` (resolver, stream, endpoint, endpointVersion), `SolidSyslogTcpSender_Create`, `_Destroy`, `SOLIDSYSLOG_TCP_DEFAULT_PORT` |
 | `SolidSyslogBufferDefinition.h` | Buffer implementors (extension point) | `SolidSyslogBuffer` vtable struct |

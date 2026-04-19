@@ -2,7 +2,6 @@
 #include "SolidSyslogFormatter.h"
 
 #include <stdint.h>
-#include <string.h>
 
 /* Unprivileged mirror of SOLIDSYSLOG_TCP_DEFAULT_PORT (514) for BDD containers */
 enum
@@ -22,8 +21,7 @@ int ExampleTcpConfig_GetPort(void)
 
 void ExampleTcpConfig_GetEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
-    const char* host = ExampleTcpConfig_GetHost();
-    SolidSyslogFormatter_BoundedString(endpoint->host, host, strlen(host));
+    SolidSyslogFormatter_BoundedString(endpoint->host, ExampleTcpConfig_GetHost(), SOLIDSYSLOG_MAX_HOST_SIZE);
     endpoint->port = (uint16_t) ExampleTcpConfig_GetPort();
 }
 

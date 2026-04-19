@@ -21,7 +21,6 @@
 
 #include <stdint.h>
 #include <stdio.h>
-#include <string.h>
 #include <winsock2.h>
 
 enum
@@ -41,8 +40,7 @@ static int GetPort(void)
 
 static void GetEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
-    const char* host = GetHost();
-    SolidSyslogFormatter_BoundedString(endpoint->host, host, strlen(host));
+    SolidSyslogFormatter_BoundedString(endpoint->host, GetHost(), SOLIDSYSLOG_MAX_HOST_SIZE);
     endpoint->port = (uint16_t) GetPort();
 }
 

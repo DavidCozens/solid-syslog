@@ -7,7 +7,6 @@
 #include "SolidSyslogSender.h"
 #include "SocketFake.h"
 #include <array>
-#include <cstring>
 #include <netinet/in.h>
 
 // clang-format off
@@ -61,8 +60,7 @@ static uint32_t endpointVersion         = 0;
 
 static void TestEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
-    const char* host = endpointGetHost();
-    SolidSyslogFormatter_BoundedString(endpoint->host, host, strlen(host));
+    SolidSyslogFormatter_BoundedString(endpoint->host, endpointGetHost(), SOLIDSYSLOG_MAX_HOST_SIZE);
     endpoint->port = (uint16_t) endpointGetPort();
 }
 
@@ -547,5 +545,6 @@ TEST(SolidSyslogUdpSenderFailure, NoEndpointConfiguredSendsToPortZero)
     struct SolidSyslogUdpSenderConfig configNoEndpoint = {resolver, datagram, nullptr, nullptr};
     sender                                             = SolidSyslogUdpSender_Create(&configNoEndpoint);
     SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN);
+    LONGS_EQUAL(1, SocketFake_SendtoCallCount());
     LONGS_EQUAL(0, SocketFake_LastPort());
 }
