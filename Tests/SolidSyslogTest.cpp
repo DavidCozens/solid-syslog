@@ -207,15 +207,18 @@ TEST_GROUP(SolidSyslog)
     SolidSyslogBuffer *buffer;
     // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
     SolidSyslogStore  *store;
+    // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
+    struct SolidSyslogSender *fakeSender;
 
     void setup() override
     {
-        SenderFake_Reset();
+        fakeSender = SenderFake_Create();
         StringFake_Reset();
-        buffer = SolidSyslogNullBuffer_Create(SenderFake_GetSender());
+        buffer = SolidSyslogNullBuffer_Create(fakeSender);
         store  = SolidSyslogNullStore_Create();
         config = {buffer, nullptr, nullptr, StringFake_GetHostname, StringFake_GetAppName, StringFake_GetProcessId, store, nullptr, 0};
         SolidSyslog_Create(&config);
+        // cppcheck-suppress unreadVariable -- read via Log() through &message; cppcheck does not model CppUTest macros
         message = {SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO, nullptr, nullptr};
     }
 
@@ -224,6 +227,7 @@ TEST_GROUP(SolidSyslog)
         SolidSyslog_Destroy();
         SolidSyslogNullStore_Destroy();
         SolidSyslogNullBuffer_Destroy();
+        SenderFake_Destroy(fakeSender);
     }
 
     void Log() const
@@ -231,9 +235,9 @@ TEST_GROUP(SolidSyslog)
         SolidSyslog_Log(&message);
     }
 
-    static const char *LastMessage()
+    [[nodiscard]] const char *LastMessage() const
     {
-        return SenderFake_LastBufferAsString();
+        return SenderFake_LastBufferAsString(fakeSender);
     }
 };
 
@@ -245,13 +249,13 @@ TEST(SolidSyslog, CreateDestroyWorksWithoutCrashing)
 
 TEST(SolidSyslog, NoMessagesAreSentWhenLogIsNotCalled)
 {
-    LONGS_EQUAL(0, SenderFake_CallCount());
+    LONGS_EQUAL(0, SenderFake_SendCount(fakeSender));
 }
 
 TEST(SolidSyslog, SingleLogCallResultsInOneSend)
 {
     Log();
-    LONGS_EQUAL(1, SenderFake_CallCount());
+    LONGS_EQUAL(1, SenderFake_SendCount(fakeSender));
 }
 
 TEST(SolidSyslog, PriValIs134)
@@ -1066,17 +1070,17 @@ TEST(SolidSyslog, EmptyProcessIdProducesNilvalue)
 TEST(SolidSyslog, ServiceSendsMessageReadFromBuffer)
 {
     SolidSyslogBuffer* fakeBuffer    = BufferFake_Create();
-    SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderFake_GetSender(), nullptr, nullptr, nullptr, nullptr, store, nullptr, 0};
+    SolidSyslogConfig  serviceConfig = {fakeBuffer, fakeSender, nullptr, nullptr, nullptr, nullptr, store, nullptr, 0};
 
     SolidSyslog_Destroy();
     SolidSyslog_Create(&serviceConfig);
 
     SolidSyslogBuffer_Write(fakeBuffer, "test", 4);
-    SenderFake_Reset();
+    SenderFake_Reset(fakeSender);
     SolidSyslog_Service();
 
-    LONGS_EQUAL(1, SenderFake_CallCount());
-    STRCMP_EQUAL("test", SenderFake_LastBufferAsString());
+    LONGS_EQUAL(1, SenderFake_SendCount(fakeSender));
+    STRCMP_EQUAL("test", SenderFake_LastBufferAsString(fakeSender));
 
     SolidSyslog_Destroy();
     SolidSyslog_Create(&config);
@@ -1087,17 +1091,17 @@ TEST(SolidSyslog, ServiceSendsBufferedMessageWithNullStore)
 {
     SolidSyslogBuffer* fakeBuffer    = BufferFake_Create();
     SolidSyslogStore*  nullStore     = SolidSyslogNullStore_Create();
-    SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderFake_GetSender(), nullptr, nullptr, nullptr, nullptr, nullStore, nullptr, 0};
+    SolidSyslogConfig  serviceConfig = {fakeBuffer, fakeSender, nullptr, nullptr, nullptr, nullptr, nullStore, nullptr, 0};
 
     SolidSyslog_Destroy();
     SolidSyslog_Create(&serviceConfig);
 
     SolidSyslogBuffer_Write(fakeBuffer, "test", 4);
-    SenderFake_Reset();
+    SenderFake_Reset(fakeSender);
     SolidSyslog_Service();
 
-    LONGS_EQUAL(1, SenderFake_CallCount());
-    STRCMP_EQUAL("test", SenderFake_LastBufferAsString());
+    LONGS_EQUAL(1, SenderFake_SendCount(fakeSender));
+    STRCMP_EQUAL("test", SenderFake_LastBufferAsString(fakeSender));
 
     SolidSyslog_Destroy();
     SolidSyslog_Create(&config);
@@ -1109,17 +1113,17 @@ TEST(SolidSyslog, ServiceSendsFromStoreWhenHasUnsent)
 {
     SolidSyslogBuffer* fakeBuffer    = BufferFake_Create();
     SolidSyslogStore*  fakeStore     = StoreFake_Create();
-    SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderFake_GetSender(), nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
+    SolidSyslogConfig  serviceConfig = {fakeBuffer, fakeSender, nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
 
     SolidSyslog_Destroy();
     SolidSyslog_Create(&serviceConfig);
 
     SolidSyslogStore_Write(fakeStore, "stored", 6);
-    SenderFake_Reset();
+    SenderFake_Reset(fakeSender);
     SolidSyslog_Service();
 
-    LONGS_EQUAL(1, SenderFake_CallCount());
-    STRCMP_EQUAL("stored", SenderFake_LastBufferAsString());
+    LONGS_EQUAL(1, SenderFake_SendCount(fakeSender));
+    STRCMP_EQUAL("stored", SenderFake_LastBufferAsString(fakeSender));
 
     SolidSyslog_Destroy();
     SolidSyslog_Create(&config);
@@ -1131,7 +1135,7 @@ TEST(SolidSyslog, ServiceMarksSentAfterSuccessfulSend)
 {
     SolidSyslogBuffer* fakeBuffer    = BufferFake_Create();
     SolidSyslogStore*  fakeStore     = StoreFake_Create();
-    SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderFake_GetSender(), nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
+    SolidSyslogConfig  serviceConfig = {fakeBuffer, fakeSender, nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
 
     SolidSyslog_Destroy();
     SolidSyslog_Create(&serviceConfig);
@@ -1151,13 +1155,13 @@ TEST(SolidSyslog, ServiceDoesNotMarkSentOnSendFailure)
 {
     SolidSyslogBuffer* fakeBuffer    = BufferFake_Create();
     SolidSyslogStore*  fakeStore     = StoreFake_Create();
-    SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderFake_GetSender(), nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
+    SolidSyslogConfig  serviceConfig = {fakeBuffer, fakeSender, nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
 
     SolidSyslog_Destroy();
     SolidSyslog_Create(&serviceConfig);
 
     SolidSyslogStore_Write(fakeStore, "stored", 6);
-    SenderFake_FailNextSend();
+    SenderFake_FailNextSend(fakeSender);
     SolidSyslog_Service();
 
     CHECK_TRUE(SolidSyslogStore_HasUnsent(fakeStore));
@@ -1172,13 +1176,13 @@ TEST(SolidSyslog, ServiceWritesBufferMessageToStore)
 {
     SolidSyslogBuffer* fakeBuffer    = BufferFake_Create();
     SolidSyslogStore*  fakeStore     = StoreFake_Create();
-    SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderFake_GetSender(), nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
+    SolidSyslogConfig  serviceConfig = {fakeBuffer, fakeSender, nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
 
     SolidSyslog_Destroy();
     SolidSyslog_Create(&serviceConfig);
 
     SolidSyslogBuffer_Write(fakeBuffer, "buffered", 8);
-    SenderFake_FailNextSend();
+    SenderFake_FailNextSend(fakeSender);
     SolidSyslog_Service();
 
     char   readData[512];
@@ -1197,17 +1201,17 @@ TEST(SolidSyslog, ServiceSendsStoreMessageNotBufferMessage)
 {
     SolidSyslogBuffer* fakeBuffer    = BufferFake_Create();
     SolidSyslogStore*  fakeStore     = StoreFake_Create();
-    SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderFake_GetSender(), nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
+    SolidSyslogConfig  serviceConfig = {fakeBuffer, fakeSender, nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
 
     SolidSyslog_Destroy();
     SolidSyslog_Create(&serviceConfig);
 
     SolidSyslogStore_Write(fakeStore, "old", 3);
     SolidSyslogBuffer_Write(fakeBuffer, "new", 3);
-    SenderFake_Reset();
+    SenderFake_Reset(fakeSender);
     SolidSyslog_Service();
 
-    STRCMP_EQUAL("old", SenderFake_LastBufferAsString());
+    STRCMP_EQUAL("old", SenderFake_LastBufferAsString(fakeSender));
 
     SolidSyslog_Destroy();
     SolidSyslog_Create(&config);
@@ -1219,18 +1223,18 @@ TEST(SolidSyslog, ServiceSendsDirectlyWhenStoreWriteFails)
 {
     SolidSyslogBuffer* fakeBuffer    = BufferFake_Create();
     SolidSyslogStore*  fakeStore     = StoreFake_Create();
-    SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderFake_GetSender(), nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
+    SolidSyslogConfig  serviceConfig = {fakeBuffer, fakeSender, nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
 
     SolidSyslog_Destroy();
     SolidSyslog_Create(&serviceConfig);
 
     SolidSyslogBuffer_Write(fakeBuffer, "direct", 6);
     StoreFake_FailNextWrite();
-    SenderFake_Reset();
+    SenderFake_Reset(fakeSender);
     SolidSyslog_Service();
 
-    LONGS_EQUAL(1, SenderFake_CallCount());
-    STRCMP_EQUAL("direct", SenderFake_LastBufferAsString());
+    LONGS_EQUAL(1, SenderFake_SendCount(fakeSender));
+    STRCMP_EQUAL("direct", SenderFake_LastBufferAsString(fakeSender));
 
     SolidSyslog_Destroy();
     SolidSyslog_Create(&config);
@@ -1242,17 +1246,17 @@ TEST(SolidSyslog, ServiceDoesNotSendWhenStoreReadFails)
 {
     SolidSyslogBuffer* fakeBuffer    = BufferFake_Create();
     SolidSyslogStore*  fakeStore     = StoreFake_Create();
-    SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderFake_GetSender(), nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
+    SolidSyslogConfig  serviceConfig = {fakeBuffer, fakeSender, nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
 
     SolidSyslog_Destroy();
     SolidSyslog_Create(&serviceConfig);
 
     SolidSyslogStore_Write(fakeStore, "stored", 6);
     StoreFake_FailNextRead();
-    SenderFake_Reset();
+    SenderFake_Reset(fakeSender);
     SolidSyslog_Service();
 
-    LONGS_EQUAL(0, SenderFake_CallCount());
+    LONGS_EQUAL(0, SenderFake_SendCount(fakeSender));
 
     SolidSyslog_Destroy();
     SolidSyslog_Create(&config);
@@ -1264,7 +1268,7 @@ TEST(SolidSyslog, ServiceDoesNotMarkSentWhenSendingFromBuffer)
 {
     SolidSyslogBuffer* fakeBuffer    = BufferFake_Create();
     SolidSyslogStore*  fakeStore     = StoreFake_Create();
-    SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderFake_GetSender(), nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
+    SolidSyslogConfig  serviceConfig = {fakeBuffer, fakeSender, nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
 
     SolidSyslog_Destroy();
     SolidSyslog_Create(&serviceConfig);
@@ -1272,11 +1276,11 @@ TEST(SolidSyslog, ServiceDoesNotMarkSentWhenSendingFromBuffer)
     SolidSyslogStore_Write(fakeStore, "in-store", 8);
     SolidSyslogStore_MarkSent(fakeStore);
     SolidSyslogBuffer_Write(fakeBuffer, "from-buffer", 11);
-    SenderFake_Reset();
+    SenderFake_Reset(fakeSender);
     SolidSyslog_Service();
 
-    LONGS_EQUAL(1, SenderFake_CallCount());
-    STRCMP_EQUAL("from-buffer", SenderFake_LastBufferAsString());
+    LONGS_EQUAL(1, SenderFake_SendCount(fakeSender));
+    STRCMP_EQUAL("from-buffer", SenderFake_LastBufferAsString(fakeSender));
 
     SolidSyslog_Destroy();
     SolidSyslog_Create(&config);
@@ -1288,17 +1292,17 @@ TEST(SolidSyslog, ServiceDoesNothingWhenStoreIsHalted)
 {
     SolidSyslogBuffer* fakeBuffer    = BufferFake_Create();
     SolidSyslogStore*  fakeStore     = StoreFake_Create();
-    SolidSyslogConfig  serviceConfig = {fakeBuffer, SenderFake_GetSender(), nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
+    SolidSyslogConfig  serviceConfig = {fakeBuffer, fakeSender, nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
 
     SolidSyslog_Destroy();
     SolidSyslog_Create(&serviceConfig);
 
     SolidSyslogBuffer_Write(fakeBuffer, "test", 4);
     StoreFake_SetHalted();
-    SenderFake_Reset();
+    SenderFake_Reset(fakeSender);
     SolidSyslog_Service();
 
-    LONGS_EQUAL(0, SenderFake_CallCount());
+    LONGS_EQUAL(0, SenderFake_SendCount(fakeSender));
 
     SolidSyslog_Destroy();
     SolidSyslog_Create(&config);
