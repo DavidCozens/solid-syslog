@@ -10,7 +10,17 @@ import time
 from datetime import datetime, timezone
 
 from behave import given, when, then
-from environment import STORE_FILE_PATH, STORE_PATH_PREFIX
+from environment import (
+    RECEIVED_TCP_LOG,
+    RECEIVED_UDP_LOG,
+    STORE_FILE_PATH,
+    STORE_PATH_PREFIX,
+)
+
+PER_TRANSPORT_LOG = {
+    "udp": RECEIVED_UDP_LOG,
+    "tcp": RECEIVED_TCP_LOG,
+}
 
 # POSIX-only paths used by the @buffered/threaded scenarios. The cross-platform
 # scenarios use context.example_binary / context.received_log instead, set in
@@ -396,6 +406,13 @@ def step_syslog_ng_is_running(context):
     # Field name kept (`lines_before`) for legacy callers, but for OTel one
     # JSONL file line may carry several records.
     context.lines_before = oracle_record_count(context.received_log, context.oracle_format)
+
+    # Per-transport baselines for the SwitchingSender scenarios. Only the
+    # syslog-ng oracle emits these; other oracles leave the dict empty.
+    context.lines_before_per_transport = {}
+    if context.oracle_format == "syslog-ng":
+        for transport, path in PER_TRANSPORT_LOG.items():
+            context.lines_before_per_transport[transport] = line_count(path)
 
 
 def build_threaded_command(context, transport, no_sd=False):
@@ -871,33 +888,44 @@ def step_check_last_sequence_id(context, value):
     )
 
 
-# --- S20.1 SwitchingSender scaffolding (Phase 2) --------------------------
-# These steps are wired up in Phase 5 once the threaded example exposes the
-# `switch` command and syslog-ng is configured to split per-transport log
-# output. Until then they raise NotImplementedError so Behave reports the
-# scenario as failed rather than silently passing.
+# --- S20.1 SwitchingSender steps ------------------------------------------
 
 
 @given("the switching example is running with default transport {transport:w}")
 def step_switching_example_running(context, transport):
-    raise NotImplementedError(
-        "S20.1 Phase 5: start threaded example with --transport "
-        f"{transport} wiring SwitchingSender"
-    )
+    cmd = build_threaded_command(context, transport)
+    start_threaded_example(context, cmd)
 
 
 @when("the client switches to transport {transport:w}")
 def step_client_switches_transport(context, transport):
-    raise NotImplementedError(
-        "S20.1 Phase 5: send `switch "
-        f"{transport}` command to the interactive example"
-    )
+    send_command(context.interactive_process, f"switch {transport}")
+
+
+def wait_for_per_transport_messages(context, transport, expected):
+    """Wait for `expected` new lines to appear in the per-transport oracle."""
+    path = PER_TRANSPORT_LOG[transport]
+    baseline = context.lines_before_per_transport.get(transport, 0)
+    deadline = time.monotonic() + 5
+    while line_count(path) - baseline < expected:
+        if time.monotonic() > deadline:
+            actual = line_count(path) - baseline
+            raise AssertionError(
+                f"{path} received {actual} of {expected} messages within 5 seconds"
+            )
+        time.sleep(0.1)
 
 
 @then("syslog-ng receives {count:d} message over {transport:w}")
 @then("syslog-ng receives {count:d} messages over {transport:w}")
 def step_check_per_transport_count(context, count, transport):
-    raise NotImplementedError(
-        "S20.1 Phase 5: count records in the "
-        f"received_{transport}.log oracle file"
+    wait_for_per_transport_messages(context, transport, count)
+    path = PER_TRANSPORT_LOG[transport]
+    baseline = context.lines_before_per_transport.get(transport, 0)
+    actual = line_count(path) - baseline
+    assert actual == count, (
+        f"Expected {count} {transport} message(s), got {actual} in {path}"
     )
+    # Consume the baseline so subsequent per-transport assertions in the same
+    # scenario count only messages that arrived after this check.
+    context.lines_before_per_transport[transport] = line_count(path)
