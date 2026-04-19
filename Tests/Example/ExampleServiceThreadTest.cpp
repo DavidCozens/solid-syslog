@@ -3,6 +3,8 @@
 #include "ExampleUdpConfig.h"
 #include "SolidSyslog.h"
 #include "SolidSyslogConfig.h"
+#include "SolidSyslogEndpoint.h"
+#include "SolidSyslogFormatter.h"
 #include "SolidSyslogPosixMessageQueueBuffer.h"
 #include "SolidSyslogGetAddrInfoResolver.h"
 #include "SolidSyslogPosixDatagram.h"
@@ -10,6 +12,15 @@
 #include "SolidSyslogNullStore.h"
 #include "SocketFake.h"
 #include "ClockFake.h"
+#include <cstring>
+
+static void ExampleEndpoint(struct SolidSyslogEndpoint* endpoint)
+{
+    const char* host = ExampleUdpConfig_GetHost();
+    SolidSyslogFormatter_BoundedString(endpoint->host, host, strlen(host));
+    endpoint->port    = (uint16_t) ExampleUdpConfig_GetPort();
+    endpoint->version = 0;
+}
 
 // clang-format off
 TEST_GROUP(ExampleServiceThread)
@@ -27,7 +38,7 @@ TEST_GROUP(ExampleServiceThread)
         ClockFake_SetTime(1743768600, 0);
         shutdown = true;
 
-        SolidSyslogUdpSenderConfig udpConfig = {SolidSyslogGetAddrInfoResolver_Create(ExampleUdpConfig_GetHost, ExampleUdpConfig_GetPort), SolidSyslogPosixDatagram_Create()};
+        SolidSyslogUdpSenderConfig udpConfig = {SolidSyslogGetAddrInfoResolver_Create(ExampleUdpConfig_GetHost, ExampleUdpConfig_GetPort), SolidSyslogPosixDatagram_Create(), ExampleEndpoint};
         sender = SolidSyslogUdpSender_Create(&udpConfig);
         buffer = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
         store  = SolidSyslogNullStore_Create();

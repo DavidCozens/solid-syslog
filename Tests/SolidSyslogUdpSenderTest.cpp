@@ -1,4 +1,6 @@
 #include "CppUTest/TestHarness.h"
+#include "SolidSyslogEndpoint.h"
+#include "SolidSyslogFormatter.h"
 #include "SolidSyslogGetAddrInfoResolver.h"
 #include "SolidSyslogPosixDatagram.h"
 #include "SolidSyslogUdpSender.h"
@@ -48,6 +50,20 @@ static int SpyGetPort()
     return TEST_DEFAULT_PORT;
 }
 
+// Endpoint stub — delegates to per-test function pointers so existing
+// callback-spy tests in TEST_GROUP(SolidSyslogUdpSenderConfig) keep counting
+// callback invocations through the new endpoint path.
+static const char* (*endpointGetHost)() = GetDefaultHost;
+static int (*endpointGetPort)()         = GetDefaultPort;
+
+static void TestEndpoint(struct SolidSyslogEndpoint* endpoint)
+{
+    const char* host = endpointGetHost();
+    SolidSyslogFormatter_BoundedString(endpoint->host, host, strlen(host));
+    endpoint->port    = (uint16_t) endpointGetPort();
+    endpoint->version = 0;
+}
+
 // clang-format off
 TEST_GROUP(SolidSyslogUdpSender)
 {
@@ -61,9 +77,11 @@ TEST_GROUP(SolidSyslogUdpSender)
     void setup() override
     {
         SocketFake_Reset();
+        endpointGetHost = GetDefaultHost;
+        endpointGetPort = GetDefaultPort;
         resolver = SolidSyslogGetAddrInfoResolver_Create(GetDefaultHost, GetDefaultPort);
         datagram = SolidSyslogPosixDatagram_Create();
-        config = {resolver, datagram};
+        config = {resolver, datagram, TestEndpoint};
         // cppcheck-suppress unreadVariable -- read by teardown and tests; cppcheck does not model CppUTest lifecycle
         sender = SolidSyslogUdpSender_Create(&config);
     }
@@ -255,10 +273,12 @@ TEST_GROUP(SolidSyslogUdpSenderDestroy)
     void setup() override
     {
         SocketFake_Reset();
-        resolver = SolidSyslogGetAddrInfoResolver_Create(GetDefaultHost, GetDefaultPort);
-        datagram = SolidSyslogPosixDatagram_Create();
+        endpointGetHost = GetDefaultHost;
+        endpointGetPort = GetDefaultPort;
+        resolver        = SolidSyslogGetAddrInfoResolver_Create(GetDefaultHost, GetDefaultPort);
+        datagram        = SolidSyslogPosixDatagram_Create();
         // cppcheck-suppress unreadVariable -- used in test bodies; cppcheck does not model CppUTest macros
-        config = {resolver, datagram};
+        config = {resolver, datagram, TestEndpoint};
     }
 
     void teardown() override
@@ -331,6 +351,8 @@ TEST_GROUP(SolidSyslogUdpSenderConfig)
         SocketFake_Reset();
         getPortCallCount = 0;
         getHostCallCount = 0;
+        endpointGetHost  = GetDefaultHost;
+        endpointGetPort  = GetDefaultPort;
     }
 
     void teardown() override
@@ -342,10 +364,12 @@ TEST_GROUP(SolidSyslogUdpSenderConfig)
 
     void CreateSender()
     {
-        struct SolidSyslogResolver* resolver = SolidSyslogGetAddrInfoResolver_Create(getHostFn, getPortFn);
-        struct SolidSyslogDatagram* datagram = SolidSyslogPosixDatagram_Create();
-        struct SolidSyslogUdpSenderConfig config = {resolver, datagram};
-        sender = SolidSyslogUdpSender_Create(&config);
+        endpointGetHost = getHostFn;
+        endpointGetPort = getPortFn;
+        struct SolidSyslogResolver*       resolver = SolidSyslogGetAddrInfoResolver_Create(getHostFn, getPortFn);
+        struct SolidSyslogDatagram*       datagram = SolidSyslogPosixDatagram_Create();
+        struct SolidSyslogUdpSenderConfig config   = {resolver, datagram, TestEndpoint};
+        sender                                     = SolidSyslogUdpSender_Create(&config);
     }
 
     void Send() const
@@ -429,6 +453,8 @@ TEST_GROUP(SolidSyslogUdpSenderFailure)
     void setup() override
     {
         SocketFake_Reset();
+        endpointGetHost = GetDefaultHost;
+        endpointGetPort = GetDefaultPort;
     }
 
     void teardown() override
@@ -442,7 +468,7 @@ TEST_GROUP(SolidSyslogUdpSenderFailure)
     {
         resolver = SolidSyslogGetAddrInfoResolver_Create(GetDefaultHost, GetDefaultPort);
         datagram = SolidSyslogPosixDatagram_Create();
-        config   = {resolver, datagram};
+        config   = {resolver, datagram, TestEndpoint};
         // cppcheck-suppress unreadVariable -- read by tests; cppcheck does not model CppUTest macros
         sender   = SolidSyslogUdpSender_Create(&config);
     }

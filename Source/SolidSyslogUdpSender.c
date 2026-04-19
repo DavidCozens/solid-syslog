@@ -1,3 +1,5 @@
+#include "SolidSyslogEndpoint.h"
+#include "SolidSyslogFormatter.h"
 #include "SolidSyslogUdpSender.h"
 #include "SolidSyslogSenderDefinition.h"
 
@@ -18,6 +20,7 @@ static bool                              Connect(struct SolidSyslogUdpSender* ud
 static void                              Disconnect(struct SolidSyslogSender* self);
 static inline bool                       OpenSocket(struct SolidSyslogUdpSender* udp);
 static inline bool                       ResolveDestination(struct SolidSyslogUdpSender* udp);
+static bool                              ResolveAtEndpoint(struct SolidSyslogUdpSender* udp);
 static inline struct SolidSyslogAddress* Address(struct SolidSyslogUdpSender* udp);
 static inline void                       CloseSocket(struct SolidSyslogUdpSender* udp);
 static inline bool                       TransmitDatagram(struct SolidSyslogUdpSender* udp, const void* buffer, size_t size);
@@ -85,7 +88,23 @@ static inline bool OpenSocket(struct SolidSyslogUdpSender* udp)
 
 static inline bool ResolveDestination(struct SolidSyslogUdpSender* udp)
 {
+    if (udp->config.endpoint != NULL)
+    {
+        return ResolveAtEndpoint(udp);
+    }
     return SolidSyslogResolver_Resolve(udp->config.resolver, SOLIDSYSLOG_TRANSPORT_UDP, Address(udp));
+}
+
+static bool ResolveAtEndpoint(struct SolidSyslogUdpSender* udp)
+{
+    SolidSyslogFormatterStorage  hostStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(SOLIDSYSLOG_MAX_HOST_SIZE)];
+    struct SolidSyslogFormatter* hostFormatter = SolidSyslogFormatter_Create(hostStorage, SOLIDSYSLOG_MAX_HOST_SIZE);
+    struct SolidSyslogEndpoint   endpoint      = {.host = hostFormatter, .port = 0, .version = 0};
+
+    udp->config.endpoint(&endpoint);
+
+    return SolidSyslogResolver_ResolveAt(udp->config.resolver, SOLIDSYSLOG_TRANSPORT_UDP, SolidSyslogFormatter_AsString(hostFormatter), endpoint.port,
+                                         Address(udp));
 }
 
 static inline struct SolidSyslogAddress* Address(struct SolidSyslogUdpSender* udp)
