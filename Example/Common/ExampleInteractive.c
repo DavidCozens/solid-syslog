@@ -1,4 +1,5 @@
 #include "ExampleInteractive.h"
+#include "ExampleSwitchConfig.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -67,6 +68,15 @@ void ExampleInteractive_Run(const struct SolidSyslogMessage* message, FILE* inpu
                 args++;
             }
             HandleSend(args, message);
+        }
+        else if (strncmp(line, "switch", 6) == 0 && (line[6] == ' ' || line[6] == '\0'))
+        {
+            const char* args = line + 6;
+            if (*args == ' ')
+            {
+                args++;
+            }
+            ExampleSwitchConfig_SetByName(args);
         }
 
         PrintPrompt();
