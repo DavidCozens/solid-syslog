@@ -37,6 +37,9 @@ Public headers are split by audience (Interface Segregation Principle):
 - **`SolidSyslogTcpSender.h`** — TCP transport with RFC 6587 octet-counting framing. Note: RFC 6587
   is a Historic RFC — the IESG recommends TLS (RFC 5425) over plain TCP for new deployments.
   TCP is provided for interoperability with existing infrastructure
+- **`SolidSyslogEndpoint.h`** — destination spec for senders. Application supplies `endpoint`
+  (fills host/port on (re)connect) and `endpointVersion` (cheap polled fingerprint); senders
+  Disconnect and lazily reopen when the version changes — supports runtime address rotation
 - **`SolidSyslogStoreDefinition.h`** / **`SolidSyslogFileStore.h`** — file-based store-and-forward with rotating files
 - **`SolidSyslogSecurityPolicyDefinition.h`** — extension point for record integrity policies
 - **`SolidSyslogCrc16Policy.h`** — CRC-16/CCITT-FALSE integrity policy

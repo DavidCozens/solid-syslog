@@ -47,12 +47,13 @@ Status key:
 
 | Section | Requirement | Status | Notes |
 |---|---|---|---|
-| 3.2 | Sender initiates TCP connection | Supported | `SolidSyslogTcpSender` connects on first send |
+| 3.2 | Sender initiates TCP connection | Supported | `SolidSyslogTcpSender` connects lazily on first send (S3.4) |
 | 3.2 | Default port 601 | Partial | `SOLIDSYSLOG_TCP_DEFAULT_PORT` defined but defaults to 514. Should be 601 per IANA |
 | 3.4.1 | Octet counting framing | Supported | `MSG-LEN SP MSG` prefix on every send |
 | 3.4.2 | Non-transparent framing (LF trailer) | Not supported | Octet counting is the recommended method |
-| 3.5 | Session closure handling | Partial | Sender detects send failure. Reconnection planned — [S3.1](https://github.com/DavidCozens/solid-syslog/issues/33) |
-| 3.5 | Handle receiver-initiated close | Partial | Send failure detected. Automatic reconnection planned — [S3.1](https://github.com/DavidCozens/solid-syslog/issues/33) |
+| 3.5 | Session closure handling | Supported | On send failure the stream is closed; the next Send transparently reconnects (S3.4) |
+| 3.5 | Handle receiver-initiated close | Supported | Detected via send failure path — same reconnect-on-next-Send mechanism (S3.4) |
+| 3.5 | Address rotation without app restart | Supported | App bumps `endpointVersion`; sender Disconnects and reconnects on next Send (S3.4) |
 | — | Partial write handling (send returns short) | Not yet | Planned — [S12.8](https://github.com/DavidCozens/solid-syslog/issues/119) |
 
 ## RFC 5425 — TLS Transport Mapping for Syslog

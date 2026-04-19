@@ -538,6 +538,15 @@ TEST(SolidSyslogUdpSenderFailure, SendReturnsTrueWhenResolverAndSocketSucceed)
     CHECK_TRUE(SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN));
 }
 
+TEST(SolidSyslogUdpSenderFailure, SendRecoversAfterTransientResolveFailure)
+{
+    SocketFake_SetGetAddrInfoFails(true);
+    CreateSender();
+    CHECK_FALSE(SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN));
+    SocketFake_SetGetAddrInfoFails(false);
+    CHECK_TRUE(SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN));
+}
+
 TEST(SolidSyslogUdpSenderFailure, NoEndpointConfiguredSendsToPortZero)
 {
     resolver                                           = SolidSyslogGetAddrInfoResolver_Create();

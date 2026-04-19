@@ -592,6 +592,14 @@ TEST(SolidSyslogTcpSenderFailure, SendReturnsTrueWhenResolverSucceeds)
     CHECK_TRUE(Send());
 }
 
+TEST(SolidSyslogTcpSenderFailure, SendRecoversAfterTransientResolveFailure)
+{
+    SocketFake_SetGetAddrInfoFails(true);
+    CHECK_FALSE(Send());
+    SocketFake_SetGetAddrInfoFails(false);
+    CHECK_TRUE(Send());
+}
+
 TEST(SolidSyslogTcpSenderFailure, NoEndpointConfiguredConnectsToPortZero)
 {
     SolidSyslogTcpSender_Destroy();
