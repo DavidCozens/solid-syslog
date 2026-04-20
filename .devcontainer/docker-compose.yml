@@ -44,7 +44,7 @@ services:
         wait
 
   behave:
-    image: ghcr.io/davidcozens/behave:sha-b871b1c
+    image: ghcr.io/davidcozens/behave:sha-3faff14
     volumes:
       - ..:/workspaces/SolidSyslog:cached
       - ../Bdd/output:/workspaces/SolidSyslog/Bdd/output

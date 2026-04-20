@@ -25,7 +25,7 @@ services:
       retries: 10
 
   behave:
-    image: ghcr.io/davidcozens/behave:sha-b871b1c
+    image: ghcr.io/davidcozens/behave:sha-3faff14
     user: "0"
     volumes:
       - ..:/workspaces/SolidSyslog
