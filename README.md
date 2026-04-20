@@ -34,7 +34,7 @@ Public headers are split by audience (Interface Segregation Principle):
 - **`SolidSyslogNullBuffer.h`** — direct-send buffer for single-task systems
 - **`SolidSyslogPosixMessageQueueBuffer.h`** — thread-safe POSIX message queue buffer
 - **`SolidSyslogUdpSender.h`** — UDP transport (RFC 5426)
-- **`SolidSyslogTcpSender.h`** — TCP transport with RFC 6587 octet-counting framing. Note: RFC 6587
+- **`SolidSyslogStreamSender.h`** — octet-framed syslog (RFC 6587) over any Stream (TCP today, TLS in future). Note: RFC 6587
   is a Historic RFC — the IESG recommends TLS (RFC 5425) over plain TCP for new deployments.
   TCP is provided for interoperability with existing infrastructure
 - **`SolidSyslogSwitchingSender.h`** — composition sender delegating to one of several

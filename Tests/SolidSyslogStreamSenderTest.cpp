@@ -4,7 +4,7 @@
 #include "SolidSyslogGetAddrInfoResolver.h"
 #include "SolidSyslogPosixTcpStream.h"
 #include "SolidSyslogSender.h"
-#include "SolidSyslogTcpSender.h"
+#include "SolidSyslogStreamSender.h"
 #include "SocketFake.h"
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -55,7 +55,7 @@ static const char* SpyGetHost()
 }
 
 // Endpoint stubs — delegate to per-test function pointers so existing
-// callback-spy tests in TEST_GROUP(SolidSyslogTcpSenderConfig) keep counting
+// callback-spy tests in TEST_GROUP(SolidSyslogStreamSenderConfig) keep counting
 // callback invocations through the new endpoint path. endpointVersion is the
 // per-test version reported by TestEndpointVersion; bump it between Sends to
 // drive fingerprint-reconnection tests.
@@ -75,11 +75,11 @@ static uint32_t TestEndpointVersion() // NOLINT(modernize-use-trailing-return-ty
 }
 
 // clang-format off
-TEST_GROUP(SolidSyslogTcpSender)
+TEST_GROUP(SolidSyslogStreamSender)
 {
     struct SolidSyslogResolver* resolver = nullptr;
     struct SolidSyslogStream*   stream   = nullptr;
-    struct SolidSyslogTcpSenderConfig config;
+    struct SolidSyslogStreamSenderConfig config;
     // cppcheck-suppress constVariablePointer -- Send requires non-const self; false positive from macro expansion
     // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
     struct SolidSyslogSender* sender = nullptr;
@@ -94,12 +94,12 @@ TEST_GROUP(SolidSyslogTcpSender)
         stream          = SolidSyslogPosixTcpStream_Create();
         config          = {resolver, stream, TestEndpoint, TestEndpointVersion};
         // cppcheck-suppress unreadVariable -- read by teardown and tests; cppcheck does not model CppUTest lifecycle
-        sender = SolidSyslogTcpSender_Create(&config);
+        sender = SolidSyslogStreamSender_Create(&config);
     }
 
     void teardown() override
     {
-        SolidSyslogTcpSender_Destroy();
+        SolidSyslogStreamSender_Destroy();
         SolidSyslogPosixTcpStream_Destroy();
         SolidSyslogGetAddrInfoResolver_Destroy();
     }
@@ -112,17 +112,17 @@ TEST_GROUP(SolidSyslogTcpSender)
 
 // clang-format on
 
-TEST(SolidSyslogTcpSender, CreateReturnsNonNull)
+TEST(SolidSyslogStreamSender, CreateReturnsNonNull)
 {
     CHECK_TRUE(sender != nullptr);
 }
 
-TEST(SolidSyslogTcpSender, CreateDoesNotOpenSocket)
+TEST(SolidSyslogStreamSender, CreateDoesNotOpenSocket)
 {
     LONGS_EQUAL(0, SocketFake_SocketCallCount());
 }
 
-TEST(SolidSyslogTcpSender, FirstSendOpensStreamSocket)
+TEST(SolidSyslogStreamSender, FirstSendOpensStreamSocket)
 {
     Send();
     LONGS_EQUAL(1, SocketFake_SocketCallCount());
@@ -130,7 +130,7 @@ TEST(SolidSyslogTcpSender, FirstSendOpensStreamSocket)
     LONGS_EQUAL(SOCK_STREAM, SocketFake_SocketType());
 }
 
-TEST(SolidSyslogTcpSender, FirstSendSetsTcpNoDelay)
+TEST(SolidSyslogStreamSender, FirstSendSetsTcpNoDelay)
 {
     Send();
     LONGS_EQUAL(1, SocketFake_SetSockOptCallCount());
@@ -139,11 +139,11 @@ TEST(SolidSyslogTcpSender, FirstSendSetsTcpNoDelay)
 }
 
 // clang-format off
-TEST_GROUP(SolidSyslogTcpSenderDestroy)
+TEST_GROUP(SolidSyslogStreamSenderDestroy)
 {
     struct SolidSyslogResolver* resolver = nullptr;
     struct SolidSyslogStream*   stream   = nullptr;
-    struct SolidSyslogTcpSenderConfig config;
+    struct SolidSyslogStreamSenderConfig config;
 
     void setup() override
     {
@@ -165,105 +165,105 @@ TEST_GROUP(SolidSyslogTcpSenderDestroy)
 
     void CreateAndDestroy() const
     {
-        SolidSyslogTcpSender_Create(&config);
-        SolidSyslogTcpSender_Destroy();
+        SolidSyslogStreamSender_Create(&config);
+        SolidSyslogStreamSender_Destroy();
     }
 };
 
 // clang-format on
 
-TEST(SolidSyslogTcpSenderDestroy, DestroyWithoutSendDoesNotClose)
+TEST(SolidSyslogStreamSenderDestroy, DestroyWithoutSendDoesNotClose)
 {
     CreateAndDestroy();
     LONGS_EQUAL(0, SocketFake_CloseCallCount());
 }
 
-TEST(SolidSyslogTcpSenderDestroy, DestroyAfterSendClosesSocket)
+TEST(SolidSyslogStreamSenderDestroy, DestroyAfterSendClosesSocket)
 {
-    struct SolidSyslogSender* sender = SolidSyslogTcpSender_Create(&config);
+    struct SolidSyslogSender* sender = SolidSyslogStreamSender_Create(&config);
     SolidSyslogSender_Send(sender, "x", 1);
-    SolidSyslogTcpSender_Destroy();
+    SolidSyslogStreamSender_Destroy();
     LONGS_EQUAL(1, SocketFake_CloseCallCount());
     LONGS_EQUAL(SocketFake_SocketFd(), SocketFake_LastClosedFd());
 }
 
-TEST(SolidSyslogTcpSenderDestroy, DestroyAfterDisconnectDoesNotDoubleClose)
+TEST(SolidSyslogStreamSenderDestroy, DestroyAfterDisconnectDoesNotDoubleClose)
 {
-    struct SolidSyslogSender* sender = SolidSyslogTcpSender_Create(&config);
+    struct SolidSyslogSender* sender = SolidSyslogStreamSender_Create(&config);
     SolidSyslogSender_Send(sender, "x", 1);
     SolidSyslogSender_Disconnect(sender);
-    SolidSyslogTcpSender_Destroy();
+    SolidSyslogStreamSender_Destroy();
     LONGS_EQUAL(1, SocketFake_CloseCallCount());
 }
 
-TEST(SolidSyslogTcpSender, SendConnectsOnFirstCall)
+TEST(SolidSyslogStreamSender, SendConnectsOnFirstCall)
 {
     Send();
     LONGS_EQUAL(1, SocketFake_ConnectCallCount());
 }
 
-TEST(SolidSyslogTcpSender, SendConnectsWithCorrectPort)
+TEST(SolidSyslogStreamSender, SendConnectsWithCorrectPort)
 {
     Send();
     LONGS_EQUAL(TEST_PORT, SocketFake_LastConnectPort());
 }
 
-TEST(SolidSyslogTcpSender, SendConnectsWithCorrectAddress)
+TEST(SolidSyslogStreamSender, SendConnectsWithCorrectAddress)
 {
     Send();
     STRCMP_EQUAL(TEST_HOST, SocketFake_LastConnectAddrAsString());
 }
 
-TEST(SolidSyslogTcpSender, SendConnectsWithSocketFd)
+TEST(SolidSyslogStreamSender, SendConnectsWithSocketFd)
 {
     Send();
     LONGS_EQUAL(SocketFake_SocketFd(), SocketFake_LastConnectFd());
 }
 
-TEST(SolidSyslogTcpSender, SecondSendDoesNotReconnect)
+TEST(SolidSyslogStreamSender, SecondSendDoesNotReconnect)
 {
     Send();
     Send();
     LONGS_EQUAL(1, SocketFake_ConnectCallCount());
 }
 
-TEST(SolidSyslogTcpSender, SendTransmitsOctetCountingPrefix)
+TEST(SolidSyslogStreamSender, SendTransmitsOctetCountingPrefix)
 {
     Send();
     STRCMP_EQUAL("5 ", SocketFake_SendBufAsString(0));
 }
 
-TEST(SolidSyslogTcpSender, SendTransmitsMessageBody)
+TEST(SolidSyslogStreamSender, SendTransmitsMessageBody)
 {
     Send();
     STRCMP_EQUAL(TEST_MESSAGE, SocketFake_SendBufAsString(1));
 }
 
-TEST(SolidSyslogTcpSender, SendMakesTwoSendCalls)
+TEST(SolidSyslogStreamSender, SendMakesTwoSendCalls)
 {
     Send();
     LONGS_EQUAL(2, SocketFake_SendCallCount());
 }
 
-TEST(SolidSyslogTcpSender, SendUsesSocketFd)
+TEST(SolidSyslogStreamSender, SendUsesSocketFd)
 {
     Send();
     LONGS_EQUAL(SocketFake_SocketFd(), SocketFake_LastSendFd());
 }
 
-TEST(SolidSyslogTcpSender, SendReturnsTrueOnSuccess)
+TEST(SolidSyslogStreamSender, SendReturnsTrueOnSuccess)
 {
     CHECK_TRUE(SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN));
 }
 
-TEST(SolidSyslogTcpSender, DisconnectAfterSendClosesSocket)
+TEST(SolidSyslogStreamSender, DisconnectAfterSendClosesSocket)
 {
     Send();
     SolidSyslogSender_Disconnect(sender);
     LONGS_EQUAL(1, SocketFake_CloseCallCount());
 }
 
-TEST(SolidSyslogTcpSender, DisconnectIsIdempotent)
+TEST(SolidSyslogStreamSender, DisconnectIsIdempotent)
 {
     Send();
     SolidSyslogSender_Disconnect(sender);
@@ -271,7 +271,7 @@ TEST(SolidSyslogTcpSender, DisconnectIsIdempotent)
     LONGS_EQUAL(1, SocketFake_CloseCallCount());
 }
 
-TEST(SolidSyslogTcpSender, SendAfterDisconnectReopensSocket)
+TEST(SolidSyslogStreamSender, SendAfterDisconnectReopensSocket)
 {
     Send();
     SolidSyslogSender_Disconnect(sender);
@@ -279,7 +279,7 @@ TEST(SolidSyslogTcpSender, SendAfterDisconnectReopensSocket)
     LONGS_EQUAL(2, SocketFake_SocketCallCount());
 }
 
-TEST(SolidSyslogTcpSender, SendAfterDisconnectResolves)
+TEST(SolidSyslogStreamSender, SendAfterDisconnectResolves)
 {
     Send();
     SolidSyslogSender_Disconnect(sender);
@@ -287,13 +287,13 @@ TEST(SolidSyslogTcpSender, SendAfterDisconnectResolves)
     LONGS_EQUAL(2, SocketFake_GetAddrInfoCallCount());
 }
 
-TEST(SolidSyslogTcpSender, DisconnectWithoutSendDoesNotClose)
+TEST(SolidSyslogStreamSender, DisconnectWithoutSendDoesNotClose)
 {
     SolidSyslogSender_Disconnect(sender);
     LONGS_EQUAL(0, SocketFake_CloseCallCount());
 }
 
-TEST(SolidSyslogTcpSender, EndpointVersionChangeBetweenSendsTriggersReconnect)
+TEST(SolidSyslogStreamSender, EndpointVersionChangeBetweenSendsTriggersReconnect)
 {
     Send();
     endpointVersion = 1;
@@ -301,7 +301,7 @@ TEST(SolidSyslogTcpSender, EndpointVersionChangeBetweenSendsTriggersReconnect)
     LONGS_EQUAL(2, SocketFake_ConnectCallCount());
 }
 
-TEST(SolidSyslogTcpSender, EndpointVersionChangeUsesNewPortOnReconnect)
+TEST(SolidSyslogStreamSender, EndpointVersionChangeUsesNewPortOnReconnect)
 {
     Send();
     endpointVersion = 1;
@@ -311,7 +311,7 @@ TEST(SolidSyslogTcpSender, EndpointVersionChangeUsesNewPortOnReconnect)
 }
 
 // clang-format off
-TEST_GROUP(SolidSyslogTcpSenderConfig)
+TEST_GROUP(SolidSyslogStreamSenderConfig)
 {
     // cppcheck-suppress unreadVariable -- assigned in CreateSender; cppcheck does not model CppUTest macros
     const char* (*getHostFn)(void) = GetHost; // NOLINT(modernize-redundant-void-arg) -- C idiom
@@ -333,7 +333,7 @@ TEST_GROUP(SolidSyslogTcpSenderConfig)
 
     void teardown() override
     {
-        SolidSyslogTcpSender_Destroy();
+        SolidSyslogStreamSender_Destroy();
         SolidSyslogPosixTcpStream_Destroy();
         SolidSyslogGetAddrInfoResolver_Destroy();
     }
@@ -344,9 +344,9 @@ TEST_GROUP(SolidSyslogTcpSenderConfig)
         endpointGetPort = getPortFn;
         struct SolidSyslogResolver*       resolver = SolidSyslogGetAddrInfoResolver_Create();
         struct SolidSyslogStream*         stream   = SolidSyslogPosixTcpStream_Create();
-        struct SolidSyslogTcpSenderConfig config   = {resolver, stream, TestEndpoint, TestEndpointVersion};
+        struct SolidSyslogStreamSenderConfig config   = {resolver, stream, TestEndpoint, TestEndpointVersion};
         // cppcheck-suppress unreadVariable -- read by teardown and tests; cppcheck does not model CppUTest lifecycle
-        sender = SolidSyslogTcpSender_Create(&config);
+        sender = SolidSyslogStreamSender_Create(&config);
     }
 
     void Send() const
@@ -357,7 +357,7 @@ TEST_GROUP(SolidSyslogTcpSenderConfig)
 
 // clang-format on
 
-TEST(SolidSyslogTcpSenderConfig, GetPortCalledOnFirstSend)
+TEST(SolidSyslogStreamSenderConfig, GetPortCalledOnFirstSend)
 {
     getPortFn = SpyGetPort;
     CreateSender();
@@ -366,7 +366,7 @@ TEST(SolidSyslogTcpSenderConfig, GetPortCalledOnFirstSend)
     LONGS_EQUAL(1, getPortCallCount);
 }
 
-TEST(SolidSyslogTcpSenderConfig, GetPortNotCalledOnSecondSend)
+TEST(SolidSyslogStreamSenderConfig, GetPortNotCalledOnSecondSend)
 {
     getPortFn = SpyGetPort;
     CreateSender();
@@ -375,7 +375,7 @@ TEST(SolidSyslogTcpSenderConfig, GetPortNotCalledOnSecondSend)
     LONGS_EQUAL(1, getPortCallCount);
 }
 
-TEST(SolidSyslogTcpSenderConfig, ConnectsWithAlternatePort)
+TEST(SolidSyslogStreamSenderConfig, ConnectsWithAlternatePort)
 {
     getPortFn = GetAlternatePort;
     CreateSender();
@@ -383,7 +383,7 @@ TEST(SolidSyslogTcpSenderConfig, ConnectsWithAlternatePort)
     LONGS_EQUAL(TEST_ALTERNATE_PORT, SocketFake_LastConnectPort());
 }
 
-TEST(SolidSyslogTcpSenderConfig, GetHostCalledOnFirstSend)
+TEST(SolidSyslogStreamSenderConfig, GetHostCalledOnFirstSend)
 {
     getHostFn = SpyGetHost;
     CreateSender();
@@ -392,7 +392,7 @@ TEST(SolidSyslogTcpSenderConfig, GetHostCalledOnFirstSend)
     LONGS_EQUAL(1, getHostCallCount);
 }
 
-TEST(SolidSyslogTcpSenderConfig, GetHostNotCalledOnSecondSend)
+TEST(SolidSyslogStreamSenderConfig, GetHostNotCalledOnSecondSend)
 {
     getHostFn = SpyGetHost;
     CreateSender();
@@ -401,7 +401,7 @@ TEST(SolidSyslogTcpSenderConfig, GetHostNotCalledOnSecondSend)
     LONGS_EQUAL(1, getHostCallCount);
 }
 
-TEST(SolidSyslogTcpSenderConfig, ConnectsWithAlternateHost)
+TEST(SolidSyslogStreamSenderConfig, ConnectsWithAlternateHost)
 {
     getHostFn = GetAlternateHost;
     CreateSender();
@@ -409,7 +409,7 @@ TEST(SolidSyslogTcpSenderConfig, ConnectsWithAlternateHost)
     STRCMP_EQUAL(TEST_ALTERNATE_HOST, SocketFake_LastConnectAddrAsString());
 }
 
-TEST(SolidSyslogTcpSenderConfig, GetAddrInfoCalledWithHostname)
+TEST(SolidSyslogStreamSenderConfig, GetAddrInfoCalledWithHostname)
 {
     getHostFn = SpyGetHost;
     CreateSender();
@@ -418,11 +418,11 @@ TEST(SolidSyslogTcpSenderConfig, GetAddrInfoCalledWithHostname)
 }
 
 // clang-format off
-TEST_GROUP(SolidSyslogTcpSenderFailure)
+TEST_GROUP(SolidSyslogStreamSenderFailure)
 {
     struct SolidSyslogResolver* resolver = nullptr;
     struct SolidSyslogStream*   stream   = nullptr;
-    struct SolidSyslogTcpSenderConfig config;
+    struct SolidSyslogStreamSenderConfig config;
     // cppcheck-suppress constVariablePointer -- Send requires non-const self; false positive from macro expansion
     // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
     struct SolidSyslogSender* sender = nullptr;
@@ -437,12 +437,12 @@ TEST_GROUP(SolidSyslogTcpSenderFailure)
         stream          = SolidSyslogPosixTcpStream_Create();
         config          = {resolver, stream, TestEndpoint, TestEndpointVersion};
         // cppcheck-suppress unreadVariable -- read by teardown and tests; cppcheck does not model CppUTest lifecycle
-        sender = SolidSyslogTcpSender_Create(&config);
+        sender = SolidSyslogStreamSender_Create(&config);
     }
 
     void teardown() override
     {
-        SolidSyslogTcpSender_Destroy();
+        SolidSyslogStreamSender_Destroy();
         SolidSyslogPosixTcpStream_Destroy();
         SolidSyslogGetAddrInfoResolver_Destroy();
     }
@@ -456,41 +456,41 @@ TEST_GROUP(SolidSyslogTcpSenderFailure)
 
 // clang-format on
 
-TEST(SolidSyslogTcpSenderFailure, SendReturnsFalseWhenConnectFails)
+TEST(SolidSyslogStreamSenderFailure, SendReturnsFalseWhenConnectFails)
 {
     SocketFake_SetConnectFails(true);
     CHECK_FALSE(Send());
 }
 
-TEST(SolidSyslogTcpSenderFailure, ConnectFailureClosesSocket)
+TEST(SolidSyslogStreamSenderFailure, ConnectFailureClosesSocket)
 {
     SocketFake_SetConnectFails(true);
     Send();
     LONGS_EQUAL(1, SocketFake_CloseCallCount());
 }
 
-TEST(SolidSyslogTcpSenderFailure, SendReturnsFalseWhenSendFails)
+TEST(SolidSyslogStreamSenderFailure, SendReturnsFalseWhenSendFails)
 {
     SocketFake_SetSendFails(true);
     CHECK_FALSE(Send());
 }
 
-TEST(SolidSyslogTcpSenderFailure, SendFailureClosesSocket)
+TEST(SolidSyslogStreamSenderFailure, SendFailureClosesSocket)
 {
     SocketFake_SetSendFails(true);
     Send();
     LONGS_EQUAL(1, SocketFake_CloseCallCount());
 }
 
-TEST(SolidSyslogTcpSenderFailure, DestroyAfterSendFailureDoesNotDoubleClose)
+TEST(SolidSyslogStreamSenderFailure, DestroyAfterSendFailureDoesNotDoubleClose)
 {
     SocketFake_SetSendFails(true);
     Send();
-    SolidSyslogTcpSender_Destroy();
+    SolidSyslogStreamSender_Destroy();
     LONGS_EQUAL(1, SocketFake_CloseCallCount());
 }
 
-TEST(SolidSyslogTcpSenderFailure, SendFailureMarksDisconnected)
+TEST(SolidSyslogStreamSenderFailure, SendFailureMarksDisconnected)
 {
     Send();
     LONGS_EQUAL(1, SocketFake_ConnectCallCount());
@@ -501,7 +501,7 @@ TEST(SolidSyslogTcpSenderFailure, SendFailureMarksDisconnected)
     LONGS_EQUAL(2, SocketFake_ConnectCallCount());
 }
 
-TEST(SolidSyslogTcpSenderFailure, ReconnectCreatesNewSocket)
+TEST(SolidSyslogStreamSenderFailure, ReconnectCreatesNewSocket)
 {
     Send();
     int firstSocketCallCount = SocketFake_SocketCallCount();
@@ -512,7 +512,7 @@ TEST(SolidSyslogTcpSenderFailure, ReconnectCreatesNewSocket)
     LONGS_EQUAL(firstSocketCallCount + 1, SocketFake_SocketCallCount());
 }
 
-TEST(SolidSyslogTcpSenderFailure, ReconnectSetsTcpNoDelay)
+TEST(SolidSyslogStreamSenderFailure, ReconnectSetsTcpNoDelay)
 {
     Send();
     SocketFake_SetSendFails(true);
@@ -524,7 +524,7 @@ TEST(SolidSyslogTcpSenderFailure, ReconnectSetsTcpNoDelay)
     LONGS_EQUAL(TCP_NODELAY, SocketFake_LastSetSockOptOptname());
 }
 
-TEST(SolidSyslogTcpSenderFailure, ReconnectResolvesDns)
+TEST(SolidSyslogStreamSenderFailure, ReconnectResolvesDns)
 {
     Send();
     SocketFake_SetSendFails(true);
@@ -534,7 +534,7 @@ TEST(SolidSyslogTcpSenderFailure, ReconnectResolvesDns)
     LONGS_EQUAL(2, SocketFake_GetAddrInfoCallCount());
 }
 
-TEST(SolidSyslogTcpSenderFailure, ReconnectConnectsWithNewFd)
+TEST(SolidSyslogStreamSenderFailure, ReconnectConnectsWithNewFd)
 {
     Send();
     SocketFake_SetSendFails(true);
@@ -544,7 +544,7 @@ TEST(SolidSyslogTcpSenderFailure, ReconnectConnectsWithNewFd)
     LONGS_EQUAL(SocketFake_SocketFd(), SocketFake_LastConnectFd());
 }
 
-TEST(SolidSyslogTcpSenderFailure, SuccessfulSendAfterReconnect)
+TEST(SolidSyslogStreamSenderFailure, SuccessfulSendAfterReconnect)
 {
     Send();
     SocketFake_SetSendFails(true);
@@ -553,33 +553,33 @@ TEST(SolidSyslogTcpSenderFailure, SuccessfulSendAfterReconnect)
     CHECK_TRUE(Send());
 }
 
-TEST(SolidSyslogTcpSenderFailure, SendUsesMsgNoSignal)
+TEST(SolidSyslogStreamSenderFailure, SendUsesMsgNoSignal)
 {
     Send();
     LONGS_EQUAL(MSG_NOSIGNAL, SocketFake_SendFlags(0));
     LONGS_EQUAL(MSG_NOSIGNAL, SocketFake_SendFlags(1));
 }
 
-TEST(SolidSyslogTcpSenderFailure, SendReturnsFalseWhenBodySendFails)
+TEST(SolidSyslogStreamSenderFailure, SendReturnsFalseWhenBodySendFails)
 {
     SocketFake_FailSendOnCall(1);
     CHECK_FALSE(Send());
 }
 
-TEST(SolidSyslogTcpSenderFailure, BodySendFailureClosesSocket)
+TEST(SolidSyslogStreamSenderFailure, BodySendFailureClosesSocket)
 {
     SocketFake_FailSendOnCall(1);
     Send();
     LONGS_EQUAL(1, SocketFake_CloseCallCount());
 }
 
-TEST(SolidSyslogTcpSenderFailure, SendReturnsFalseWhenResolverFails)
+TEST(SolidSyslogStreamSenderFailure, SendReturnsFalseWhenResolverFails)
 {
     SocketFake_SetGetAddrInfoFails(true);
     CHECK_FALSE(Send());
 }
 
-TEST(SolidSyslogTcpSenderFailure, SendDoesNotOpenStreamWhenResolverFails)
+TEST(SolidSyslogStreamSenderFailure, SendDoesNotOpenStreamWhenResolverFails)
 {
     SocketFake_SetGetAddrInfoFails(true);
     Send();
@@ -587,12 +587,12 @@ TEST(SolidSyslogTcpSenderFailure, SendDoesNotOpenStreamWhenResolverFails)
     LONGS_EQUAL(0, SocketFake_ConnectCallCount());
 }
 
-TEST(SolidSyslogTcpSenderFailure, SendReturnsTrueWhenResolverSucceeds)
+TEST(SolidSyslogStreamSenderFailure, SendReturnsTrueWhenResolverSucceeds)
 {
     CHECK_TRUE(Send());
 }
 
-TEST(SolidSyslogTcpSenderFailure, SendRecoversAfterTransientResolveFailure)
+TEST(SolidSyslogStreamSenderFailure, SendRecoversAfterTransientResolveFailure)
 {
     SocketFake_SetGetAddrInfoFails(true);
     CHECK_FALSE(Send());
@@ -600,11 +600,11 @@ TEST(SolidSyslogTcpSenderFailure, SendRecoversAfterTransientResolveFailure)
     CHECK_TRUE(Send());
 }
 
-TEST(SolidSyslogTcpSenderFailure, NoEndpointConfiguredConnectsToPortZero)
+TEST(SolidSyslogStreamSenderFailure, NoEndpointConfiguredConnectsToPortZero)
 {
-    SolidSyslogTcpSender_Destroy();
-    struct SolidSyslogTcpSenderConfig configNoEndpoint = {resolver, stream, nullptr, nullptr};
-    struct SolidSyslogSender*         senderNoEndpoint = SolidSyslogTcpSender_Create(&configNoEndpoint);
+    SolidSyslogStreamSender_Destroy();
+    struct SolidSyslogStreamSenderConfig configNoEndpoint = {resolver, stream, nullptr, nullptr};
+    struct SolidSyslogSender*            senderNoEndpoint = SolidSyslogStreamSender_Create(&configNoEndpoint);
     SolidSyslogSender_Send(senderNoEndpoint, TEST_MESSAGE, TEST_MESSAGE_LEN);
     LONGS_EQUAL(1, SocketFake_ConnectCallCount());
     LONGS_EQUAL(0, SocketFake_LastConnectPort());

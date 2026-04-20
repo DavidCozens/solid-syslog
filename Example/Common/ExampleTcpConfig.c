@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-/* Unprivileged mirror of SOLIDSYSLOG_TCP_DEFAULT_PORT (514) for BDD containers */
+/* Unprivileged mirror of SOLIDSYSLOG_TCP_DEFAULT_PORT (514, see SolidSyslogPosixTcpStream.h) for BDD containers */
 enum
 {
     EXAMPLE_TCP_PORT = 5514

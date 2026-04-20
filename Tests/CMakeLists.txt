@@ -52,7 +52,7 @@ if(SOLIDSYSLOG_POSIX)
         SolidSyslogPosixMessageQueueBufferTest.cpp
         ClockFakeTest.cpp
         SolidSyslogUdpSenderTest.cpp
-        SolidSyslogTcpSenderTest.cpp
+        SolidSyslogStreamSenderTest.cpp
         SolidSyslogPosixFileTest.cpp
         SolidSyslogFileStorePosixTest.cpp
         SolidSyslogGetAddrInfoResolverTest.cpp

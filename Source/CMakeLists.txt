@@ -33,7 +33,7 @@ endif()
 if(SOLIDSYSLOG_POSIX)
     list(APPEND SOURCES
         SolidSyslogStream.c
-        SolidSyslogTcpSender.c
+        SolidSyslogStreamSender.c
     )
 endif()
 
