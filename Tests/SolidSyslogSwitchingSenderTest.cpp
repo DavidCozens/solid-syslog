@@ -4,6 +4,8 @@
 #include "SolidSyslogSwitchingSender.h"
 #include "TestUtils.h"
 
+using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for CALLED_FUNCTION
+
 /* Selector return values — named for the inner sender they select, so tests
  * read as `selectorReturn = INNER_B`. */
 enum

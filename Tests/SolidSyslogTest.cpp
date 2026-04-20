@@ -54,42 +54,42 @@ static const int TIMESTAMP_OFFSET_OFFSET       = 26;
 // clang-format on
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage) -- macros preserve __FILE__/__LINE__ in test failure output
-#define CHECK_PRIVAL(expected) STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_HEADER).c_str(), strlen(expected))
+#define CHECK_PRIVAL(expected) STRNCMP_EQUAL(expected, SyslogField(lastMessage(), SYSLOG_FIELD_HEADER).c_str(), strlen(expected))
 
 #define CHECK_TIMESTAMP_YEAR(expected) \
-    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_YEAR_OFFSET, TIMESTAMP_YEAR_LENGTH)
+    STRNCMP_EQUAL(expected, SyslogField(lastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_YEAR_OFFSET, TIMESTAMP_YEAR_LENGTH)
 
 #define CHECK_TIMESTAMP_MONTH(expected) \
-    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_MONTH_OFFSET, TIMESTAMP_MONTH_LENGTH)
+    STRNCMP_EQUAL(expected, SyslogField(lastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_MONTH_OFFSET, TIMESTAMP_MONTH_LENGTH)
 
 #define CHECK_TIMESTAMP_DAY(expected) \
-    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_DAY_OFFSET, TIMESTAMP_DAY_LENGTH)
+    STRNCMP_EQUAL(expected, SyslogField(lastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_DAY_OFFSET, TIMESTAMP_DAY_LENGTH)
 
 #define CHECK_TIMESTAMP_HOUR(expected) \
-    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_HOUR_OFFSET, TIMESTAMP_HOUR_LENGTH)
+    STRNCMP_EQUAL(expected, SyslogField(lastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_HOUR_OFFSET, TIMESTAMP_HOUR_LENGTH)
 
 #define CHECK_TIMESTAMP_MINUTE(expected) \
-    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_MINUTE_OFFSET, TIMESTAMP_MINUTE_LENGTH)
+    STRNCMP_EQUAL(expected, SyslogField(lastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_MINUTE_OFFSET, TIMESTAMP_MINUTE_LENGTH)
 
 #define CHECK_TIMESTAMP_SECOND(expected) \
-    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_SECOND_OFFSET, TIMESTAMP_SECOND_LENGTH)
+    STRNCMP_EQUAL(expected, SyslogField(lastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_SECOND_OFFSET, TIMESTAMP_SECOND_LENGTH)
 
 #define CHECK_TIMESTAMP_MICROSECOND(expected) \
-    STRNCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_MICROSECOND_OFFSET, TIMESTAMP_MICROSECOND_LENGTH)
+    STRNCMP_EQUAL(expected, SyslogField(lastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str() + TIMESTAMP_MICROSECOND_OFFSET, TIMESTAMP_MICROSECOND_LENGTH)
 
-#define CHECK_TIMESTAMP(expected) STRCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str())
+#define CHECK_TIMESTAMP(expected) STRCMP_EQUAL(expected, SyslogField(lastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str())
 
-#define CHECK_TIMESTAMP_OFFSET(expected) STRCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).substr(TIMESTAMP_OFFSET_OFFSET).c_str())
+#define CHECK_TIMESTAMP_OFFSET(expected) STRCMP_EQUAL(expected, SyslogField(lastMessage(), SYSLOG_FIELD_TIMESTAMP).substr(TIMESTAMP_OFFSET_OFFSET).c_str())
 
-#define CHECK_TIMESTAMP_IS_NILVALUE() STRCMP_EQUAL("-", SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str())
+#define CHECK_TIMESTAMP_IS_NILVALUE() STRCMP_EQUAL("-", SyslogField(lastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str())
 
-#define CHECK_HOSTNAME(expected) STRCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_HOSTNAME).c_str())
+#define CHECK_HOSTNAME(expected) STRCMP_EQUAL(expected, SyslogField(lastMessage(), SYSLOG_FIELD_HOSTNAME).c_str())
 
-#define CHECK_APP_NAME(expected) STRCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_APP_NAME).c_str())
+#define CHECK_APP_NAME(expected) STRCMP_EQUAL(expected, SyslogField(lastMessage(), SYSLOG_FIELD_APP_NAME).c_str())
 
-#define CHECK_PROCID(expected) STRCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_PROCID).c_str())
+#define CHECK_PROCID(expected) STRCMP_EQUAL(expected, SyslogField(lastMessage(), SYSLOG_FIELD_PROCID).c_str())
 
-#define CHECK_MSGID(expected) STRCMP_EQUAL(expected, SyslogField(LastMessage(), SYSLOG_FIELD_MSGID).c_str())
+#define CHECK_MSGID(expected) STRCMP_EQUAL(expected, SyslogField(lastMessage(), SYSLOG_FIELD_MSGID).c_str())
 
 // NOLINTEND(cppcoreguidelines-macro-usage)
 
@@ -235,7 +235,7 @@ TEST_GROUP(SolidSyslog)
         SolidSyslog_Log(&message);
     }
 
-    [[nodiscard]] const char *LastMessage() const
+    [[nodiscard]] const char *lastMessage() const
     {
         return SenderFake_LastBufferAsString(fakeSender);
     }
@@ -327,7 +327,7 @@ TEST(SolidSyslog, OutOfRangeSeverityProducesErrorPrival)
 TEST(SolidSyslog, VersionIs1)
 {
     Log();
-    std::string header         = SyslogField(LastMessage(), SYSLOG_FIELD_HEADER);
+    std::string header         = SyslogField(lastMessage(), SYSLOG_FIELD_HEADER);
     auto        closingBracket = header.find('>');
     BYTES_EQUAL('1', header.at(closingBracket + 1));
 }
@@ -457,7 +457,7 @@ TEST(SolidSyslog, MessageIdAt33CharsIsTruncatedTo32)
 TEST(SolidSyslog, StructuredDataIsNilValue)
 {
     Log();
-    STRCMP_EQUAL(TEST_SDATA, SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
+    STRCMP_EQUAL(TEST_SDATA, SyslogField(lastMessage(), SYSLOG_FIELD_SDATA).c_str());
 }
 
 TEST(SolidSyslog, InjectedSdObjectFormatIsCalledDuringLog)
@@ -468,7 +468,7 @@ TEST(SolidSyslog, InjectedSdObjectFormatIsCalledDuringLog)
     SolidSyslog_Destroy();
     SolidSyslog_Create(&config);
     Log();
-    STRCMP_EQUAL("[spy]", SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
+    STRCMP_EQUAL("[spy]", SyslogField(lastMessage(), SYSLOG_FIELD_SDATA).c_str());
 }
 
 TEST(SolidSyslog, MetaSdProducesSequenceIdInStructuredData)
@@ -481,7 +481,7 @@ TEST(SolidSyslog, MetaSdProducesSequenceIdInStructuredData)
     SolidSyslog_Destroy();
     SolidSyslog_Create(&config);
     Log();
-    STRCMP_EQUAL("[meta sequenceId=\"1\"]", SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
+    STRCMP_EQUAL("[meta sequenceId=\"1\"]", SyslogField(lastMessage(), SYSLOG_FIELD_SDATA).c_str());
     SolidSyslogMetaSd_Destroy();
     SolidSyslogAtomicCounter_Destroy();
 }
@@ -497,7 +497,7 @@ TEST(SolidSyslog, MetaSdSequenceIdIncrementsAcrossLogCalls)
     SolidSyslog_Create(&config);
     Log();
     Log();
-    STRCMP_EQUAL("[meta sequenceId=\"2\"]", SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
+    STRCMP_EQUAL("[meta sequenceId=\"2\"]", SyslogField(lastMessage(), SYSLOG_FIELD_SDATA).c_str());
     SolidSyslogMetaSd_Destroy();
     SolidSyslogAtomicCounter_Destroy();
 }
@@ -513,7 +513,7 @@ TEST(SolidSyslog, MsgFieldPreservedWithMetaSd)
     SolidSyslog_Create(&config);
     message.msg = "hello world";
     Log();
-    STRCMP_EQUAL("hello world", SyslogMsg(LastMessage()).c_str());
+    STRCMP_EQUAL("hello world", SyslogMsg(lastMessage()).c_str());
     SolidSyslogMetaSd_Destroy();
     SolidSyslogAtomicCounter_Destroy();
 }
@@ -526,7 +526,7 @@ TEST(SolidSyslog, MultipleSdItemsAreConcatenated)
     SolidSyslog_Destroy();
     SolidSyslog_Create(&config);
     Log();
-    STRCMP_EQUAL("[spy][spy2]", SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
+    STRCMP_EQUAL("[spy][spy2]", SyslogField(lastMessage(), SYSLOG_FIELD_SDATA).c_str());
 }
 
 TEST(SolidSyslog, SingleSdReturningZeroBytesProducesNilvalue)
@@ -537,7 +537,7 @@ TEST(SolidSyslog, SingleSdReturningZeroBytesProducesNilvalue)
     SolidSyslog_Destroy();
     SolidSyslog_Create(&config);
     Log();
-    STRCMP_EQUAL("-", SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
+    STRCMP_EQUAL("-", SyslogField(lastMessage(), SYSLOG_FIELD_SDATA).c_str());
 }
 
 TEST(SolidSyslog, FailingSdIsSkippedWhenOtherSdSucceeds)
@@ -548,7 +548,7 @@ TEST(SolidSyslog, FailingSdIsSkippedWhenOtherSdSucceeds)
     SolidSyslog_Destroy();
     SolidSyslog_Create(&config);
     Log();
-    STRCMP_EQUAL("[spy]", SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
+    STRCMP_EQUAL("[spy]", SyslogField(lastMessage(), SYSLOG_FIELD_SDATA).c_str());
 }
 
 TEST(SolidSyslog, AllSdFailingProducesNilvalue)
@@ -559,7 +559,7 @@ TEST(SolidSyslog, AllSdFailingProducesNilvalue)
     SolidSyslog_Destroy();
     SolidSyslog_Create(&config);
     Log();
-    STRCMP_EQUAL("-", SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
+    STRCMP_EQUAL("-", SyslogField(lastMessage(), SYSLOG_FIELD_SDATA).c_str());
 }
 
 TEST(SolidSyslog, MetaSdAndTimeQualitySdCoexistInSdArray)
@@ -573,7 +573,7 @@ TEST(SolidSyslog, MetaSdAndTimeQualitySdCoexistInSdArray)
     SolidSyslog_Destroy();
     SolidSyslog_Create(&config);
     Log();
-    STRCMP_EQUAL("[meta sequenceId=\"1\"][timeQuality tzKnown=\"1\" isSynced=\"1\"]", SyslogField(LastMessage(), SYSLOG_FIELD_SDATA).c_str());
+    STRCMP_EQUAL("[meta sequenceId=\"1\"][timeQuality tzKnown=\"1\" isSynced=\"1\"]", SyslogField(lastMessage(), SYSLOG_FIELD_SDATA).c_str());
     SolidSyslogTimeQualitySd_Destroy();
     SolidSyslogMetaSd_Destroy();
     SolidSyslogAtomicCounter_Destroy();
@@ -582,35 +582,35 @@ TEST(SolidSyslog, MetaSdAndTimeQualitySdCoexistInSdArray)
 TEST(SolidSyslog, NullMessageOmitsMsgField)
 {
     Log();
-    STRCMP_EQUAL("", SyslogMsg(LastMessage()).c_str());
+    STRCMP_EQUAL("", SyslogMsg(lastMessage()).c_str());
 }
 
 TEST(SolidSyslog, MessageBodyAppearsInMessage)
 {
     message.msg = "system started";
     Log();
-    STRCMP_EQUAL("system started", SyslogMsg(LastMessage()).c_str());
+    STRCMP_EQUAL("system started", SyslogMsg(lastMessage()).c_str());
 }
 
 TEST(SolidSyslog, EmptyMessageOmitsMsgField)
 {
     message.msg = "";
     Log();
-    STRCMP_EQUAL("", SyslogMsg(LastMessage()).c_str());
+    STRCMP_EQUAL("", SyslogMsg(lastMessage()).c_str());
 }
 
 TEST(SolidSyslog, MessageBodyIsNotHardCoded)
 {
     message.msg = TEST_MSG;
     Log();
-    STRCMP_EQUAL(TEST_MSG, SyslogMsg(LastMessage()).c_str());
+    STRCMP_EQUAL(TEST_MSG, SyslogMsg(lastMessage()).c_str());
 }
 
 TEST(SolidSyslog, MessageWithSpacesIsPreserved)
 {
     message.msg = "hello world with spaces";
     Log();
-    STRCMP_EQUAL("hello world with spaces", SyslogMsg(LastMessage()).c_str());
+    STRCMP_EQUAL("hello world with spaces", SyslogMsg(lastMessage()).c_str());
 }
 
 TEST(SolidSyslog, MessageFillsRemainingBuffer)
@@ -620,7 +620,7 @@ TEST(SolidSyslog, MessageFillsRemainingBuffer)
     std::string longMsg(maxMsg, 'X');
     message.msg = longMsg.c_str();
     Log();
-    STRCMP_EQUAL(longMsg.c_str(), SyslogMsg(LastMessage()).c_str());
+    STRCMP_EQUAL(longMsg.c_str(), SyslogMsg(lastMessage()).c_str());
 }
 
 TEST(SolidSyslog, MessageTruncatedWhenExceedingBuffer)
@@ -631,7 +631,7 @@ TEST(SolidSyslog, MessageTruncatedWhenExceedingBuffer)
     message.msg = longMsg.c_str();
     Log();
     std::string expected(maxMsg, 'X');
-    STRCMP_EQUAL(expected.c_str(), SyslogMsg(LastMessage()).c_str());
+    STRCMP_EQUAL(expected.c_str(), SyslogMsg(lastMessage()).c_str());
 }
 
 TEST(SolidSyslog, HugeMessageDoesNotCorruptMemory)
@@ -639,7 +639,7 @@ TEST(SolidSyslog, HugeMessageDoesNotCorruptMemory)
     std::string hugeMsg(10000, 'Z');
     message.msg = hugeMsg.c_str();
     Log();
-    std::string result = SyslogMsg(LastMessage());
+    std::string result = SyslogMsg(lastMessage());
     CHECK(result.size() <= SOLIDSYSLOG_MAX_MESSAGE_SIZE);
 }
 
@@ -737,7 +737,7 @@ TEST(SolidSyslogTimestamp, MicrosecondFormatsAsSixDigitZeroPadded)
 TEST(SolidSyslogTimestamp, DateFieldsSeparatedByHyphen)
 {
     Log();
-    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    std::string timestamp = SyslogField(lastMessage(), SYSLOG_FIELD_TIMESTAMP);
     BYTES_EQUAL('-', timestamp.at(TIMESTAMP_DATE_SEPARATOR_1));
     BYTES_EQUAL('-', timestamp.at(TIMESTAMP_DATE_SEPARATOR_2));
 }
@@ -745,14 +745,14 @@ TEST(SolidSyslogTimestamp, DateFieldsSeparatedByHyphen)
 TEST(SolidSyslogTimestamp, DateAndTimeSeparatedByT)
 {
     Log();
-    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    std::string timestamp = SyslogField(lastMessage(), SYSLOG_FIELD_TIMESTAMP);
     BYTES_EQUAL('T', timestamp.at(TIMESTAMP_DATE_TIME_SEPARATOR));
 }
 
 TEST(SolidSyslogTimestamp, TimeFieldsSeparatedByColon)
 {
     Log();
-    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    std::string timestamp = SyslogField(lastMessage(), SYSLOG_FIELD_TIMESTAMP);
     BYTES_EQUAL(':', timestamp.at(TIMESTAMP_TIME_SEPARATOR_1));
     BYTES_EQUAL(':', timestamp.at(TIMESTAMP_TIME_SEPARATOR_2));
 }
@@ -760,7 +760,7 @@ TEST(SolidSyslogTimestamp, TimeFieldsSeparatedByColon)
 TEST(SolidSyslogTimestamp, FractionalSecondsPrecededByDot)
 {
     Log();
-    std::string timestamp = SyslogField(LastMessage(), SYSLOG_FIELD_TIMESTAMP);
+    std::string timestamp = SyslogField(lastMessage(), SYSLOG_FIELD_TIMESTAMP);
     BYTES_EQUAL('.', timestamp.at(TIMESTAMP_MICROSECOND_OFFSET));
 }
 
