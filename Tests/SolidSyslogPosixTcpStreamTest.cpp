@@ -227,11 +227,16 @@ TEST(SolidSyslogPosixTcpStream, ReadReturnsRecvReturnValue)
     LONGS_EQUAL(7, n);
 }
 
-TEST(SolidSyslogPosixTcpStream, DestroyResetsFdSoRecreatedStreamIsNotOpen)
+TEST(SolidSyslogPosixTcpStream, DestroyClosesOpenSocket)
 {
     SolidSyslogStream_Open(stream, addr);
     SolidSyslogPosixTcpStream_Destroy();
-    struct SolidSyslogStream* reopened = SolidSyslogPosixTcpStream_Create();
-    SolidSyslogStream_Close(reopened);
-    LONGS_EQUAL(0, SocketFake_CloseCallCount());
+    LONGS_EQUAL(1, SocketFake_CloseCallCount());
+}
+
+TEST(SolidSyslogPosixTcpStream, DestroyClosesWithSocketFd)
+{
+    SolidSyslogStream_Open(stream, addr);
+    SolidSyslogPosixTcpStream_Destroy();
+    LONGS_EQUAL(SocketFake_SocketFd(), SocketFake_LastClosedFd());
 }

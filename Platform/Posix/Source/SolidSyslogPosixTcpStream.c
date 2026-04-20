@@ -38,11 +38,11 @@ struct SolidSyslogStream* SolidSyslogPosixTcpStream_Create(void)
 
 void SolidSyslogPosixTcpStream_Destroy(void)
 {
+    Close(&instance.base);
     instance.base.Open  = NULL;
     instance.base.Send  = NULL;
     instance.base.Read  = NULL;
     instance.base.Close = NULL;
-    instance.fd         = INVALID_FD;
 }
 
 static bool Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr)
