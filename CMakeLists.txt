@@ -86,6 +86,7 @@ add_subdirectory(Source)
 
 if(SOLIDSYSLOG_POSIX)
     add_subdirectory(Platform/Posix)
+    add_subdirectory(Platform/OpenSsl)
 endif()
 
 if(HAVE_WINDOWS_INTERLOCKED OR HAVE_WINDOWS_PLATFORM OR SOLIDSYSLOG_WINSOCK)

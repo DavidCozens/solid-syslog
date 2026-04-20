@@ -1,6 +1,7 @@
 if(SOLIDSYSLOG_POSIX)
     set(POSIX_FAKES_SOURCES
         ClockFake.c
+        OpenSslFake.c
         SafeStringStandard.c
         SocketFake.c
     )
