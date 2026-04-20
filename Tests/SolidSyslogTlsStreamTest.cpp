@@ -235,3 +235,110 @@ TEST(SolidSyslogTlsStream, DestroyFreesSslContext)
     LONGS_EQUAL(1, OpenSslFake_CtxFreeCallCount());
     /* teardown re-Destroys safely */
 }
+
+/* -------------------------------------------------------------------------
+ * Pointer-chain assertions: each OpenSSL call must receive the handle
+ * returned by the preceding call, not some stale or NULL pointer.
+ * ------------------------------------------------------------------------- */
+
+TEST(SolidSyslogTlsStream, OpenPassesClientMethodToCtxNew)
+{
+    SolidSyslogStream_Open(stream, addr);
+    POINTERS_EQUAL(TLS_client_method(), OpenSslFake_LastCtxNewMethodArg());
+}
+
+TEST(SolidSyslogTlsStream, OpenPassesCtxFromNewToLoadVerifyLocations)
+{
+    SolidSyslogStream_Open(stream, addr);
+    POINTERS_EQUAL(OpenSslFake_LastCtxReturned(), OpenSslFake_LastLoadVerifyLocationsCtxArg());
+}
+
+TEST(SolidSyslogTlsStream, OpenPassesCtxFromNewToSetVerify)
+{
+    SolidSyslogStream_Open(stream, addr);
+    POINTERS_EQUAL(OpenSslFake_LastCtxReturned(), OpenSslFake_LastSetVerifyCtxArg());
+}
+
+TEST(SolidSyslogTlsStream, OpenPassesCtxFromNewToSetMinProtoVersion)
+{
+    SolidSyslogStream_Open(stream, addr);
+    POINTERS_EQUAL(OpenSslFake_LastCtxReturned(), OpenSslFake_LastSslCtxCtrlCtxArg());
+}
+
+TEST(SolidSyslogTlsStream, OpenPassesBioMethodFromNewToSetRead)
+{
+    SolidSyslogStream_Open(stream, addr);
+    POINTERS_EQUAL(OpenSslFake_LastBioMethReturned(), OpenSslFake_LastBioMethSetReadMethodArg());
+}
+
+TEST(SolidSyslogTlsStream, OpenPassesBioMethodFromNewToSetWrite)
+{
+    SolidSyslogStream_Open(stream, addr);
+    POINTERS_EQUAL(OpenSslFake_LastBioMethReturned(), OpenSslFake_LastBioMethSetWriteMethodArg());
+}
+
+TEST(SolidSyslogTlsStream, OpenPassesBioMethodFromNewToBioNew)
+{
+    SolidSyslogStream_Open(stream, addr);
+    POINTERS_EQUAL(OpenSslFake_LastBioMethReturned(), OpenSslFake_LastBioNewMethodArg());
+}
+
+TEST(SolidSyslogTlsStream, OpenPassesBioFromNewToSetData)
+{
+    SolidSyslogStream_Open(stream, addr);
+    POINTERS_EQUAL(OpenSslFake_LastBioReturned(), OpenSslFake_LastSetDataBioArg());
+}
+
+TEST(SolidSyslogTlsStream, OpenPassesSameBioForReadAndWrite)
+{
+    SolidSyslogStream_Open(stream, addr);
+    POINTERS_EQUAL(OpenSslFake_LastSetBioReadBioArg(), OpenSslFake_LastSetBioWriteBioArg());
+}
+
+TEST(SolidSyslogTlsStream, OpenPassesSslToSniCtrl)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.serverName = "logs.example";
+    stream            = SolidSyslogTlsStream_Create(&config);
+    SolidSyslogStream_Open(stream, addr);
+    POINTERS_EQUAL(OpenSslFake_LastSslReturned(), OpenSslFake_LastSslCtrlSslArg());
+}
+
+TEST(SolidSyslogTlsStream, OpenPassesSslFromNewToSet1Host)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.serverName = "logs.example";
+    stream            = SolidSyslogTlsStream_Create(&config);
+    SolidSyslogStream_Open(stream, addr);
+    POINTERS_EQUAL(OpenSslFake_LastSslReturned(), OpenSslFake_LastSet1HostSslArg());
+}
+
+TEST(SolidSyslogTlsStream, BioReadCallbackLooksUpDataOnTheCorrectBio)
+{
+    SolidSyslogStream_Open(stream, addr);
+    int (*readFn)(BIO*, char*, int) = OpenSslFake_LastBioReadCallback();
+    char buf[16];
+    readFn(OpenSslFake_LastBioReturned(), buf, sizeof(buf));
+    POINTERS_EQUAL(OpenSslFake_LastBioReturned(), OpenSslFake_LastGetDataBioArg());
+}
+
+TEST(SolidSyslogTlsStream, ClosePassesSslFromNewToShutdown)
+{
+    SolidSyslogStream_Open(stream, addr);
+    SolidSyslogStream_Close(stream);
+    POINTERS_EQUAL(OpenSslFake_LastSslReturned(), OpenSslFake_LastShutdownSslArg());
+}
+
+TEST(SolidSyslogTlsStream, ClosePassesSslFromNewToFree)
+{
+    SolidSyslogStream_Open(stream, addr);
+    SolidSyslogStream_Close(stream);
+    POINTERS_EQUAL(OpenSslFake_LastSslReturned(), OpenSslFake_LastFreeSslArg());
+}
+
+TEST(SolidSyslogTlsStream, DestroyPassesCtxFromNewToCtxFree)
+{
+    SolidSyslogStream_Open(stream, addr);
+    SolidSyslogTlsStream_Destroy();
+    POINTERS_EQUAL(OpenSslFake_LastCtxReturned(), OpenSslFake_LastCtxFreeCtxArg());
+}

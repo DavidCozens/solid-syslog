@@ -269,3 +269,129 @@ TEST(OpenSslFake, CtxFreeIncrementsCount)
     SSL_CTX_free(ctx);
     LONGS_EQUAL(1, OpenSslFake_CtxFreeCallCount());
 }
+
+/* -------------------------------------------------------------------------
+ * Arg captures — prove each fake function records the args its callers pass.
+ * ------------------------------------------------------------------------- */
+
+TEST(OpenSslFake, CtxNewCapturesMethodArg)
+{
+    const SSL_METHOD* method = TLS_client_method();
+    SSL_CTX_new(method);
+    POINTERS_EQUAL(method, OpenSslFake_LastCtxNewMethodArg());
+}
+
+TEST(OpenSslFake, LoadVerifyLocationsCapturesCtxArg)
+{
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL_CTX_load_verify_locations(ctx, "/ca.pem", nullptr);
+    POINTERS_EQUAL(ctx, OpenSslFake_LastLoadVerifyLocationsCtxArg());
+}
+
+TEST(OpenSslFake, SetVerifyCapturesCtxArg)
+{
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, nullptr);
+    POINTERS_EQUAL(ctx, OpenSslFake_LastSetVerifyCtxArg());
+}
+
+TEST(OpenSslFake, SetMinProtoVersionCapturesCtxArg)
+{
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION);
+    POINTERS_EQUAL(ctx, OpenSslFake_LastSslCtxCtrlCtxArg());
+}
+
+TEST(OpenSslFake, BioMethSetReadCapturesMethodArg)
+{
+    BIO_METHOD* method = BIO_meth_new(0, "fake");
+    BIO_meth_set_read(method, DummyRead);
+    POINTERS_EQUAL(method, OpenSslFake_LastBioMethSetReadMethodArg());
+}
+
+TEST(OpenSslFake, BioMethSetWriteCapturesMethodArg)
+{
+    BIO_METHOD* method = BIO_meth_new(0, "fake");
+    BIO_meth_set_write(method, DummyWrite);
+    POINTERS_EQUAL(method, OpenSslFake_LastBioMethSetWriteMethodArg());
+}
+
+TEST(OpenSslFake, BioNewCapturesMethodArg)
+{
+    BIO_METHOD* method = BIO_meth_new(0, "fake");
+    BIO_new(method);
+    POINTERS_EQUAL(method, OpenSslFake_LastBioNewMethodArg());
+}
+
+TEST(OpenSslFake, BioMethNewReturnValueIsSurfaced)
+{
+    BIO_METHOD* method = BIO_meth_new(0, "fake");
+    POINTERS_EQUAL(method, OpenSslFake_LastBioMethReturned());
+}
+
+TEST(OpenSslFake, BioSetDataCapturesBioArg)
+{
+    BIO_METHOD* method = BIO_meth_new(0, "fake");
+    BIO*        bio    = BIO_new(method);
+    int         sentinel;
+    BIO_set_data(bio, &sentinel);
+    POINTERS_EQUAL(bio, OpenSslFake_LastSetDataBioArg());
+}
+
+TEST(OpenSslFake, BioGetDataCapturesBioArg)
+{
+    BIO_METHOD* method = BIO_meth_new(0, "fake");
+    BIO*        bio    = BIO_new(method);
+    BIO_get_data(bio);
+    POINTERS_EQUAL(bio, OpenSslFake_LastGetDataBioArg());
+}
+
+TEST(OpenSslFake, SetBioCapturesWriteBioArg)
+{
+    SSL_CTX*    ctx    = SSL_CTX_new(TLS_client_method());
+    SSL*        ssl    = SSL_new(ctx);
+    BIO_METHOD* method = BIO_meth_new(0, "fake");
+    BIO*        rbio   = BIO_new(method);
+    BIO*        wbio   = BIO_new(method);
+    SSL_set_bio(ssl, rbio, wbio);
+    POINTERS_EQUAL(wbio, OpenSslFake_LastSetBioWriteBioArg());
+}
+
+TEST(OpenSslFake, SetTlsExtHostNameCapturesSslArg)
+{
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL*     ssl = SSL_new(ctx);
+    SSL_set_tlsext_host_name(ssl, "host.example");
+    POINTERS_EQUAL(ssl, OpenSslFake_LastSslCtrlSslArg());
+}
+
+TEST(OpenSslFake, Set1HostCapturesSslArg)
+{
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL*     ssl = SSL_new(ctx);
+    SSL_set1_host(ssl, "host.example");
+    POINTERS_EQUAL(ssl, OpenSslFake_LastSet1HostSslArg());
+}
+
+TEST(OpenSslFake, ShutdownCapturesSslArg)
+{
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL*     ssl = SSL_new(ctx);
+    SSL_shutdown(ssl);
+    POINTERS_EQUAL(ssl, OpenSslFake_LastShutdownSslArg());
+}
+
+TEST(OpenSslFake, FreeCapturesSslArg)
+{
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL*     ssl = SSL_new(ctx);
+    SSL_free(ssl);
+    POINTERS_EQUAL(ssl, OpenSslFake_LastFreeSslArg());
+}
+
+TEST(OpenSslFake, CtxFreeCapturesCtxArg)
+{
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL_CTX_free(ctx);
+    POINTERS_EQUAL(ctx, OpenSslFake_LastCtxFreeCtxArg());
+}

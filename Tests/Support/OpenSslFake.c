@@ -3,201 +3,211 @@
 #include <openssl/ssl.h>
 #include <stddef.h>
 
-static int         ctxNewCallCount;
+/* -------------------------------------------------------------------------
+ * Captured state — one section per OpenSSL API call. Tests read these via
+ * accessors below; production reaches libssl through the link-interposed
+ * functions at the bottom of the file.
+ * ------------------------------------------------------------------------- */
+
+/* Sentinel storage for opaque OpenSSL types — our fake returns stable
+ * pointers to these so tests can assert pointer-chain plumbing with
+ * POINTERS_EQUAL. */
+static char fakeCtxStorage;
+static char fakeMethodStorage;
+static char fakeSslStorage;
+static char fakeBioMethStorage;
+static char fakeBioStorage;
+
+/* SSL_CTX_new */
+static int               ctxNewCallCount;
+static const SSL_METHOD* lastCtxNewMethodArg;
+
+/* SSL_CTX_load_verify_locations */
+static SSL_CTX*    lastLoadVerifyLocationsCtxArg;
 static const char* lastCaBundlePath;
-static int         lastVerifyMode;
-static long        lastMinProtoVersion;
-static int         sslNewCallCount;
-static SSL_CTX*    lastSslNewCtxArg;
-static int         bioNewCallCount;
-static int         setBioCallCount;
-static SSL*        lastSetBioSslArg;
-static BIO*        lastSetBioReadBioArg;
-static int         connectCallCount;
-static SSL*        lastConnectSslArg;
-static const char* lastSniHostname;
-static const char* lastSet1Host;
-static void*       lastSetDataArg;
+
+/* SSL_CTX_set_verify */
+static SSL_CTX* lastSetVerifyCtxArg;
+static int      lastVerifyMode;
+
+/* SSL_CTX_ctrl (SET_MIN_PROTO_VERSION) */
+static SSL_CTX* lastSslCtxCtrlCtxArg;
+static long     lastMinProtoVersion;
+
+/* SSL_new */
+static int      sslNewCallCount;
+static SSL_CTX* lastSslNewCtxArg;
+
+/* BIO_meth_set_read / BIO_meth_set_write */
+static BIO_METHOD* lastBioMethSetReadMethodArg;
 static int (*lastBioReadCallback)(BIO*, char*, int);
+static BIO_METHOD* lastBioMethSetWriteMethodArg;
 static int (*lastBioWriteCallback)(BIO*, const char*, int);
+
+/* BIO_new */
+static int               bioNewCallCount;
+static const BIO_METHOD* lastBioNewMethodArg;
+
+/* BIO_set_data / BIO_get_data */
+static BIO*  lastSetDataBioArg;
+static void* lastSetDataArg;
+static BIO*  lastGetDataBioArg;
+
+/* SSL_set_bio */
+static int  setBioCallCount;
+static SSL* lastSetBioSslArg;
+static BIO* lastSetBioReadBioArg;
+static BIO* lastSetBioWriteBioArg;
+
+/* SSL_ctrl (SET_TLSEXT_HOSTNAME) */
+static SSL*        lastSslCtrlSslArg;
+static const char* lastSniHostname;
+
+/* SSL_set1_host */
+static SSL*        lastSet1HostSslArg;
+static const char* lastSet1Host;
+
+/* SSL_connect */
+static int  connectCallCount;
+static SSL* lastConnectSslArg;
+
+/* SSL_write */
 static int         writeCallCount;
 static SSL*        lastWriteSslArg;
 static const void* lastWriteBuf;
 static int         lastWriteSize;
-static int         shutdownCallCount;
-static int         freeCallCount;
-static int         ctxFreeCallCount;
-static char        fakeCtxStorage;
-static char        fakeMethodStorage;
-static char        fakeSslStorage;
-static char        fakeBioMethStorage;
-static char        fakeBioStorage;
+
+/* SSL_shutdown */
+static int  shutdownCallCount;
+static SSL* lastShutdownSslArg;
+
+/* SSL_free */
+static int  freeCallCount;
+static SSL* lastFreeSslArg;
+
+/* SSL_CTX_free */
+static int      ctxFreeCallCount;
+static SSL_CTX* lastCtxFreeCtxArg;
+
+/* -------------------------------------------------------------------------
+ * Reset — zero every captured value.
+ * ------------------------------------------------------------------------- */
 
 void OpenSslFake_Reset(void)
 {
-    ctxNewCallCount     = 0;
-    lastCaBundlePath    = NULL;
-    lastVerifyMode      = 0;
-    lastMinProtoVersion = 0;
-    sslNewCallCount     = 0;
-    lastSslNewCtxArg    = NULL;
-    bioNewCallCount      = 0;
-    setBioCallCount      = 0;
-    lastSetBioSslArg     = NULL;
-    lastSetBioReadBioArg = NULL;
-    connectCallCount     = 0;
-    lastConnectSslArg    = NULL;
-    lastSniHostname      = NULL;
-    lastSet1Host         = NULL;
-    lastSetDataArg       = NULL;
-    lastBioReadCallback  = NULL;
-    lastBioWriteCallback = NULL;
-    writeCallCount       = 0;
-    lastWriteSslArg      = NULL;
-    lastWriteBuf         = NULL;
-    lastWriteSize        = 0;
-    shutdownCallCount    = 0;
-    freeCallCount        = 0;
-    ctxFreeCallCount     = 0;
+    ctxNewCallCount               = 0;
+    lastCtxNewMethodArg           = NULL;
+    lastLoadVerifyLocationsCtxArg = NULL;
+    lastCaBundlePath              = NULL;
+    lastSetVerifyCtxArg           = NULL;
+    lastVerifyMode                = 0;
+    lastSslCtxCtrlCtxArg          = NULL;
+    lastMinProtoVersion           = 0;
+    sslNewCallCount               = 0;
+    lastSslNewCtxArg              = NULL;
+    lastBioMethSetReadMethodArg   = NULL;
+    lastBioReadCallback           = NULL;
+    lastBioMethSetWriteMethodArg  = NULL;
+    lastBioWriteCallback          = NULL;
+    bioNewCallCount               = 0;
+    lastBioNewMethodArg           = NULL;
+    lastSetDataBioArg             = NULL;
+    lastSetDataArg                = NULL;
+    lastGetDataBioArg             = NULL;
+    setBioCallCount               = 0;
+    lastSetBioSslArg              = NULL;
+    lastSetBioReadBioArg          = NULL;
+    lastSetBioWriteBioArg         = NULL;
+    lastSslCtrlSslArg             = NULL;
+    lastSniHostname               = NULL;
+    lastSet1HostSslArg            = NULL;
+    lastSet1Host                  = NULL;
+    connectCallCount              = 0;
+    lastConnectSslArg             = NULL;
+    writeCallCount                = 0;
+    lastWriteSslArg               = NULL;
+    lastWriteBuf                  = NULL;
+    lastWriteSize                 = 0;
+    shutdownCallCount             = 0;
+    lastShutdownSslArg            = NULL;
+    freeCallCount                 = 0;
+    lastFreeSslArg                = NULL;
+    ctxFreeCallCount              = 0;
+    lastCtxFreeCtxArg             = NULL;
 }
 
-int OpenSslFake_CtxNewCallCount(void)
-{
-    return ctxNewCallCount;
-}
+/* -------------------------------------------------------------------------
+ * Accessors — grouped by the OpenSSL function they describe.
+ * ------------------------------------------------------------------------- */
 
-const char* OpenSslFake_LastCaBundlePath(void)
-{
-    return lastCaBundlePath;
-}
+int                OpenSslFake_CtxNewCallCount(void) { return ctxNewCallCount; }
+const SSL_METHOD*  OpenSslFake_LastCtxNewMethodArg(void) { return lastCtxNewMethodArg; }
+SSL_CTX*           OpenSslFake_LastCtxReturned(void) { return (SSL_CTX*) &fakeCtxStorage; }
 
-int OpenSslFake_LastVerifyMode(void)
-{
-    return lastVerifyMode;
-}
+SSL_CTX*           OpenSslFake_LastLoadVerifyLocationsCtxArg(void) { return lastLoadVerifyLocationsCtxArg; }
+const char*        OpenSslFake_LastCaBundlePath(void) { return lastCaBundlePath; }
 
-long OpenSslFake_LastMinProtoVersion(void)
-{
-    return lastMinProtoVersion;
-}
+SSL_CTX*           OpenSslFake_LastSetVerifyCtxArg(void) { return lastSetVerifyCtxArg; }
+int                OpenSslFake_LastVerifyMode(void) { return lastVerifyMode; }
 
-SSL_CTX* OpenSslFake_LastCtxReturned(void)
-{
-    return (SSL_CTX*) &fakeCtxStorage;
-}
+SSL_CTX*           OpenSslFake_LastSslCtxCtrlCtxArg(void) { return lastSslCtxCtrlCtxArg; }
+long               OpenSslFake_LastMinProtoVersion(void) { return lastMinProtoVersion; }
 
-int OpenSslFake_SslNewCallCount(void)
-{
-    return sslNewCallCount;
-}
+int                OpenSslFake_SslNewCallCount(void) { return sslNewCallCount; }
+SSL_CTX*           OpenSslFake_LastSslNewCtxArg(void) { return lastSslNewCtxArg; }
+SSL*               OpenSslFake_LastSslReturned(void) { return (SSL*) &fakeSslStorage; }
 
-SSL* OpenSslFake_LastSslReturned(void)
-{
-    return (SSL*) &fakeSslStorage;
-}
+BIO_METHOD*        OpenSslFake_LastBioMethReturned(void) { return (BIO_METHOD*) &fakeBioMethStorage; }
 
-SSL_CTX* OpenSslFake_LastSslNewCtxArg(void)
-{
-    return lastSslNewCtxArg;
-}
+BIO_METHOD*        OpenSslFake_LastBioMethSetReadMethodArg(void) { return lastBioMethSetReadMethodArg; }
+int (*OpenSslFake_LastBioReadCallback(void))(BIO*, char*, int) { return lastBioReadCallback; }
 
-int OpenSslFake_BioNewCallCount(void)
-{
-    return bioNewCallCount;
-}
+BIO_METHOD*        OpenSslFake_LastBioMethSetWriteMethodArg(void) { return lastBioMethSetWriteMethodArg; }
+int (*OpenSslFake_LastBioWriteCallback(void))(BIO*, const char*, int) { return lastBioWriteCallback; }
 
-BIO* OpenSslFake_LastBioReturned(void)
-{
-    return (BIO*) &fakeBioStorage;
-}
+int                OpenSslFake_BioNewCallCount(void) { return bioNewCallCount; }
+const BIO_METHOD*  OpenSslFake_LastBioNewMethodArg(void) { return lastBioNewMethodArg; }
+BIO*               OpenSslFake_LastBioReturned(void) { return (BIO*) &fakeBioStorage; }
 
-int OpenSslFake_SetBioCallCount(void)
-{
-    return setBioCallCount;
-}
+BIO*               OpenSslFake_LastSetDataBioArg(void) { return lastSetDataBioArg; }
+void*              OpenSslFake_LastSetDataArg(void) { return lastSetDataArg; }
+BIO*               OpenSslFake_LastGetDataBioArg(void) { return lastGetDataBioArg; }
 
-SSL* OpenSslFake_LastSetBioSslArg(void)
-{
-    return lastSetBioSslArg;
-}
+int                OpenSslFake_SetBioCallCount(void) { return setBioCallCount; }
+SSL*               OpenSslFake_LastSetBioSslArg(void) { return lastSetBioSslArg; }
+BIO*               OpenSslFake_LastSetBioReadBioArg(void) { return lastSetBioReadBioArg; }
+BIO*               OpenSslFake_LastSetBioWriteBioArg(void) { return lastSetBioWriteBioArg; }
 
-BIO* OpenSslFake_LastSetBioReadBioArg(void)
-{
-    return lastSetBioReadBioArg;
-}
+SSL*               OpenSslFake_LastSslCtrlSslArg(void) { return lastSslCtrlSslArg; }
+const char*        OpenSslFake_LastSniHostname(void) { return lastSniHostname; }
 
-int OpenSslFake_ConnectCallCount(void)
-{
-    return connectCallCount;
-}
+SSL*               OpenSslFake_LastSet1HostSslArg(void) { return lastSet1HostSslArg; }
+const char*        OpenSslFake_LastSet1Host(void) { return lastSet1Host; }
 
-SSL* OpenSslFake_LastConnectSslArg(void)
-{
-    return lastConnectSslArg;
-}
+int                OpenSslFake_ConnectCallCount(void) { return connectCallCount; }
+SSL*               OpenSslFake_LastConnectSslArg(void) { return lastConnectSslArg; }
 
-const char* OpenSslFake_LastSniHostname(void)
-{
-    return lastSniHostname;
-}
+int                OpenSslFake_WriteCallCount(void) { return writeCallCount; }
+SSL*               OpenSslFake_LastWriteSslArg(void) { return lastWriteSslArg; }
+const void*        OpenSslFake_LastWriteBuf(void) { return lastWriteBuf; }
+int                OpenSslFake_LastWriteSize(void) { return lastWriteSize; }
 
-const char* OpenSslFake_LastSet1Host(void)
-{
-    return lastSet1Host;
-}
+int                OpenSslFake_ShutdownCallCount(void) { return shutdownCallCount; }
+SSL*               OpenSslFake_LastShutdownSslArg(void) { return lastShutdownSslArg; }
 
-void* OpenSslFake_LastSetDataArg(void)
-{
-    return lastSetDataArg;
-}
+int                OpenSslFake_FreeCallCount(void) { return freeCallCount; }
+SSL*               OpenSslFake_LastFreeSslArg(void) { return lastFreeSslArg; }
 
-int (*OpenSslFake_LastBioReadCallback(void))(BIO*, char*, int)
-{
-    return lastBioReadCallback;
-}
+int                OpenSslFake_CtxFreeCallCount(void) { return ctxFreeCallCount; }
+SSL_CTX*           OpenSslFake_LastCtxFreeCtxArg(void) { return lastCtxFreeCtxArg; }
 
-int (*OpenSslFake_LastBioWriteCallback(void))(BIO*, const char*, int)
-{
-    return lastBioWriteCallback;
-}
-
-int OpenSslFake_WriteCallCount(void)
-{
-    return writeCallCount;
-}
-
-SSL* OpenSslFake_LastWriteSslArg(void)
-{
-    return lastWriteSslArg;
-}
-
-const void* OpenSslFake_LastWriteBuf(void)
-{
-    return lastWriteBuf;
-}
-
-int OpenSslFake_LastWriteSize(void)
-{
-    return lastWriteSize;
-}
-
-int OpenSslFake_ShutdownCallCount(void)
-{
-    return shutdownCallCount;
-}
-
-int OpenSslFake_FreeCallCount(void)
-{
-    return freeCallCount;
-}
-
-int OpenSslFake_CtxFreeCallCount(void)
-{
-    return ctxFreeCallCount;
-}
-
-/* Link-time substitution for OpenSSL — replaces libssl symbols in the test
- * binary. Production links real libssl; tests never link -lssl. */
+/* -------------------------------------------------------------------------
+ * Link-time substitution for OpenSSL — replaces libssl symbols in the test
+ * binary. Production links real libssl; tests never link -lssl.
+ * Each function records its args for test assertion. Return values are
+ * plausible-success stubs; where behaviour needs switching for failure-path
+ * tests, add a setter (e.g. OpenSslFake_SetConnectFails) in a later cycle.
+ * ------------------------------------------------------------------------- */
 
 const SSL_METHOD* TLS_client_method(void)
 {
@@ -206,9 +216,37 @@ const SSL_METHOD* TLS_client_method(void)
 
 SSL_CTX* SSL_CTX_new(const SSL_METHOD* method)
 {
-    (void) method;
     ctxNewCallCount++;
+    lastCtxNewMethodArg = method;
     return (SSL_CTX*) &fakeCtxStorage;
+}
+
+int SSL_CTX_load_verify_locations(SSL_CTX* ctx, const char* CAfile, const char* CApath)
+{
+    (void) CApath;
+    lastLoadVerifyLocationsCtxArg = ctx;
+    lastCaBundlePath              = CAfile;
+    return 1;
+}
+
+void SSL_CTX_set_verify(SSL_CTX* ctx, int mode, SSL_verify_cb verify_callback)
+{
+    (void) verify_callback;
+    lastSetVerifyCtxArg = ctx;
+    lastVerifyMode      = mode;
+}
+
+/* SSL_CTX_set_min_proto_version is a macro forwarding to SSL_CTX_ctrl; fake
+ * intercepts the ctrl call for the min-proto command only. */
+long SSL_CTX_ctrl(SSL_CTX* ctx, int cmd, long larg, void* parg)
+{
+    (void) parg;
+    lastSslCtxCtrlCtxArg = ctx;
+    if (cmd == SSL_CTRL_SET_MIN_PROTO_VERSION)
+    {
+        lastMinProtoVersion = larg;
+    }
+    return 1;
 }
 
 SSL* SSL_new(SSL_CTX* ctx)
@@ -225,34 +263,53 @@ BIO_METHOD* BIO_meth_new(int type, const char* name)
     return (BIO_METHOD*) &fakeBioMethStorage;
 }
 
+int BIO_meth_set_read(BIO_METHOD* method, int (*read)(BIO*, char*, int))
+{
+    lastBioMethSetReadMethodArg = method;
+    lastBioReadCallback         = read;
+    return 1;
+}
+
+int BIO_meth_set_write(BIO_METHOD* method, int (*write)(BIO*, const char*, int))
+{
+    lastBioMethSetWriteMethodArg = method;
+    lastBioWriteCallback         = write;
+    return 1;
+}
+
 BIO* BIO_new(const BIO_METHOD* method)
 {
-    (void) method;
     bioNewCallCount++;
+    lastBioNewMethodArg = method;
     return (BIO*) &fakeBioStorage;
+}
+
+void BIO_set_data(BIO* bio, void* data)
+{
+    lastSetDataBioArg = bio;
+    lastSetDataArg    = data;
+}
+
+void* BIO_get_data(BIO* bio)
+{
+    lastGetDataBioArg = bio;
+    return lastSetDataArg;
 }
 
 void SSL_set_bio(SSL* ssl, BIO* rbio, BIO* wbio)
 {
-    (void) wbio;
     setBioCallCount++;
-    lastSetBioSslArg     = ssl;
-    lastSetBioReadBioArg = rbio;
-}
-
-int SSL_connect(SSL* ssl)
-{
-    connectCallCount++;
-    lastConnectSslArg = ssl;
-    return 1;
+    lastSetBioSslArg      = ssl;
+    lastSetBioReadBioArg  = rbio;
+    lastSetBioWriteBioArg = wbio;
 }
 
 /* SSL_set_tlsext_host_name is a macro forwarding to SSL_ctrl; fake intercepts
  * the SET_TLSEXT_HOSTNAME command and captures the hostname pointer. */
 long SSL_ctrl(SSL* ssl, int cmd, long larg, void* parg)
 {
-    (void) ssl;
     (void) larg;
+    lastSslCtrlSslArg = ssl;
     if (cmd == SSL_CTRL_SET_TLSEXT_HOSTNAME)
     {
         lastSniHostname = (const char*) parg;
@@ -262,34 +319,15 @@ long SSL_ctrl(SSL* ssl, int cmd, long larg, void* parg)
 
 int SSL_set1_host(SSL* ssl, const char* hostname)
 {
-    (void) ssl;
-    lastSet1Host = hostname;
+    lastSet1HostSslArg = ssl;
+    lastSet1Host       = hostname;
     return 1;
 }
 
-void BIO_set_data(BIO* bio, void* data)
+int SSL_connect(SSL* ssl)
 {
-    (void) bio;
-    lastSetDataArg = data;
-}
-
-void* BIO_get_data(BIO* bio)
-{
-    (void) bio;
-    return lastSetDataArg;
-}
-
-int BIO_meth_set_read(BIO_METHOD* method, int (*read)(BIO*, char*, int))
-{
-    (void) method;
-    lastBioReadCallback = read;
-    return 1;
-}
-
-int BIO_meth_set_write(BIO_METHOD* method, int (*write)(BIO*, const char*, int))
-{
-    (void) method;
-    lastBioWriteCallback = write;
+    connectCallCount++;
+    lastConnectSslArg = ssl;
     return 1;
 }
 
@@ -304,47 +342,19 @@ int SSL_write(SSL* ssl, const void* buf, int num)
 
 int SSL_shutdown(SSL* ssl)
 {
-    (void) ssl;
     shutdownCallCount++;
+    lastShutdownSslArg = ssl;
     return 1;
 }
 
 void SSL_free(SSL* ssl)
 {
-    (void) ssl;
     freeCallCount++;
+    lastFreeSslArg = ssl;
 }
 
 void SSL_CTX_free(SSL_CTX* ctx)
 {
-    (void) ctx;
     ctxFreeCallCount++;
-}
-
-int SSL_CTX_load_verify_locations(SSL_CTX* ctx, const char* CAfile, const char* CApath)
-{
-    (void) ctx;
-    (void) CApath;
-    lastCaBundlePath = CAfile;
-    return 1;
-}
-
-void SSL_CTX_set_verify(SSL_CTX* ctx, int mode, SSL_verify_cb verify_callback)
-{
-    (void) ctx;
-    (void) verify_callback;
-    lastVerifyMode = mode;
-}
-
-/* SSL_CTX_set_min_proto_version is a macro forwarding to SSL_CTX_ctrl; fake by
- * intercepting the ctrl call for the min-proto command only. */
-long SSL_CTX_ctrl(SSL_CTX* ctx, int cmd, long larg, void* parg)
-{
-    (void) ctx;
-    (void) parg;
-    if (cmd == SSL_CTRL_SET_MIN_PROTO_VERSION)
-    {
-        lastMinProtoVersion = larg;
-    }
-    return 1;
+    lastCtxFreeCtxArg = ctx;
 }
