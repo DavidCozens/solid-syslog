@@ -87,3 +87,39 @@ TEST(SolidSyslogTlsStream, OpenPassesCtxFromCtxNewToSslNew)
     SolidSyslogStream_Open(stream, addr);
     POINTERS_EQUAL(OpenSslFake_LastCtxReturned(), OpenSslFake_LastSslNewCtxArg());
 }
+
+TEST(SolidSyslogTlsStream, OpenCreatesBio)
+{
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(1, OpenSslFake_BioNewCallCount());
+}
+
+TEST(SolidSyslogTlsStream, OpenSetsBioOnSsl)
+{
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(1, OpenSslFake_SetBioCallCount());
+}
+
+TEST(SolidSyslogTlsStream, OpenPassesSslFromNewToSetBio)
+{
+    SolidSyslogStream_Open(stream, addr);
+    POINTERS_EQUAL(OpenSslFake_LastSslReturned(), OpenSslFake_LastSetBioSslArg());
+}
+
+TEST(SolidSyslogTlsStream, OpenPassesBioFromNewToSetBio)
+{
+    SolidSyslogStream_Open(stream, addr);
+    POINTERS_EQUAL(OpenSslFake_LastBioReturned(), OpenSslFake_LastSetBioReadBioArg());
+}
+
+TEST(SolidSyslogTlsStream, OpenPerformsHandshake)
+{
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(1, OpenSslFake_ConnectCallCount());
+}
+
+TEST(SolidSyslogTlsStream, OpenPassesSslToConnect)
+{
+    SolidSyslogStream_Open(stream, addr);
+    POINTERS_EQUAL(OpenSslFake_LastSslReturned(), OpenSslFake_LastConnectSslArg());
+}

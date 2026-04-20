@@ -9,9 +9,17 @@ static int         lastVerifyMode;
 static long        lastMinProtoVersion;
 static int         sslNewCallCount;
 static SSL_CTX*    lastSslNewCtxArg;
+static int         bioNewCallCount;
+static int         setBioCallCount;
+static SSL*        lastSetBioSslArg;
+static BIO*        lastSetBioReadBioArg;
+static int         connectCallCount;
+static SSL*        lastConnectSslArg;
 static char        fakeCtxStorage;
 static char        fakeMethodStorage;
 static char        fakeSslStorage;
+static char        fakeBioMethStorage;
+static char        fakeBioStorage;
 
 void OpenSslFake_Reset(void)
 {
@@ -21,6 +29,12 @@ void OpenSslFake_Reset(void)
     lastMinProtoVersion = 0;
     sslNewCallCount     = 0;
     lastSslNewCtxArg    = NULL;
+    bioNewCallCount      = 0;
+    setBioCallCount      = 0;
+    lastSetBioSslArg     = NULL;
+    lastSetBioReadBioArg = NULL;
+    connectCallCount     = 0;
+    lastConnectSslArg    = NULL;
 }
 
 int OpenSslFake_CtxNewCallCount(void)
@@ -63,6 +77,41 @@ SSL_CTX* OpenSslFake_LastSslNewCtxArg(void)
     return lastSslNewCtxArg;
 }
 
+int OpenSslFake_BioNewCallCount(void)
+{
+    return bioNewCallCount;
+}
+
+BIO* OpenSslFake_LastBioReturned(void)
+{
+    return (BIO*) &fakeBioStorage;
+}
+
+int OpenSslFake_SetBioCallCount(void)
+{
+    return setBioCallCount;
+}
+
+SSL* OpenSslFake_LastSetBioSslArg(void)
+{
+    return lastSetBioSslArg;
+}
+
+BIO* OpenSslFake_LastSetBioReadBioArg(void)
+{
+    return lastSetBioReadBioArg;
+}
+
+int OpenSslFake_ConnectCallCount(void)
+{
+    return connectCallCount;
+}
+
+SSL* OpenSslFake_LastConnectSslArg(void)
+{
+    return lastConnectSslArg;
+}
+
 /* Link-time substitution for OpenSSL — replaces libssl symbols in the test
  * binary. Production links real libssl; tests never link -lssl. */
 
@@ -83,6 +132,35 @@ SSL* SSL_new(SSL_CTX* ctx)
     sslNewCallCount++;
     lastSslNewCtxArg = ctx;
     return (SSL*) &fakeSslStorage;
+}
+
+BIO_METHOD* BIO_meth_new(int type, const char* name)
+{
+    (void) type;
+    (void) name;
+    return (BIO_METHOD*) &fakeBioMethStorage;
+}
+
+BIO* BIO_new(const BIO_METHOD* method)
+{
+    (void) method;
+    bioNewCallCount++;
+    return (BIO*) &fakeBioStorage;
+}
+
+void SSL_set_bio(SSL* ssl, BIO* rbio, BIO* wbio)
+{
+    (void) wbio;
+    setBioCallCount++;
+    lastSetBioSslArg     = ssl;
+    lastSetBioReadBioArg = rbio;
+}
+
+int SSL_connect(SSL* ssl)
+{
+    connectCallCount++;
+    lastConnectSslArg = ssl;
+    return 1;
 }
 
 int SSL_CTX_load_verify_locations(SSL_CTX* ctx, const char* CAfile, const char* CApath)

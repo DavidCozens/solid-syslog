@@ -6,6 +6,7 @@
 /* Forward-declared OpenSSL types — full definitions live in <openssl/ssl.h>. */
 struct ssl_ctx_st;
 struct ssl_st;
+struct bio_st;
 
 EXTERN_C_BEGIN
 
@@ -18,6 +19,13 @@ EXTERN_C_BEGIN
     int                OpenSslFake_SslNewCallCount(void);
     struct ssl_st*     OpenSslFake_LastSslReturned(void);
     struct ssl_ctx_st* OpenSslFake_LastSslNewCtxArg(void);
+    int                OpenSslFake_BioNewCallCount(void);
+    struct bio_st*     OpenSslFake_LastBioReturned(void);
+    int                OpenSslFake_SetBioCallCount(void);
+    struct ssl_st*     OpenSslFake_LastSetBioSslArg(void);
+    struct bio_st*     OpenSslFake_LastSetBioReadBioArg(void);
+    int                OpenSslFake_ConnectCallCount(void);
+    struct ssl_st*     OpenSslFake_LastConnectSslArg(void);
 
 EXTERN_C_END
 

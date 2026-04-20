@@ -11,6 +11,7 @@ struct SolidSyslogTlsStream
 
 static bool     Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr);
 static SSL_CTX* CreateSslContext(const char* caBundlePath);
+static BIO*     CreateTransportBio(void);
 
 static struct SolidSyslogTlsStream instance;
 
@@ -30,8 +31,17 @@ static bool Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress
     struct SolidSyslogTlsStream* stream = (struct SolidSyslogTlsStream*) self;
     SolidSyslogStream_Open(stream->config.transport, addr);
     SSL_CTX* ctx = CreateSslContext(stream->config.caBundlePath);
-    SSL_new(ctx);
+    SSL*     ssl = SSL_new(ctx);
+    BIO*     bio = CreateTransportBio();
+    SSL_set_bio(ssl, bio, bio);
+    SSL_connect(ssl);
     return true;
+}
+
+static BIO* CreateTransportBio(void)
+{
+    BIO_METHOD* method = BIO_meth_new(BIO_TYPE_SOURCE_SINK, "SolidSyslog transport BIO");
+    return BIO_new(method);
 }
 
 static SSL_CTX* CreateSslContext(const char* caBundlePath)

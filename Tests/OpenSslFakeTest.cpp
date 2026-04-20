@@ -69,3 +69,76 @@ TEST(OpenSslFake, SslNewCapturesCtxArg)
     SSL_new(ctx);
     POINTERS_EQUAL(ctx, OpenSslFake_LastSslNewCtxArg());
 }
+
+TEST(OpenSslFake, BioNewIncrementsCount)
+{
+    BIO_METHOD* method = BIO_meth_new(0, "fake");
+    BIO_new(method);
+    LONGS_EQUAL(1, OpenSslFake_BioNewCallCount());
+}
+
+TEST(OpenSslFake, BioNewReturnsNonNull)
+{
+    BIO_METHOD* method = BIO_meth_new(0, "fake");
+    CHECK_TRUE(BIO_new(method) != nullptr);
+}
+
+TEST(OpenSslFake, BioNewReturnValueIsSurfaced)
+{
+    BIO_METHOD* method = BIO_meth_new(0, "fake");
+    BIO*        bio    = BIO_new(method);
+    POINTERS_EQUAL(bio, OpenSslFake_LastBioReturned());
+}
+
+TEST(OpenSslFake, SetBioIncrementsCount)
+{
+    SSL_CTX*    ctx    = SSL_CTX_new(TLS_client_method());
+    SSL*        ssl    = SSL_new(ctx);
+    BIO_METHOD* method = BIO_meth_new(0, "fake");
+    BIO*        bio    = BIO_new(method);
+    SSL_set_bio(ssl, bio, bio);
+    LONGS_EQUAL(1, OpenSslFake_SetBioCallCount());
+}
+
+TEST(OpenSslFake, SetBioCapturesSslArg)
+{
+    SSL_CTX*    ctx    = SSL_CTX_new(TLS_client_method());
+    SSL*        ssl    = SSL_new(ctx);
+    BIO_METHOD* method = BIO_meth_new(0, "fake");
+    BIO*        bio    = BIO_new(method);
+    SSL_set_bio(ssl, bio, bio);
+    POINTERS_EQUAL(ssl, OpenSslFake_LastSetBioSslArg());
+}
+
+TEST(OpenSslFake, SetBioCapturesReadBioArg)
+{
+    SSL_CTX*    ctx    = SSL_CTX_new(TLS_client_method());
+    SSL*        ssl    = SSL_new(ctx);
+    BIO_METHOD* method = BIO_meth_new(0, "fake");
+    BIO*        bio    = BIO_new(method);
+    SSL_set_bio(ssl, bio, bio);
+    POINTERS_EQUAL(bio, OpenSslFake_LastSetBioReadBioArg());
+}
+
+TEST(OpenSslFake, ConnectIncrementsCount)
+{
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL*     ssl = SSL_new(ctx);
+    SSL_connect(ssl);
+    LONGS_EQUAL(1, OpenSslFake_ConnectCallCount());
+}
+
+TEST(OpenSslFake, ConnectCapturesSslArg)
+{
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL*     ssl = SSL_new(ctx);
+    SSL_connect(ssl);
+    POINTERS_EQUAL(ssl, OpenSslFake_LastConnectSslArg());
+}
+
+TEST(OpenSslFake, ConnectDefaultsToSuccess)
+{
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL*     ssl = SSL_new(ctx);
+    LONGS_EQUAL(1, SSL_connect(ssl));
+}
