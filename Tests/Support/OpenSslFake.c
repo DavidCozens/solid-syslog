@@ -15,6 +15,11 @@ static SSL*        lastSetBioSslArg;
 static BIO*        lastSetBioReadBioArg;
 static int         connectCallCount;
 static SSL*        lastConnectSslArg;
+static const char* lastSniHostname;
+static const char* lastSet1Host;
+static void*       lastSetDataArg;
+static int (*lastBioReadCallback)(BIO*, char*, int);
+static int (*lastBioWriteCallback)(BIO*, const char*, int);
 static char        fakeCtxStorage;
 static char        fakeMethodStorage;
 static char        fakeSslStorage;
@@ -35,6 +40,11 @@ void OpenSslFake_Reset(void)
     lastSetBioReadBioArg = NULL;
     connectCallCount     = 0;
     lastConnectSslArg    = NULL;
+    lastSniHostname      = NULL;
+    lastSet1Host         = NULL;
+    lastSetDataArg       = NULL;
+    lastBioReadCallback  = NULL;
+    lastBioWriteCallback = NULL;
 }
 
 int OpenSslFake_CtxNewCallCount(void)
@@ -112,6 +122,31 @@ SSL* OpenSslFake_LastConnectSslArg(void)
     return lastConnectSslArg;
 }
 
+const char* OpenSslFake_LastSniHostname(void)
+{
+    return lastSniHostname;
+}
+
+const char* OpenSslFake_LastSet1Host(void)
+{
+    return lastSet1Host;
+}
+
+void* OpenSslFake_LastSetDataArg(void)
+{
+    return lastSetDataArg;
+}
+
+int (*OpenSslFake_LastBioReadCallback(void))(BIO*, char*, int)
+{
+    return lastBioReadCallback;
+}
+
+int (*OpenSslFake_LastBioWriteCallback(void))(BIO*, const char*, int)
+{
+    return lastBioWriteCallback;
+}
+
 /* Link-time substitution for OpenSSL — replaces libssl symbols in the test
  * binary. Production links real libssl; tests never link -lssl. */
 
@@ -160,6 +195,52 @@ int SSL_connect(SSL* ssl)
 {
     connectCallCount++;
     lastConnectSslArg = ssl;
+    return 1;
+}
+
+/* SSL_set_tlsext_host_name is a macro forwarding to SSL_ctrl; fake intercepts
+ * the SET_TLSEXT_HOSTNAME command and captures the hostname pointer. */
+long SSL_ctrl(SSL* ssl, int cmd, long larg, void* parg)
+{
+    (void) ssl;
+    (void) larg;
+    if (cmd == SSL_CTRL_SET_TLSEXT_HOSTNAME)
+    {
+        lastSniHostname = (const char*) parg;
+    }
+    return 1;
+}
+
+int SSL_set1_host(SSL* ssl, const char* hostname)
+{
+    (void) ssl;
+    lastSet1Host = hostname;
+    return 1;
+}
+
+void BIO_set_data(BIO* bio, void* data)
+{
+    (void) bio;
+    lastSetDataArg = data;
+}
+
+void* BIO_get_data(BIO* bio)
+{
+    (void) bio;
+    return lastSetDataArg;
+}
+
+int BIO_meth_set_read(BIO_METHOD* method, int (*read)(BIO*, char*, int))
+{
+    (void) method;
+    lastBioReadCallback = read;
+    return 1;
+}
+
+int BIO_meth_set_write(BIO_METHOD* method, int (*write)(BIO*, const char*, int))
+{
+    (void) method;
+    lastBioWriteCallback = write;
     return 1;
 }
 

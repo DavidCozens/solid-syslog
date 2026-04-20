@@ -26,6 +26,11 @@ EXTERN_C_BEGIN
     struct bio_st*     OpenSslFake_LastSetBioReadBioArg(void);
     int                OpenSslFake_ConnectCallCount(void);
     struct ssl_st*     OpenSslFake_LastConnectSslArg(void);
+    const char*        OpenSslFake_LastSniHostname(void);
+    const char*        OpenSslFake_LastSet1Host(void);
+    void*              OpenSslFake_LastSetDataArg(void);
+    int (*OpenSslFake_LastBioReadCallback(void))(struct bio_st*, char*, int);
+    int (*OpenSslFake_LastBioWriteCallback(void))(struct bio_st*, const char*, int);
 
 EXTERN_C_END
 

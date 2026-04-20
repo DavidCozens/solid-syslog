@@ -142,3 +142,67 @@ TEST(OpenSslFake, ConnectDefaultsToSuccess)
     SSL*     ssl = SSL_new(ctx);
     LONGS_EQUAL(1, SSL_connect(ssl));
 }
+
+TEST(OpenSslFake, SetTlsExtHostNameCapturesHostname)
+{
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL*     ssl = SSL_new(ctx);
+    SSL_set_tlsext_host_name(ssl, "host.example");
+    STRCMP_EQUAL("host.example", OpenSslFake_LastSniHostname());
+}
+
+TEST(OpenSslFake, Set1HostCapturesHostname)
+{
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL*     ssl = SSL_new(ctx);
+    SSL_set1_host(ssl, "host.example");
+    STRCMP_EQUAL("host.example", OpenSslFake_LastSet1Host());
+}
+
+TEST(OpenSslFake, BioSetDataCapturesData)
+{
+    BIO_METHOD* method = BIO_meth_new(0, "fake");
+    BIO*        bio    = BIO_new(method);
+    int         sentinel;
+    BIO_set_data(bio, &sentinel);
+    POINTERS_EQUAL(&sentinel, OpenSslFake_LastSetDataArg());
+}
+
+TEST(OpenSslFake, BioGetDataReturnsPreviouslySetData)
+{
+    BIO_METHOD* method = BIO_meth_new(0, "fake");
+    BIO*        bio    = BIO_new(method);
+    int         sentinel;
+    BIO_set_data(bio, &sentinel);
+    POINTERS_EQUAL(&sentinel, BIO_get_data(bio));
+}
+
+static int DummyRead(BIO* bio, char* buf, int size)
+{
+    (void) bio;
+    (void) buf;
+    (void) size;
+    return 0;
+}
+
+TEST(OpenSslFake, BioMethSetReadCapturesCallback)
+{
+    BIO_METHOD* method = BIO_meth_new(0, "fake");
+    BIO_meth_set_read(method, DummyRead);
+    POINTERS_EQUAL((void*) DummyRead, (void*) OpenSslFake_LastBioReadCallback());
+}
+
+static int DummyWrite(BIO* bio, const char* buf, int size)
+{
+    (void) bio;
+    (void) buf;
+    (void) size;
+    return 0;
+}
+
+TEST(OpenSslFake, BioMethSetWriteCapturesCallback)
+{
+    BIO_METHOD* method = BIO_meth_new(0, "fake");
+    BIO_meth_set_write(method, DummyWrite);
+    POINTERS_EQUAL((void*) DummyWrite, (void*) OpenSslFake_LastBioWriteCallback());
+}

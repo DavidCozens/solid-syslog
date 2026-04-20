@@ -123,3 +123,54 @@ TEST(SolidSyslogTlsStream, OpenPassesSslToConnect)
     SolidSyslogStream_Open(stream, addr);
     POINTERS_EQUAL(OpenSslFake_LastSslReturned(), OpenSslFake_LastConnectSslArg());
 }
+
+TEST(SolidSyslogTlsStream, OpenSetsSniHostnameFromConfig)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.serverName = "logs.example";
+    stream            = SolidSyslogTlsStream_Create(&config);
+    SolidSyslogStream_Open(stream, addr);
+    STRCMP_EQUAL("logs.example", OpenSslFake_LastSniHostname());
+}
+
+TEST(SolidSyslogTlsStream, OpenSetsExpectedCertHostname)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.serverName = "logs.example";
+    stream            = SolidSyslogTlsStream_Create(&config);
+    SolidSyslogStream_Open(stream, addr);
+    STRCMP_EQUAL("logs.example", OpenSslFake_LastSet1Host());
+}
+
+TEST(SolidSyslogTlsStream, OpenSkipsHostnameSetupWhenServerNameIsNull)
+{
+    /* Default config.serverName is NULL */
+    SolidSyslogStream_Open(stream, addr);
+    POINTERS_EQUAL(NULL, OpenSslFake_LastSet1Host());
+}
+
+TEST(SolidSyslogTlsStream, OpenAttachesTransportAsBioData)
+{
+    SolidSyslogStream_Open(stream, addr);
+    POINTERS_EQUAL(transport, OpenSslFake_LastSetDataArg());
+}
+
+TEST(SolidSyslogTlsStream, BioReadCallbackDelegatesToTransportRead)
+{
+    SolidSyslogStream_Open(stream, addr);
+    int (*readFn)(BIO*, char*, int) = OpenSslFake_LastBioReadCallback();
+    CHECK_TRUE(readFn != nullptr);
+    char buf[16];
+    readFn(OpenSslFake_LastBioReturned(), buf, sizeof(buf));
+    LONGS_EQUAL(1, StreamFake_ReadCallCount(transport));
+}
+
+TEST(SolidSyslogTlsStream, BioWriteCallbackDelegatesToTransportSend)
+{
+    SolidSyslogStream_Open(stream, addr);
+    int (*writeFn)(BIO*, const char*, int) = OpenSslFake_LastBioWriteCallback();
+    CHECK_TRUE(writeFn != nullptr);
+    const char msg[] = "hi";
+    writeFn(OpenSslFake_LastBioReturned(), msg, (int) sizeof(msg));
+    LONGS_EQUAL(1, StreamFake_SendCallCount(transport));
+}
