@@ -1,6 +1,6 @@
 services:
   gcc:
-    image: ghcr.io/davidcozens/cpputest:sha-6acaccf
+    image: ghcr.io/davidcozens/cpputest:sha-18f19e1
     volumes:
       - ..:/workspaces/SolidSyslog:cached
       - ${SSH_AUTH_SOCK:-/dev/null}:/ssh-agent
@@ -61,7 +61,7 @@ services:
     command: sleep infinity
 
   clang:
-    image: ghcr.io/davidcozens/cpputest-clang:sha-6ea3f95
+    image: ghcr.io/davidcozens/cpputest-clang:sha-0385cea
     volumes:
       - ..:/workspaces/SolidSyslog:cached
       - ${SSH_AUTH_SOCK:-/dev/null}:/ssh-agent
