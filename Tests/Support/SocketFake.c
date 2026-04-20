@@ -52,8 +52,12 @@ static int lastSetSockOptOptname;
 static int closeCallCount;
 static int lastClosedFd;
 
-static int     recvCallCount;
-static ssize_t recvReturn;
+static int         recvCallCount;
+static ssize_t     recvReturn;
+static int         lastRecvFd;
+static const void* lastRecvBuf;
+static size_t      lastRecvLen;
+static int         lastRecvFlags;
 
 static char lastAddrString[INET_ADDRSTRLEN];
 
@@ -102,6 +106,10 @@ void SocketFake_Reset(void)
     lastClosedFd             = -1;
     recvCallCount            = 0;
     recvReturn               = 0;
+    lastRecvFd               = -1;
+    lastRecvBuf              = NULL;
+    lastRecvLen              = 0;
+    lastRecvFlags            = 0;
     lastAddrString[0]        = '\0';
 
     getAddrInfoFails            = false;
@@ -328,6 +336,26 @@ int SocketFake_RecvCallCount(void)
     return recvCallCount;
 }
 
+int SocketFake_LastRecvFd(void)
+{
+    return lastRecvFd;
+}
+
+const void* SocketFake_LastRecvBuf(void)
+{
+    return lastRecvBuf;
+}
+
+size_t SocketFake_LastRecvLen(void)
+{
+    return lastRecvLen;
+}
+
+int SocketFake_LastRecvFlags(void)
+{
+    return lastRecvFlags;
+}
+
 /* getaddrinfo configuration */
 
 void SocketFake_SetGetAddrInfoFails(bool fails)
@@ -450,11 +478,11 @@ int close(int fd)
 
 ssize_t recv(int sockfd, void* buf, size_t len, int flags)
 {
-    (void) sockfd;
-    (void) buf;
-    (void) len;
-    (void) flags;
     recvCallCount++;
+    lastRecvFd    = sockfd;
+    lastRecvBuf   = buf;
+    lastRecvLen   = len;
+    lastRecvFlags = flags;
     return recvReturn;
 }
 

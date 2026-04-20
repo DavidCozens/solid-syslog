@@ -183,8 +183,39 @@ TEST(SolidSyslogPosixTcpStream, ReadCallsRecvOnce)
     SolidSyslogStream_Open(stream, addr);
     char buf[16];
     SolidSyslogStream_Read(stream, buf, sizeof(buf));
-    SolidSyslogStream_Close(stream);
     LONGS_EQUAL(1, SocketFake_RecvCallCount());
+}
+
+TEST(SolidSyslogPosixTcpStream, ReadPassesSocketFdToRecv)
+{
+    SolidSyslogStream_Open(stream, addr);
+    char buf[16];
+    SolidSyslogStream_Read(stream, buf, sizeof(buf));
+    LONGS_EQUAL(SocketFake_SocketFd(), SocketFake_LastRecvFd());
+}
+
+TEST(SolidSyslogPosixTcpStream, ReadPassesBufferToRecv)
+{
+    SolidSyslogStream_Open(stream, addr);
+    char buf[16];
+    SolidSyslogStream_Read(stream, buf, sizeof(buf));
+    POINTERS_EQUAL(buf, SocketFake_LastRecvBuf());
+}
+
+TEST(SolidSyslogPosixTcpStream, ReadPassesLengthToRecv)
+{
+    SolidSyslogStream_Open(stream, addr);
+    char buf[16];
+    SolidSyslogStream_Read(stream, buf, sizeof(buf));
+    LONGS_EQUAL(sizeof(buf), SocketFake_LastRecvLen());
+}
+
+TEST(SolidSyslogPosixTcpStream, ReadPassesZeroFlagsToRecv)
+{
+    SolidSyslogStream_Open(stream, addr);
+    char buf[16];
+    SolidSyslogStream_Read(stream, buf, sizeof(buf));
+    LONGS_EQUAL(0, SocketFake_LastRecvFlags());
 }
 
 TEST(SolidSyslogPosixTcpStream, ReadReturnsRecvReturnValue)
@@ -193,6 +224,14 @@ TEST(SolidSyslogPosixTcpStream, ReadReturnsRecvReturnValue)
     SolidSyslogStream_Open(stream, addr);
     char buf[16];
     ssize_t n = SolidSyslogStream_Read(stream, buf, sizeof(buf));
-    SolidSyslogStream_Close(stream);
     LONGS_EQUAL(7, n);
+}
+
+TEST(SolidSyslogPosixTcpStream, DestroyResetsFdSoRecreatedStreamIsNotOpen)
+{
+    SolidSyslogStream_Open(stream, addr);
+    SolidSyslogPosixTcpStream_Destroy();
+    struct SolidSyslogStream* reopened = SolidSyslogPosixTcpStream_Create();
+    SolidSyslogStream_Close(reopened);
+    LONGS_EQUAL(0, SocketFake_CloseCallCount());
 }

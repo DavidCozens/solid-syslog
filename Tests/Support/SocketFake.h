@@ -67,7 +67,11 @@ EXTERN_C_BEGIN
     void SocketFake_SetRecvReturn(ssize_t value);
 
     /* recv accessors */
-    int SocketFake_RecvCallCount(void);
+    int         SocketFake_RecvCallCount(void);
+    int         SocketFake_LastRecvFd(void);
+    const void* SocketFake_LastRecvBuf(void);
+    size_t      SocketFake_LastRecvLen(void);
+    int         SocketFake_LastRecvFlags(void);
 
     /* getaddrinfo configuration */
     void SocketFake_SetGetAddrInfoFails(bool fails);
