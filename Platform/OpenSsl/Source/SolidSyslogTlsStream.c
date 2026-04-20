@@ -7,9 +7,13 @@ struct SolidSyslogTlsStream
 {
     struct SolidSyslogStream          base;
     struct SolidSyslogTlsStreamConfig config;
+    SSL_CTX*                          ctx;
+    SSL*                              ssl;
 };
 
 static bool     Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr);
+static bool     Send(struct SolidSyslogStream* self, const void* buffer, size_t size);
+static void     Close(struct SolidSyslogStream* self);
 static SSL_CTX* CreateSslContext(const char* caBundlePath);
 static BIO*     CreateTransportBio(void);
 static int      TransportBioRead(BIO* bio, char* buffer, int size);
@@ -19,31 +23,52 @@ static struct SolidSyslogTlsStream instance;
 
 struct SolidSyslogStream* SolidSyslogTlsStream_Create(const struct SolidSyslogTlsStreamConfig* config)
 {
-    instance.config    = *config;
-    instance.base.Open = Open;
+    instance.config     = *config;
+    instance.base.Open  = Open;
+    instance.base.Send  = Send;
+    instance.base.Close = Close;
     return &instance.base;
 }
 
 void SolidSyslogTlsStream_Destroy(void)
 {
+    if (instance.ctx != NULL)
+    {
+        SSL_CTX_free(instance.ctx);
+        instance.ctx = NULL;
+    }
 }
 
 static bool Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr)
 {
     struct SolidSyslogTlsStream* stream = (struct SolidSyslogTlsStream*) self;
     SolidSyslogStream_Open(stream->config.transport, addr);
-    SSL_CTX* ctx = CreateSslContext(stream->config.caBundlePath);
-    SSL*     ssl = SSL_new(ctx);
-    BIO*     bio = CreateTransportBio();
+    stream->ctx = CreateSslContext(stream->config.caBundlePath);
+    stream->ssl = SSL_new(stream->ctx);
+    BIO* bio     = CreateTransportBio();
     BIO_set_data(bio, stream->config.transport);
-    SSL_set_bio(ssl, bio, bio);
+    SSL_set_bio(stream->ssl, bio, bio);
     if (stream->config.serverName != NULL)
     {
-        SSL_set_tlsext_host_name(ssl, stream->config.serverName);
-        SSL_set1_host(ssl, stream->config.serverName);
+        SSL_set_tlsext_host_name(stream->ssl, stream->config.serverName);
+        SSL_set1_host(stream->ssl, stream->config.serverName);
     }
-    SSL_connect(ssl);
+    SSL_connect(stream->ssl);
     return true;
+}
+
+static bool Send(struct SolidSyslogStream* self, const void* buffer, size_t size)
+{
+    struct SolidSyslogTlsStream* stream = (struct SolidSyslogTlsStream*) self;
+    return SSL_write(stream->ssl, buffer, (int) size) > 0;
+}
+
+static void Close(struct SolidSyslogStream* self)
+{
+    struct SolidSyslogTlsStream* stream = (struct SolidSyslogTlsStream*) self;
+    SSL_shutdown(stream->ssl);
+    SSL_free(stream->ssl);
+    SolidSyslogStream_Close(stream->config.transport);
 }
 
 static BIO* CreateTransportBio(void)

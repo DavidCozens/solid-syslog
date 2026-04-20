@@ -174,3 +174,64 @@ TEST(SolidSyslogTlsStream, BioWriteCallbackDelegatesToTransportSend)
     writeFn(OpenSslFake_LastBioReturned(), msg, (int) sizeof(msg));
     LONGS_EQUAL(1, StreamFake_SendCallCount(transport));
 }
+
+TEST(SolidSyslogTlsStream, SendWritesToSsl)
+{
+    SolidSyslogStream_Open(stream, addr);
+    const char msg[] = "hello";
+    SolidSyslogStream_Send(stream, msg, sizeof(msg));
+    LONGS_EQUAL(1, OpenSslFake_WriteCallCount());
+}
+
+TEST(SolidSyslogTlsStream, SendPassesBufferToSslWrite)
+{
+    SolidSyslogStream_Open(stream, addr);
+    const char msg[] = "hello";
+    SolidSyslogStream_Send(stream, msg, sizeof(msg));
+    POINTERS_EQUAL(msg, OpenSslFake_LastWriteBuf());
+}
+
+TEST(SolidSyslogTlsStream, SendPassesSizeToSslWrite)
+{
+    SolidSyslogStream_Open(stream, addr);
+    const char msg[] = "hello";
+    SolidSyslogStream_Send(stream, msg, sizeof(msg));
+    LONGS_EQUAL(sizeof(msg), OpenSslFake_LastWriteSize());
+}
+
+TEST(SolidSyslogTlsStream, SendPassesSslFromNewToWrite)
+{
+    SolidSyslogStream_Open(stream, addr);
+    const char msg[] = "hello";
+    SolidSyslogStream_Send(stream, msg, sizeof(msg));
+    POINTERS_EQUAL(OpenSslFake_LastSslReturned(), OpenSslFake_LastWriteSslArg());
+}
+
+TEST(SolidSyslogTlsStream, CloseShutsDownSsl)
+{
+    SolidSyslogStream_Open(stream, addr);
+    SolidSyslogStream_Close(stream);
+    LONGS_EQUAL(1, OpenSslFake_ShutdownCallCount());
+}
+
+TEST(SolidSyslogTlsStream, CloseFreesSsl)
+{
+    SolidSyslogStream_Open(stream, addr);
+    SolidSyslogStream_Close(stream);
+    LONGS_EQUAL(1, OpenSslFake_FreeCallCount());
+}
+
+TEST(SolidSyslogTlsStream, CloseClosesTransport)
+{
+    SolidSyslogStream_Open(stream, addr);
+    SolidSyslogStream_Close(stream);
+    LONGS_EQUAL(1, StreamFake_CloseCallCount(transport));
+}
+
+TEST(SolidSyslogTlsStream, DestroyFreesSslContext)
+{
+    SolidSyslogStream_Open(stream, addr);
+    SolidSyslogTlsStream_Destroy();
+    LONGS_EQUAL(1, OpenSslFake_CtxFreeCallCount());
+    /* teardown re-Destroys safely */
+}

@@ -31,6 +31,13 @@ EXTERN_C_BEGIN
     void*              OpenSslFake_LastSetDataArg(void);
     int (*OpenSslFake_LastBioReadCallback(void))(struct bio_st*, char*, int);
     int (*OpenSslFake_LastBioWriteCallback(void))(struct bio_st*, const char*, int);
+    int                OpenSslFake_WriteCallCount(void);
+    struct ssl_st*     OpenSslFake_LastWriteSslArg(void);
+    const void*        OpenSslFake_LastWriteBuf(void);
+    int                OpenSslFake_LastWriteSize(void);
+    int                OpenSslFake_ShutdownCallCount(void);
+    int                OpenSslFake_FreeCallCount(void);
+    int                OpenSslFake_CtxFreeCallCount(void);
 
 EXTERN_C_END
 

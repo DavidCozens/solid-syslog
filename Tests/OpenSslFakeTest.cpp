@@ -206,3 +206,66 @@ TEST(OpenSslFake, BioMethSetWriteCapturesCallback)
     BIO_meth_set_write(method, DummyWrite);
     POINTERS_EQUAL((void*) DummyWrite, (void*) OpenSslFake_LastBioWriteCallback());
 }
+
+TEST(OpenSslFake, WriteIncrementsCount)
+{
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL*     ssl = SSL_new(ctx);
+    SSL_write(ssl, "x", 1);
+    LONGS_EQUAL(1, OpenSslFake_WriteCallCount());
+}
+
+TEST(OpenSslFake, WriteCapturesSslArg)
+{
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL*     ssl = SSL_new(ctx);
+    SSL_write(ssl, "x", 1);
+    POINTERS_EQUAL(ssl, OpenSslFake_LastWriteSslArg());
+}
+
+TEST(OpenSslFake, WriteCapturesBuffer)
+{
+    SSL_CTX*    ctx = SSL_CTX_new(TLS_client_method());
+    SSL*        ssl = SSL_new(ctx);
+    const char* msg = "payload";
+    SSL_write(ssl, msg, 7);
+    POINTERS_EQUAL(msg, OpenSslFake_LastWriteBuf());
+}
+
+TEST(OpenSslFake, WriteCapturesSize)
+{
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL*     ssl = SSL_new(ctx);
+    SSL_write(ssl, "payload", 7);
+    LONGS_EQUAL(7, OpenSslFake_LastWriteSize());
+}
+
+TEST(OpenSslFake, WriteDefaultsToEchoingSize)
+{
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL*     ssl = SSL_new(ctx);
+    LONGS_EQUAL(7, SSL_write(ssl, "payload", 7));
+}
+
+TEST(OpenSslFake, ShutdownIncrementsCount)
+{
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL*     ssl = SSL_new(ctx);
+    SSL_shutdown(ssl);
+    LONGS_EQUAL(1, OpenSslFake_ShutdownCallCount());
+}
+
+TEST(OpenSslFake, FreeIncrementsCount)
+{
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL*     ssl = SSL_new(ctx);
+    SSL_free(ssl);
+    LONGS_EQUAL(1, OpenSslFake_FreeCallCount());
+}
+
+TEST(OpenSslFake, CtxFreeIncrementsCount)
+{
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL_CTX_free(ctx);
+    LONGS_EQUAL(1, OpenSslFake_CtxFreeCallCount());
+}

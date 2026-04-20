@@ -20,6 +20,13 @@ static const char* lastSet1Host;
 static void*       lastSetDataArg;
 static int (*lastBioReadCallback)(BIO*, char*, int);
 static int (*lastBioWriteCallback)(BIO*, const char*, int);
+static int         writeCallCount;
+static SSL*        lastWriteSslArg;
+static const void* lastWriteBuf;
+static int         lastWriteSize;
+static int         shutdownCallCount;
+static int         freeCallCount;
+static int         ctxFreeCallCount;
 static char        fakeCtxStorage;
 static char        fakeMethodStorage;
 static char        fakeSslStorage;
@@ -45,6 +52,13 @@ void OpenSslFake_Reset(void)
     lastSetDataArg       = NULL;
     lastBioReadCallback  = NULL;
     lastBioWriteCallback = NULL;
+    writeCallCount       = 0;
+    lastWriteSslArg      = NULL;
+    lastWriteBuf         = NULL;
+    lastWriteSize        = 0;
+    shutdownCallCount    = 0;
+    freeCallCount        = 0;
+    ctxFreeCallCount     = 0;
 }
 
 int OpenSslFake_CtxNewCallCount(void)
@@ -147,6 +161,41 @@ int (*OpenSslFake_LastBioWriteCallback(void))(BIO*, const char*, int)
     return lastBioWriteCallback;
 }
 
+int OpenSslFake_WriteCallCount(void)
+{
+    return writeCallCount;
+}
+
+SSL* OpenSslFake_LastWriteSslArg(void)
+{
+    return lastWriteSslArg;
+}
+
+const void* OpenSslFake_LastWriteBuf(void)
+{
+    return lastWriteBuf;
+}
+
+int OpenSslFake_LastWriteSize(void)
+{
+    return lastWriteSize;
+}
+
+int OpenSslFake_ShutdownCallCount(void)
+{
+    return shutdownCallCount;
+}
+
+int OpenSslFake_FreeCallCount(void)
+{
+    return freeCallCount;
+}
+
+int OpenSslFake_CtxFreeCallCount(void)
+{
+    return ctxFreeCallCount;
+}
+
 /* Link-time substitution for OpenSSL — replaces libssl symbols in the test
  * binary. Production links real libssl; tests never link -lssl. */
 
@@ -242,6 +291,34 @@ int BIO_meth_set_write(BIO_METHOD* method, int (*write)(BIO*, const char*, int))
     (void) method;
     lastBioWriteCallback = write;
     return 1;
+}
+
+int SSL_write(SSL* ssl, const void* buf, int num)
+{
+    writeCallCount++;
+    lastWriteSslArg = ssl;
+    lastWriteBuf    = buf;
+    lastWriteSize   = num;
+    return num;
+}
+
+int SSL_shutdown(SSL* ssl)
+{
+    (void) ssl;
+    shutdownCallCount++;
+    return 1;
+}
+
+void SSL_free(SSL* ssl)
+{
+    (void) ssl;
+    freeCallCount++;
+}
+
+void SSL_CTX_free(SSL_CTX* ctx)
+{
+    (void) ctx;
+    ctxFreeCallCount++;
 }
 
 int SSL_CTX_load_verify_locations(SSL_CTX* ctx, const char* CAfile, const char* CApath)
