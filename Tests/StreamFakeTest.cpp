@@ -89,3 +89,18 @@ TEST(StreamFake, CloseIncrementsCount)
     SolidSyslogStream_Close(stream);
     LONGS_EQUAL(1, StreamFake_CloseCallCount(stream));
 }
+
+TEST(StreamFake, OpenDefaultsToSuccess)
+{
+    SolidSyslogAddressStorage  storage = {0};
+    struct SolidSyslogAddress* addr    = SolidSyslogAddress_FromStorage(&storage);
+    CHECK_TRUE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(StreamFake, SetOpenFailsMakesOpenReturnFalse)
+{
+    StreamFake_SetOpenFails(stream, true);
+    SolidSyslogAddressStorage  storage = {0};
+    struct SolidSyslogAddress* addr    = SolidSyslogAddress_FromStorage(&storage);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}

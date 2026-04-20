@@ -42,7 +42,10 @@ void SolidSyslogTlsStream_Destroy(void)
 static bool Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr)
 {
     struct SolidSyslogTlsStream* stream = (struct SolidSyslogTlsStream*) self;
-    SolidSyslogStream_Open(stream->config.transport, addr);
+    if (!SolidSyslogStream_Open(stream->config.transport, addr))
+    {
+        return false;
+    }
     stream->ctx = CreateSslContext(stream->config.caBundlePath);
     stream->ssl = SSL_new(stream->ctx);
     BIO* bio     = CreateTransportBio();
@@ -53,8 +56,7 @@ static bool Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress
         SSL_set_tlsext_host_name(stream->ssl, stream->config.serverName);
         SSL_set1_host(stream->ssl, stream->config.serverName);
     }
-    SSL_connect(stream->ssl);
-    return true;
+    return SSL_connect(stream->ssl) > 0;
 }
 
 static bool Send(struct SolidSyslogStream* self, const void* buffer, size_t size)

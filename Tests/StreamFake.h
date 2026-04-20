@@ -3,6 +3,7 @@
 
 #include "ExternC.h"
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <sys/types.h>
 
@@ -22,6 +23,7 @@ EXTERN_C_BEGIN
     void*                            StreamFake_LastReadBuf(struct SolidSyslogStream* stream);
     size_t                           StreamFake_LastReadSize(struct SolidSyslogStream* stream);
     void                             StreamFake_SetReadReturn(struct SolidSyslogStream* stream, ssize_t value);
+    void                             StreamFake_SetOpenFails(struct SolidSyslogStream* stream, bool fails);
     int                              StreamFake_CloseCallCount(struct SolidSyslogStream* stream);
 
 EXTERN_C_END

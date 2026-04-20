@@ -342,3 +342,46 @@ TEST(SolidSyslogTlsStream, DestroyPassesCtxFromNewToCtxFree)
     SolidSyslogTlsStream_Destroy();
     POINTERS_EQUAL(OpenSslFake_LastCtxReturned(), OpenSslFake_LastCtxFreeCtxArg());
 }
+
+/* -------------------------------------------------------------------------
+ * Error paths.
+ * ------------------------------------------------------------------------- */
+
+TEST(SolidSyslogTlsStream, OpenReturnsTrueOnHappyPath)
+{
+    CHECK_TRUE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenHandshakeFails)
+{
+    OpenSslFake_SetConnectFails(true);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(SolidSyslogTlsStream, SendReturnsTrueOnHappyPath)
+{
+    SolidSyslogStream_Open(stream, addr);
+    const char msg[] = "hi";
+    CHECK_TRUE(SolidSyslogStream_Send(stream, msg, sizeof(msg)));
+}
+
+TEST(SolidSyslogTlsStream, SendReturnsFalseWhenWriteFails)
+{
+    SolidSyslogStream_Open(stream, addr);
+    OpenSslFake_SetWriteFails(true);
+    const char msg[] = "hi";
+    CHECK_FALSE(SolidSyslogStream_Send(stream, msg, sizeof(msg)));
+}
+
+TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenTransportOpenFails)
+{
+    StreamFake_SetOpenFails(transport, true);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(SolidSyslogTlsStream, OpenSkipsSslSetupWhenTransportOpenFails)
+{
+    StreamFake_SetOpenFails(transport, true);
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(0, OpenSslFake_CtxNewCallCount());
+}

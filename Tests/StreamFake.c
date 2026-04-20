@@ -9,6 +9,7 @@ struct StreamFake
     struct SolidSyslogStream         base;
     int                              openCallCount;
     const struct SolidSyslogAddress* lastOpenAddr;
+    bool                             openFails;
     int                              sendCallCount;
     const void*                      lastSendBuf;
     size_t                           lastSendSize;
@@ -24,7 +25,7 @@ static bool Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress
     struct StreamFake* fake = (struct StreamFake*) self;
     fake->openCallCount++;
     fake->lastOpenAddr = addr;
-    return true;
+    return !fake->openFails;
 }
 
 static bool Send(struct SolidSyslogStream* self, const void* buffer, size_t size)
@@ -109,6 +110,11 @@ size_t StreamFake_LastReadSize(struct SolidSyslogStream* stream)
 void StreamFake_SetReadReturn(struct SolidSyslogStream* stream, ssize_t value)
 {
     ((struct StreamFake*) stream)->readReturn = value;
+}
+
+void StreamFake_SetOpenFails(struct SolidSyslogStream* stream, bool fails)
+{
+    ((struct StreamFake*) stream)->openFails = fails;
 }
 
 int StreamFake_CloseCallCount(struct SolidSyslogStream* stream)

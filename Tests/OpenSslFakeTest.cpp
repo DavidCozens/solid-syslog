@@ -395,3 +395,23 @@ TEST(OpenSslFake, CtxFreeCapturesCtxArg)
     SSL_CTX_free(ctx);
     POINTERS_EQUAL(ctx, OpenSslFake_LastCtxFreeCtxArg());
 }
+
+/* -------------------------------------------------------------------------
+ * Failure-mode switches — tests opt into failure returns via SetXxxFails.
+ * ------------------------------------------------------------------------- */
+
+TEST(OpenSslFake, SetConnectFailsMakesConnectReturnNegative)
+{
+    OpenSslFake_SetConnectFails(true);
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL*     ssl = SSL_new(ctx);
+    CHECK_TRUE(SSL_connect(ssl) <= 0);
+}
+
+TEST(OpenSslFake, SetWriteFailsMakesWriteReturnNegative)
+{
+    OpenSslFake_SetWriteFails(true);
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL*     ssl = SSL_new(ctx);
+    CHECK_TRUE(SSL_write(ssl, "x", 1) <= 0);
+}

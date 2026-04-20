@@ -3,6 +3,8 @@
 
 #include "ExternC.h"
 
+#include <stdbool.h>
+
 /* Forward-declared OpenSSL types — full definitions live in <openssl/ssl.h>. */
 struct ssl_ctx_st;
 struct ssl_st;
@@ -13,6 +15,10 @@ struct bio_method_st;
 EXTERN_C_BEGIN
 
     void OpenSslFake_Reset(void);
+
+    /* Failure-mode switches */
+    void OpenSslFake_SetConnectFails(bool fails);
+    void OpenSslFake_SetWriteFails(bool fails);
 
     /* SSL_CTX_new */
     int                         OpenSslFake_CtxNewCallCount(void);

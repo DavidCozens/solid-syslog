@@ -1,6 +1,7 @@
 #include "OpenSslFake.h"
 
 #include <openssl/ssl.h>
+#include <stdbool.h>
 #include <stddef.h>
 
 /* -------------------------------------------------------------------------
@@ -70,12 +71,14 @@ static const char* lastSet1Host;
 /* SSL_connect */
 static int  connectCallCount;
 static SSL* lastConnectSslArg;
+static bool connectFails;
 
 /* SSL_write */
 static int         writeCallCount;
 static SSL*        lastWriteSslArg;
 static const void* lastWriteBuf;
 static int         lastWriteSize;
+static bool        writeFails;
 
 /* SSL_shutdown */
 static int  shutdownCallCount;
@@ -124,10 +127,12 @@ void OpenSslFake_Reset(void)
     lastSet1Host                  = NULL;
     connectCallCount              = 0;
     lastConnectSslArg             = NULL;
+    connectFails                  = false;
     writeCallCount                = 0;
     lastWriteSslArg               = NULL;
     lastWriteBuf                  = NULL;
     lastWriteSize                 = 0;
+    writeFails                    = false;
     shutdownCallCount             = 0;
     lastShutdownSslArg            = NULL;
     freeCallCount                 = 0;
@@ -328,7 +333,12 @@ int SSL_connect(SSL* ssl)
 {
     connectCallCount++;
     lastConnectSslArg = ssl;
-    return 1;
+    return connectFails ? -1 : 1;
+}
+
+void OpenSslFake_SetConnectFails(bool fails)
+{
+    connectFails = fails;
 }
 
 int SSL_write(SSL* ssl, const void* buf, int num)
@@ -337,7 +347,12 @@ int SSL_write(SSL* ssl, const void* buf, int num)
     lastWriteSslArg = ssl;
     lastWriteBuf    = buf;
     lastWriteSize   = num;
-    return num;
+    return writeFails ? -1 : num;
+}
+
+void OpenSslFake_SetWriteFails(bool fails)
+{
+    writeFails = fails;
 }
 
 int SSL_shutdown(SSL* ssl)
