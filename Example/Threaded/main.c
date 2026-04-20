@@ -2,6 +2,7 @@
 #include "ExampleCommandLine.h"
 #include "ExampleInteractive.h"
 #include "ExampleServiceThread.h"
+#include "ExampleSwitchConfig.h"
 #include "ExampleTcpConfig.h"
 #include "ExampleUdpConfig.h"
 #include "SolidSyslog.h"
@@ -21,6 +22,7 @@
 #include "SolidSyslogGetAddrInfoResolver.h"
 #include "SolidSyslogPosixDatagram.h"
 #include "SolidSyslogPosixTcpStream.h"
+#include "SolidSyslogSwitchingSender.h"
 #include "SolidSyslogTcpSender.h"
 #include "SolidSyslogUdpSender.h"
 
@@ -50,24 +52,34 @@ static void* ServiceThreadEntry(void* arg)
 
 static struct SolidSyslogSender* CreateSender(const struct ExampleOptions* options)
 {
-    bool useTcp = (strcmp(options->transport, "tcp") == 0);
-
-    if (useTcp)
-    {
-        static struct SolidSyslogTcpSenderConfig tcpConfig = {0};
-        tcpConfig.resolver                                 = SolidSyslogGetAddrInfoResolver_Create();
-        tcpConfig.stream                                   = SolidSyslogPosixTcpStream_Create();
-        tcpConfig.endpoint                                 = ExampleTcpConfig_GetEndpoint;
-        tcpConfig.endpointVersion                          = ExampleTcpConfig_GetEndpointVersion;
-        return SolidSyslogTcpSender_Create(&tcpConfig);
-    }
+    struct SolidSyslogResolver* resolver = SolidSyslogGetAddrInfoResolver_Create();
 
     static struct SolidSyslogUdpSenderConfig udpConfig = {0};
-    udpConfig.resolver                                 = SolidSyslogGetAddrInfoResolver_Create();
+    udpConfig.resolver                                 = resolver;
     udpConfig.datagram                                 = SolidSyslogPosixDatagram_Create();
     udpConfig.endpoint                                 = ExampleUdpConfig_GetEndpoint;
     udpConfig.endpointVersion                          = ExampleUdpConfig_GetEndpointVersion;
-    return SolidSyslogUdpSender_Create(&udpConfig);
+    struct SolidSyslogSender* udpSender                = SolidSyslogUdpSender_Create(&udpConfig);
+
+    static struct SolidSyslogTcpSenderConfig tcpConfig = {0};
+    tcpConfig.resolver                                 = resolver;
+    tcpConfig.stream                                   = SolidSyslogPosixTcpStream_Create();
+    tcpConfig.endpoint                                 = ExampleTcpConfig_GetEndpoint;
+    tcpConfig.endpointVersion                          = ExampleTcpConfig_GetEndpointVersion;
+    struct SolidSyslogSender* tcpSender                = SolidSyslogTcpSender_Create(&tcpConfig);
+
+    static struct SolidSyslogSender* inners[EXAMPLE_SWITCH_COUNT];
+    inners[EXAMPLE_SWITCH_UDP] = udpSender;
+    inners[EXAMPLE_SWITCH_TCP] = tcpSender;
+
+    static struct SolidSyslogSwitchingSenderConfig switchConfig = {0};
+    switchConfig.senders                                        = inners;
+    switchConfig.senderCount                                    = EXAMPLE_SWITCH_COUNT;
+    switchConfig.selector                                       = ExampleSwitchConfig_Selector;
+
+    ExampleSwitchConfig_SetByName(options->transport);
+
+    return SolidSyslogSwitchingSender_Create(&switchConfig);
 }
 
 static enum SolidSyslogDiscardPolicy MapDiscardPolicy(const char* policy)
@@ -119,20 +131,13 @@ static struct SolidSyslogStore* CreateStore(const struct ExampleOptions* options
     return SolidSyslogNullStore_Create();
 }
 
-static void DestroySender(const struct ExampleOptions* options)
+static void DestroySender(void)
 {
-    bool useTcp = (strcmp(options->transport, "tcp") == 0);
-
-    if (useTcp)
-    {
-        SolidSyslogTcpSender_Destroy();
-        SolidSyslogPosixTcpStream_Destroy();
-    }
-    else
-    {
-        SolidSyslogUdpSender_Destroy();
-        SolidSyslogPosixDatagram_Destroy();
-    }
+    SolidSyslogSwitchingSender_Destroy();
+    SolidSyslogTcpSender_Destroy();
+    SolidSyslogPosixTcpStream_Destroy();
+    SolidSyslogUdpSender_Destroy();
+    SolidSyslogPosixDatagram_Destroy();
     SolidSyslogGetAddrInfoResolver_Destroy();
 }
 
@@ -202,7 +207,7 @@ int main(int argc, char* argv[])
         .msg       = options.msg,
     };
 
-    ExampleInteractive_Run(&message, stdin);
+    ExampleInteractive_Run(&message, stdin, ExampleSwitchConfig_SetByName);
 
     shutdown_flag = true;
     pthread_join(serviceThread, NULL);
@@ -214,7 +219,7 @@ int main(int argc, char* argv[])
     SolidSyslogAtomicCounter_Destroy();
     DestroyStore(&options);
     SolidSyslogPosixMessageQueueBuffer_Destroy();
-    DestroySender(&options);
+    DestroySender();
 
     return 0;
 }

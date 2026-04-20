@@ -102,7 +102,7 @@ int SolidSyslogWindowsExample_Run(int argc, char* argv[])
         .msg       = options.msg,
     };
 
-    ExampleInteractive_Run(&message, stdin);
+    ExampleInteractive_Run(&message, stdin, NULL);
 
     SolidSyslog_Destroy();
     SolidSyslogOriginSd_Destroy();

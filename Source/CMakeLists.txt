@@ -1,5 +1,6 @@
 set(SOURCES
     SolidSyslog.c
+    SolidSyslogSwitchingSender.c
     SolidSyslogBuffer.c
     SolidSyslogFormatter.c
     SolidSyslogMetaSd.c

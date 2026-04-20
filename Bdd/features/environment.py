@@ -12,6 +12,8 @@ SYSLOG_NG_FULL_CONF = "Bdd/syslog-ng/syslog-ng-full.conf"
 SYSLOG_NG_CTL = "/var/lib/syslog-ng/syslog-ng.ctl"
 STORE_FILE_PATH = "/tmp/solidsyslog_store.dat"
 STORE_PATH_PREFIX = "/tmp/STORE"
+RECEIVED_UDP_LOG = "Bdd/output/received_udp.log"
+RECEIVED_TCP_LOG = "Bdd/output/received_tcp.log"
 
 
 def wait_for_tcp_port_open(host="syslog-ng", port=5514, timeout=5):

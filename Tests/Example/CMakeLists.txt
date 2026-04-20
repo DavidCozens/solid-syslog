@@ -17,6 +17,7 @@ if(SOLIDSYSLOG_POSIX)
         ExampleCommandLineTest.cpp
         SolidSyslogExampleTest.cpp
         ExampleServiceThreadTest.cpp
+        ExampleSwitchConfigTest.cpp
     )
     list(APPEND EXAMPLE_PRODUCTION_SOURCES
         ${CMAKE_SOURCE_DIR}/Example/SingleTask/SolidSyslogExample.c
@@ -24,6 +25,7 @@ if(SOLIDSYSLOG_POSIX)
         ${CMAKE_SOURCE_DIR}/Example/Common/ExampleServiceThread.c
         ${CMAKE_SOURCE_DIR}/Example/Common/ExampleUdpConfig.c
         ${CMAKE_SOURCE_DIR}/Example/Common/ExampleInteractive.c
+        ${CMAKE_SOURCE_DIR}/Example/Common/ExampleSwitchConfig.c
     )
     list(APPEND EXAMPLE_TEST_INCLUDE_DIRS
         ${CMAKE_SOURCE_DIR}/Example/SingleTask

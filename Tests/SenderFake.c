@@ -2,6 +2,7 @@
 #include "SolidSyslogSenderDefinition.h"
 #include "TestUtils.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 enum
@@ -9,60 +10,84 @@ enum
     SENDERFAKE_MAX_BUFFER_SIZE = 1024
 };
 
-static int                      callCount;
-static char                     lastBuffer[SENDERFAKE_MAX_BUFFER_SIZE];
-static size_t                   lastSize;
-static bool                     failNextSend;
-static struct SolidSyslogSender sender;
+struct SenderFake
+{
+    struct SolidSyslogSender base;
+    int                      sendCount;
+    int                      disconnectCount;
+    char                     lastBuffer[SENDERFAKE_MAX_BUFFER_SIZE];
+    size_t                   lastSize;
+    bool                     failNextSend;
+};
 
 static bool Send(struct SolidSyslogSender* self, const void* buffer, size_t size)
 {
-    (void) self;
-    size_t copySize = MinSize(size, sizeof(lastBuffer) - 1);
+    struct SenderFake* fake     = (struct SenderFake*) self;
+    size_t             copySize = MinSize(size, sizeof(fake->lastBuffer) - 1);
     // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling) -- memcpy with bounded copySize; memcpy_s is not portable
-    memcpy(lastBuffer, buffer, copySize);
-    lastBuffer[copySize] = '\0';
-    lastSize             = size;
-    callCount++;
+    memcpy(fake->lastBuffer, buffer, copySize);
+    fake->lastBuffer[copySize] = '\0';
+    fake->lastSize             = size;
+    fake->sendCount++;
 
-    if (failNextSend)
+    if (fake->failNextSend)
     {
-        failNextSend = false;
+        fake->failNextSend = false;
         return false;
     }
     return true;
 }
 
-void SenderFake_Reset(void)
+static void Disconnect(struct SolidSyslogSender* self)
 {
-    callCount     = 0;
-    lastBuffer[0] = '\0';
-    lastSize      = 0;
-    failNextSend  = false;
+    struct SenderFake* fake = (struct SenderFake*) self;
+    fake->disconnectCount++;
 }
 
-void SenderFake_FailNextSend(void)
+struct SolidSyslogSender* SenderFake_Create(void)
 {
-    failNextSend = true;
+    struct SenderFake* fake = (struct SenderFake*) calloc(1, sizeof(struct SenderFake));
+    fake->base.Send         = Send;
+    fake->base.Disconnect   = Disconnect;
+    return &fake->base;
 }
 
-const char* SenderFake_LastBufferAsString(void)
+void SenderFake_Destroy(struct SolidSyslogSender* sender)
 {
-    return lastBuffer;
+    free(sender);
 }
 
-struct SolidSyslogSender* SenderFake_GetSender(void)
+void SenderFake_Reset(struct SolidSyslogSender* sender)
 {
-    sender.Send = Send;
-    return &sender;
+    struct SenderFake* fake = (struct SenderFake*) sender;
+    fake->sendCount         = 0;
+    fake->disconnectCount   = 0;
+    fake->lastBuffer[0]     = '\0';
+    fake->lastSize          = 0;
+    fake->failNextSend      = false;
 }
 
-int SenderFake_CallCount(void)
+int SenderFake_SendCount(struct SolidSyslogSender* sender)
 {
-    return callCount;
+    return ((struct SenderFake*) sender)->sendCount;
 }
 
-size_t SenderFake_LastSize(void)
+int SenderFake_DisconnectCount(struct SolidSyslogSender* sender)
 {
-    return lastSize;
+    return ((struct SenderFake*) sender)->disconnectCount;
+}
+
+const char* SenderFake_LastBufferAsString(struct SolidSyslogSender* sender)
+{
+    return ((struct SenderFake*) sender)->lastBuffer;
+}
+
+size_t SenderFake_LastSize(struct SolidSyslogSender* sender)
+{
+    return ((struct SenderFake*) sender)->lastSize;
+}
+
+void SenderFake_FailNextSend(struct SolidSyslogSender* sender)
+{
+    ((struct SenderFake*) sender)->failNextSend = true;
 }
