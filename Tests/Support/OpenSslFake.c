@@ -42,6 +42,8 @@ static SSL_CTX* lastSslNewCtxArg;
 /* BIO_meth_set_read / BIO_meth_set_write */
 static BIO_METHOD* lastBioMethSetReadMethodArg;
 static int (*lastBioReadCallback)(BIO*, char*, int);
+static long (*lastBioCtrlCallback)(BIO*, int, long, void*);
+static int (*lastBioCreateCallback)(BIO*);
 static BIO_METHOD* lastBioMethSetWriteMethodArg;
 static int (*lastBioWriteCallback)(BIO*, const char*, int);
 
@@ -110,6 +112,8 @@ void OpenSslFake_Reset(void)
     lastSslNewCtxArg              = NULL;
     lastBioMethSetReadMethodArg   = NULL;
     lastBioReadCallback           = NULL;
+    lastBioCtrlCallback           = NULL;
+    lastBioCreateCallback         = NULL;
     lastBioMethSetWriteMethodArg  = NULL;
     lastBioWriteCallback          = NULL;
     bioNewCallCount               = 0;
@@ -166,6 +170,10 @@ BIO_METHOD*        OpenSslFake_LastBioMethReturned(void) { return (BIO_METHOD*) 
 
 BIO_METHOD*        OpenSslFake_LastBioMethSetReadMethodArg(void) { return lastBioMethSetReadMethodArg; }
 int (*OpenSslFake_LastBioReadCallback(void))(BIO*, char*, int) { return lastBioReadCallback; }
+
+long (*OpenSslFake_LastBioCtrlCallback(void))(BIO*, int, long, void*) { return lastBioCtrlCallback; }
+
+int (*OpenSslFake_LastBioCreateCallback(void))(BIO*) { return lastBioCreateCallback; }
 
 BIO_METHOD*        OpenSslFake_LastBioMethSetWriteMethodArg(void) { return lastBioMethSetWriteMethodArg; }
 int (*OpenSslFake_LastBioWriteCallback(void))(BIO*, const char*, int) { return lastBioWriteCallback; }
@@ -280,6 +288,26 @@ int BIO_meth_set_write(BIO_METHOD* method, int (*write)(BIO*, const char*, int))
     lastBioMethSetWriteMethodArg = method;
     lastBioWriteCallback         = write;
     return 1;
+}
+
+int BIO_meth_set_ctrl(BIO_METHOD* method, long (*ctrl)(BIO*, int, long, void*))
+{
+    (void) method;
+    lastBioCtrlCallback = ctrl;
+    return 1;
+}
+
+int BIO_meth_set_create(BIO_METHOD* method, int (*create)(BIO*))
+{
+    (void) method;
+    lastBioCreateCallback = create;
+    return 1;
+}
+
+void BIO_set_init(BIO* bio, int init)
+{
+    (void) bio;
+    (void) init;
 }
 
 BIO* BIO_new(const BIO_METHOD* method)

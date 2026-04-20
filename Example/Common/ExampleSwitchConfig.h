@@ -11,6 +11,7 @@ EXTERN_C_BEGIN
     {
         EXAMPLE_SWITCH_UDP,
         EXAMPLE_SWITCH_TCP,
+        EXAMPLE_SWITCH_TLS,
         EXAMPLE_SWITCH_COUNT,
     };
 

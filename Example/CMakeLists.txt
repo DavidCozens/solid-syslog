@@ -5,6 +5,7 @@ if(SOLIDSYSLOG_POSIX)
         Common/ExampleServiceThread.c
         Common/ExampleUdpConfig.c
         Common/ExampleTcpConfig.c
+        Common/ExampleTlsConfig.c
         Common/ExampleInteractive.c
         Common/ExampleSwitchConfig.c
     )
@@ -17,9 +18,11 @@ if(SOLIDSYSLOG_POSIX)
         ${CMAKE_CURRENT_SOURCE_DIR}/Common
     )
 
-    # Threaded example: PosixMessageQueueBuffer, two pthreads (requires POSIX threads and mqueue)
+    # Threaded example: PosixMessageQueueBuffer, two pthreads (requires POSIX threads and mqueue),
+    # OpenSSL for the TLS transport.
+    find_package(OpenSSL REQUIRED)
     add_executable(SolidSyslogThreadedExample Threaded/main.c ${COMMON_SOURCES})
-    target_link_libraries(SolidSyslogThreadedExample PRIVATE ${PROJECT_NAME} Threads::Threads)
+    target_link_libraries(SolidSyslogThreadedExample PRIVATE ${PROJECT_NAME} Threads::Threads OpenSSL::SSL OpenSSL::Crypto)
     target_include_directories(SolidSyslogThreadedExample PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/Common
     )

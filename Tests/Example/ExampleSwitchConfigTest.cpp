@@ -24,6 +24,12 @@ TEST(ExampleSwitchConfig, SetByNameTcpSelectsTcpIndex)
     LONGS_EQUAL(EXAMPLE_SWITCH_TCP, ExampleSwitchConfig_Selector());
 }
 
+TEST(ExampleSwitchConfig, SetByNameTlsSelectsTlsIndex)
+{
+    ExampleSwitchConfig_SetByName("tls");
+    LONGS_EQUAL(EXAMPLE_SWITCH_TLS, ExampleSwitchConfig_Selector());
+}
+
 TEST(ExampleSwitchConfig, UnknownNameLeavesPreviousSelection)
 {
     ExampleSwitchConfig_SetByName("tcp");

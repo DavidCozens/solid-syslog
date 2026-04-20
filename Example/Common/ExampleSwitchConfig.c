@@ -14,6 +14,10 @@ void ExampleSwitchConfig_SetByName(const char* name)
     {
         selectedIndex = EXAMPLE_SWITCH_TCP;
     }
+    else if (strcmp(name, "tls") == 0)
+    {
+        selectedIndex = EXAMPLE_SWITCH_TLS;
+    }
 }
 
 uint8_t ExampleSwitchConfig_Selector(void)

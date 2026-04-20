@@ -385,3 +385,15 @@ TEST(SolidSyslogTlsStream, OpenSkipsSslSetupWhenTransportOpenFails)
     SolidSyslogStream_Open(stream, addr);
     LONGS_EQUAL(0, OpenSslFake_CtxNewCallCount());
 }
+
+TEST(SolidSyslogTlsStream, OpenWiresBioCtrlCallback)
+{
+    SolidSyslogStream_Open(stream, addr);
+    CHECK_TRUE(OpenSslFake_LastBioCtrlCallback() != nullptr);
+}
+
+TEST(SolidSyslogTlsStream, OpenWiresBioCreateCallback)
+{
+    SolidSyslogStream_Open(stream, addr);
+    CHECK_TRUE(OpenSslFake_LastBioCreateCallback() != nullptr);
+}

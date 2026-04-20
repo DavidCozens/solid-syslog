@@ -207,6 +207,35 @@ TEST(OpenSslFake, BioMethSetWriteCapturesCallback)
     POINTERS_EQUAL((void*) DummyWrite, (void*) OpenSslFake_LastBioWriteCallback());
 }
 
+static long DummyCtrl(BIO* bio, int cmd, long larg, void* parg)
+{
+    (void) bio;
+    (void) cmd;
+    (void) larg;
+    (void) parg;
+    return 0;
+}
+
+TEST(OpenSslFake, BioMethSetCtrlCapturesCallback)
+{
+    BIO_METHOD* method = BIO_meth_new(0, "fake");
+    BIO_meth_set_ctrl(method, DummyCtrl);
+    POINTERS_EQUAL((void*) DummyCtrl, (void*) OpenSslFake_LastBioCtrlCallback());
+}
+
+static int DummyCreate(BIO* bio)
+{
+    (void) bio;
+    return 1;
+}
+
+TEST(OpenSslFake, BioMethSetCreateCapturesCallback)
+{
+    BIO_METHOD* method = BIO_meth_new(0, "fake");
+    BIO_meth_set_create(method, DummyCreate);
+    POINTERS_EQUAL((void*) DummyCreate, (void*) OpenSslFake_LastBioCreateCallback());
+}
+
 TEST(OpenSslFake, WriteIncrementsCount)
 {
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
