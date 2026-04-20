@@ -52,6 +52,9 @@ static int lastSetSockOptOptname;
 static int closeCallCount;
 static int lastClosedFd;
 
+static int     recvCallCount;
+static ssize_t recvReturn;
+
 static char lastAddrString[INET_ADDRSTRLEN];
 
 static bool               getAddrInfoFails;
@@ -97,6 +100,8 @@ void SocketFake_Reset(void)
     lastSocketType           = 0;
     closeCallCount           = 0;
     lastClosedFd             = -1;
+    recvCallCount            = 0;
+    recvReturn               = 0;
     lastAddrString[0]        = '\0';
 
     getAddrInfoFails            = false;
@@ -309,6 +314,20 @@ int SocketFake_LastClosedFd(void)
     return lastClosedFd;
 }
 
+/* recv configuration */
+
+void SocketFake_SetRecvReturn(ssize_t value)
+{
+    recvReturn = value;
+}
+
+/* recv accessors */
+
+int SocketFake_RecvCallCount(void)
+{
+    return recvCallCount;
+}
+
 /* getaddrinfo configuration */
 
 void SocketFake_SetGetAddrInfoFails(bool fails)
@@ -427,6 +446,16 @@ int close(int fd)
     closeCallCount++;
     lastClosedFd = fd;
     return 0;
+}
+
+ssize_t recv(int sockfd, void* buf, size_t len, int flags)
+{
+    (void) sockfd;
+    (void) buf;
+    (void) len;
+    (void) flags;
+    recvCallCount++;
+    return recvReturn;
 }
 
 // clang-format off

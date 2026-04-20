@@ -63,6 +63,12 @@ EXTERN_C_BEGIN
     int SocketFake_CloseCallCount(void);
     int SocketFake_LastClosedFd(void);
 
+    /* recv configuration */
+    void SocketFake_SetRecvReturn(ssize_t value);
+
+    /* recv accessors */
+    int SocketFake_RecvCallCount(void);
+
     /* getaddrinfo configuration */
     void SocketFake_SetGetAddrInfoFails(bool fails);
 

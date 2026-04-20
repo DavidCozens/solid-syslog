@@ -177,3 +177,22 @@ TEST(SolidSyslogPosixTcpStream, CloseIsNoOpWhenNotOpen)
     SolidSyslogStream_Close(stream);
     LONGS_EQUAL(0, SocketFake_CloseCallCount());
 }
+
+TEST(SolidSyslogPosixTcpStream, ReadCallsRecvOnce)
+{
+    SolidSyslogStream_Open(stream, addr);
+    char buf[16];
+    SolidSyslogStream_Read(stream, buf, sizeof(buf));
+    SolidSyslogStream_Close(stream);
+    LONGS_EQUAL(1, SocketFake_RecvCallCount());
+}
+
+TEST(SolidSyslogPosixTcpStream, ReadReturnsRecvReturnValue)
+{
+    SocketFake_SetRecvReturn(7);
+    SolidSyslogStream_Open(stream, addr);
+    char buf[16];
+    ssize_t n = SolidSyslogStream_Read(stream, buf, sizeof(buf));
+    SolidSyslogStream_Close(stream);
+    LONGS_EQUAL(7, n);
+}

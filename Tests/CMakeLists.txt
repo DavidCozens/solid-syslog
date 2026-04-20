@@ -58,6 +58,7 @@ if(SOLIDSYSLOG_POSIX)
         SolidSyslogGetAddrInfoResolverTest.cpp
         SolidSyslogPosixDatagramTest.cpp
         SolidSyslogPosixTcpStreamTest.cpp
+        SocketFakeTest.cpp
     )
 endif()
 
