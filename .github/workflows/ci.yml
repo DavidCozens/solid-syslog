@@ -16,7 +16,7 @@ jobs:
       contents: read
       checks: write
     container:
-      image: ghcr.io/davidcozens/cpputest:sha-6acaccf
+      image: ghcr.io/davidcozens/cpputest:sha-18f19e1
       options: --user root
     env:
       GIT_CONFIG_COUNT: 1
@@ -67,7 +67,7 @@ jobs:
       contents: read
       checks: write
     container:
-      image: ghcr.io/davidcozens/cpputest-clang:sha-6ea3f95
+      image: ghcr.io/davidcozens/cpputest-clang:sha-0385cea
       options: --user root
     env:
       GIT_CONFIG_COUNT: 1
@@ -105,7 +105,7 @@ jobs:
       contents: read
       checks: write
     container:
-      image: ghcr.io/davidcozens/cpputest:sha-6acaccf
+      image: ghcr.io/davidcozens/cpputest:sha-18f19e1
       options: --user root
     env:
       GIT_CONFIG_COUNT: 1
@@ -145,7 +145,7 @@ jobs:
       pages: write
       id-token: write
     container:
-      image: ghcr.io/davidcozens/cpputest:sha-6acaccf
+      image: ghcr.io/davidcozens/cpputest:sha-18f19e1
       options: --user root
     env:
       GIT_CONFIG_COUNT: 1
@@ -223,7 +223,7 @@ jobs:
   tidy:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/davidcozens/cpputest:sha-6acaccf
+      image: ghcr.io/davidcozens/cpputest:sha-18f19e1
       options: --user root
     env:
       GIT_CONFIG_COUNT: 1
@@ -251,7 +251,7 @@ jobs:
   format:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/davidcozens/cpputest:sha-6acaccf
+      image: ghcr.io/davidcozens/cpputest:sha-18f19e1
       options: --user root
     env:
       GIT_CONFIG_COUNT: 1
@@ -269,7 +269,7 @@ jobs:
   cppcheck:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/davidcozens/cpputest:sha-6acaccf
+      image: ghcr.io/davidcozens/cpputest:sha-18f19e1
       options: --user root
     env:
       GIT_CONFIG_COUNT: 1
