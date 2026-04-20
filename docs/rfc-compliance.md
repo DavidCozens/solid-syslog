@@ -47,7 +47,7 @@ Status key:
 
 | Section | Requirement | Status | Notes |
 |---|---|---|---|
-| 3.2 | Sender initiates TCP connection | Supported | `SolidSyslogTcpSender` connects lazily on first send (S3.4) |
+| 3.2 | Sender initiates TCP connection | Supported | `SolidSyslogStreamSender` connects lazily on first send (S3.4) |
 | 3.2 | Default port 601 | Partial | `SOLIDSYSLOG_TCP_DEFAULT_PORT` defined but defaults to 514. Should be 601 per IANA |
 | 3.4.1 | Octet counting framing | Supported | `MSG-LEN SP MSG` prefix on every send |
 | 3.4.2 | Non-transparent framing (LF trailer) | Not supported | Octet counting is the recommended method |

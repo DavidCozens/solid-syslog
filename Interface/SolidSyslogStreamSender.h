@@ -1,5 +1,5 @@
-#ifndef SOLIDSYSLOG_TCP_SENDER_H
-#define SOLIDSYSLOG_TCP_SENDER_H
+#ifndef SOLIDSYSLOG_STREAM_SENDER_H
+#define SOLIDSYSLOG_STREAM_SENDER_H
 
 #include "SolidSyslogEndpoint.h"
 #include "SolidSyslogResolver.h"
@@ -9,12 +9,7 @@ EXTERN_C_BEGIN
 
     struct SolidSyslogSender;
 
-    enum
-    {
-        SOLIDSYSLOG_TCP_DEFAULT_PORT = 514 /* RFC 6587 convention — same as UDP; no IANA assignment for plain TCP syslog */
-    };
-
-    struct SolidSyslogTcpSenderConfig
+    struct SolidSyslogStreamSenderConfig
     {
         struct SolidSyslogResolver*        resolver;
         struct SolidSyslogStream*          stream;
@@ -22,9 +17,9 @@ EXTERN_C_BEGIN
         SolidSyslogEndpointVersionFunction endpointVersion; /* polled cheaply on every Send for stale check */
     };
 
-    struct SolidSyslogSender* SolidSyslogTcpSender_Create(const struct SolidSyslogTcpSenderConfig* config);
-    void                      SolidSyslogTcpSender_Destroy(void);
+    struct SolidSyslogSender* SolidSyslogStreamSender_Create(const struct SolidSyslogStreamSenderConfig* config);
+    void                      SolidSyslogStreamSender_Destroy(void);
 
 EXTERN_C_END
 
-#endif /* SOLIDSYSLOG_TCP_SENDER_H */
+#endif /* SOLIDSYSLOG_STREAM_SENDER_H */

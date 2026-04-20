@@ -23,7 +23,7 @@
 #include "SolidSyslogPosixDatagram.h"
 #include "SolidSyslogPosixTcpStream.h"
 #include "SolidSyslogSwitchingSender.h"
-#include "SolidSyslogTcpSender.h"
+#include "SolidSyslogStreamSender.h"
 #include "SolidSyslogUdpSender.h"
 
 #include <pthread.h>
@@ -61,12 +61,12 @@ static struct SolidSyslogSender* CreateSender(const struct ExampleOptions* optio
     udpConfig.endpointVersion                          = ExampleUdpConfig_GetEndpointVersion;
     struct SolidSyslogSender* udpSender                = SolidSyslogUdpSender_Create(&udpConfig);
 
-    static struct SolidSyslogTcpSenderConfig tcpConfig = {0};
-    tcpConfig.resolver                                 = resolver;
-    tcpConfig.stream                                   = SolidSyslogPosixTcpStream_Create();
-    tcpConfig.endpoint                                 = ExampleTcpConfig_GetEndpoint;
-    tcpConfig.endpointVersion                          = ExampleTcpConfig_GetEndpointVersion;
-    struct SolidSyslogSender* tcpSender                = SolidSyslogTcpSender_Create(&tcpConfig);
+    static struct SolidSyslogStreamSenderConfig tcpConfig = {0};
+    tcpConfig.resolver                                    = resolver;
+    tcpConfig.stream                                      = SolidSyslogPosixTcpStream_Create();
+    tcpConfig.endpoint                                    = ExampleTcpConfig_GetEndpoint;
+    tcpConfig.endpointVersion                             = ExampleTcpConfig_GetEndpointVersion;
+    struct SolidSyslogSender* tcpSender                   = SolidSyslogStreamSender_Create(&tcpConfig);
 
     static struct SolidSyslogSender* inners[EXAMPLE_SWITCH_COUNT];
     inners[EXAMPLE_SWITCH_UDP] = udpSender;
@@ -134,7 +134,7 @@ static struct SolidSyslogStore* CreateStore(const struct ExampleOptions* options
 static void DestroySender(void)
 {
     SolidSyslogSwitchingSender_Destroy();
-    SolidSyslogTcpSender_Destroy();
+    SolidSyslogStreamSender_Destroy();
     SolidSyslogPosixTcpStream_Destroy();
     SolidSyslogUdpSender_Destroy();
     SolidSyslogPosixDatagram_Destroy();
