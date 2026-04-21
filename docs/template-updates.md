@@ -26,12 +26,12 @@ template merges apply cleanly:
 - `.github/workflows/ci.yml`
 - `.github/workflows/release-please.yml`
 - `CMakePresets.json`
-- `Source/CMakeLists.txt`
+- `Core/Source/CMakeLists.txt`
 - `Tests/CMakeLists.txt`
 - `.clang-format`
 - `.clang-tidy`
 - `misra_suppressions.txt`
-- `Interface/ExternC.h`
+- `Core/Interface/ExternC.h`
 - `Bdd/features/environment.py`
 - `ci/docker-compose.bdd.yml`
 - `docs/` (all files)

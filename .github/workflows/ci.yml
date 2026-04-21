@@ -293,9 +293,9 @@ jobs:
           --suppress=missingIncludeSystem
           --inline-suppr
           --std=c11
-          -IInterface
+          -ICore/Interface
           --xml --xml-version=2
-          Source/
+          Core/Source/
           2> build/cppcheck/cppcheck-report.xml
 
       - name: Upload cppcheck report
