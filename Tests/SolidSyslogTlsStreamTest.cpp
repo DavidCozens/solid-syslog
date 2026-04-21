@@ -397,3 +397,35 @@ TEST(SolidSyslogTlsStream, OpenWiresBioCreateCallback)
     SolidSyslogStream_Open(stream, addr);
     CHECK_TRUE(OpenSslFake_LastBioCreateCallback() != nullptr);
 }
+
+TEST(SolidSyslogTlsStream, BioCtrlCallbackReturnsSuccessForFlush)
+{
+    SolidSyslogStream_Open(stream, addr);
+    auto ctrlFn = OpenSslFake_LastBioCtrlCallback();
+    LONGS_EQUAL(1, ctrlFn(OpenSslFake_LastBioReturned(), BIO_CTRL_FLUSH, 0, nullptr));
+}
+
+TEST(SolidSyslogTlsStream, BioCtrlCallbackReturnsSuccessForPushPopDup)
+{
+    SolidSyslogStream_Open(stream, addr);
+    auto ctrlFn = OpenSslFake_LastBioCtrlCallback();
+    BIO* bio    = OpenSslFake_LastBioReturned();
+    LONGS_EQUAL(1, ctrlFn(bio, BIO_CTRL_PUSH, 0, nullptr));
+    LONGS_EQUAL(1, ctrlFn(bio, BIO_CTRL_POP, 0, nullptr));
+    LONGS_EQUAL(1, ctrlFn(bio, BIO_CTRL_DUP, 0, nullptr));
+}
+
+TEST(SolidSyslogTlsStream, BioCtrlCallbackReturnsFailureForUnknownCommand)
+{
+    SolidSyslogStream_Open(stream, addr);
+    auto ctrlFn = OpenSslFake_LastBioCtrlCallback();
+    LONGS_EQUAL(0, ctrlFn(OpenSslFake_LastBioReturned(), /* arbitrary unsupported cmd */ 9999, 0, nullptr));
+}
+
+TEST(SolidSyslogTlsStream, BioCreateCallbackMarksBioInitialised)
+{
+    SolidSyslogStream_Open(stream, addr);
+    auto createFn = OpenSslFake_LastBioCreateCallback();
+    createFn(OpenSslFake_LastBioReturned());
+    LONGS_EQUAL(1, OpenSslFake_LastSetInitArg());
+}

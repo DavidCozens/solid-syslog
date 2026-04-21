@@ -44,6 +44,7 @@ static BIO_METHOD* lastBioMethSetReadMethodArg;
 static int (*lastBioReadCallback)(BIO*, char*, int);
 static long (*lastBioCtrlCallback)(BIO*, int, long, void*);
 static int (*lastBioCreateCallback)(BIO*);
+static int         lastSetInitArg;
 static BIO_METHOD* lastBioMethSetWriteMethodArg;
 static int (*lastBioWriteCallback)(BIO*, const char*, int);
 
@@ -114,6 +115,7 @@ void OpenSslFake_Reset(void)
     lastBioReadCallback           = NULL;
     lastBioCtrlCallback           = NULL;
     lastBioCreateCallback         = NULL;
+    lastSetInitArg                = 0;
     lastBioMethSetWriteMethodArg  = NULL;
     lastBioWriteCallback          = NULL;
     bioNewCallCount               = 0;
@@ -174,6 +176,8 @@ int (*OpenSslFake_LastBioReadCallback(void))(BIO*, char*, int) { return lastBioR
 long (*OpenSslFake_LastBioCtrlCallback(void))(BIO*, int, long, void*) { return lastBioCtrlCallback; }
 
 int (*OpenSslFake_LastBioCreateCallback(void))(BIO*) { return lastBioCreateCallback; }
+
+int OpenSslFake_LastSetInitArg(void) { return lastSetInitArg; }
 
 BIO_METHOD*        OpenSslFake_LastBioMethSetWriteMethodArg(void) { return lastBioMethSetWriteMethodArg; }
 int (*OpenSslFake_LastBioWriteCallback(void))(BIO*, const char*, int) { return lastBioWriteCallback; }
@@ -307,7 +311,7 @@ int BIO_meth_set_create(BIO_METHOD* method, int (*create)(BIO*))
 void BIO_set_init(BIO* bio, int init)
 {
     (void) bio;
-    (void) init;
+    lastSetInitArg = init;
 }
 
 BIO* BIO_new(const BIO_METHOD* method)
