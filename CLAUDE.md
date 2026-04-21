@@ -266,24 +266,35 @@ Coverage report: `cmake --preset coverage && cmake --build --preset coverage --t
 ## Project Structure
 
 ```
-Interface/        — Public headers only. No implementation. This is the API boundary.
-Source/           — Implementation. Compiled into a static library.
-Tests/            — CppUTest unit tests. Never link production code directly; always via the library.
-Tests/Support/    — PosixFakes static lib (SocketFake, ClockFake) — shared across test executables.
-Tests/Example/    — Example code unit tests (ExampleTests executable).
-Example/Common/   — Shared example code (CLI parsing, app name, UDP/TCP config, service thread).
-Example/SingleTask/ — Single-task example (NullBuffer, bare-metal model). BDD sender.
-Example/Threaded/ — Threaded example (PosixMessageQueueBuffer, two pthreads, SwitchingSender over UDP + TCP; `--transport` sets initial, `switch <name>` flips at runtime). BDD sender.
-Bdd/              — BDD test infrastructure: Gherkin features, step definitions, syslog-ng config.
-ci/               — CI-specific files (e.g. docker-compose.bdd.yml).
+Core/Interface/     — Public headers of the core library. No implementation. This is the API boundary.
+Core/Source/        — Core library implementation. Compiled into a static library.
+Platform/           — Platform-specific code (Posix, Windows, OpenSsl) — each a subfolder with its own Interface/ and Source/.
+Example/            — Example applications (Common, SingleTask, Threaded).
+Tests/              — CppUTest unit tests. Never link production code directly; always via the library.
+Tests/Support/      — PosixFakes static lib (SocketFake, ClockFake) — shared across test executables.
+Tests/Example/      — Example code unit tests (ExampleTests executable).
+Bdd/                — BDD test infrastructure: Gherkin features, step definitions, syslog-ng config.
+ci/                 — CI-specific files (e.g. docker-compose.bdd.yml).
+docs/               — Project documentation.
 ```
 
-The separation between `Interface/` and `Source/` is deliberate — it enforces the dependency inversion
+### Support tiers
+
+Not all directories carry the same review rigour or long-term support commitment.
+
+| Tier | Scope | Directories |
+|---|---|---|
+| 1 | Full support, highest review bar, stable API | `Core/Interface/`, `Core/Source/` |
+| 2 | Supported, API may evolve per target platform | `Platform/*/` |
+| 3 | Best-effort examples | `Example/` |
+| — | Out of scope for support | `Tests/`, `Bdd/`, `docs/`, `ci/`, `.github/`, `.devcontainer/`, build tooling |
+
+The separation between `Core/Interface/` and `Core/Source/` is deliberate — it enforces the dependency inversion
 boundary that makes the code testable and portable to embedded targets.
 
 ### Public header audiences (Interface Segregation)
 
-Headers in `Interface/` are split by audience — each user includes only what they need:
+Headers in `Core/Interface/` are split by audience — each user includes only what they need:
 
 | Header | Audience | Provides |
 |---|---|---|

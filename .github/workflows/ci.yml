@@ -263,7 +263,7 @@ jobs:
 
       - name: Check clang-format
         run: |
-          find Interface Source Tests Example -name '*.c' -o -name '*.cpp' -o -name '*.h' \
+          find Core/Interface Core/Source Tests Example -name '*.c' -o -name '*.cpp' -o -name '*.h' \
             | xargs clang-format --dry-run --Werror
 
   cppcheck:
@@ -293,9 +293,9 @@ jobs:
           --suppress=missingIncludeSystem
           --inline-suppr
           --std=c11
-          -IInterface
+          -ICore/Interface
           --xml --xml-version=2
-          Source/
+          Core/Source/
           2> build/cppcheck/cppcheck-report.xml
 
       - name: Upload cppcheck report

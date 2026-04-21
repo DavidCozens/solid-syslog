@@ -48,16 +48,16 @@ sed -i "s/\[component description\]/[TODO: describe $COMPONENT here]/" "$ROOT/RE
 echo "  Updated README.md"
 
 # --- Remove example source files ------------------------------------------
-rm -f "$ROOT/Interface/ExampleC.h" "$ROOT/Interface/ExampleCpp.h"
-rm -f "$ROOT/Source/ExampleC.c" "$ROOT/Source/ExampleCpp.cpp"
+rm -f "$ROOT/Core/Interface/ExampleC.h" "$ROOT/Core/Interface/ExampleCpp.h"
+rm -f "$ROOT/Core/Source/ExampleC.c" "$ROOT/Core/Source/ExampleCpp.cpp"
 rm -f "$ROOT/Tests/ExampleCTests.cpp" "$ROOT/Tests/ExampleCppTests.cpp"
 rm -f "$ROOT/Example/ExampleMain.c"
 echo "  Removed example source, header, and test files"
 
-# --- Source/CMakeLists.txt: replace source file list ----------------------
+# --- Core/Source/CMakeLists.txt: replace source file list -----------------
 sed -i "/^set(SOURCES/,/^)/{ /ExampleC\.c/d; /ExampleCpp\.cpp/d; /^set(SOURCES/a\\    ${COMPONENT}.c
-}" "$ROOT/Source/CMakeLists.txt"
-echo "  Updated Source/CMakeLists.txt"
+}" "$ROOT/Core/Source/CMakeLists.txt"
+echo "  Updated Core/Source/CMakeLists.txt"
 
 # --- Tests/CMakeLists.txt: replace test file list -------------------------
 sed -i "/^set(TEST_SOURCES/,/^)/{ /ExampleCTests\.cpp/d; /ExampleCppTests\.cpp/d; /^set(TEST_SOURCES/a\\    ${COMPONENT}Test.cpp
@@ -65,7 +65,7 @@ sed -i "/^set(TEST_SOURCES/,/^)/{ /ExampleCTests\.cpp/d; /ExampleCppTests\.cpp/d
 echo "  Updated Tests/CMakeLists.txt"
 
 # --- Create stub header ---------------------------------------------------
-cat > "$ROOT/Interface/${COMPONENT}.h" << EOF
+cat > "$ROOT/Core/Interface/${COMPONENT}.h" << EOF
 #ifndef ${COMPONENT^^}_H
 #define ${COMPONENT^^}_H
 
@@ -83,10 +83,10 @@ extern "C"
 
 #endif /* ${COMPONENT^^}_H */
 EOF
-echo "  Created Interface/${COMPONENT}.h"
+echo "  Created Core/Interface/${COMPONENT}.h"
 
 # --- Create stub source ---------------------------------------------------
-cat > "$ROOT/Source/${COMPONENT}.c" << EOF
+cat > "$ROOT/Core/Source/${COMPONENT}.c" << EOF
 #include "${COMPONENT}.h"
 
 void ${COMPONENT}_Create(void)
@@ -97,7 +97,7 @@ void ${COMPONENT}_Destroy(void)
 {
 }
 EOF
-echo "  Created Source/${COMPONENT}.c"
+echo "  Created Core/Source/${COMPONENT}.c"
 
 # --- Create example program -----------------------------------------------
 cat > "$ROOT/Example/${COMPONENT}Main.c" << EOF

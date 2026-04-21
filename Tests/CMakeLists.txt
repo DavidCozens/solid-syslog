@@ -94,7 +94,7 @@ endif()
 add_executable(${PROJECT_NAME}Tests ${TEST_SOURCES})
 
 target_link_libraries(${PROJECT_NAME}Tests PRIVATE ${PROJECT_NAME} CppUTest CppUTestExt Threads::Threads)
-target_include_directories(${PROJECT_NAME}Tests PRIVATE ${CMAKE_SOURCE_DIR}/Source ${CMAKE_CURRENT_SOURCE_DIR}/Support)
+target_include_directories(${PROJECT_NAME}Tests PRIVATE ${CMAKE_SOURCE_DIR}/Core/Source ${CMAKE_CURRENT_SOURCE_DIR}/Support)
 
 if(SOLIDSYSLOG_POSIX)
     target_link_libraries(${PROJECT_NAME}Tests PRIVATE PosixFakes)
@@ -144,7 +144,7 @@ if(COVERAGE)
                 --output-file ${CMAKE_BINARY_DIR}/coverage.info
                 --rc branch_coverage=1
             COMMAND ${LCOV_EXECUTABLE} --extract ${CMAKE_BINARY_DIR}/coverage.info
-                "${CMAKE_SOURCE_DIR}/Source/*"
+                "${CMAKE_SOURCE_DIR}/Core/Source/*"
                 "${CMAKE_SOURCE_DIR}/Platform/*/Source/*"
                 --output-file ${CMAKE_BINARY_DIR}/coverage.filtered.info
                 --rc branch_coverage=1
