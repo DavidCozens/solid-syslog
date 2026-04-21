@@ -583,7 +583,7 @@ _Reconstructed. Structural refinement day._
 
 The platform reorg landing _before_ the Windows port proper is the key
 refinement this day. Discussed in the conversation leading to #141 and
-#142. The lesson applies more broadly: when a structural change and a
+PR `#142`. The lesson applies more broadly: when a structural change and a
 feature change both want to happen, land the structure first so the
 feature drops in without carrying reorg noise. Same rationale surfaced
 again at the Core/ rename (PR #180, 2026-04-21).
