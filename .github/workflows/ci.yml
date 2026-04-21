@@ -263,7 +263,7 @@ jobs:
 
       - name: Check clang-format
         run: |
-          find Interface Source Tests Example -name '*.c' -o -name '*.cpp' -o -name '*.h' \
+          find Core/Interface Core/Source Tests Example -name '*.c' -o -name '*.cpp' -o -name '*.h' \
             | xargs clang-format --dry-run --Werror
 
   cppcheck:
