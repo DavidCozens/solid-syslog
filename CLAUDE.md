@@ -1,5 +1,13 @@
 # Claude Code Guidelines
 
+## Read this with SKILL.md
+
+Also read [`SKILL.md`](SKILL.md) at session start. It holds cross-context conventions
+that the VSCode extension does not auto-load — notably the **DEVLOG cadence**
+(append an entry after every meaningful session) and the **TDD pairing contract**.
+This file (CLAUDE.md) covers implementation and workflow details; SKILL.md covers
+the "why" and the habits that span Windows host / WSL / container sessions.
+
 ## Git Workflow
 
 All changes to `main` must go via a pull request — direct pushes are blocked by branch protection.

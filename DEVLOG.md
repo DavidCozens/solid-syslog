@@ -408,3 +408,436 @@ no external implementations exist yet. Right time to do it.
    could potentially split further (extract timestamp functions first, then field
    formatters, then wire up Formatter struct) but this risks intermediate states where
    the code is half-extracted.
+
+---
+
+## 2026-04-09 / 2026-04-10 — E15 TCP transport and BDD infrastructure hardening
+
+_Reconstructed 2026-04-21 from PR bodies, memory, and git log._
+
+### What shipped
+
+- **S15.1 TCP sender** (#91) — RFC 6587 octet-counting framing sender.
+- **S15.2 connection failure and reconnection** (#93) — first explicit sender
+  reliability work, reconnect-on-failure semantics.
+- **BDD infrastructure hardening** (#94) — teardown reload, wait-for-prompt,
+  syslog-ng startup fail-fast.
+- **S5.3 file-based store** (#98) — first file-backed store implementation and
+  sender-outage BDD.
+- **Prove string callbacks are invoked per Log** (#92) — tightens the contract
+  so tests can't silently pass if the library caches values it shouldn't.
+
+### Collaboration note
+
+The BDD hardening PR (#94) accumulated items deferred from S15.2 — a pattern
+that recurs: reviews flag real issues, the author keeps the story tightly
+scoped, and the deferred items surface either as a follow-up infrastructure
+PR or as entries in the robustness backlog memory. Worth noticing: the
+"defer to follow-up" default holds only as long as the robustness-backlog
+memory doesn't rot.
+
+---
+
+## 2026-04-10 — MISRA and function-ordering conventions formalised
+
+_Reconstructed._
+
+Two code-style feedback memories landed this day
+(`feedback_misra_style.md`, `feedback_function_order.md`) formalising rules
+that had been implicit:
+
+- **Single exit point** per function, **positive logic** in conditions,
+  **no magic numbers** (named constants with documented derivation).
+- **Top-down function ordering**: Create/Destroy first, then public fns, then
+  static helpers _directly below the function that first calls them_.
+  Optimised for human reading depth-first rather than alphabetic.
+
+### Collaboration note
+
+This is a pattern worth naming: _repeated correction → once it is a rule,
+capture it as feedback memory so future-me doesn't need the correction
+again_. The cost of writing the memory is lower than the cost of the next
+correction. Later sessions show the rules sticking — new C modules arrive
+in roughly the right shape without prompting.
+
+---
+
+## 2026-04-11 / 2026-04-12 — Store & Forward epic (E5) completes
+
+_Reconstructed._
+
+### What shipped
+
+- **S5.4** Power-cycle replay BDD (#100)
+- **S5.5** File rotation with discard policies (#103) — plus fix for filename
+  buffer overflow on long path prefixes (#104)
+- **S5.6** File-store corruption detection and recovery (#106)
+- **S5.7** Halt callback on storage full (#107)
+- **S5.8** Halt-policy BDD scenarios and example CLI plumbing (#109)
+- **Release versioning reset to 0.x** (#99) — admits pre-1.0 status explicitly
+
+### Collaboration note — TDD discipline reset
+
+S5.5 Phase 1 and Phase 4 triggered two documented TDD violations (captured
+in `feedback_tdd_no_untested_code.md`). I wrote whole sub-systems (FileFake
+rewrite, new FileApi operations, new state fields) _to unblock later tests_
+rather than one failing test at a time. Much of that code had no failing
+test driving it individually, even though the aggregate suite passed at the
+end.
+
+The reset after the second incident was specific: _"When facing a test that
+requires infrastructure, write the ONE test that fails; the MINIMUM code to
+pass, even if ugly; the NEXT test; more infrastructure only as it demands."_
+The instinct to batch infrastructure is strong exactly when the rule most
+matters — "quick refactor" mode is where discipline slips. A prior incident
+in S05.01 (2026-04-06, `sendto >= 0` returned from UdpSender without a test
+for the failure path) had already flagged the same class of error.
+
+If there's a blog thread in this, it is: _agent-paired TDD is effective in
+proportion to how strictly you hold the loop_. Violations don't look like
+violations at the time — they feel like momentum. The green bar covers them.
+
+---
+
+## 2026-04-13 — Formatter extraction and buffer-overflow protection
+
+_Reconstructed._
+
+- **S12.2** Formatter extraction (#113) — the design discussed in the
+  2026-04-08 entry above; every write now funnels through `WriteChar`.
+- **S12.3** TDD-driven buffer overflow protection at `FormatCharacter` (#114) —
+  bounds-checking added test-first at the new chokepoint.
+- **CLI numeric validation fix** (#110) — CodeRabbit flag from #109 addressed
+  with `ParsePositiveNumber` helper; six negative/non-numeric/trailing tests.
+
+### Collaboration note
+
+S12.3 is a clean example of "design-before-code, then strict TDD". The
+extraction (S12.2) created the overflow-protection seam _on purpose_ — we
+didn't need the protection yet, but naming it as a subsequent story made
+the extraction scope sane. The reward was a tight S12.3: one chokepoint,
+one test-driven guard, nothing else. Shape worth repeating.
+
+---
+
+## 2026-04-14 — IEC 62443 and RFC compliance docs + C99 baseline
+
+_Reconstructed._
+
+### What shipped
+
+- **docs/iec62443.md** (#122) — client-facing mapping of library components
+  to IEC 62443-3-3/4-2 requirements across SL1–SL4, with traceability
+  matrix and links to open stories for SL4 gaps.
+- **docs/rfc-compliance.md** (#122) — sender-side RFC 5424/5426/6587/5425
+  compliance matrix.
+- **`feedback_c99_target.md`** captured — C99 baseline, C11 only via
+  injection (atomics), in anticipation of older embedded toolchain reach.
+
+### Why
+
+Client-visible capability documents needed for the "Crafted with AI" blog
+series audience and for demonstrating suitability to industrial buyers. The
+C99 commitment ties to the same audience — legacy embedded compilers tend
+not to track the latest standard cleanly.
+
+---
+
+## 2026-04-15 — Windows MSVC CI begins (E13 kick-off)
+
+_Reconstructed._
+
+- **S13.1** Windows MSVC CI build (#124)
+- **S13.2** C99 portability — portable static assert, MSVC suppressions
+  documented (#130)
+- **S13.3** Replace Microsoft SDL banned APIs with portable bounded
+  alternatives (#131) — `SafeString` abstraction, banned-API policy in CLAUDE.md
+
+### Collaboration note
+
+First portability PR in a new direction surfaces a batch of related issues;
+subsequent PRs in the same series get cleaner because the patterns are
+established. `SafeString` formalised the "test code uses a `SafeString_Copy`,
+production code uses the `Formatter`" split and that stuck.
+
+---
+
+## 2026-04-17 — Platform reorganisation and abstraction extractions
+
+_Reconstructed. Structural refinement day._
+
+### What shipped
+
+- **Platform/<OS>/ reorganisation** (#143) — introduced top-level `Platform/`
+  tree so Windows transport work had a stable structural home rather than
+  mixing with POSIX and being reorganised afterward.
+- **S13.6** Resolver abstraction extracted from UdpSender and TcpSender (#137)
+- **S13.7** Datagram abstraction extracted from UdpSender (#139)
+- **S13.8** Stream abstraction extracted from TcpSender (#140)
+- **S13.11** Opaque `SolidSyslogAddress` to hide `sockaddr_in` (#145)
+- **S12.11** Honest error reporting for Resolver and Datagram vtables (#144)
+- **S13.4** Winsock UDP transport — Winsock Resolver + Datagram (#149)
+- **S13.13–S13.15** Windows clock, hostname, and process-id helpers (#150)
+
+### Collaboration note — "land the structure before the feature"
+
+The platform reorg landing _before_ the Windows port proper is the key
+refinement this day. Discussed in the conversation leading to #141 and
+PR `#142`. The lesson applies more broadly: when a structural change and a
+feature change both want to happen, land the structure first so the
+feature drops in without carrying reorg noise. Same rationale surfaced
+again at the Core/ rename (PR #180, 2026-04-21).
+
+### Why
+
+Three `Platform/*/` abstractions (Resolver, Datagram, Stream) extracted
+the platform-agnostic contract from what had been a POSIX-locked
+implementation. Windows could then come in as a peer rather than a graft.
+Each abstraction was its own TDD story; the graft would have concealed
+those seams.
+
+---
+
+## 2026-04-18 — Windows end-to-end: BDD on Windows
+
+_Reconstructed._
+
+- **S13.5** (five PRs across the day, #152–#159) — BDD features tagged by
+  capability, `bdd-windows` GitHub Actions job, Windows example executable,
+  scenarios promoted to the Windows runner progressively.
+
+### Collaboration note — small-PR vs one-PR call
+
+The cost of 5 PRs vs 1 is meaningful (context switches, review overhead),
+but so is the benefit — bisectable if something breaks a month from now.
+For infrastructure where a regression could mean "Windows CI is red for
+days", small PRs pay for themselves. For a pure refactor that either
+builds or doesn't, one PR is usually fine. The heuristic: _could this
+specific slice break something subtly and only be noticed later?_ If yes,
+slice it.
+
+---
+
+## 2026-04-19 — Phase-gated TDD convention + S3.4 lazy init
+
+_Reconstructed. Biggest working-practice refinement of the project so far._
+
+### What shipped
+
+- **S3.4** Lazy initialisation and reconnection on UdpSender and TcpSender
+  (#161) — introduced `SolidSyslogEndpoint` (host/port supplier +
+  version-fingerprint callback), `Disconnect` vtable op, lazy open on first
+  Send. Foundation for E20 and a future reconfiguration epic.
+
+### Refinement — phase-gated workflow and BDD-first
+
+`feedback_tdd_and_review_style.md` grew substantially this day with new
+working conventions:
+
+- **Phase-gated workflow for larger stories** — break work into phases,
+  stop at each for code review, no commit until reviewed, no next phase
+  until David says so. PR #161 (S3.4) was scoped across multiple phases
+  with this review rhythm.
+- **BDD first** — write Gherkin scenarios and pending step definitions at
+  the start of a story, before implementation. Steps go green progressively
+  as phases land. Working solo with Claude means front-loading what a
+  tester would otherwise write in parallel.
+- **Autonomy semantics** — when told "let me see what you can do by
+  yourself", run the full TDD cycle without pausing at each step, but
+  still stop _before_ committing for review.
+
+### Collaboration note
+
+All three conventions push in the same direction: _stop more often_.
+Phase-gated stops protect design decisions. BDD-first stops the
+temptation to implement before acceptance criteria exist. Even under
+autonomy, the pre-commit stop preserves veto. The bar for "paused
+collaboration" has moved steadily toward more pauses, not fewer. This is
+probably the single most important meta-refinement of the project so far.
+
+---
+
+## 2026-04-20 — S3.6 StreamSender rename, S20.1 SwitchingSender, PR "Closes" keyword
+
+_Reconstructed._
+
+### What shipped
+
+- **S20.1** SwitchingSender (#163) — selector-driven multi-transport
+  switching; first new pattern under E20.
+- **S3.6 rename** `SolidSyslogTcpSender` → `SolidSyslogStreamSender` (#166,
+  breaking change) — reflects that the module frames bytes over any
+  Stream, not just TCP. Sets up S3.7 TLS as a Stream drop-in.
+
+### Refinement — `Closes #<issue>` keyword in PR bodies
+
+After PR #163 (S20.1) squash-merged, issue #162 (the story) and #160 (the
+parent epic) were left open because the PR body said _"Implements story
+S20.01 (#162)"_ — descriptive but not a GitHub close-keyword. Had to
+close manually.
+
+Captured as an addendum in `feedback_pr_template.md`: **each PR body's
+Purpose section must use `Closes #<issue>` (or `Fixes` / `Resolves`)**.
+If the PR also completes a single-story parent epic (like E20), close
+both.
+
+### Collaboration note
+
+Small process rule born from a small embarrassment. Telling because the
+workflow had operated for weeks without it — story-closing mostly worked
+because Claude kept noticing and closing manually. Once the PR template
+got the keyword discipline, the "manual close" step disappeared. Another
+case of _the cost of writing it down is lower than the cost of the next
+occurrence_.
+
+---
+
+## 2026-04-21 (morning) — S3.7 TLS walking skeleton
+
+_Reconstructed._
+
+### What shipped
+
+- **S3.7** (#170) — `SolidSyslogTlsStream` (OpenSSL), TLS BDD scenario,
+  first end-to-end syslog-over-TLS into `syslog-ng`. TLS lands as a Stream
+  per the architecture set up in S3.6.
+
+### Scope note
+
+The walking-skeleton is deliberately minimal: OpenSSL defaults for
+hostname verification and cipher selection, knowingly leaves mid-`Open`
+cleanup imperfect. Explicit validation, cipher hardening, and cleanup
+move to S3.8 (created as #172). mTLS, cert rotation, docs promotion
+queued as S3.9 / S3.10 / S3.11.
+
+### Collaboration note
+
+The walking-skeleton discipline is holding: _make one scenario green,
+capture every known imperfection as a distinct follow-up story, defer all
+of them_. The PR review surfaced several deferrable items which became
+the S3.8 scope rather than creeping into S3.7.
+
+---
+
+## 2026-04-21 (afternoon) — Chore catchup session + SKILL.md reading gap
+
+Session scope: a deliberate "low-effort tidy" phase while E3 TLS
+hardening isn't ready to start. Landed five PRs in one afternoon.
+
+### What shipped
+
+- **#176** — Codified three GitHub workflow conventions in CLAUDE.md:
+  - **Issue / epic linking** via GraphQL `addSubIssue` (plain-text
+    `Parent epic: #N` lines don't create GitHub's native sub-issue edge,
+    and the board roll-up and swimlanes depend on that edge).
+  - **Project board membership**: epics are never items (they'd duplicate
+    as orphan rows and as swimlanes); stories always are. Stable project
+    and field IDs baked into the recipe.
+  - **Zero-padded issue numbers** (`E03`, `S03.07`) so GitHub's
+    alphabetic title sort also sorts numerically.
+- **#177** — Closed the last coverage gap in `SolidSyslogFileStore`
+  (null-object fallback when `securityPolicy->integritySize >
+  SOLIDSYSLOG_MAX_INTEGRITY_SIZE`). Behavioural test asserts on-disk
+  record = `[magic][length][body][sent_flag]`, no integrity gap.
+  Coverage back to 100%.
+- **#178** — `SOLIDSYSLOG_TCP_DEFAULT_PORT` corrected from `514` to `601`
+  per RFC 6587 / IANA, with a pinning test. CodeRabbit flag from #166.
+- **#179** — Four `FailNext*OnlyAffects*` tests across FileFake and
+  SenderFake strengthened with `CHECK_FALSE` on the injected call, so
+  they prove what their names claim.
+- **#180** — Top-level `Interface/` and `Source/` relocated under `Core/`
+  in a pure two-commit rename (`git mv` at 100% similarity, then
+  reference updates). CLAUDE.md got an explicit **support tiers** table
+  (Tier 1 `Core/`, Tier 2 `Platform/`, Tier 3 `Example/`, out-of-scope
+  `Tests/` / `Bdd/` / docs / CI).
+
+Also restructured the GitHub project board: 37 orphan story items added
+with correct Status, 11 epics removed-as-items (they render as swimlanes
+via Parent-issue grouping), stale In-Progress on #65 flipped to Done.
+Renamed 76 issue titles and cross-refs to the padded format. Created
+S3.9 / S3.10 / S3.11 as placeholder issues under E3.
+
+### What went well
+
+- **TDD red-step discipline held even for pure backfill coverage.**
+  Coverage gap in FileStore: commented out the production line,
+  confirmed SIGSEGV exit 139, uncommented, green. Similar pattern for
+  the TCP port pin test (red before the enum flip). Makes "the test was
+  green from the start" genuine rather than performative.
+- **Review-before-execute caught a bad test design.** First proposal
+  for the FileStore coverage test was spy-observation (assert the
+  over-size policy's `Compute` function was not invoked). User rejected
+  in favour of a behavioural assertion (on-disk record layout shows no
+  integrity gap). The rejected test would have been brittle to
+  implementation changes; the behavioural test survives them.
+- **GraphQL automation for GitHub state** made the project-board audit
+  and repair feasible as a single chore rather than many UI clicks.
+  Adding it to CLAUDE.md as a standard recipe means the next session
+  won't rebuild the workflow.
+
+### What didn't — three real misses in one session
+
+- **SKILL.md not read at session start.** The DEVLOG cadence is defined
+  in SKILL.md (_"append an entry … after every meaningful session"_).
+  I didn't read SKILL.md. The user asked _"why did you stop updating the
+  devlog?"_ while waiting for CodeRabbit on #180. Honest answer: I
+  never started in this session; the memory-based workflow had quietly
+  replaced it. Fix: CLAUDE.md now points to SKILL.md so any future
+  session that auto-loads CLAUDE.md gets the pointer, plus a memory
+  entry for belt-and-braces.
+- **Audit regex for the Core/ rename too narrow.** Grepped for
+  `Interface/` / `Source/` with trailing slashes; missed the
+  `find Interface Source Tests Example` invocation in the `format` CI
+  job that uses them as bare directory names. CodeRabbit caught it on
+  PR #180 — would have broken the `format` required status check on
+  merge. A third commit on the rename branch fixed it pre-merge.
+  Lesson: for rename audits, search for the name with multiple
+  delimiters (`/`, end-of-word, end-of-line).
+- **Story renumbering first pass missed 7 issues.** Filtered by label
+  `epic,story` — the oldest E4 stories (`S0.1`, `S4.1`–`S4.6`) predated
+  the labelling convention and weren't tagged. Only noticed when the
+  user pointed at remaining unpadded titles on the board. Second pass
+  used a title-pattern search across all labels, caught them, and
+  added the missing labels so this can't recur.
+
+### Decisions captured in CLAUDE.md today
+
+- Sub-issue linking uses the GraphQL `addSubIssue` mutation (textual
+  `Parent epic: #N` is human-readable noise, not machine-authoritative).
+- Epics never appear as board items; Parent-issue grouping renders the
+  swimlane automatically when any child story is on the board.
+- Zero-padded issue numbers (`E03`, `S03.07`) in titles and bodies —
+  commit messages and merged PR titles stay unpadded (no history rewrite).
+- Support tiers: Tier 1 `Core/`, Tier 2 `Platform/`, Tier 3 `Example/`,
+  out-of-scope `Tests/`, `Bdd/`, `docs/`, CI, build tooling.
+
+### Deferred
+
+- E0 swimlane appears even though its only story (#15) is archived on
+  the project — archived items still participate in Parent-issue
+  grouping. User prefers leaving archived items on the project for
+  insight-graph value; the swimlane persistence is an accepted cost.
+  May revisit.
+- Template-repo backport of the `Core/` layout and the
+  `initializeCommand` devcontainer fix — tracked in
+  `project_template_sync.md` memory.
+- S3.9 / S3.10 / S3.11 have minimal placeholder bodies; full refinement
+  before each is picked up.
+
+### Open questions for the blog source
+
+- **Granularity of DEVLOG entries in chore-heavy sessions.** Today
+  landed five PRs; one entry feels right, per-PR would be noisy.
+  SKILL.md says "per meaningful session" — a chore-heavy session is
+  one meaningful thing even if it contains multiple small PRs.
+- **Two-way blog material.** DEVLOG is already doing double duty as
+  design record and blog raw material. If the blog process later wants
+  structured tags (`[collab]` / `[project]` / `[incident]`), easy to
+  add retroactively. Not doing it yet — premature structure.
+- **Why SKILL.md didn't get auto-read.** VSCode's Claude Code extension
+  auto-loads `CLAUDE.md` but not other root-level Markdown. The fix
+  here (CLAUDE.md pointing to SKILL.md) is the cheapest cross-context
+  solution — works on Windows host, WSL, and in-container sessions
+  because it rides on the already-reliable auto-load. Worth recording:
+  separating "conventions that must be read" from "conventions the tool
+  auto-loads" is a real gap, and signposting from CLAUDE.md bridges it.
