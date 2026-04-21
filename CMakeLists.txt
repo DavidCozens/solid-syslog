@@ -88,6 +88,9 @@ endif()
 # OpenSSL.
 find_package(OpenSSL QUIET)
 option(SOLIDSYSLOG_OPENSSL "Include OpenSSL-based TLS support" ${OpenSSL_FOUND})
+if(SOLIDSYSLOG_OPENSSL AND NOT OpenSSL_FOUND)
+    message(FATAL_ERROR "SOLIDSYSLOG_OPENSSL=ON but OpenSSL was not found; install OpenSSL or pass -DSOLIDSYSLOG_OPENSSL=OFF")
+endif()
 
 add_subdirectory(Source)
 

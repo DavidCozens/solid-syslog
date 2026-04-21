@@ -17,9 +17,9 @@ const char* ExampleTlsConfig_GetHost(void)
     return "syslog-ng";
 }
 
-int ExampleTlsConfig_GetPort(void)
+uint16_t ExampleTlsConfig_GetPort(void)
 {
-    return EXAMPLE_TLS_PORT;
+    return (uint16_t) EXAMPLE_TLS_PORT;
 }
 
 const char* ExampleTlsConfig_GetCaBundlePath(void)
@@ -35,7 +35,7 @@ const char* ExampleTlsConfig_GetServerName(void)
 void ExampleTlsConfig_GetEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
     SolidSyslogFormatter_BoundedString(endpoint->host, ExampleTlsConfig_GetHost(), SOLIDSYSLOG_MAX_HOST_SIZE);
-    endpoint->port = (uint16_t) ExampleTlsConfig_GetPort();
+    endpoint->port = ExampleTlsConfig_GetPort();
 }
 
 /* Static config — host/port never change, so version stays 0 forever and the

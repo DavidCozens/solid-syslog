@@ -9,7 +9,7 @@
 EXTERN_C_BEGIN
 
     const char* ExampleTlsConfig_GetHost(void);
-    int         ExampleTlsConfig_GetPort(void);
+    uint16_t    ExampleTlsConfig_GetPort(void);
     const char* ExampleTlsConfig_GetCaBundlePath(void);
     const char* ExampleTlsConfig_GetServerName(void);
     void        ExampleTlsConfig_GetEndpoint(struct SolidSyslogEndpoint * endpoint);

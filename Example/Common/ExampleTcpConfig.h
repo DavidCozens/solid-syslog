@@ -9,7 +9,7 @@
 EXTERN_C_BEGIN
 
     const char* ExampleTcpConfig_GetHost(void);
-    int         ExampleTcpConfig_GetPort(void);
+    uint16_t    ExampleTcpConfig_GetPort(void);
     void        ExampleTcpConfig_GetEndpoint(struct SolidSyslogEndpoint * endpoint);
     uint32_t    ExampleTcpConfig_GetEndpointVersion(void);
 
