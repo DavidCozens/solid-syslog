@@ -2,10 +2,12 @@
 #include "OpenSslFake.h"
 #include <openssl/ssl.h>
 
+// clang-format off
 TEST_GROUP(OpenSslFake)
 {
     void setup() override { OpenSslFake_Reset(); }
 };
+// clang-format on
 
 TEST(OpenSslFake, CtxNewCountIsZeroAfterReset)
 {
@@ -161,22 +163,23 @@ TEST(OpenSslFake, Set1HostCapturesHostname)
 
 TEST(OpenSslFake, BioSetDataCapturesData)
 {
-    BIO_METHOD* method = BIO_meth_new(0, "fake");
-    BIO*        bio    = BIO_new(method);
-    int         sentinel;
+    BIO_METHOD* method   = BIO_meth_new(0, "fake");
+    BIO*        bio      = BIO_new(method);
+    int         sentinel = 0;
     BIO_set_data(bio, &sentinel);
     POINTERS_EQUAL(&sentinel, OpenSslFake_LastSetDataArg());
 }
 
 TEST(OpenSslFake, BioGetDataReturnsPreviouslySetData)
 {
-    BIO_METHOD* method = BIO_meth_new(0, "fake");
-    BIO*        bio    = BIO_new(method);
-    int         sentinel;
+    BIO_METHOD* method   = BIO_meth_new(0, "fake");
+    BIO*        bio      = BIO_new(method);
+    int         sentinel = 0;
     BIO_set_data(bio, &sentinel);
     POINTERS_EQUAL(&sentinel, BIO_get_data(bio));
 }
 
+// NOLINTNEXTLINE(readability-non-const-parameter) -- signature fixed by OpenSSL BIO_meth_set_read contract
 static int DummyRead(BIO* bio, char* buf, int size)
 {
     (void) bio;
@@ -189,7 +192,7 @@ TEST(OpenSslFake, BioMethSetReadCapturesCallback)
 {
     BIO_METHOD* method = BIO_meth_new(0, "fake");
     BIO_meth_set_read(method, DummyRead);
-    POINTERS_EQUAL((void*) DummyRead, (void*) OpenSslFake_LastBioReadCallback());
+    FUNCTIONPOINTERS_EQUAL(DummyRead, OpenSslFake_LastBioReadCallback());
 }
 
 static int DummyWrite(BIO* bio, const char* buf, int size)
@@ -204,9 +207,10 @@ TEST(OpenSslFake, BioMethSetWriteCapturesCallback)
 {
     BIO_METHOD* method = BIO_meth_new(0, "fake");
     BIO_meth_set_write(method, DummyWrite);
-    POINTERS_EQUAL((void*) DummyWrite, (void*) OpenSslFake_LastBioWriteCallback());
+    FUNCTIONPOINTERS_EQUAL(DummyWrite, OpenSslFake_LastBioWriteCallback());
 }
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- signature fixed by OpenSSL BIO_meth_set_ctrl contract
 static long DummyCtrl(BIO* bio, int cmd, long larg, void* parg)
 {
     (void) bio;
@@ -220,7 +224,7 @@ TEST(OpenSslFake, BioMethSetCtrlCapturesCallback)
 {
     BIO_METHOD* method = BIO_meth_new(0, "fake");
     BIO_meth_set_ctrl(method, DummyCtrl);
-    POINTERS_EQUAL((void*) DummyCtrl, (void*) OpenSslFake_LastBioCtrlCallback());
+    FUNCTIONPOINTERS_EQUAL(DummyCtrl, OpenSslFake_LastBioCtrlCallback());
 }
 
 static int DummyCreate(BIO* bio)
@@ -233,7 +237,7 @@ TEST(OpenSslFake, BioMethSetCreateCapturesCallback)
 {
     BIO_METHOD* method = BIO_meth_new(0, "fake");
     BIO_meth_set_create(method, DummyCreate);
-    POINTERS_EQUAL((void*) DummyCreate, (void*) OpenSslFake_LastBioCreateCallback());
+    FUNCTIONPOINTERS_EQUAL(DummyCreate, OpenSslFake_LastBioCreateCallback());
 }
 
 TEST(OpenSslFake, WriteIncrementsCount)
@@ -360,9 +364,9 @@ TEST(OpenSslFake, BioMethNewReturnValueIsSurfaced)
 
 TEST(OpenSslFake, BioSetDataCapturesBioArg)
 {
-    BIO_METHOD* method = BIO_meth_new(0, "fake");
-    BIO*        bio    = BIO_new(method);
-    int         sentinel;
+    BIO_METHOD* method   = BIO_meth_new(0, "fake");
+    BIO*        bio      = BIO_new(method);
+    int         sentinel = 0;
     BIO_set_data(bio, &sentinel);
     POINTERS_EQUAL(bio, OpenSslFake_LastSetDataBioArg());
 }

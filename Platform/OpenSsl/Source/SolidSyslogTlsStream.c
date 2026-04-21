@@ -50,7 +50,7 @@ static bool Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress
     }
     stream->ctx = CreateSslContext(stream->config.caBundlePath);
     stream->ssl = SSL_new(stream->ctx);
-    BIO* bio     = CreateTransportBio();
+    BIO* bio    = CreateTransportBio();
     BIO_set_data(bio, stream->config.transport);
     SSL_set_bio(stream->ssl, bio, bio);
     if (stream->config.serverName != NULL)
@@ -108,6 +108,7 @@ static int TransportBioWrite(BIO* bio, const char* buffer, int size)
 /* Minimal ctrl handler. OpenSSL calls this for a variety of control commands
  * during normal operation; returning 1 for the common lifecycle commands lets
  * SSL_connect / SSL_write / SSL_shutdown proceed. Unknown commands return 0. */
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- signature fixed by OpenSSL BIO_ctrl_fn contract
 static long TransportBioCtrl(BIO* bio, int cmd, long larg, void* parg)
 {
     (void) bio;

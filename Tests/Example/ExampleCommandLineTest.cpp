@@ -168,7 +168,7 @@ TEST(ExampleCommandLine, TrailingTextMaxFileSizeReturnsOne)
 
 TEST(ExampleCommandLine, TransportTlsAccepted)
 {
-    char  arg0[] = "test";
+    char  arg0[]    = "test";
     char  argFlag[] = "--transport";
     char  argVal[]  = "tls";
     char* argv[]    = {arg0, argFlag, argVal, nullptr};

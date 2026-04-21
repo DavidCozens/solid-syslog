@@ -12,7 +12,7 @@ EXTERN_C_BEGIN
     int         ExampleTlsConfig_GetPort(void);
     const char* ExampleTlsConfig_GetCaBundlePath(void);
     const char* ExampleTlsConfig_GetServerName(void);
-    void        ExampleTlsConfig_GetEndpoint(struct SolidSyslogEndpoint* endpoint);
+    void        ExampleTlsConfig_GetEndpoint(struct SolidSyslogEndpoint * endpoint);
     uint32_t    ExampleTlsConfig_GetEndpointVersion(void);
 
 EXTERN_C_END

@@ -1,4 +1,4 @@
-@tls @buffered @wip
+@tls @buffered
 Feature: TLS message delivery
   The threaded example sends messages via TLS transport (RFC 5425) —
   RFC 6587 octet-counting framing over TLS — to syslog-ng.

@@ -50,7 +50,7 @@ EXTERN_C_BEGIN
     int (*OpenSslFake_LastBioReadCallback(void))(struct bio_st*, char*, int);
     long (*OpenSslFake_LastBioCtrlCallback(void))(struct bio_st*, int, long, void*);
     int (*OpenSslFake_LastBioCreateCallback(void))(struct bio_st*);
-    int                OpenSslFake_LastSetInitArg(void);
+    int OpenSslFake_LastSetInitArg(void);
 
     /* BIO_meth_set_write */
     struct bio_method_st* OpenSslFake_LastBioMethSetWriteMethodArg(void);

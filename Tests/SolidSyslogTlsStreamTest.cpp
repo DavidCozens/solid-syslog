@@ -20,8 +20,10 @@ TEST_GROUP(SolidSyslogTlsStream)
         OpenSslFake_Reset();
         transport        = StreamFake_Create();
         config.transport = transport;
-        stream           = SolidSyslogTlsStream_Create(&config);
-        addr             = SolidSyslogAddress_FromStorage(&addrStorage);
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+        stream = SolidSyslogTlsStream_Create(&config);
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+        addr = SolidSyslogAddress_FromStorage(&addrStorage);
     }
 
     void teardown() override
@@ -30,6 +32,7 @@ TEST_GROUP(SolidSyslogTlsStream)
         StreamFake_Destroy(transport);
     }
 };
+
 // clang-format on
 
 TEST(SolidSyslogTlsStream, CreateSucceeds)
@@ -160,6 +163,10 @@ TEST(SolidSyslogTlsStream, BioReadCallbackDelegatesToTransportRead)
     SolidSyslogStream_Open(stream, addr);
     int (*readFn)(BIO*, char*, int) = OpenSslFake_LastBioReadCallback();
     CHECK_TRUE(readFn != nullptr);
+    if (readFn == nullptr)
+    {
+        return;
+    }
     char buf[16];
     readFn(OpenSslFake_LastBioReturned(), buf, sizeof(buf));
     LONGS_EQUAL(1, StreamFake_ReadCallCount(transport));
@@ -170,6 +177,10 @@ TEST(SolidSyslogTlsStream, BioWriteCallbackDelegatesToTransportSend)
     SolidSyslogStream_Open(stream, addr);
     int (*writeFn)(BIO*, const char*, int) = OpenSslFake_LastBioWriteCallback();
     CHECK_TRUE(writeFn != nullptr);
+    if (writeFn == nullptr)
+    {
+        return;
+    }
     const char msg[] = "hi";
     writeFn(OpenSslFake_LastBioReturned(), msg, (int) sizeof(msg));
     LONGS_EQUAL(1, StreamFake_SendCallCount(transport));

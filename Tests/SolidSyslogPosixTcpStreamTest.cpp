@@ -222,7 +222,7 @@ TEST(SolidSyslogPosixTcpStream, ReadReturnsRecvReturnValue)
 {
     SocketFake_SetRecvReturn(7);
     SolidSyslogStream_Open(stream, addr);
-    char buf[16];
+    char    buf[16];
     ssize_t n = SolidSyslogStream_Read(stream, buf, sizeof(buf));
     LONGS_EQUAL(7, n);
 }
