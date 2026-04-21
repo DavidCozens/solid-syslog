@@ -1,27 +1,13 @@
 if(SOLIDSYSLOG_POSIX)
-    set(POSIX_FAKES_SOURCES
+    add_library(PosixFakes STATIC
         ClockFake.c
         SafeStringStandard.c
         SocketFake.c
     )
 
-    if(SOLIDSYSLOG_OPENSSL)
-        list(APPEND POSIX_FAKES_SOURCES OpenSslFake.c)
-    endif()
-
-    add_library(PosixFakes STATIC ${POSIX_FAKES_SOURCES})
-
     target_include_directories(PosixFakes PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
     target_link_libraries(PosixFakes PUBLIC ${PROJECT_NAME})
-
-    if(SOLIDSYSLOG_OPENSSL)
-        # OpenSslFake.c and any test that includes <openssl/ssl.h> needs the
-        # OpenSSL headers on the compiler include path. On POSIX these usually
-        # come from /usr/include implicitly; on Windows+vcpkg they live under
-        # the vcpkg install tree and must be declared explicitly.
-        target_include_directories(PosixFakes PUBLIC ${OPENSSL_INCLUDE_DIR})
-    endif()
 endif()
 
 if(SOLIDSYSLOG_WINSOCK)
@@ -30,4 +16,20 @@ if(SOLIDSYSLOG_WINSOCK)
     target_include_directories(WinsockFakes PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
     target_link_libraries(WinsockFakes PUBLIC ${PROJECT_NAME})
+endif()
+
+# OpenSSL fake is orthogonal to platform — link-time substitutes libssl symbols
+# so the library's TLS code can be test-driven without real OpenSSL. Any target
+# linking OpenSslFakes inherits the OpenSSL include path, which is needed
+# explicitly on systems where OpenSSL isn't on the default compiler search
+# path (e.g. Windows + vcpkg).
+if(SOLIDSYSLOG_OPENSSL)
+    add_library(OpenSslFakes STATIC OpenSslFake.c)
+
+    target_include_directories(OpenSslFakes PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${OPENSSL_INCLUDE_DIR}
+    )
+
+    target_link_libraries(OpenSslFakes PUBLIC ${PROJECT_NAME})
 endif()

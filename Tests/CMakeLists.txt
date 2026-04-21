@@ -100,6 +100,10 @@ if(SOLIDSYSLOG_POSIX)
     target_link_libraries(${PROJECT_NAME}Tests PRIVATE PosixFakes)
 endif()
 
+if(SOLIDSYSLOG_OPENSSL)
+    target_link_libraries(${PROJECT_NAME}Tests PRIVATE OpenSslFakes)
+endif()
+
 if(HAVE_WINDOWS_PLATFORM OR SOLIDSYSLOG_WINSOCK)
     target_include_directories(${PROJECT_NAME}Tests PRIVATE ${CMAKE_SOURCE_DIR}/Platform/Windows/Source)
 endif()
