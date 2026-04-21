@@ -401,6 +401,15 @@ TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenHandshakeFails)
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
 }
 
+TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenSet1HostFails)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.serverName = "logs.example";
+    stream            = SolidSyslogTlsStream_Create(&config);
+    OpenSslFake_SetSet1HostFails(true);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
 TEST(SolidSyslogTlsStream, SendReturnsTrueOnHappyPath)
 {
     SolidSyslogStream_Open(stream, addr);

@@ -70,6 +70,7 @@ static const char* lastSniHostname;
 /* SSL_set1_host */
 static SSL*        lastSet1HostSslArg;
 static const char* lastSet1Host;
+static bool        set1HostFails;
 
 /* SSL_connect */
 static int  connectCallCount;
@@ -137,6 +138,7 @@ void OpenSslFake_Reset(void)
     lastSniHostname               = NULL;
     lastSet1HostSslArg            = NULL;
     lastSet1Host                  = NULL;
+    set1HostFails                 = false;
     connectCallCount              = 0;
     lastConnectSslArg             = NULL;
     connectFails                  = false;
@@ -554,7 +556,12 @@ int SSL_set1_host(SSL* ssl, const char* hostname)
 {
     lastSet1HostSslArg = ssl;
     lastSet1Host       = hostname;
-    return 1;
+    return set1HostFails ? 0 : 1;
+}
+
+void OpenSslFake_SetSet1HostFails(bool fails)
+{
+    set1HostFails = fails;
 }
 
 int SSL_connect(SSL* ssl)
