@@ -39,6 +39,7 @@ static long     lastMinProtoVersion;
 /* SSL_new */
 static int      sslNewCallCount;
 static SSL_CTX* lastSslNewCtxArg;
+static bool     sslNewFails;
 
 /* BIO_meth_set_read / BIO_meth_set_write */
 static BIO_METHOD* lastBioMethSetReadMethodArg;
@@ -121,6 +122,7 @@ void OpenSslFake_Reset(void)
     lastMinProtoVersion           = 0;
     sslNewCallCount               = 0;
     lastSslNewCtxArg              = NULL;
+    sslNewFails                   = false;
     lastBioMethSetReadMethodArg   = NULL;
     lastBioReadCallback           = NULL;
     lastBioCtrlCallback           = NULL;
@@ -476,7 +478,12 @@ SSL* SSL_new(SSL_CTX* ctx)
 {
     sslNewCallCount++;
     lastSslNewCtxArg = ctx;
-    return (SSL*) &fakeSslStorage;
+    return sslNewFails ? NULL : (SSL*) &fakeSslStorage;
+}
+
+void OpenSslFake_SetSslNewFails(bool fails)
+{
+    sslNewFails = fails;
 }
 
 BIO_METHOD* BIO_meth_new(int type, const char* name)

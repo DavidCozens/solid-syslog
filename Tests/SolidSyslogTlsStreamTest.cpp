@@ -425,6 +425,12 @@ TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenCtxNewFails)
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
 }
 
+TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenSslNewFails)
+{
+    OpenSslFake_SetSslNewFails(true);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
 TEST(SolidSyslogTlsStream, SendReturnsTrueOnHappyPath)
 {
     SolidSyslogStream_Open(stream, addr);

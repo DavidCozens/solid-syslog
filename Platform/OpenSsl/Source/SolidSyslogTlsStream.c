@@ -56,7 +56,11 @@ static bool Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress
         return false;
     }
     stream->ssl = SSL_new(stream->ctx);
-    BIO* bio    = CreateTransportBio();
+    if (stream->ssl == NULL)
+    {
+        return false;
+    }
+    BIO* bio = CreateTransportBio();
     BIO_set_data(bio, stream->config.transport);
     SSL_set_bio(stream->ssl, bio, bio);
     if (stream->config.serverName != NULL)
