@@ -22,6 +22,7 @@ static char fakeBioStorage;
 /* SSL_CTX_new */
 static int               ctxNewCallCount;
 static const SSL_METHOD* lastCtxNewMethodArg;
+static bool              ctxNewFails;
 
 /* SSL_CTX_load_verify_locations */
 static SSL_CTX*    lastLoadVerifyLocationsCtxArg;
@@ -111,6 +112,7 @@ void OpenSslFake_Reset(void)
 {
     ctxNewCallCount               = 0;
     lastCtxNewMethodArg           = NULL;
+    ctxNewFails                   = false;
     lastLoadVerifyLocationsCtxArg = NULL;
     lastCaBundlePath              = NULL;
     lastSetVerifyCtxArg           = NULL;
@@ -432,7 +434,12 @@ SSL_CTX* SSL_CTX_new(const SSL_METHOD* method)
 {
     ctxNewCallCount++;
     lastCtxNewMethodArg = method;
-    return (SSL_CTX*) &fakeCtxStorage;
+    return ctxNewFails ? NULL : (SSL_CTX*) &fakeCtxStorage;
+}
+
+void OpenSslFake_SetCtxNewFails(bool fails)
+{
+    ctxNewFails = fails;
 }
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- signature fixed by OpenSSL API

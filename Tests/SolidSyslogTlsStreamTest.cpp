@@ -419,6 +419,12 @@ TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenSniHostnameSetupFails)
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
 }
 
+TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenCtxNewFails)
+{
+    OpenSslFake_SetCtxNewFails(true);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
 TEST(SolidSyslogTlsStream, SendReturnsTrueOnHappyPath)
 {
     SolidSyslogStream_Open(stream, addr);

@@ -21,6 +21,7 @@ EXTERN_C_BEGIN
     void OpenSslFake_SetWriteFails(bool fails);
     void OpenSslFake_SetSet1HostFails(bool fails);
     void OpenSslFake_SetSniHostnameFails(bool fails);
+    void OpenSslFake_SetCtxNewFails(bool fails);
 
     /* SSL_CTX_new */
     int                         OpenSslFake_CtxNewCallCount(void);

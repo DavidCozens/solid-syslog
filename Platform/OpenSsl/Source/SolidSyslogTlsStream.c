@@ -51,6 +51,10 @@ static bool Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress
         return false;
     }
     stream->ctx = CreateSslContext(stream->config.caBundlePath);
+    if (stream->ctx == NULL)
+    {
+        return false;
+    }
     stream->ssl = SSL_new(stream->ctx);
     BIO* bio    = CreateTransportBio();
     BIO_set_data(bio, stream->config.transport);
@@ -143,6 +147,10 @@ static long TransportBioCtrl(BIO* bio, int cmd, long larg, void* parg)
 static SSL_CTX* CreateSslContext(const char* caBundlePath)
 {
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    if (ctx == NULL)
+    {
+        return NULL;
+    }
     SSL_CTX_load_verify_locations(ctx, caBundlePath, NULL);
     SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
     SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION);
