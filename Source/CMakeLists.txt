@@ -30,9 +30,14 @@ if(SOLIDSYSLOG_POSIX OR SOLIDSYSLOG_WINSOCK)
     )
 endif()
 
-if(SOLIDSYSLOG_POSIX)
+if(SOLIDSYSLOG_POSIX OR SOLIDSYSLOG_OPENSSL)
     list(APPEND SOURCES
         SolidSyslogStream.c
+    )
+endif()
+
+if(SOLIDSYSLOG_POSIX)
+    list(APPEND SOURCES
         SolidSyslogStreamSender.c
     )
 endif()

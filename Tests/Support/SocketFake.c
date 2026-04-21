@@ -52,6 +52,13 @@ static int lastSetSockOptOptname;
 static int closeCallCount;
 static int lastClosedFd;
 
+static int         recvCallCount;
+static ssize_t     recvReturn;
+static int         lastRecvFd;
+static const void* lastRecvBuf;
+static size_t      lastRecvLen;
+static int         lastRecvFlags;
+
 static char lastAddrString[INET_ADDRSTRLEN];
 
 static bool               getAddrInfoFails;
@@ -97,6 +104,12 @@ void SocketFake_Reset(void)
     lastSocketType           = 0;
     closeCallCount           = 0;
     lastClosedFd             = -1;
+    recvCallCount            = 0;
+    recvReturn               = 0;
+    lastRecvFd               = -1;
+    lastRecvBuf              = NULL;
+    lastRecvLen              = 0;
+    lastRecvFlags            = 0;
     lastAddrString[0]        = '\0';
 
     getAddrInfoFails            = false;
@@ -309,6 +322,40 @@ int SocketFake_LastClosedFd(void)
     return lastClosedFd;
 }
 
+/* recv configuration */
+
+void SocketFake_SetRecvReturn(ssize_t value)
+{
+    recvReturn = value;
+}
+
+/* recv accessors */
+
+int SocketFake_RecvCallCount(void)
+{
+    return recvCallCount;
+}
+
+int SocketFake_LastRecvFd(void)
+{
+    return lastRecvFd;
+}
+
+const void* SocketFake_LastRecvBuf(void)
+{
+    return lastRecvBuf;
+}
+
+size_t SocketFake_LastRecvLen(void)
+{
+    return lastRecvLen;
+}
+
+int SocketFake_LastRecvFlags(void)
+{
+    return lastRecvFlags;
+}
+
 /* getaddrinfo configuration */
 
 void SocketFake_SetGetAddrInfoFails(bool fails)
@@ -427,6 +474,19 @@ int close(int fd)
     closeCallCount++;
     lastClosedFd = fd;
     return 0;
+}
+
+// clang-format off
+// NOLINTNEXTLINE(readability-inconsistent-declaration-parameter-name,bugprone-easily-swappable-parameters) -- POSIX API; names differ from glibc internal names
+ssize_t recv(int sockfd, void* buf, size_t len, int flags)
+// clang-format on
+{
+    recvCallCount++;
+    lastRecvFd    = sockfd;
+    lastRecvBuf   = buf;
+    lastRecvLen   = len;
+    lastRecvFlags = flags;
+    return recvReturn;
 }
 
 // clang-format off

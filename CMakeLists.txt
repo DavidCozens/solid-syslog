@@ -82,10 +82,24 @@ if(HAVE_STDATOMIC_H OR HAVE_WINDOWS_INTERLOCKED)
     set(HAVE_ATOMIC_COUNTER TRUE)
 endif()
 
+# OpenSSL-based TLS is an optional platform feature. Default ON when OpenSSL is
+# discoverable so CI and most workstations get TLS automatically; pass
+# -DSOLIDSYSLOG_OPENSSL=OFF to build a UDP/TCP-only library on systems without
+# OpenSSL.
+find_package(OpenSSL QUIET)
+option(SOLIDSYSLOG_OPENSSL "Include OpenSSL-based TLS support" ${OpenSSL_FOUND})
+if(SOLIDSYSLOG_OPENSSL AND NOT OpenSSL_FOUND)
+    message(FATAL_ERROR "SOLIDSYSLOG_OPENSSL=ON but OpenSSL was not found; install OpenSSL or pass -DSOLIDSYSLOG_OPENSSL=OFF")
+endif()
+
 add_subdirectory(Source)
 
 if(SOLIDSYSLOG_POSIX)
     add_subdirectory(Platform/Posix)
+endif()
+
+if(SOLIDSYSLOG_OPENSSL)
+    add_subdirectory(Platform/OpenSsl)
 endif()
 
 if(HAVE_WINDOWS_INTERLOCKED OR HAVE_WINDOWS_PLATFORM OR SOLIDSYSLOG_WINSOCK)

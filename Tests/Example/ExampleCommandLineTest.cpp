@@ -166,6 +166,16 @@ TEST(ExampleCommandLine, TrailingTextMaxFileSizeReturnsOne)
     LONGS_EQUAL(1, Parse(3, argv));
 }
 
+TEST(ExampleCommandLine, TransportTlsAccepted)
+{
+    char  arg0[]    = "test";
+    char  argFlag[] = "--transport";
+    char  argVal[]  = "tls";
+    char* argv[]    = {arg0, argFlag, argVal, nullptr};
+    LONGS_EQUAL(0, Parse(3, argv));
+    STRCMP_EQUAL("tls", options.transport);
+}
+
 TEST(ExampleCommandLine, NoSdFlag)
 {
     char  arg0[] = "test";

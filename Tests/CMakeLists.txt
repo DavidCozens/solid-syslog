@@ -29,6 +29,8 @@ set(TEST_SOURCES
     StringFake.c
     FileFakeTest.cpp
     FileFake.c
+    StreamFakeTest.cpp
+    StreamFake.c
     TestAssert.cpp
     SolidSyslogFileStoreTest.cpp
     main.cpp
@@ -58,6 +60,14 @@ if(SOLIDSYSLOG_POSIX)
         SolidSyslogGetAddrInfoResolverTest.cpp
         SolidSyslogPosixDatagramTest.cpp
         SolidSyslogPosixTcpStreamTest.cpp
+        SocketFakeTest.cpp
+    )
+endif()
+
+if(SOLIDSYSLOG_OPENSSL)
+    list(APPEND TEST_SOURCES
+        SolidSyslogTlsStreamTest.cpp
+        OpenSslFakeTest.cpp
     )
 endif()
 
@@ -88,6 +98,10 @@ target_include_directories(${PROJECT_NAME}Tests PRIVATE ${CMAKE_SOURCE_DIR}/Sour
 
 if(SOLIDSYSLOG_POSIX)
     target_link_libraries(${PROJECT_NAME}Tests PRIVATE PosixFakes)
+endif()
+
+if(SOLIDSYSLOG_OPENSSL)
+    target_link_libraries(${PROJECT_NAME}Tests PRIVATE OpenSslFakes)
 endif()
 
 if(HAVE_WINDOWS_PLATFORM OR SOLIDSYSLOG_WINSOCK)

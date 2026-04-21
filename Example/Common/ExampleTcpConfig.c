@@ -14,15 +14,15 @@ const char* ExampleTcpConfig_GetHost(void)
     return "syslog-ng";
 }
 
-int ExampleTcpConfig_GetPort(void)
+uint16_t ExampleTcpConfig_GetPort(void)
 {
-    return EXAMPLE_TCP_PORT;
+    return (uint16_t) EXAMPLE_TCP_PORT;
 }
 
 void ExampleTcpConfig_GetEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
     SolidSyslogFormatter_BoundedString(endpoint->host, ExampleTcpConfig_GetHost(), SOLIDSYSLOG_MAX_HOST_SIZE);
-    endpoint->port = (uint16_t) ExampleTcpConfig_GetPort();
+    endpoint->port = ExampleTcpConfig_GetPort();
 }
 
 /* Static config — host/port never change, so version stays 0 forever and the

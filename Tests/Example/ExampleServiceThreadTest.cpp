@@ -16,7 +16,7 @@
 static void ExampleEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
     SolidSyslogFormatter_BoundedString(endpoint->host, ExampleUdpConfig_GetHost(), SOLIDSYSLOG_MAX_HOST_SIZE);
-    endpoint->port = (uint16_t) ExampleUdpConfig_GetPort();
+    endpoint->port = ExampleUdpConfig_GetPort();
 }
 
 static uint32_t ExampleEndpointVersion() // NOLINT(modernize-use-trailing-return-type)
