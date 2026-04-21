@@ -1,4 +1,6 @@
-find_package(OpenSSL REQUIRED)
+# OpenSSL was discovered (or explicitly requested) at the top-level CMakeLists.
+# Platform/OpenSsl is only entered when SOLIDSYSLOG_OPENSSL is ON, so we can
+# rely on the OPENSSL_INCLUDE_DIR variable being set.
 
 target_sources(${PROJECT_NAME} PRIVATE
     Source/SolidSyslogTlsStream.c

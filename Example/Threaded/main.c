@@ -4,7 +4,6 @@
 #include "ExampleServiceThread.h"
 #include "ExampleSwitchConfig.h"
 #include "ExampleTcpConfig.h"
-#include "ExampleTlsConfig.h"
 #include "ExampleUdpConfig.h"
 #include "SolidSyslog.h"
 #include "SolidSyslogAtomicCounter.h"
@@ -25,8 +24,14 @@
 #include "SolidSyslogPosixTcpStream.h"
 #include "SolidSyslogSwitchingSender.h"
 #include "SolidSyslogStreamSender.h"
-#include "SolidSyslogTlsStream.h"
 #include "SolidSyslogUdpSender.h"
+
+/* TODO(S3.13, #171): replace these three #ifdef blocks with a per-backend
+ * ExampleTlsSender factory selected at CMake time. */
+#ifdef SOLIDSYSLOG_HAVE_OPENSSL
+#include "ExampleTlsConfig.h"
+#include "SolidSyslogTlsStream.h"
+#endif
 
 #include <pthread.h>
 #include <string.h>
@@ -75,6 +80,7 @@ static struct SolidSyslogSender* CreateSender(const struct ExampleOptions* optio
     struct SolidSyslogSender* reliableSender = NULL;
     if (tlsModeActive)
     {
+#ifdef SOLIDSYSLOG_HAVE_OPENSSL
         static struct SolidSyslogTlsStreamConfig tlsStreamConfig = {0};
         tlsStreamConfig.transport                                = SolidSyslogPosixTcpStream_Create();
         tlsStreamConfig.caBundlePath                             = ExampleTlsConfig_GetCaBundlePath();
@@ -87,8 +93,12 @@ static struct SolidSyslogSender* CreateSender(const struct ExampleOptions* optio
         tlsSenderConfig.endpoint                                    = ExampleTlsConfig_GetEndpoint;
         tlsSenderConfig.endpointVersion                             = ExampleTlsConfig_GetEndpointVersion;
         reliableSender                                              = SolidSyslogStreamSender_Create(&tlsSenderConfig);
+#else
+        /* --transport tls requested but the build has no OpenSSL — fall through to TCP. */
+        tlsModeActive = false;
+#endif
     }
-    else
+    if (!tlsModeActive && reliableSender == NULL)
     {
         static struct SolidSyslogStreamSenderConfig tcpConfig = {0};
         tcpConfig.resolver                                    = resolver;
@@ -166,10 +176,12 @@ static void DestroySender(void)
 {
     SolidSyslogSwitchingSender_Destroy();
     SolidSyslogStreamSender_Destroy();
+#ifdef SOLIDSYSLOG_HAVE_OPENSSL
     if (tlsModeActive)
     {
         SolidSyslogTlsStream_Destroy();
     }
+#endif
     SolidSyslogPosixTcpStream_Destroy();
     SolidSyslogUdpSender_Destroy();
     SolidSyslogPosixDatagram_Destroy();

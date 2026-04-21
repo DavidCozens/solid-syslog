@@ -2,10 +2,10 @@
 #define STREAMFAKE_H
 
 #include "ExternC.h"
+#include "SolidSyslogStream.h"
 
 #include <stdbool.h>
 #include <stddef.h>
-#include <sys/types.h>
 
 EXTERN_C_BEGIN
 
@@ -22,7 +22,7 @@ EXTERN_C_BEGIN
     int                              StreamFake_ReadCallCount(struct SolidSyslogStream * stream);
     void*                            StreamFake_LastReadBuf(struct SolidSyslogStream * stream);
     size_t                           StreamFake_LastReadSize(struct SolidSyslogStream * stream);
-    void                             StreamFake_SetReadReturn(struct SolidSyslogStream * stream, ssize_t value);
+    void                             StreamFake_SetReadReturn(struct SolidSyslogStream * stream, SolidSyslogSsize value);
     void                             StreamFake_SetOpenFails(struct SolidSyslogStream * stream, bool fails);
     int                              StreamFake_CloseCallCount(struct SolidSyslogStream * stream);
 

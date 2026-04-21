@@ -2,7 +2,6 @@
 #include "SolidSyslogStreamDefinition.h"
 
 #include <stdlib.h>
-#include <sys/types.h>
 
 struct StreamFake
 {
@@ -16,7 +15,7 @@ struct StreamFake
     int                              readCallCount;
     void*                            lastReadBuf;
     size_t                           lastReadSize;
-    ssize_t                          readReturn;
+    SolidSyslogSsize                 readReturn;
     int                              closeCallCount;
 };
 
@@ -37,7 +36,7 @@ static bool Send(struct SolidSyslogStream* self, const void* buffer, size_t size
     return true;
 }
 
-static ssize_t Read(struct SolidSyslogStream* self, void* buffer, size_t size)
+static SolidSyslogSsize Read(struct SolidSyslogStream* self, void* buffer, size_t size)
 {
     struct StreamFake* fake = (struct StreamFake*) self;
     fake->readCallCount++;
@@ -107,7 +106,7 @@ size_t StreamFake_LastReadSize(struct SolidSyslogStream* stream)
     return ((struct StreamFake*) stream)->lastReadSize;
 }
 
-void StreamFake_SetReadReturn(struct SolidSyslogStream* stream, ssize_t value)
+void StreamFake_SetReadReturn(struct SolidSyslogStream* stream, SolidSyslogSsize value)
 {
     ((struct StreamFake*) stream)->readReturn = value;
 }

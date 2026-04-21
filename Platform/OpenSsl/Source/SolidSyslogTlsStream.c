@@ -11,15 +11,16 @@ struct SolidSyslogTlsStream
     SSL*                              ssl;
 };
 
-static bool     Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr);
-static bool     Send(struct SolidSyslogStream* self, const void* buffer, size_t size);
-static void     Close(struct SolidSyslogStream* self);
-static SSL_CTX* CreateSslContext(const char* caBundlePath);
-static BIO*     CreateTransportBio(void);
-static int      TransportBioCreate(BIO* bio);
-static int      TransportBioRead(BIO* bio, char* buffer, int size);
-static int      TransportBioWrite(BIO* bio, const char* buffer, int size);
-static long     TransportBioCtrl(BIO* bio, int cmd, long larg, void* parg);
+static bool             Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr);
+static bool             Send(struct SolidSyslogStream* self, const void* buffer, size_t size);
+static SolidSyslogSsize Read(struct SolidSyslogStream* self, void* buffer, size_t size);
+static void             Close(struct SolidSyslogStream* self);
+static SSL_CTX*         CreateSslContext(const char* caBundlePath);
+static BIO*             CreateTransportBio(void);
+static int              TransportBioCreate(BIO* bio);
+static int              TransportBioRead(BIO* bio, char* buffer, int size);
+static int              TransportBioWrite(BIO* bio, const char* buffer, int size);
+static long             TransportBioCtrl(BIO* bio, int cmd, long larg, void* parg);
 
 static struct SolidSyslogTlsStream instance;
 
@@ -28,6 +29,7 @@ struct SolidSyslogStream* SolidSyslogTlsStream_Create(const struct SolidSyslogTl
     instance.config     = *config;
     instance.base.Open  = Open;
     instance.base.Send  = Send;
+    instance.base.Read  = Read;
     instance.base.Close = Close;
     return &instance.base;
 }
@@ -65,6 +67,12 @@ static bool Send(struct SolidSyslogStream* self, const void* buffer, size_t size
 {
     struct SolidSyslogTlsStream* stream = (struct SolidSyslogTlsStream*) self;
     return SSL_write(stream->ssl, buffer, (int) size) > 0;
+}
+
+static SolidSyslogSsize Read(struct SolidSyslogStream* self, void* buffer, size_t size)
+{
+    struct SolidSyslogTlsStream* stream = (struct SolidSyslogTlsStream*) self;
+    return (SolidSyslogSsize) SSL_read(stream->ssl, buffer, (int) size);
 }
 
 static void Close(struct SolidSyslogStream* self)

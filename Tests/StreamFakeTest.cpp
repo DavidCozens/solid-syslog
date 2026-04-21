@@ -82,8 +82,8 @@ TEST(StreamFake, ReadCapturesSize)
 TEST(StreamFake, ReadReturnsConfiguredValue)
 {
     StreamFake_SetReadReturn(stream, 5);
-    char    buf[16];
-    ssize_t n = SolidSyslogStream_Read(stream, buf, sizeof(buf));
+    char             buf[16];
+    SolidSyslogSsize n = SolidSyslogStream_Read(stream, buf, sizeof(buf));
     LONGS_EQUAL(5, n);
 }
 

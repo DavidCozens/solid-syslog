@@ -9,7 +9,7 @@ EXTERN_C_BEGIN
     {
         bool (*Open)(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr);
         bool (*Send)(struct SolidSyslogStream* self, const void* buffer, size_t size);
-        ssize_t (*Read)(struct SolidSyslogStream* self, void* buffer, size_t size);
+        SolidSyslogSsize (*Read)(struct SolidSyslogStream* self, void* buffer, size_t size);
         void (*Close)(struct SolidSyslogStream* self);
     };
 

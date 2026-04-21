@@ -476,9 +476,10 @@ int close(int fd)
     return 0;
 }
 
-// NOLINTNEXTLINE(readability-inconsistent-declaration-parameter-name,bugprone-easily-swappable-parameters) -- POSIX API; parameter names differ from glibc
-// internal names
+// clang-format off
+// NOLINTNEXTLINE(readability-inconsistent-declaration-parameter-name,bugprone-easily-swappable-parameters) -- POSIX API; names differ from glibc internal names
 ssize_t recv(int sockfd, void* buf, size_t len, int flags)
+// clang-format on
 {
     recvCallCount++;
     lastRecvFd    = sockfd;

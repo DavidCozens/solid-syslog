@@ -83,6 +83,12 @@ static const void* lastWriteBuf;
 static int         lastWriteSize;
 static bool        writeFails;
 
+/* SSL_read */
+static int   sslReadCallCount;
+static SSL*  lastSslReadSslArg;
+static void* lastSslReadBuf;
+static int   lastSslReadSize;
+
 /* SSL_shutdown */
 static int  shutdownCallCount;
 static SSL* lastShutdownSslArg;
@@ -139,6 +145,10 @@ void OpenSslFake_Reset(void)
     lastWriteBuf                  = NULL;
     lastWriteSize                 = 0;
     writeFails                    = false;
+    sslReadCallCount              = 0;
+    lastSslReadSslArg             = NULL;
+    lastSslReadBuf                = NULL;
+    lastSslReadSize               = 0;
     shutdownCallCount             = 0;
     lastShutdownSslArg            = NULL;
     freeCallCount                 = 0;
@@ -351,6 +361,26 @@ int OpenSslFake_LastWriteSize(void)
     return lastWriteSize;
 }
 
+int OpenSslFake_SslReadCallCount(void)
+{
+    return sslReadCallCount;
+}
+
+SSL* OpenSslFake_LastSslReadSslArg(void)
+{
+    return lastSslReadSslArg;
+}
+
+void* OpenSslFake_LastSslReadBuf(void)
+{
+    return lastSslReadBuf;
+}
+
+int OpenSslFake_LastSslReadSize(void)
+{
+    return lastSslReadSize;
+}
+
 int OpenSslFake_ShutdownCallCount(void)
 {
     return shutdownCallCount;
@@ -551,6 +581,15 @@ int SSL_write(SSL* ssl, const void* buf, int num)
 void OpenSslFake_SetWriteFails(bool fails)
 {
     writeFails = fails;
+}
+
+int SSL_read(SSL* ssl, void* buf, int num)
+{
+    sslReadCallCount++;
+    lastSslReadSslArg = ssl;
+    lastSslReadBuf    = buf;
+    lastSslReadSize   = num;
+    return num;
 }
 
 int SSL_shutdown(SSL* ssl)

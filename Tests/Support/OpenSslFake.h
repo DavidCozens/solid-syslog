@@ -92,6 +92,12 @@ EXTERN_C_BEGIN
     const void*    OpenSslFake_LastWriteBuf(void);
     int            OpenSslFake_LastWriteSize(void);
 
+    /* SSL_read */
+    int            OpenSslFake_SslReadCallCount(void);
+    struct ssl_st* OpenSslFake_LastSslReadSslArg(void);
+    void*          OpenSslFake_LastSslReadBuf(void);
+    int            OpenSslFake_LastSslReadSize(void);
+
     /* SSL_shutdown */
     int            OpenSslFake_ShutdownCallCount(void);
     struct ssl_st* OpenSslFake_LastShutdownSslArg(void);

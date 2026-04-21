@@ -12,12 +12,12 @@ enum
     INVALID_FD = -1
 };
 
-static bool        Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr);
-static bool        Send(struct SolidSyslogStream* self, const void* buffer, size_t size);
-static ssize_t     Read(struct SolidSyslogStream* self, void* buffer, size_t size);
-static void        Close(struct SolidSyslogStream* self);
-static void        EnableTcpNoDelay(int fd);
-static inline bool IsFileDescriptorValid(int fd);
+static bool             Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr);
+static bool             Send(struct SolidSyslogStream* self, const void* buffer, size_t size);
+static SolidSyslogSsize Read(struct SolidSyslogStream* self, void* buffer, size_t size);
+static void             Close(struct SolidSyslogStream* self);
+static void             EnableTcpNoDelay(int fd);
+static inline bool      IsFileDescriptorValid(int fd);
 
 struct SolidSyslogPosixTcpStream
 {
@@ -77,10 +77,10 @@ static bool Send(struct SolidSyslogStream* self, const void* buffer, size_t size
     return send(stream->fd, buffer, size, MSG_NOSIGNAL) >= 0;
 }
 
-static ssize_t Read(struct SolidSyslogStream* self, void* buffer, size_t size)
+static SolidSyslogSsize Read(struct SolidSyslogStream* self, void* buffer, size_t size)
 {
     struct SolidSyslogPosixTcpStream* stream = (struct SolidSyslogPosixTcpStream*) self;
-    return recv(stream->fd, buffer, size, 0);
+    return (SolidSyslogSsize) recv(stream->fd, buffer, size, 0);
 }
 
 static void Close(struct SolidSyslogStream* self)

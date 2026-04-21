@@ -218,6 +218,38 @@ TEST(SolidSyslogTlsStream, SendPassesSslFromNewToWrite)
     POINTERS_EQUAL(OpenSslFake_LastSslReturned(), OpenSslFake_LastWriteSslArg());
 }
 
+TEST(SolidSyslogTlsStream, ReadReadsFromSsl)
+{
+    SolidSyslogStream_Open(stream, addr);
+    char buf[16];
+    SolidSyslogStream_Read(stream, buf, sizeof(buf));
+    LONGS_EQUAL(1, OpenSslFake_SslReadCallCount());
+}
+
+TEST(SolidSyslogTlsStream, ReadPassesSslFromNewToSslRead)
+{
+    SolidSyslogStream_Open(stream, addr);
+    char buf[16];
+    SolidSyslogStream_Read(stream, buf, sizeof(buf));
+    POINTERS_EQUAL(OpenSslFake_LastSslReturned(), OpenSslFake_LastSslReadSslArg());
+}
+
+TEST(SolidSyslogTlsStream, ReadPassesBufferToSslRead)
+{
+    SolidSyslogStream_Open(stream, addr);
+    char buf[16];
+    SolidSyslogStream_Read(stream, buf, sizeof(buf));
+    POINTERS_EQUAL(buf, OpenSslFake_LastSslReadBuf());
+}
+
+TEST(SolidSyslogTlsStream, ReadPassesSizeToSslRead)
+{
+    SolidSyslogStream_Open(stream, addr);
+    char buf[16];
+    SolidSyslogStream_Read(stream, buf, sizeof(buf));
+    LONGS_EQUAL(sizeof(buf), OpenSslFake_LastSslReadSize());
+}
+
 TEST(SolidSyslogTlsStream, CloseShutsDownSsl)
 {
     SolidSyslogStream_Open(stream, addr);

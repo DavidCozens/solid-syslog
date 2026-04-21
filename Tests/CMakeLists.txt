@@ -60,9 +60,14 @@ if(SOLIDSYSLOG_POSIX)
         SolidSyslogGetAddrInfoResolverTest.cpp
         SolidSyslogPosixDatagramTest.cpp
         SolidSyslogPosixTcpStreamTest.cpp
+        SocketFakeTest.cpp
+    )
+endif()
+
+if(SOLIDSYSLOG_OPENSSL)
+    list(APPEND TEST_SOURCES
         SolidSyslogTlsStreamTest.cpp
         OpenSslFakeTest.cpp
-        SocketFakeTest.cpp
     )
 endif()
 
