@@ -24,6 +24,162 @@ When cloning this template, reconfigure these branch protection rules on the new
 
 ---
 
+## Issue / Epic Linking
+
+A line like `Parent epic: #5` in an issue body is for human readers only — it does **not**
+create a GitHub sub-issue relationship. The epic's sub-issue summary, the roll-up percentage,
+and the "child issues" column on the project board are all driven by GitHub's native sub-issue
+feature, which is only reachable via the GraphQL API.
+
+When creating a new story under an epic, link it immediately after `gh issue create`:
+
+```bash
+# 1. Get the node IDs (epic and story).
+gh api graphql -f query='
+query {
+  repository(owner: "DavidCozens", name: "solid-syslog") {
+    epic:  issue(number: <EPIC_NUM>)  { id }
+    story: issue(number: <STORY_NUM>) { id }
+  }
+}'
+
+# 2. Link the story as a sub-issue of the epic.
+gh api graphql -f query='
+mutation {
+  addSubIssue(input: {issueId: "<EPIC_NODE_ID>", subIssueId: "<STORY_NODE_ID>"}) {
+    subIssue { number }
+  }
+}'
+
+# 3. Verify.
+gh api graphql -f query='
+query {
+  repository(owner: "DavidCozens", name: "solid-syslog") {
+    issue(number: <EPIC_NUM>) {
+      subIssuesSummary { total completed }
+      subIssues(first: 50) { nodes { number title state } }
+    }
+  }
+}'
+```
+
+Always prefer this GraphQL wiring over `gh issue develop` or textual `Parent epic:` lines —
+those leave the epic's sub-issue list empty and the project board incomplete. If an audit
+turns up orphan stories (body references an epic but the epic's `subIssues` list doesn't
+include them), run `addSubIssue` retroactively; it's idempotent-safe on closed issues.
+
+---
+
+## Project Board Membership
+
+The `SolidSyslog` project board (`gh project list --owner DavidCozens` → project 1) has a
+`Status` single-select field with options **Todo**, **In Progress**, **Done**. Adding an
+issue to the repo does **not** add it to the board — that is a separate step and must be
+done explicitly.
+
+### Convention
+
+- **Epics are never added to the project as items.** The board is grouped by the native
+  *Parent issue* field — every story under the same epic forms a swimlane, and the
+  swimlane header renders the epic's title automatically. Adding the epic itself as an
+  item would make it appear a second time as an orphan row in the "no parent" lane, so
+  don't do it.
+- **Unstarted epic** → nothing on the board. No items, no swimlane. The swimlane only
+  exists once at least one child story is on the board.
+- **Started epic** → the swimlane appears the moment its first story is added to the
+  board. There is no Status field for the epic itself (it isn't an item) — the epic's
+  state is inferred visually from its stories' columns. `subIssuesSummary.percentCompleted`
+  on the epic gives the same roll-up numerically.
+- **All stories belonging to a started epic** → on the board as items, regardless of
+  state. Closed → `Done`. Open and not yet begun → `Todo`. Working → `In Progress`.
+- When the board fills up, Done stories are archived manually as needed — archival is a
+  housekeeping step, not a status transition. Archived items stay on the project and still
+  count in the epic's sub-issue roll-up.
+
+### Add-to-board recipe
+
+```bash
+# Project and Status field IDs (stable for this repo):
+#   projectId   = PVT_kwHOAPhEnM4BTETq
+#   statusField = PVTSSF_lAHOAPhEnM4BTETqzhAat7w
+#   options     = Todo:f75ad846  In Progress:47fc9ee4  Done:98236657
+
+# 1. Get the issue's node ID.
+gh api graphql -f query='
+query {
+  repository(owner: "DavidCozens", name: "solid-syslog") {
+    issue(number: <N>) { id }
+  }
+}'
+
+# 2. Add to project (returns the new project item's id).
+gh api graphql -f query='
+mutation {
+  addProjectV2ItemById(input: {
+    projectId: "PVT_kwHOAPhEnM4BTETq",
+    contentId: "<ISSUE_NODE_ID>"
+  }) { item { id } }
+}'
+
+# 3. Set Status (use the option id matching Todo / In Progress / Done).
+gh api graphql -f query='
+mutation {
+  updateProjectV2ItemFieldValue(input: {
+    projectId: "PVT_kwHOAPhEnM4BTETq",
+    itemId:    "<ITEM_ID>",
+    fieldId:   "PVTSSF_lAHOAPhEnM4BTETqzhAat7w",
+    value:     {singleSelectOptionId: "<OPTION_ID>"}
+  }) { projectV2Item { id } }
+}'
+```
+
+### Issue and story number format
+
+Epic and story numbers in **issue titles and issue bodies** are zero-padded to two
+digits so the board and issue lists sort in numeric order (GitHub sorts alphabetically
+by title). Convention:
+
+- Epics: `E00`, `E01`, …, `E20`, …, `E99`.
+- Stories: `S<EE>.<NN>` — both parts always two digits. e.g. `S03.07`, `S13.09`.
+
+This applies to:
+
+- New issue titles (`gh issue create --title "S<EE>.<NN>: …"`).
+- Cross-references inside issue bodies (epic story tables, "Parent epic", etc.).
+- CLAUDE.md and memory files.
+
+This does **not** apply to:
+
+- Commit messages and branch names — historical commits use the unpadded form, and
+  we don't rewrite history. Going forward both forms are acceptable, padded preferred
+  for consistency with what the referenced issue will show. Readers treat `S3.7` and
+  `S03.07` as equivalent; real linking is by issue number.
+- Code, ADRs, or other repo docs — these reference story numbers only incidentally.
+
+### New-story checklist
+
+For every new story:
+
+1. `gh issue create --title "S<EE>.<NN>: …" --label story` — creates the issue.
+   Pad both the epic and story numbers to two digits.
+2. `addSubIssue` it under the parent epic (see **Issue / Epic Linking** above). The
+   Parent-issue link is what groups the story into the correct swimlane.
+3. Add the story to the project board with `Status = Todo` using the recipe above. Do
+   **not** add the parent epic itself — the swimlane appears automatically once a child
+   story is on the board.
+
+### When closing a story
+
+When a PR merges and closes a story, flip its project Status to `Done`. Closing the
+issue does not update the Status field automatically.
+
+Epics don't have a Status field on the board (they aren't items). When every child
+story is Done, the swimlane naturally becomes all-Done; the epic issue itself should
+also be closed on GitHub. Check `subIssuesSummary.percentCompleted` on the epic if you
+need a numeric roll-up.
+
+---
+
 ## Commit Messages
 
 All commit messages must follow [Conventional Commits](https://www.conventionalcommits.org/) format.
