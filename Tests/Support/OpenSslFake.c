@@ -27,6 +27,7 @@ static bool              ctxNewFails;
 /* SSL_CTX_load_verify_locations */
 static SSL_CTX*    lastLoadVerifyLocationsCtxArg;
 static const char* lastCaBundlePath;
+static bool        loadVerifyLocationsFails;
 
 /* SSL_CTX_set_verify */
 static SSL_CTX* lastSetVerifyCtxArg;
@@ -116,6 +117,7 @@ void OpenSslFake_Reset(void)
     ctxNewFails                   = false;
     lastLoadVerifyLocationsCtxArg = NULL;
     lastCaBundlePath              = NULL;
+    loadVerifyLocationsFails      = false;
     lastSetVerifyCtxArg           = NULL;
     lastVerifyMode                = 0;
     lastSslCtxCtrlCtxArg          = NULL;
@@ -450,7 +452,12 @@ int SSL_CTX_load_verify_locations(SSL_CTX* ctx, const char* CAfile, const char* 
     (void) CApath;
     lastLoadVerifyLocationsCtxArg = ctx;
     lastCaBundlePath              = CAfile;
-    return 1;
+    return loadVerifyLocationsFails ? 0 : 1;
+}
+
+void OpenSslFake_SetLoadVerifyLocationsFails(bool fails)
+{
+    loadVerifyLocationsFails = fails;
 }
 
 void SSL_CTX_set_verify(SSL_CTX* ctx, int mode, SSL_verify_cb verify_callback)

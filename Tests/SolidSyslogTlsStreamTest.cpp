@@ -431,6 +431,19 @@ TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenSslNewFails)
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
 }
 
+TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenLoadVerifyLocationsFails)
+{
+    OpenSslFake_SetLoadVerifyLocationsFails(true);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(SolidSyslogTlsStream, LoadVerifyLocationsFailureFreesCtx)
+{
+    OpenSslFake_SetLoadVerifyLocationsFails(true);
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(1, OpenSslFake_CtxFreeCallCount());
+}
+
 TEST(SolidSyslogTlsStream, SendReturnsTrueOnHappyPath)
 {
     SolidSyslogStream_Open(stream, addr);

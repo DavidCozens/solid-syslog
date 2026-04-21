@@ -155,7 +155,11 @@ static SSL_CTX* CreateSslContext(const char* caBundlePath)
     {
         return NULL;
     }
-    SSL_CTX_load_verify_locations(ctx, caBundlePath, NULL);
+    if (SSL_CTX_load_verify_locations(ctx, caBundlePath, NULL) != 1)
+    {
+        SSL_CTX_free(ctx);
+        return NULL;
+    }
     SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
     SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION);
     return ctx;
