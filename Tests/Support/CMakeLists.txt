@@ -14,6 +14,14 @@ if(SOLIDSYSLOG_POSIX)
     target_include_directories(PosixFakes PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
     target_link_libraries(PosixFakes PUBLIC ${PROJECT_NAME})
+
+    if(SOLIDSYSLOG_OPENSSL)
+        # OpenSslFake.c and any test that includes <openssl/ssl.h> needs the
+        # OpenSSL headers on the compiler include path. On POSIX these usually
+        # come from /usr/include implicitly; on Windows+vcpkg they live under
+        # the vcpkg install tree and must be declared explicitly.
+        target_include_directories(PosixFakes PUBLIC ${OPENSSL_INCLUDE_DIR})
+    endif()
 endif()
 
 if(SOLIDSYSLOG_WINSOCK)
