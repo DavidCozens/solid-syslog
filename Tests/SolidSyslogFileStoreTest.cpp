@@ -542,6 +542,27 @@ TEST(SolidSyslogFileStoreConfig, NullSecurityPolicyDefaultsToNoOp)
     VerifyWriteAndReadBack();
 }
 
+TEST(SolidSyslogFileStoreConfig, OversizedSecurityPolicyLeavesNoIntegrityGap)
+{
+    struct SolidSyslogSecurityPolicy oversizedPolicy = {
+        SOLIDSYSLOG_MAX_INTEGRITY_SIZE + 1,
+        nullptr,
+        nullptr,
+    };
+    struct SolidSyslogFileStoreConfig config = MakeConfig(file);
+    config.securityPolicy                    = &oversizedPolicy;
+    store                                    = SolidSyslogFileStore_Create(&config);
+
+    const char   body[]  = "HELLO WORLD";
+    const size_t bodyLen = sizeof(body) - 1;
+    CHECK_TRUE(SolidSyslogStore_Write(store, body, bodyLen));
+
+    const size_t RECORD_HEADER = 4;
+    const size_t SENT_FLAG     = 1;
+    LONGS_EQUAL(RECORD_HEADER + bodyLen + SENT_FLAG, FileFake_FileSize());
+    MEMCMP_EQUAL(body, static_cast<const uint8_t*>(FileFake_FileContent()) + RECORD_HEADER, bodyLen);
+}
+
 /* ------------------------------------------------------------------
  * Error paths
  * ----------------------------------------------------------------*/
