@@ -444,6 +444,19 @@ TEST(SolidSyslogTlsStream, LoadVerifyLocationsFailureFreesCtx)
     LONGS_EQUAL(1, OpenSslFake_CtxFreeCallCount());
 }
 
+TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenMinProtoVersionFails)
+{
+    OpenSslFake_SetMinProtoVersionFails(true);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(SolidSyslogTlsStream, MinProtoVersionFailureFreesCtx)
+{
+    OpenSslFake_SetMinProtoVersionFails(true);
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(1, OpenSslFake_CtxFreeCallCount());
+}
+
 TEST(SolidSyslogTlsStream, SendReturnsTrueOnHappyPath)
 {
     SolidSyslogStream_Open(stream, addr);

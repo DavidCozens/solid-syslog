@@ -36,6 +36,7 @@ static int      lastVerifyMode;
 /* SSL_CTX_ctrl (SET_MIN_PROTO_VERSION) */
 static SSL_CTX* lastSslCtxCtrlCtxArg;
 static long     lastMinProtoVersion;
+static bool     minProtoVersionFails;
 
 /* SSL_new */
 static int      sslNewCallCount;
@@ -122,6 +123,7 @@ void OpenSslFake_Reset(void)
     lastVerifyMode                = 0;
     lastSslCtxCtrlCtxArg          = NULL;
     lastMinProtoVersion           = 0;
+    minProtoVersionFails          = false;
     sslNewCallCount               = 0;
     lastSslNewCtxArg              = NULL;
     sslNewFails                   = false;
@@ -477,8 +479,14 @@ long SSL_CTX_ctrl(SSL_CTX* ctx, int cmd, long larg, void* parg)
     if (cmd == SSL_CTRL_SET_MIN_PROTO_VERSION)
     {
         lastMinProtoVersion = larg;
+        return minProtoVersionFails ? 0 : 1;
     }
     return 1;
+}
+
+void OpenSslFake_SetMinProtoVersionFails(bool fails)
+{
+    minProtoVersionFails = fails;
 }
 
 SSL* SSL_new(SSL_CTX* ctx)
