@@ -119,7 +119,7 @@ TEST(SenderFake, FailNextSendStillCapturesBuffer)
 TEST(SenderFake, FailNextSendOnlyAffectsOneSend)
 {
     SenderFake_FailNextSend(sender);
-    SolidSyslogSender_Send(sender, "a", 1);
+    CHECK_FALSE(SolidSyslogSender_Send(sender, "a", 1));
     CHECK_TRUE(SolidSyslogSender_Send(sender, "b", 1));
 }
 
