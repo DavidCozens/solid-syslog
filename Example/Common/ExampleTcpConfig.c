@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-/* Unprivileged mirror of SOLIDSYSLOG_TCP_DEFAULT_PORT (514, see SolidSyslogPosixTcpStream.h) for BDD containers */
+/* Unprivileged port used by the BDD syslog-ng container — library default is
+   SOLIDSYSLOG_TCP_DEFAULT_PORT (601, RFC 6587 §3.2 / IANA) which requires root. */
 enum
 {
     EXAMPLE_TCP_PORT = 5514

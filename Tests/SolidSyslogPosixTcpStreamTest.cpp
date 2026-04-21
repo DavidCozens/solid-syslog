@@ -240,3 +240,8 @@ TEST(SolidSyslogPosixTcpStream, DestroyClosesWithSocketFd)
     SolidSyslogPosixTcpStream_Destroy();
     LONGS_EQUAL(SocketFake_SocketFd(), SocketFake_LastClosedFd());
 }
+
+TEST(SolidSyslogPosixTcpStream, DefaultPortMatchesRfc6587)
+{
+    LONGS_EQUAL(601, SOLIDSYSLOG_TCP_DEFAULT_PORT);
+}
