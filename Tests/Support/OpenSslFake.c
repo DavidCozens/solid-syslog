@@ -66,6 +66,7 @@ static BIO* lastSetBioWriteBioArg;
 /* SSL_ctrl (SET_TLSEXT_HOSTNAME) */
 static SSL*        lastSslCtrlSslArg;
 static const char* lastSniHostname;
+static bool        sniHostnameFails;
 
 /* SSL_set1_host */
 static SSL*        lastSet1HostSslArg;
@@ -136,6 +137,7 @@ void OpenSslFake_Reset(void)
     lastSetBioWriteBioArg         = NULL;
     lastSslCtrlSslArg             = NULL;
     lastSniHostname               = NULL;
+    sniHostnameFails              = false;
     lastSet1HostSslArg            = NULL;
     lastSet1Host                  = NULL;
     set1HostFails                 = false;
@@ -548,8 +550,14 @@ long SSL_ctrl(SSL* ssl, int cmd, long larg, void* parg)
     if (cmd == SSL_CTRL_SET_TLSEXT_HOSTNAME)
     {
         lastSniHostname = (const char*) parg;
+        return sniHostnameFails ? 0 : 1;
     }
     return 1;
+}
+
+void OpenSslFake_SetSniHostnameFails(bool fails)
+{
+    sniHostnameFails = fails;
 }
 
 int SSL_set1_host(SSL* ssl, const char* hostname)

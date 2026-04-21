@@ -57,7 +57,10 @@ static bool Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress
     SSL_set_bio(stream->ssl, bio, bio);
     if (stream->config.serverName != NULL)
     {
-        SSL_set_tlsext_host_name(stream->ssl, stream->config.serverName);
+        if (SSL_set_tlsext_host_name(stream->ssl, stream->config.serverName) != 1)
+        {
+            return false;
+        }
         if (SSL_set1_host(stream->ssl, stream->config.serverName) != 1)
         {
             return false;

@@ -410,6 +410,15 @@ TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenSet1HostFails)
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
 }
 
+TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenSniHostnameSetupFails)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.serverName = "logs.example";
+    stream            = SolidSyslogTlsStream_Create(&config);
+    OpenSslFake_SetSniHostnameFails(true);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
 TEST(SolidSyslogTlsStream, SendReturnsTrueOnHappyPath)
 {
     SolidSyslogStream_Open(stream, addr);
