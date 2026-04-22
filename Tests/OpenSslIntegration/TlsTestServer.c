@@ -2,6 +2,7 @@
 
 #include <openssl/bio.h>
 #include <openssl/ssl.h>
+#include <openssl/x509.h>
 #include <stdbool.h>
 #include <stdlib.h>
 
@@ -24,6 +25,12 @@ struct TlsTestServer* TlsTestServer_Create(const struct TlsTestServerConfig* con
     if (config->cipherList != NULL)
     {
         SSL_CTX_set_cipher_list(self->ctx, config->cipherList);
+    }
+    if (config->clientCaCert != NULL)
+    {
+        X509_STORE* store = SSL_CTX_get_cert_store(self->ctx);
+        X509_STORE_add_cert(store, config->clientCaCert->cert);
+        SSL_CTX_set_verify(self->ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
     }
 
     self->ssl = SSL_new(self->ctx);

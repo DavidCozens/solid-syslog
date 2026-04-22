@@ -67,6 +67,17 @@ void TlsTestCert_WritePemToFile(const struct TlsTestCert* cert, const char* path
     fclose(file);
 }
 
+void TlsTestCert_WritePrivateKeyPemToFile(const struct TlsTestCert* cert, const char* path)
+{
+    FILE* file = fopen(path, "w");
+    if (file == NULL)
+    {
+        return;
+    }
+    PEM_write_PrivateKey(file, cert->key, NULL, NULL, 0, NULL, NULL);
+    fclose(file);
+}
+
 static void SetValidity(X509* cert, const struct TlsTestCertConfig* config)
 {
     time_t now   = time(NULL);
