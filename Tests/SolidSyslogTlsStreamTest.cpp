@@ -94,6 +94,25 @@ TEST(SolidSyslogTlsStream, OpenSkipsCipherListSetupWhenNotConfigured)
     LONGS_EQUAL(0, OpenSslFake_SetCipherListCallCount());
 }
 
+TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenCipherListRejected)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.cipherList = "not-a-real-cipher";
+    stream            = SolidSyslogTlsStream_Create(&config);
+    OpenSslFake_SetCipherListFails(true);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(SolidSyslogTlsStream, CipherListFailureFreesCtx)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.cipherList = "not-a-real-cipher";
+    stream            = SolidSyslogTlsStream_Create(&config);
+    OpenSslFake_SetCipherListFails(true);
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(1, OpenSslFake_CtxFreeCallCount());
+}
+
 TEST(SolidSyslogTlsStream, OpenCreatesSslSession)
 {
     SolidSyslogStream_Open(stream, addr);

@@ -196,9 +196,10 @@ static SSL_CTX* CreateSslContext(const char* caBundlePath, const char* cipherLis
         SSL_CTX_free(ctx);
         return NULL;
     }
-    if (cipherList != NULL)
+    if (cipherList != NULL && SSL_CTX_set_cipher_list(ctx, cipherList) != 1)
     {
-        SSL_CTX_set_cipher_list(ctx, cipherList);
+        SSL_CTX_free(ctx);
+        return NULL;
     }
     return ctx;
 }

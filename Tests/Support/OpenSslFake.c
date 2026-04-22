@@ -42,6 +42,7 @@ static bool     minProtoVersionFails;
 static int         setCipherListCallCount;
 static SSL_CTX*    lastSetCipherListCtxArg;
 static const char* lastCipherList;
+static bool        setCipherListFails;
 
 /* SSL_new */
 static int      sslNewCallCount;
@@ -140,6 +141,7 @@ void OpenSslFake_Reset(void)
     setCipherListCallCount        = 0;
     lastSetCipherListCtxArg       = NULL;
     lastCipherList                = NULL;
+    setCipherListFails            = false;
     sslNewCallCount               = 0;
     lastSslNewCtxArg              = NULL;
     sslNewFails                   = false;
@@ -514,7 +516,12 @@ int SSL_CTX_set_cipher_list(SSL_CTX* ctx, const char* str)
     setCipherListCallCount++;
     lastSetCipherListCtxArg = ctx;
     lastCipherList          = str;
-    return 1;
+    return setCipherListFails ? 0 : 1;
+}
+
+void OpenSslFake_SetCipherListFails(bool fails)
+{
+    setCipherListFails = fails;
 }
 
 int OpenSslFake_SetCipherListCallCount(void)
