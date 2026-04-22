@@ -71,7 +71,7 @@ The workflow uses only the default `GITHUB_TOKEN` — no repo secrets required.
 
 ## Sanity-check a generated SBOM
 
-```
+```shell
 cyclonedx validate --input-file sbom.cdx.json --input-format json --input-version v1_5 --fail-on-errors
 ```
 
