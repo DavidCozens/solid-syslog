@@ -841,3 +841,115 @@ S3.9 / S3.10 / S3.11 as placeholder issues under E3.
   because it rides on the already-reliable auto-load. Worth recording:
   separating "conventions that must be read" from "conventions the tool
   auto-loads" is a real gap, and signposting from CLAUDE.md bridges it.
+
+## 2026-04-21/22 — S03.08 TLS hardening: cert validation, cipher pinning, lifecycle
+
+### What went well
+
+- **Planning turn before coding paid off.** Before any C, I laid out a
+  phase plan and six API-shape surprises — integration harness must
+  live in its own binary (fake interposes libssl), cert generation
+  programmatic not fixtures, cipher policy at caller not library, BIO
+  lifecycle per-Open, the `OpenSslFake` per-BIO aliasing issue. The
+  user corrected one call (BDD scenarios for negative cases →
+  integration harness instead, much faster feedback), parked three
+  (cipher shape, BIO lifecycle, `SSL_VERIFY_FAIL_IF_NO_PEER_CERT`),
+  and greenlit the rest. Every surprise came up once, got a decision,
+  then didn't recur.
+
+- **Composable test-support trio.** `TlsTestCert` + `TlsTestServer` +
+  `BioPairStream` under `Tests/OpenSslIntegration/` each do one thing;
+  new scenarios are a single test body with a cert config and an
+  assertion. The fourth scenario (unsupported cipher) was a
+  seven-line addition. This is the scaffolding paying for itself
+  instantly, not in six months.
+
+- **Pump-on-read pattern.** `BioPairStream::Read` drives the server
+  side cooperatively when the BIO pair is empty, so
+  `SolidSyslogTlsStream`'s synchronous `SSL_connect` works unchanged
+  over non-blocking in-memory BIOs — no threads in the harness, no
+  production changes to accommodate testing.
+
+### What didn't go well / process refinements
+
+- **BDD-first plan got reversed.** My Phase 1 was "BDD pending
+  scenarios for SL4 failure modes." User pushed back: integration
+  harness covers it faster with no PO-visibility loss. Should have
+  surfaced this trade-off *myself* in the opening surprises list
+  rather than defaulting to BDD. Memory entry
+  `feedback_integration_over_bdd.md` captures the pattern: for
+  crypto/TLS failure modes, integration harness beats BDD.
+
+- **Phase 2 / Phase 4 coupling I didn't spot up front.** Plan
+  separated "return-value checks" (Phase 2) from "resource lifecycle"
+  (Phase 4). In practice, every new early-return path made a
+  pre-existing leak worse until `Destroy` covered partial state.
+  Ended up interleaving — not a real problem but the phase plan was
+  cleaner than reality.
+
+- **Commit count.** 17 commits on the branch is a lot of tight red/green
+  pairs. Each is a clear atomic behaviour change and reads well in
+  `git log --oneline`, but the PR-review surface is larger than a
+  single "TLS hardening" story arguably needed. Next time, consider
+  batching several return-value checks into one commit when they
+  share a test shape.
+
+- **Characterisation vs red/green mismatch.** Three of the integration
+  tests went green on first write — OpenSSL defaults already rejected
+  expired / wrong-hostname / wrong-CA. Under strict "only write
+  production code driven by a failing test" this feels off, but the
+  tests still earn their keep as regression protection. I flagged
+  this explicitly rather than pretending it was red/green, and the
+  user accepted the framing. Calling out "this is characterisation,
+  not TDD" is probably the right move whenever it happens.
+
+- **One stray production branch.** The `if (ctx == NULL) return NULL;`
+  inside `CreateSslContext` wasn't strictly driven by a failing test —
+  it was the natural implementation alongside the `OpenReturnsFalseWhenCtxNewFails`
+  fix. User reminded me mid-session to "only write a new branch of code
+  when you have a failing test." Tightened up for the rest of the session.
+
+### Decisions captured this session
+
+- **Integration test executable is its own CI job** (option C of A/B/C)
+  — runs in parallel with `build-and-test`, self-contained configure
+  + build of only `OpenSslIntegrationTests`. Clang and sanitize
+  presets don't run it; unit tests remain the coverage engine.
+- **Cipher list is caller policy.** `SolidSyslogTlsStreamConfig.cipherList`
+  is forwarded to `SSL_CTX_set_cipher_list` if non-NULL; library ships
+  no SL4 default. `docs/iec62443.md` names
+  `ECDHE+AESGCM:ECDHE+CHACHA20` as a reasonable starting point, not a
+  baked-in list.
+- **BIO_METHOD lifecycle is per-Open.** Symmetric with SSL/SSL_CTX —
+  each Open allocates a fresh set, each Close releases. Destroy
+  covers partial-init state idempotently.
+- **Coverage stays unit-test-only.** Integration tests are supplementary
+  evidence of real-libssl acceptance, not the coverage engine. Memory
+  entry `project_coverage_integration.md` records the trigger for
+  revisiting (multi-platform, or a real-libssl-only code path).
+
+### Deferred
+
+- **`OpenSslFake` per-BIO data refactor.** Listed as S03.08 acceptance
+  but no production code path or test requires distinct BIO data yet
+  (the library creates exactly one BIO per Open). Forward-looking
+  for mTLS (S03.09) and future cases. Suggest a short follow-up
+  story rather than doing it here without a test that fails without it.
+- **TLS 1.3 cipher suite control.** `SSL_CTX_set_cipher_list` governs
+  TLS 1.2 only; TLS 1.3 uses `SSL_CTX_set_ciphersuites`. Out of the
+  ticket's acceptance. Follow-up.
+- **`max_proto_version` control.** Library pins min but not max. No
+  current need; might emerge with an SL4 policy that mandates TLS 1.3.
+- **Formal Planned → Available promotion** for TLS in
+  `docs/iec62443.md` — S03.11 scope. This session added the SL4
+  substrate narrative without touching the headline status.
+
+### Open questions for the blog source
+
+- **When is characterisation a legitimate TDD outcome?** Three tests
+  went green on first write because OpenSSL already did the right
+  thing. Keeping them is evidence and regression protection; rejecting
+  them would be dogmatic. The useful lens: if the test protects against
+  a realistic future regression, it's load-bearing — TDD discipline is
+  about "production code driven by tests", not "every test must have
+  been red at some point."
