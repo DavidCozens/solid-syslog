@@ -103,8 +103,8 @@ static struct SolidSyslogSender* CreateSender(const struct ExampleOptions* optio
         tlsSenderConfig.resolver                                    = resolver;
         tlsSenderConfig.stream                                      = tlsStream;
         tlsSenderConfig.endpoint                                    = mtlsModeActive ? ExampleMtlsConfig_GetEndpoint : ExampleTlsConfig_GetEndpoint;
-        tlsSenderConfig.endpointVersion                             = mtlsModeActive ? ExampleMtlsConfig_GetEndpointVersion : ExampleTlsConfig_GetEndpointVersion;
-        reliableSender                                              = SolidSyslogStreamSender_Create(&tlsSenderConfig);
+        tlsSenderConfig.endpointVersion = mtlsModeActive ? ExampleMtlsConfig_GetEndpointVersion : ExampleTlsConfig_GetEndpointVersion;
+        reliableSender                  = SolidSyslogStreamSender_Create(&tlsSenderConfig);
 #else
         /* --transport tls/mtls requested but the build has no OpenSSL — fall through to TCP. */
         tlsModeActive = false;

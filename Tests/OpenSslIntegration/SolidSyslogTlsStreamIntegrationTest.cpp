@@ -47,9 +47,12 @@ TEST_GROUP(TlsStreamIntegration)
         if (clientKeyPath[0] != '\0')     { unlink(clientKeyPath); }
     }
 
-    void makeTempFile(char* out)
+    template <std::size_t N>
+    static void makeTempFile(char (&out)[N])
     {
-        std::strcpy(out, "/tmp/solidsyslog_mtls_XXXXXX");
+        static constexpr const char TEMPLATE[] = "/tmp/solidsyslog_mtls_XXXXXX";
+        static_assert(sizeof(TEMPLATE) <= N, "buffer too small for mkstemp template");
+        std::memcpy(out, TEMPLATE, sizeof(TEMPLATE));
         int fd = mkstemp(out);
         CHECK_TRUE(fd >= 0);
         if (fd >= 0) { close(fd); }
