@@ -495,6 +495,12 @@ TEST(SolidSyslogTlsStream, MinProtoVersionFailureFreesCtx)
     LONGS_EQUAL(1, OpenSslFake_CtxFreeCallCount());
 }
 
+TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenBioMethNewFails)
+{
+    OpenSslFake_SetBioMethNewFails(true);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
 TEST(SolidSyslogTlsStream, SendReturnsTrueOnHappyPath)
 {
     SolidSyslogStream_Open(stream, addr);

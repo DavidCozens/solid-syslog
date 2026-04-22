@@ -72,6 +72,10 @@ static bool Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress
         return false;
     }
     BIO* bio = CreateTransportBio(stream);
+    if (bio == NULL)
+    {
+        return false;
+    }
     BIO_set_data(bio, stream->config.transport);
     SSL_set_bio(stream->ssl, bio, bio);
     if (stream->config.serverName != NULL)
@@ -114,6 +118,10 @@ static void Close(struct SolidSyslogStream* self)
 static BIO* CreateTransportBio(struct SolidSyslogTlsStream* stream)
 {
     BIO_METHOD* method = BIO_meth_new(BIO_TYPE_SOURCE_SINK, "SolidSyslog transport BIO");
+    if (method == NULL)
+    {
+        return NULL;
+    }
     BIO_meth_set_create(method, TransportBioCreate);
     BIO_meth_set_read(method, TransportBioRead);
     BIO_meth_set_write(method, TransportBioWrite);

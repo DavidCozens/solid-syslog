@@ -43,6 +43,9 @@ static int      sslNewCallCount;
 static SSL_CTX* lastSslNewCtxArg;
 static bool     sslNewFails;
 
+/* BIO_meth_new */
+static bool        bioMethNewFails;
+
 /* BIO_meth_free */
 static int         bioMethFreeCallCount;
 static BIO_METHOD* lastBioMethFreeArg;
@@ -131,6 +134,7 @@ void OpenSslFake_Reset(void)
     sslNewCallCount               = 0;
     lastSslNewCtxArg              = NULL;
     sslNewFails                   = false;
+    bioMethNewFails               = false;
     bioMethFreeCallCount          = 0;
     lastBioMethFreeArg            = NULL;
     lastBioMethSetReadMethodArg   = NULL;
@@ -511,7 +515,12 @@ BIO_METHOD* BIO_meth_new(int type, const char* name)
 {
     (void) type;
     (void) name;
-    return (BIO_METHOD*) &fakeBioMethStorage;
+    return bioMethNewFails ? NULL : (BIO_METHOD*) &fakeBioMethStorage;
+}
+
+void OpenSslFake_SetBioMethNewFails(bool fails)
+{
+    bioMethNewFails = fails;
 }
 
 void BIO_meth_free(BIO_METHOD* biom)
