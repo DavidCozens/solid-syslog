@@ -38,10 +38,21 @@
 #include <string.h>
 #include <unistd.h>
 
-static const char* const       STORE_PATH_PREFIX = "/tmp/STORE";
-static struct SolidSyslogFile* storeReadFile;
-static struct SolidSyslogFile* storeWriteFile;
-static bool                    tlsModeActive;
+static const char* const                STORE_PATH_PREFIX = "/tmp/STORE";
+static struct SolidSyslogFile*          storeReadFile;
+static struct SolidSyslogFile*          storeWriteFile;
+static SolidSyslogPosixTcpStreamStorage plainTcpStreamStorage;
+static struct SolidSyslogStream*        plainTcpStream;
+static SolidSyslogStreamSenderStorage   plainTcpSenderStorage;
+static struct SolidSyslogSender*        plainTcpSender;
+#ifdef SOLIDSYSLOG_HAVE_OPENSSL
+static SolidSyslogPosixTcpStreamStorage tlsUnderlyingStreamStorage;
+static struct SolidSyslogStream*        tlsUnderlyingStream;
+static SolidSyslogTlsStreamStorage      tlsStreamStorage;
+static struct SolidSyslogStream*        tlsStream;
+static SolidSyslogStreamSenderStorage   tlsSenderStorage;
+static struct SolidSyslogSender*        tlsSender;
+#endif
 
 static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
 {
@@ -59,16 +70,9 @@ static void* ServiceThreadEntry(void* arg)
     return NULL;
 }
 
-/* SolidSyslogStreamSender and SolidSyslogPosixTcpStream are singletons in this
- * walking-skeleton build, so we can't wire plain TCP and TLS simultaneously.
- * The launched --transport picks one: "tls" wires UDP + TLS; anything else
- * wires UDP + plain TCP (the pre-existing behaviour). Switching to the
- * non-enabled reliable transport at runtime falls back to UDP.
- */
 static struct SolidSyslogSender* CreateSender(const struct ExampleOptions* options)
 {
     bool mtlsModeActive = (strcmp(options->transport, "mtls") == 0);
-    tlsModeActive       = (strcmp(options->transport, "tls") == 0) || mtlsModeActive;
 
     struct SolidSyslogResolver* resolver = SolidSyslogGetAddrInfoResolver_Create();
 
@@ -79,51 +83,49 @@ static struct SolidSyslogSender* CreateSender(const struct ExampleOptions* optio
     udpConfig.endpointVersion                          = ExampleUdpConfig_GetEndpointVersion;
     struct SolidSyslogSender* udpSender                = SolidSyslogUdpSender_Create(&udpConfig);
 
-    struct SolidSyslogSender* reliableSender = NULL;
-    if (tlsModeActive)
-    {
-#ifdef SOLIDSYSLOG_HAVE_OPENSSL
-        static struct SolidSyslogTlsStreamConfig tlsStreamConfig = {0};
-        tlsStreamConfig.transport                                = SolidSyslogPosixTcpStream_Create();
-        if (mtlsModeActive)
-        {
-            tlsStreamConfig.caBundlePath        = ExampleMtlsConfig_GetCaBundlePath();
-            tlsStreamConfig.serverName          = ExampleMtlsConfig_GetServerName();
-            tlsStreamConfig.clientCertChainPath = ExampleMtlsConfig_GetClientCertChainPath();
-            tlsStreamConfig.clientKeyPath       = ExampleMtlsConfig_GetClientKeyPath();
-        }
-        else
-        {
-            tlsStreamConfig.caBundlePath = ExampleTlsConfig_GetCaBundlePath();
-            tlsStreamConfig.serverName   = ExampleTlsConfig_GetServerName();
-        }
-        struct SolidSyslogStream* tlsStream = SolidSyslogTlsStream_Create(&tlsStreamConfig);
+    plainTcpStream                                        = SolidSyslogPosixTcpStream_Create(&plainTcpStreamStorage);
+    static struct SolidSyslogStreamSenderConfig tcpConfig = {0};
+    tcpConfig.resolver                                    = resolver;
+    tcpConfig.stream                                      = plainTcpStream;
+    tcpConfig.endpoint                                    = ExampleTcpConfig_GetEndpoint;
+    tcpConfig.endpointVersion                             = ExampleTcpConfig_GetEndpointVersion;
+    plainTcpSender                                        = SolidSyslogStreamSender_Create(&plainTcpSenderStorage, &tcpConfig);
 
-        static struct SolidSyslogStreamSenderConfig tlsSenderConfig = {0};
-        tlsSenderConfig.resolver                                    = resolver;
-        tlsSenderConfig.stream                                      = tlsStream;
-        tlsSenderConfig.endpoint                                    = mtlsModeActive ? ExampleMtlsConfig_GetEndpoint : ExampleTlsConfig_GetEndpoint;
-        tlsSenderConfig.endpointVersion = mtlsModeActive ? ExampleMtlsConfig_GetEndpointVersion : ExampleTlsConfig_GetEndpointVersion;
-        reliableSender                  = SolidSyslogStreamSender_Create(&tlsSenderConfig);
-#else
-        /* --transport tls/mtls requested but the build has no OpenSSL — falls back to plain TCP sender; TLS slot maps to UDP at runtime. */
-        tlsModeActive = false;
-#endif
-    }
-    if (!tlsModeActive && reliableSender == NULL)
+    struct SolidSyslogSender* tlsSlot = NULL;
+#ifdef SOLIDSYSLOG_HAVE_OPENSSL
+    tlsUnderlyingStream                                      = SolidSyslogPosixTcpStream_Create(&tlsUnderlyingStreamStorage);
+    static struct SolidSyslogTlsStreamConfig tlsStreamConfig = {0};
+    tlsStreamConfig.transport                                = tlsUnderlyingStream;
+    if (mtlsModeActive)
     {
-        static struct SolidSyslogStreamSenderConfig tcpConfig = {0};
-        tcpConfig.resolver                                    = resolver;
-        tcpConfig.stream                                      = SolidSyslogPosixTcpStream_Create();
-        tcpConfig.endpoint                                    = ExampleTcpConfig_GetEndpoint;
-        tcpConfig.endpointVersion                             = ExampleTcpConfig_GetEndpointVersion;
-        reliableSender                                        = SolidSyslogStreamSender_Create(&tcpConfig);
+        tlsStreamConfig.caBundlePath        = ExampleMtlsConfig_GetCaBundlePath();
+        tlsStreamConfig.serverName          = ExampleMtlsConfig_GetServerName();
+        tlsStreamConfig.clientCertChainPath = ExampleMtlsConfig_GetClientCertChainPath();
+        tlsStreamConfig.clientKeyPath       = ExampleMtlsConfig_GetClientKeyPath();
     }
+    else
+    {
+        tlsStreamConfig.caBundlePath = ExampleTlsConfig_GetCaBundlePath();
+        tlsStreamConfig.serverName   = ExampleTlsConfig_GetServerName();
+    }
+    tlsStream = SolidSyslogTlsStream_Create(&tlsStreamStorage, &tlsStreamConfig);
+
+    static struct SolidSyslogStreamSenderConfig tlsSenderConfig = {0};
+    tlsSenderConfig.resolver                                    = resolver;
+    tlsSenderConfig.stream                                      = tlsStream;
+    tlsSenderConfig.endpoint                                    = mtlsModeActive ? ExampleMtlsConfig_GetEndpoint : ExampleTlsConfig_GetEndpoint;
+    tlsSenderConfig.endpointVersion                             = mtlsModeActive ? ExampleMtlsConfig_GetEndpointVersion : ExampleTlsConfig_GetEndpointVersion;
+    tlsSender                                                   = SolidSyslogStreamSender_Create(&tlsSenderStorage, &tlsSenderConfig);
+    tlsSlot                                                     = tlsSender;
+#else
+    (void) mtlsModeActive;
+    tlsSlot = udpSender; /* fallback when TLS not built — keeps switching selector total */
+#endif
 
     static struct SolidSyslogSender* inners[EXAMPLE_SWITCH_COUNT];
     inners[EXAMPLE_SWITCH_UDP] = udpSender;
-    inners[EXAMPLE_SWITCH_TCP] = tlsModeActive ? udpSender : reliableSender;
-    inners[EXAMPLE_SWITCH_TLS] = tlsModeActive ? reliableSender : udpSender;
+    inners[EXAMPLE_SWITCH_TCP] = plainTcpSender;
+    inners[EXAMPLE_SWITCH_TLS] = tlsSlot;
 
     static struct SolidSyslogSwitchingSenderConfig switchConfig = {0};
     switchConfig.senders                                        = inners;
@@ -131,7 +133,6 @@ static struct SolidSyslogSender* CreateSender(const struct ExampleOptions* optio
     switchConfig.selector                                       = ExampleSwitchConfig_Selector;
 
     ExampleSwitchConfig_SetByName(options->transport);
-
     return SolidSyslogSwitchingSender_Create(&switchConfig);
 }
 
@@ -164,8 +165,8 @@ static struct SolidSyslogStore* CreateStore(const struct ExampleOptions* options
 
     if (useFile)
     {
-        static struct SolidSyslogPosixFileStorage readStorage;
-        static struct SolidSyslogPosixFileStorage writeStorage;
+        static SolidSyslogPosixFileStorage readStorage;
+        static SolidSyslogPosixFileStorage writeStorage;
         storeReadFile  = SolidSyslogPosixFile_Create(&readStorage);
         storeWriteFile = SolidSyslogPosixFile_Create(&writeStorage);
 
@@ -187,14 +188,13 @@ static struct SolidSyslogStore* CreateStore(const struct ExampleOptions* options
 static void DestroySender(void)
 {
     SolidSyslogSwitchingSender_Destroy();
-    SolidSyslogStreamSender_Destroy();
 #ifdef SOLIDSYSLOG_HAVE_OPENSSL
-    if (tlsModeActive)
-    {
-        SolidSyslogTlsStream_Destroy();
-    }
+    SolidSyslogStreamSender_Destroy(tlsSender);
+    SolidSyslogTlsStream_Destroy(tlsStream);
+    SolidSyslogPosixTcpStream_Destroy(tlsUnderlyingStream);
 #endif
-    SolidSyslogPosixTcpStream_Destroy();
+    SolidSyslogStreamSender_Destroy(plainTcpSender);
+    SolidSyslogPosixTcpStream_Destroy(plainTcpStream);
     SolidSyslogUdpSender_Destroy();
     SolidSyslogPosixDatagram_Destroy();
     SolidSyslogGetAddrInfoResolver_Destroy();

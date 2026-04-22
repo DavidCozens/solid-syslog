@@ -3,7 +3,19 @@
 
 #include "SolidSyslogStream.h"
 
+#include <stdint.h>
+
 EXTERN_C_BEGIN
+
+    enum
+    {
+        SOLIDSYSLOG_TLS_STREAM_SIZE = sizeof(intptr_t) * 13
+    };
+
+    typedef struct
+    {
+        intptr_t slots[(SOLIDSYSLOG_TLS_STREAM_SIZE + sizeof(intptr_t) - 1) / sizeof(intptr_t)];
+    } SolidSyslogTlsStreamStorage;
 
     struct SolidSyslogTlsStreamConfig
     {
@@ -15,8 +27,8 @@ EXTERN_C_BEGIN
         const char*               clientKeyPath;       /* PEM: matching private key; NULL = no mTLS */
     };
 
-    struct SolidSyslogStream* SolidSyslogTlsStream_Create(const struct SolidSyslogTlsStreamConfig* config);
-    void                      SolidSyslogTlsStream_Destroy(void);
+    struct SolidSyslogStream* SolidSyslogTlsStream_Create(SolidSyslogTlsStreamStorage * storage, const struct SolidSyslogTlsStreamConfig* config);
+    void                      SolidSyslogTlsStream_Destroy(struct SolidSyslogStream * stream);
 
 EXTERN_C_END
 

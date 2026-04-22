@@ -39,25 +39,39 @@ static bool                         SendBytes(struct SolidSyslogStreamSender* se
 static void                         NilEndpoint(struct SolidSyslogEndpoint* endpoint);
 static uint32_t                     NilEndpointVersion(void);
 
-static const struct SolidSyslogStreamSender DEFAULT_INSTANCE = {.config = {.endpoint = NilEndpoint, .endpointVersion = NilEndpointVersion}};
-static struct SolidSyslogStreamSender       instance;
+SOLIDSYSLOG_STATIC_ASSERT(sizeof(struct SolidSyslogStreamSender) <= sizeof(SolidSyslogStreamSenderStorage),
+                          "SOLIDSYSLOG_STREAM_SENDER_SIZE is too small for struct SolidSyslogStreamSender");
 
-struct SolidSyslogSender* SolidSyslogStreamSender_Create(const struct SolidSyslogStreamSenderConfig* config)
+static const struct SolidSyslogStreamSender DEFAULT_INSTANCE = {
+    {Send, Disconnect},
+    {NULL, NULL, NilEndpoint, NilEndpointVersion},
+    false,
+    0,
+};
+
+static const struct SolidSyslogStreamSender DESTROYED_INSTANCE = {
+    {NULL, NULL},
+    {NULL, NULL, NilEndpoint, NilEndpointVersion},
+    false,
+    0,
+};
+
+struct SolidSyslogSender* SolidSyslogStreamSender_Create(SolidSyslogStreamSenderStorage* storage, const struct SolidSyslogStreamSenderConfig* config)
 {
-    instance                 = DEFAULT_INSTANCE;
-    instance.config.resolver = config->resolver;
-    instance.config.stream   = config->stream;
-    ASSIGN_IF_NON_NULL(instance.config.endpoint, config->endpoint);
-    ASSIGN_IF_NON_NULL(instance.config.endpointVersion, config->endpointVersion);
-    instance.base.Send       = Send;
-    instance.base.Disconnect = Disconnect;
-    return &instance.base;
+    struct SolidSyslogStreamSender* sender = (struct SolidSyslogStreamSender*) storage;
+    *sender                                = DEFAULT_INSTANCE;
+    sender->config.resolver                = config->resolver;
+    sender->config.stream                  = config->stream;
+    ASSIGN_IF_NON_NULL(sender->config.endpoint, config->endpoint);
+    ASSIGN_IF_NON_NULL(sender->config.endpointVersion, config->endpointVersion);
+    return &sender->base;
 }
 
-void SolidSyslogStreamSender_Destroy(void)
+void SolidSyslogStreamSender_Destroy(struct SolidSyslogSender* sender)
 {
-    Disconnect(&instance.base);
-    instance = DEFAULT_INSTANCE;
+    struct SolidSyslogStreamSender* self = (struct SolidSyslogStreamSender*) sender;
+    Disconnect(sender);
+    *self = DESTROYED_INSTANCE;
 }
 
 static bool Send(struct SolidSyslogSender* self, const void* buffer, size_t size)

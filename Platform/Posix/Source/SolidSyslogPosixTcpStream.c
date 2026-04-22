@@ -1,5 +1,6 @@
 #include "SolidSyslogPosixTcpStream.h"
 #include "SolidSyslogAddressInternal.h"
+#include "SolidSyslogMacros.h"
 #include "SolidSyslogStreamDefinition.h"
 
 #include <netinet/tcp.h>
@@ -25,24 +26,31 @@ struct SolidSyslogPosixTcpStream
     int                      fd;
 };
 
-static struct SolidSyslogPosixTcpStream instance = {.fd = INVALID_FD};
+SOLIDSYSLOG_STATIC_ASSERT(sizeof(struct SolidSyslogPosixTcpStream) <= SOLIDSYSLOG_POSIX_TCP_STREAM_SIZE,
+                          "SOLIDSYSLOG_POSIX_TCP_STREAM_SIZE is too small for struct SolidSyslogPosixTcpStream");
 
-struct SolidSyslogStream* SolidSyslogPosixTcpStream_Create(void)
+static const struct SolidSyslogPosixTcpStream DEFAULT_INSTANCE = {
+    {Open, Send, Read, Close},
+    INVALID_FD,
+};
+
+static const struct SolidSyslogPosixTcpStream DESTROYED_INSTANCE = {
+    {NULL, NULL, NULL, NULL},
+    INVALID_FD,
+};
+
+struct SolidSyslogStream* SolidSyslogPosixTcpStream_Create(SolidSyslogPosixTcpStreamStorage* storage)
 {
-    instance.base.Open  = Open;
-    instance.base.Send  = Send;
-    instance.base.Read  = Read;
-    instance.base.Close = Close;
-    return &instance.base;
+    struct SolidSyslogPosixTcpStream* stream = (struct SolidSyslogPosixTcpStream*) storage;
+    *stream                                  = DEFAULT_INSTANCE;
+    return &stream->base;
 }
 
-void SolidSyslogPosixTcpStream_Destroy(void)
+void SolidSyslogPosixTcpStream_Destroy(struct SolidSyslogStream* stream)
 {
-    Close(&instance.base);
-    instance.base.Open  = NULL;
-    instance.base.Send  = NULL;
-    instance.base.Read  = NULL;
-    instance.base.Close = NULL;
+    struct SolidSyslogPosixTcpStream* self = (struct SolidSyslogPosixTcpStream*) stream;
+    Close(stream);
+    *self = DESTROYED_INSTANCE;
 }
 
 static bool Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr)

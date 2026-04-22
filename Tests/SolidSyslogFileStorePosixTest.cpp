@@ -34,8 +34,8 @@ TEST_GROUP(SolidSyslogFileStorePosix)
     static const size_t RECORD_OVERHEAD    = 5; /* 2 (magic) + 2 (length) + 1 (sent flag) */
     static const size_t ONE_MAX_MSG_RECORD = SOLIDSYSLOG_MAX_MESSAGE_SIZE + RECORD_OVERHEAD;
 
-    struct SolidSyslogPosixFileStorage readStorage = {};
-    struct SolidSyslogPosixFileStorage writeStorage = {};
+    SolidSyslogPosixFileStorage readStorage = {};
+    SolidSyslogPosixFileStorage writeStorage = {};
     struct SolidSyslogFile* readFile = nullptr;
     struct SolidSyslogFile* writeFile = nullptr;
     struct SolidSyslogStore* store = nullptr;
