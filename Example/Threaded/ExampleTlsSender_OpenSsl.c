@@ -16,8 +16,9 @@ struct SolidSyslogSender* ExampleTlsSender_Create(struct SolidSyslogResolver* re
 {
     underlyingStream = SolidSyslogPosixTcpStream_Create(&underlyingStreamStorage);
 
-    static struct SolidSyslogTlsStreamConfig tlsStreamConfig = {0};
-    tlsStreamConfig.transport                                = underlyingStream;
+    static struct SolidSyslogTlsStreamConfig tlsStreamConfig;
+    tlsStreamConfig           = (struct SolidSyslogTlsStreamConfig) {0};
+    tlsStreamConfig.transport = underlyingStream;
     if (mtls)
     {
         tlsStreamConfig.caBundlePath        = ExampleMtlsConfig_GetCaBundlePath();
@@ -32,12 +33,13 @@ struct SolidSyslogSender* ExampleTlsSender_Create(struct SolidSyslogResolver* re
     }
     tlsStream = SolidSyslogTlsStream_Create(&tlsStreamStorage, &tlsStreamConfig);
 
-    static struct SolidSyslogStreamSenderConfig senderConfig = {0};
-    senderConfig.resolver                                    = resolver;
-    senderConfig.stream                                      = tlsStream;
-    senderConfig.endpoint                                    = mtls ? ExampleMtlsConfig_GetEndpoint : ExampleTlsConfig_GetEndpoint;
-    senderConfig.endpointVersion                             = mtls ? ExampleMtlsConfig_GetEndpointVersion : ExampleTlsConfig_GetEndpointVersion;
-    sender                                                   = SolidSyslogStreamSender_Create(&senderStorage, &senderConfig);
+    static struct SolidSyslogStreamSenderConfig senderConfig;
+    senderConfig                 = (struct SolidSyslogStreamSenderConfig) {0};
+    senderConfig.resolver        = resolver;
+    senderConfig.stream          = tlsStream;
+    senderConfig.endpoint        = mtls ? ExampleMtlsConfig_GetEndpoint : ExampleTlsConfig_GetEndpoint;
+    senderConfig.endpointVersion = mtls ? ExampleMtlsConfig_GetEndpointVersion : ExampleTlsConfig_GetEndpointVersion;
+    sender                       = SolidSyslogStreamSender_Create(&senderStorage, &senderConfig);
 
     return sender;
 }
