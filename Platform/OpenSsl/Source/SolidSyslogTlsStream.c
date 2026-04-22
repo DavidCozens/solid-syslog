@@ -16,7 +16,7 @@ static bool             Open(struct SolidSyslogStream* self, const struct SolidS
 static bool             Send(struct SolidSyslogStream* self, const void* buffer, size_t size);
 static SolidSyslogSsize Read(struct SolidSyslogStream* self, void* buffer, size_t size);
 static void             Close(struct SolidSyslogStream* self);
-static SSL_CTX*         CreateSslContext(const char* caBundlePath);
+static SSL_CTX*         CreateSslContext(const char* caBundlePath, const char* cipherList);
 static BIO*             CreateTransportBio(struct SolidSyslogTlsStream* stream);
 static int              TransportBioCreate(BIO* bio);
 static int              TransportBioRead(BIO* bio, char* buffer, int size);
@@ -61,7 +61,7 @@ static bool Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress
     {
         return false;
     }
-    stream->ctx = CreateSslContext(stream->config.caBundlePath);
+    stream->ctx = CreateSslContext(stream->config.caBundlePath, stream->config.cipherList);
     if (stream->ctx == NULL)
     {
         return false;
@@ -178,7 +178,7 @@ static long TransportBioCtrl(BIO* bio, int cmd, long larg, void* parg)
     }
 }
 
-static SSL_CTX* CreateSslContext(const char* caBundlePath)
+static SSL_CTX* CreateSslContext(const char* caBundlePath, const char* cipherList)
 {
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
     if (ctx == NULL)
@@ -195,6 +195,10 @@ static SSL_CTX* CreateSslContext(const char* caBundlePath)
     {
         SSL_CTX_free(ctx);
         return NULL;
+    }
+    if (cipherList != NULL)
+    {
+        SSL_CTX_set_cipher_list(ctx, cipherList);
     }
     return ctx;
 }

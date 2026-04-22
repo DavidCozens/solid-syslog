@@ -79,6 +79,21 @@ TEST(SolidSyslogTlsStream, OpenSetsTls12Floor)
     LONGS_EQUAL(TLS1_2_VERSION, OpenSslFake_LastMinProtoVersion());
 }
 
+TEST(SolidSyslogTlsStream, OpenPassesCipherListToSslCtx)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.cipherList = "ECDHE+AESGCM";
+    stream            = SolidSyslogTlsStream_Create(&config);
+    SolidSyslogStream_Open(stream, addr);
+    STRCMP_EQUAL("ECDHE+AESGCM", OpenSslFake_LastCipherList());
+}
+
+TEST(SolidSyslogTlsStream, OpenSkipsCipherListSetupWhenNotConfigured)
+{
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(0, OpenSslFake_SetCipherListCallCount());
+}
+
 TEST(SolidSyslogTlsStream, OpenCreatesSslSession)
 {
     SolidSyslogStream_Open(stream, addr);

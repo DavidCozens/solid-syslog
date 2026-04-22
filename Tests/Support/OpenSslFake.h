@@ -45,6 +45,11 @@ EXTERN_C_BEGIN
     struct ssl_ctx_st* OpenSslFake_LastSslCtxCtrlCtxArg(void);
     long               OpenSslFake_LastMinProtoVersion(void);
 
+    /* SSL_CTX_set_cipher_list */
+    int                OpenSslFake_SetCipherListCallCount(void);
+    struct ssl_ctx_st* OpenSslFake_LastSetCipherListCtxArg(void);
+    const char*        OpenSslFake_LastCipherList(void);
+
     /* SSL_new */
     int                OpenSslFake_SslNewCallCount(void);
     struct ssl_ctx_st* OpenSslFake_LastSslNewCtxArg(void);

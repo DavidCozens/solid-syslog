@@ -38,6 +38,11 @@ static SSL_CTX* lastSslCtxCtrlCtxArg;
 static long     lastMinProtoVersion;
 static bool     minProtoVersionFails;
 
+/* SSL_CTX_set_cipher_list */
+static int         setCipherListCallCount;
+static SSL_CTX*    lastSetCipherListCtxArg;
+static const char* lastCipherList;
+
 /* SSL_new */
 static int      sslNewCallCount;
 static SSL_CTX* lastSslNewCtxArg;
@@ -132,6 +137,9 @@ void OpenSslFake_Reset(void)
     lastSslCtxCtrlCtxArg          = NULL;
     lastMinProtoVersion           = 0;
     minProtoVersionFails          = false;
+    setCipherListCallCount        = 0;
+    lastSetCipherListCtxArg       = NULL;
+    lastCipherList                = NULL;
     sslNewCallCount               = 0;
     lastSslNewCtxArg              = NULL;
     sslNewFails                   = false;
@@ -499,6 +507,29 @@ long SSL_CTX_ctrl(SSL_CTX* ctx, int cmd, long larg, void* parg)
 void OpenSslFake_SetMinProtoVersionFails(bool fails)
 {
     minProtoVersionFails = fails;
+}
+
+int SSL_CTX_set_cipher_list(SSL_CTX* ctx, const char* str)
+{
+    setCipherListCallCount++;
+    lastSetCipherListCtxArg = ctx;
+    lastCipherList          = str;
+    return 1;
+}
+
+int OpenSslFake_SetCipherListCallCount(void)
+{
+    return setCipherListCallCount;
+}
+
+SSL_CTX* OpenSslFake_LastSetCipherListCtxArg(void)
+{
+    return lastSetCipherListCtxArg;
+}
+
+const char* OpenSslFake_LastCipherList(void)
+{
+    return lastCipherList;
 }
 
 SSL* SSL_new(SSL_CTX* ctx)
