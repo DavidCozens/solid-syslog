@@ -18,6 +18,7 @@ static SolidSyslogSsize Read(struct SolidSyslogStream* self, void* buffer, size_
 static void             Close(struct SolidSyslogStream* self);
 static bool             AttachTransportBio(struct SolidSyslogTlsStream* stream);
 static bool             ConfigureExpectedHostname(struct SolidSyslogTlsStream* stream);
+static void             ReleaseHandshakeState(struct SolidSyslogTlsStream* stream);
 static SSL_CTX*         CreateSslContext(const struct SolidSyslogTlsStreamConfig* config);
 static BIO*             CreateTransportBio(struct SolidSyslogTlsStream* stream);
 static int              TransportBioCreate(BIO* bio);
@@ -39,16 +40,7 @@ struct SolidSyslogStream* SolidSyslogTlsStream_Create(const struct SolidSyslogTl
 
 void SolidSyslogTlsStream_Destroy(void)
 {
-    if (instance.ssl != NULL)
-    {
-        SSL_free(instance.ssl);
-        instance.ssl = NULL;
-    }
-    if (instance.bioMethod != NULL)
-    {
-        BIO_meth_free(instance.bioMethod);
-        instance.bioMethod = NULL;
-    }
+    ReleaseHandshakeState(&instance);
     if (instance.ctx != NULL)
     {
         SSL_CTX_free(instance.ctx);
@@ -100,11 +92,22 @@ static void Close(struct SolidSyslogStream* self)
 {
     struct SolidSyslogTlsStream* stream = (struct SolidSyslogTlsStream*) self;
     SSL_shutdown(stream->ssl);
-    SSL_free(stream->ssl);
-    stream->ssl = NULL;
-    BIO_meth_free(stream->bioMethod);
-    stream->bioMethod = NULL;
+    ReleaseHandshakeState(stream);
     SolidSyslogStream_Close(stream->config.transport);
+}
+
+static void ReleaseHandshakeState(struct SolidSyslogTlsStream* stream)
+{
+    if (stream->ssl != NULL)
+    {
+        SSL_free(stream->ssl);
+        stream->ssl = NULL;
+    }
+    if (stream->bioMethod != NULL)
+    {
+        BIO_meth_free(stream->bioMethod);
+        stream->bioMethod = NULL;
+    }
 }
 
 static bool AttachTransportBio(struct SolidSyslogTlsStream* stream)
