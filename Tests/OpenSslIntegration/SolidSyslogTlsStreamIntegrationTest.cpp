@@ -44,6 +44,11 @@ TEST_GROUP(TlsStreamIntegration)
         TlsTestCert_Create(&certConfig, &cert);
         std::strcpy(caPath, "/tmp/solidsyslog_tls_ca_XXXXXX");
         int fd = mkstemp(caPath);
+        CHECK_TRUE(fd >= 0);
+        if (fd < 0)
+        {
+            return;
+        }
         close(fd);
         TlsTestCert_WritePemToFile(&cert, caPath);
 

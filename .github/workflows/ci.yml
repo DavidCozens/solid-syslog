@@ -549,7 +549,7 @@ jobs:
 
   quality-summary:
     if: always() && github.event_name == 'pull_request'
-    needs: [build-and-test, clang-build-and-test, sanitize, coverage, tidy, cppcheck, format, bdd, windows-build-and-test, bdd-windows]
+    needs: [build-and-test, clang-build-and-test, sanitize, coverage, tidy, cppcheck, format, bdd, windows-build-and-test, bdd-windows, openssl-integration]
     runs-on: ubuntu-latest
     permissions:
       contents: read

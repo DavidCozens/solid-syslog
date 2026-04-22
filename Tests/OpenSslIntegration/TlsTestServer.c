@@ -29,6 +29,7 @@ struct TlsTestServer* TlsTestServer_Create(const struct TlsTestServerConfig* con
     self->ssl = SSL_new(self->ctx);
     BIO_new_bio_pair(&self->serverBio, 0, &self->clientBio, 0);
     SSL_set_bio(self->ssl, self->serverBio, self->serverBio);
+    self->serverBio = NULL; /* ownership transferred to SSL via SSL_set_bio */
     SSL_set_accept_state(self->ssl);
 
     return self;
