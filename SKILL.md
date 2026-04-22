@@ -2,9 +2,9 @@
 
 ## What this project is
 
-SolidSyslog is a C syslog client library implementing RFC 5424/5426/5425 for embedded
-and industrial systems. It is developed under the "Crafted with AI" blog series by
-Cozens Software Solutions Limited.
+SolidSyslog is a C syslog client library implementing RFC 5424/5426/6587/5425 for
+embedded and industrial systems. It is developed under the "Crafted with AI" blog
+series by Cozens Software Solutions Limited.
 
 ## Collaboration architecture
 
@@ -91,7 +91,8 @@ Test progression follows ZOMBIES order.
 
 ## Key references
 
-- Epics tracked as GitHub Issues #2–#12, Project board "SolidSyslog" (project #1)
+- Epics tracked as GitHub Issues, Project board "SolidSyslog" (project #1); active and future epics are labelled `epic` and numbered beyond the original #2–#12 range (e.g. E12 #31, E14 #64, E17 #105, E18 #112)
 - RFC 5424 — structured syslog message format
 - RFC 5426 — syslog over UDP
+- RFC 6587 — syslog over TCP (octet counting)
 - RFC 5425 — syslog over TLS

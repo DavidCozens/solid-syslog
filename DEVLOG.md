@@ -1,5 +1,50 @@
 # Dev Log
 
+## 2026-04-22 — S03.11 TLS promoted to Available + docs sanity pass
+
+### Decisions
+- Promoted TLS from Planned to Available in `docs/iec62443.md`: new
+  `SolidSyslogTlsStream` row in the SL4 components table, present-tense
+  bullets for what SL4 now adds, and a "Still to come" block carrying the
+  remaining E17 (integrity + encryption at rest) and S12.x (string hygiene)
+  items. Dropped the "Remaining E03 work" paragraph — there's no
+  compliance-relevant E03 work left; S03.12 / S03.13 are architectural.
+- Added CR 1.5 (Authenticator management) and CR 1.8 (PKI certificates) to
+  the Relevant Requirements table at SL4 and wired both into the
+  traceability matrix. Both are honestly claimed: library covers the bits
+  it can (load / refresh / authenticity / integrity), and the notes call
+  out the integrator-owned pieces (at-rest key protection is filesystem /
+  HSM; revocation is deferred to the OS trust store per the S03.08 ADR;
+  enrolment is the caller's PKI process). Better to state the gaps than
+  to overclaim.
+- README Status section rewritten: "Approaching feature-complete for POSIX
+  and Windows"; not production-ready; explicit known-gaps list covering
+  API churn, at-rest cryptography, CRL/OCSP, PRINTUSASCII / UTF-8 hygiene,
+  and error-guard rollout. Keeps the "not production-ready" signal but
+  stops undersellling where the library actually is.
+- Sanity-checked the other repo markdown and fixed the drift that was
+  visible: `docs/rfc-compliance.md` RFC 5425 section (all rows were
+  Planned — now 6 Supported + 1 Partial for the absent
+  `SOLIDSYSLOG_TLS_DEFAULT_PORT` constant); `docs/bdd.md` architecture
+  diagram + syslog-ng source list + `@tls` / `@mtls` feature tags;
+  `Bdd/syslog-ng/tls/README.md` now lists `client.key` / `client.pem` and
+  mentions `mtls_transport.feature`; `docs/ci.md` gains
+  `openssl-integration` and `bdd-windows` rows; `SKILL.md` lists RFC 6587
+  and notes the epic-number range has grown beyond the original #2–#12.
+- Epic #5 story table synced: S03.06 / S03.07 / S03.08 / S03.09 marked Done
+  with PR links.
+
+### Deferred
+- `SOLIDSYSLOG_TLS_DEFAULT_PORT = 6514` constant — would promote the RFC
+  5425 §4.2 row from Partial to Supported. Small, mechanical, not urgent.
+- `docs/template-updates.md` claims `docs/` is template-owned. That
+  conflicts with the reality that `docs/iec62443.md` /
+  `docs/rfc-compliance.md` are clearly project-specific. Worth tightening
+  the template-ownership list on a later pass.
+
+### Open questions
+- None.
+
 ## 2026-04-22 — S03.10 retired (cert rotation covered by reconnect)
 
 ### Decisions

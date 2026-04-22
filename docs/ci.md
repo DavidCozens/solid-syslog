@@ -14,7 +14,9 @@ GitHub Actions runs all jobs in parallel on every push and pull request to `main
 | `cppcheck` | `cppcheck` | cppcheck static analysis |
 | `format` | — | clang-format dry-run; fails if any file needs reformatting |
 | `windows-build-and-test` | `msvc-debug` | MSVC build on `windows-latest`; CppUTest via vcpkg; test results annotated on PR |
-| `bdd` | — | End-to-end BDD test via Docker Compose (syslog-ng + Behave) |
+| `openssl-integration` | `debug` | Runs the in-process TLS integration tests against libssl (no network oracle) |
+| `bdd` | — | End-to-end BDD test via Docker Compose (syslog-ng + Behave), Linux runner |
+| `bdd-windows` | — | Windows-eligible BDD scenarios driven against an OTel Collector oracle |
 
 ## Branch protection
 
