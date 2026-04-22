@@ -23,6 +23,10 @@ static bool             ConfigureExpectedHostname(struct SolidSyslogTlsStream* s
 static bool             PerformHandshake(struct SolidSyslogTlsStream* stream);
 static void             ReleaseHandshakeState(struct SolidSyslogTlsStream* stream);
 static SSL_CTX*         CreateSslContext(const struct SolidSyslogTlsStreamConfig* config);
+static bool             ConfigureSslContext(SSL_CTX* ctx, const struct SolidSyslogTlsStreamConfig* config);
+static bool             ConfigureTrustAnchors(SSL_CTX* ctx, const char* caBundlePath);
+static bool             ConfigureProtocolFloor(SSL_CTX* ctx);
+static bool             ConfigureCipherList(SSL_CTX* ctx, const char* cipherList);
 static BIO*             CreateTransportBio(struct SolidSyslogTlsStream* stream);
 static int              TransportBioCreate(BIO* bio);
 static int              TransportBioRead(BIO* bio, char* buffer, int size);
@@ -202,25 +206,42 @@ static long TransportBioCtrl(BIO* bio, int cmd, long larg, void* parg)
 static SSL_CTX* CreateSslContext(const struct SolidSyslogTlsStreamConfig* config)
 {
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
-    if (ctx == NULL)
-    {
-        return NULL;
-    }
-    if (SSL_CTX_load_verify_locations(ctx, config->caBundlePath, NULL) != 1)
+    if (ctx != NULL && !ConfigureSslContext(ctx, config))
     {
         SSL_CTX_free(ctx);
-        return NULL;
-    }
-    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
-    if (SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION) != 1)
-    {
-        SSL_CTX_free(ctx);
-        return NULL;
-    }
-    if (config->cipherList != NULL && SSL_CTX_set_cipher_list(ctx, config->cipherList) != 1)
-    {
-        SSL_CTX_free(ctx);
-        return NULL;
+        ctx = NULL;
     }
     return ctx;
+}
+
+static bool ConfigureSslContext(SSL_CTX* ctx, const struct SolidSyslogTlsStreamConfig* config)
+{
+    return ConfigureTrustAnchors(ctx, config->caBundlePath)
+        && ConfigureProtocolFloor(ctx)
+        && ConfigureCipherList(ctx, config->cipherList);
+}
+
+static bool ConfigureTrustAnchors(SSL_CTX* ctx, const char* caBundlePath)
+{
+    bool ok = SSL_CTX_load_verify_locations(ctx, caBundlePath, NULL) == 1;
+    if (ok)
+    {
+        SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
+    }
+    return ok;
+}
+
+static bool ConfigureProtocolFloor(SSL_CTX* ctx)
+{
+    return SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION) == 1;
+}
+
+static bool ConfigureCipherList(SSL_CTX* ctx, const char* cipherList)
+{
+    bool ok = true;
+    if (cipherList != NULL)
+    {
+        ok = SSL_CTX_set_cipher_list(ctx, cipherList) == 1;
+    }
+    return ok;
 }
