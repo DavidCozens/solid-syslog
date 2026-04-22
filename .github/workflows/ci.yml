@@ -61,6 +61,47 @@ jobs:
           retention-days: 1
           compression-level: 0
 
+  openssl-integration:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    container:
+      image: ghcr.io/davidcozens/cpputest:sha-18f19e1
+      options: --user root
+    env:
+      GIT_CONFIG_COUNT: 1
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: '*'
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Configure
+        run: cmake --preset debug
+
+      - name: Build integration tests
+        run: cmake --build --preset debug --target OpenSslIntegrationTests
+
+      - name: Run integration tests
+        run: cd build/debug && ./Tests/OpenSslIntegration/OpenSslIntegrationTests -v -ojunit -k OpenSslIntegrationTests
+
+      - name: Test Report
+        uses: dorny/test-reporter@v3
+        if: success() || failure()
+        with:
+          name: Test Results (OpenSSL Integration)
+          path: build/debug/cpputest_*.xml
+          reporter: java-junit
+
+      - name: Upload JUnit XML
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-openssl-integration
+          path: build/debug/cpputest_*.xml
+          retention-days: 1
+
   clang-build-and-test:
     runs-on: ubuntu-latest
     permissions:
@@ -508,7 +549,7 @@ jobs:
 
   quality-summary:
     if: always() && github.event_name == 'pull_request'
-    needs: [build-and-test, clang-build-and-test, sanitize, coverage, tidy, cppcheck, format, bdd, windows-build-and-test, bdd-windows]
+    needs: [build-and-test, clang-build-and-test, sanitize, coverage, tidy, cppcheck, format, bdd, windows-build-and-test, bdd-windows, openssl-integration]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -562,6 +603,11 @@ jobs:
                     "id": "junit",
                     "name": "Unit Tests (Sanitize)",
                     "pattern": "**/junit-sanitize/cpputest_*.xml"
+                  },
+                  {
+                    "id": "junit",
+                    "name": "Integration Tests (OpenSSL)",
+                    "pattern": "**/junit-openssl-integration/cpputest_*.xml"
                   },
                   {
                     "id": "junit",

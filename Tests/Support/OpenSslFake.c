@@ -17,15 +17,34 @@ static char fakeCtxStorage;
 static char fakeMethodStorage;
 static char fakeSslStorage;
 static char fakeBioMethStorage;
-static char fakeBioStorage;
+
+/* Pool of fake BIOs. Each slot is independent so callers can exercise
+ * multiple BIOs without aliasing. The address of `slot` is the BIO handle
+ * returned from BIO_new; `data` is the per-BIO storage that backs
+ * BIO_set_data / BIO_get_data. */
+typedef struct
+{
+    char  slot;
+    void* data;
+} FakeBio;
+
+enum
+{
+    FAKE_BIO_POOL_SIZE = 4
+};
+
+static FakeBio fakeBios[FAKE_BIO_POOL_SIZE];
+static int     fakeBioCount;
 
 /* SSL_CTX_new */
 static int               ctxNewCallCount;
 static const SSL_METHOD* lastCtxNewMethodArg;
+static bool              ctxNewFails;
 
 /* SSL_CTX_load_verify_locations */
 static SSL_CTX*    lastLoadVerifyLocationsCtxArg;
 static const char* lastCaBundlePath;
+static bool        loadVerifyLocationsFails;
 
 /* SSL_CTX_set_verify */
 static SSL_CTX* lastSetVerifyCtxArg;
@@ -34,10 +53,25 @@ static int      lastVerifyMode;
 /* SSL_CTX_ctrl (SET_MIN_PROTO_VERSION) */
 static SSL_CTX* lastSslCtxCtrlCtxArg;
 static long     lastMinProtoVersion;
+static bool     minProtoVersionFails;
+
+/* SSL_CTX_set_cipher_list */
+static int         setCipherListCallCount;
+static SSL_CTX*    lastSetCipherListCtxArg;
+static const char* lastCipherList;
+static bool        setCipherListFails;
 
 /* SSL_new */
 static int      sslNewCallCount;
 static SSL_CTX* lastSslNewCtxArg;
+static bool     sslNewFails;
+
+/* BIO_meth_new */
+static bool bioMethNewFails;
+
+/* BIO_meth_free */
+static int         bioMethFreeCallCount;
+static BIO_METHOD* lastBioMethFreeArg;
 
 /* BIO_meth_set_read / BIO_meth_set_write */
 static BIO_METHOD* lastBioMethSetReadMethodArg;
@@ -51,6 +85,7 @@ static int (*lastBioWriteCallback)(BIO*, const char*, int);
 /* BIO_new */
 static int               bioNewCallCount;
 static const BIO_METHOD* lastBioNewMethodArg;
+static bool              bioNewFails;
 
 /* BIO_set_data / BIO_get_data */
 static BIO*  lastSetDataBioArg;
@@ -66,10 +101,12 @@ static BIO* lastSetBioWriteBioArg;
 /* SSL_ctrl (SET_TLSEXT_HOSTNAME) */
 static SSL*        lastSslCtrlSslArg;
 static const char* lastSniHostname;
+static bool        sniHostnameFails;
 
 /* SSL_set1_host */
 static SSL*        lastSet1HostSslArg;
 static const char* lastSet1Host;
+static bool        set1HostFails;
 
 /* SSL_connect */
 static int  connectCallCount;
@@ -109,14 +146,25 @@ void OpenSslFake_Reset(void)
 {
     ctxNewCallCount               = 0;
     lastCtxNewMethodArg           = NULL;
+    ctxNewFails                   = false;
     lastLoadVerifyLocationsCtxArg = NULL;
     lastCaBundlePath              = NULL;
+    loadVerifyLocationsFails      = false;
     lastSetVerifyCtxArg           = NULL;
     lastVerifyMode                = 0;
     lastSslCtxCtrlCtxArg          = NULL;
     lastMinProtoVersion           = 0;
+    minProtoVersionFails          = false;
+    setCipherListCallCount        = 0;
+    lastSetCipherListCtxArg       = NULL;
+    lastCipherList                = NULL;
+    setCipherListFails            = false;
     sslNewCallCount               = 0;
     lastSslNewCtxArg              = NULL;
+    sslNewFails                   = false;
+    bioMethNewFails               = false;
+    bioMethFreeCallCount          = 0;
+    lastBioMethFreeArg            = NULL;
     lastBioMethSetReadMethodArg   = NULL;
     lastBioReadCallback           = NULL;
     lastBioCtrlCallback           = NULL;
@@ -126,35 +174,43 @@ void OpenSslFake_Reset(void)
     lastBioWriteCallback          = NULL;
     bioNewCallCount               = 0;
     lastBioNewMethodArg           = NULL;
-    lastSetDataBioArg             = NULL;
-    lastSetDataArg                = NULL;
-    lastGetDataBioArg             = NULL;
-    setBioCallCount               = 0;
-    lastSetBioSslArg              = NULL;
-    lastSetBioReadBioArg          = NULL;
-    lastSetBioWriteBioArg         = NULL;
-    lastSslCtrlSslArg             = NULL;
-    lastSniHostname               = NULL;
-    lastSet1HostSslArg            = NULL;
-    lastSet1Host                  = NULL;
-    connectCallCount              = 0;
-    lastConnectSslArg             = NULL;
-    connectFails                  = false;
-    writeCallCount                = 0;
-    lastWriteSslArg               = NULL;
-    lastWriteBuf                  = NULL;
-    lastWriteSize                 = 0;
-    writeFails                    = false;
-    sslReadCallCount              = 0;
-    lastSslReadSslArg             = NULL;
-    lastSslReadBuf                = NULL;
-    lastSslReadSize               = 0;
-    shutdownCallCount             = 0;
-    lastShutdownSslArg            = NULL;
-    freeCallCount                 = 0;
-    lastFreeSslArg                = NULL;
-    ctxFreeCallCount              = 0;
-    lastCtxFreeCtxArg             = NULL;
+    bioNewFails                   = false;
+    fakeBioCount                  = 0;
+    for (int i = 0; i < FAKE_BIO_POOL_SIZE; i++)
+    {
+        fakeBios[i].data = NULL;
+    }
+    lastSetDataBioArg     = NULL;
+    lastSetDataArg        = NULL;
+    lastGetDataBioArg     = NULL;
+    setBioCallCount       = 0;
+    lastSetBioSslArg      = NULL;
+    lastSetBioReadBioArg  = NULL;
+    lastSetBioWriteBioArg = NULL;
+    lastSslCtrlSslArg     = NULL;
+    lastSniHostname       = NULL;
+    sniHostnameFails      = false;
+    lastSet1HostSslArg    = NULL;
+    lastSet1Host          = NULL;
+    set1HostFails         = false;
+    connectCallCount      = 0;
+    lastConnectSslArg     = NULL;
+    connectFails          = false;
+    writeCallCount        = 0;
+    lastWriteSslArg       = NULL;
+    lastWriteBuf          = NULL;
+    lastWriteSize         = 0;
+    writeFails            = false;
+    sslReadCallCount      = 0;
+    lastSslReadSslArg     = NULL;
+    lastSslReadBuf        = NULL;
+    lastSslReadSize       = 0;
+    shutdownCallCount     = 0;
+    lastShutdownSslArg    = NULL;
+    freeCallCount         = 0;
+    lastFreeSslArg        = NULL;
+    ctxFreeCallCount      = 0;
+    lastCtxFreeCtxArg     = NULL;
 }
 
 /* -------------------------------------------------------------------------
@@ -273,7 +329,7 @@ const BIO_METHOD* OpenSslFake_LastBioNewMethodArg(void)
 
 BIO* OpenSslFake_LastBioReturned(void)
 {
-    return (BIO*) &fakeBioStorage;
+    return fakeBioCount > 0 ? (BIO*) &fakeBios[fakeBioCount - 1].slot : NULL;
 }
 
 BIO* OpenSslFake_LastSetDataBioArg(void)
@@ -428,7 +484,12 @@ SSL_CTX* SSL_CTX_new(const SSL_METHOD* method)
 {
     ctxNewCallCount++;
     lastCtxNewMethodArg = method;
-    return (SSL_CTX*) &fakeCtxStorage;
+    return ctxNewFails ? NULL : (SSL_CTX*) &fakeCtxStorage;
+}
+
+void OpenSslFake_SetCtxNewFails(bool fails)
+{
+    ctxNewFails = fails;
 }
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- signature fixed by OpenSSL API
@@ -437,7 +498,12 @@ int SSL_CTX_load_verify_locations(SSL_CTX* ctx, const char* CAfile, const char* 
     (void) CApath;
     lastLoadVerifyLocationsCtxArg = ctx;
     lastCaBundlePath              = CAfile;
-    return 1;
+    return loadVerifyLocationsFails ? 0 : 1;
+}
+
+void OpenSslFake_SetLoadVerifyLocationsFails(bool fails)
+{
+    loadVerifyLocationsFails = fails;
 }
 
 void SSL_CTX_set_verify(SSL_CTX* ctx, int mode, SSL_verify_cb verify_callback)
@@ -457,22 +523,82 @@ long SSL_CTX_ctrl(SSL_CTX* ctx, int cmd, long larg, void* parg)
     if (cmd == SSL_CTRL_SET_MIN_PROTO_VERSION)
     {
         lastMinProtoVersion = larg;
+        return minProtoVersionFails ? 0 : 1;
     }
     return 1;
+}
+
+void OpenSslFake_SetMinProtoVersionFails(bool fails)
+{
+    minProtoVersionFails = fails;
+}
+
+int SSL_CTX_set_cipher_list(SSL_CTX* ctx, const char* str)
+{
+    setCipherListCallCount++;
+    lastSetCipherListCtxArg = ctx;
+    lastCipherList          = str;
+    return setCipherListFails ? 0 : 1;
+}
+
+void OpenSslFake_SetCipherListFails(bool fails)
+{
+    setCipherListFails = fails;
+}
+
+int OpenSslFake_SetCipherListCallCount(void)
+{
+    return setCipherListCallCount;
+}
+
+SSL_CTX* OpenSslFake_LastSetCipherListCtxArg(void)
+{
+    return lastSetCipherListCtxArg;
+}
+
+const char* OpenSslFake_LastCipherList(void)
+{
+    return lastCipherList;
 }
 
 SSL* SSL_new(SSL_CTX* ctx)
 {
     sslNewCallCount++;
     lastSslNewCtxArg = ctx;
-    return (SSL*) &fakeSslStorage;
+    return sslNewFails ? NULL : (SSL*) &fakeSslStorage;
+}
+
+void OpenSslFake_SetSslNewFails(bool fails)
+{
+    sslNewFails = fails;
 }
 
 BIO_METHOD* BIO_meth_new(int type, const char* name)
 {
     (void) type;
     (void) name;
-    return (BIO_METHOD*) &fakeBioMethStorage;
+    return bioMethNewFails ? NULL : (BIO_METHOD*) &fakeBioMethStorage;
+}
+
+void OpenSslFake_SetBioMethNewFails(bool fails)
+{
+    bioMethNewFails = fails;
+}
+
+void BIO_meth_free(BIO_METHOD* biom)
+{
+    bioMethFreeCallCount++;
+    lastBioMethFreeArg = biom;
+}
+
+int OpenSslFake_BioMethFreeCallCount(void)
+{
+    return bioMethFreeCallCount;
+}
+
+BIO_METHOD* OpenSslFake_LastBioMethFreeArg(void)
+{
+    return lastBioMethFreeArg;
 }
 
 int BIO_meth_set_read(BIO_METHOD* biom, int (*read)(BIO*, char*, int))
@@ -513,19 +639,45 @@ BIO* BIO_new(const BIO_METHOD* type)
 {
     bioNewCallCount++;
     lastBioNewMethodArg = type;
-    return (BIO*) &fakeBioStorage;
+    BIO* bio            = NULL;
+    if (!bioNewFails && fakeBioCount < FAKE_BIO_POOL_SIZE)
+    {
+        bio = (BIO*) &fakeBios[fakeBioCount].slot;
+        fakeBioCount++;
+    }
+    return bio;
+}
+
+void OpenSslFake_SetBioNewFails(bool fails)
+{
+    bioNewFails = fails;
 }
 
 void BIO_set_data(BIO* a, void* ptr)
 {
     lastSetDataBioArg = a;
     lastSetDataArg    = ptr;
+    for (int i = 0; i < fakeBioCount; i++)
+    {
+        if ((BIO*) &fakeBios[i].slot == a)
+        {
+            fakeBios[i].data = ptr;
+        }
+    }
 }
 
 void* BIO_get_data(BIO* a)
 {
     lastGetDataBioArg = a;
-    return lastSetDataArg;
+    void* result      = NULL;
+    for (int i = 0; i < fakeBioCount; i++)
+    {
+        if ((BIO*) &fakeBios[i].slot == a)
+        {
+            result = fakeBios[i].data;
+        }
+    }
+    return result;
 }
 
 void SSL_set_bio(SSL* ssl, BIO* rbio, BIO* wbio)
@@ -546,15 +698,26 @@ long SSL_ctrl(SSL* ssl, int cmd, long larg, void* parg)
     if (cmd == SSL_CTRL_SET_TLSEXT_HOSTNAME)
     {
         lastSniHostname = (const char*) parg;
+        return sniHostnameFails ? 0 : 1;
     }
     return 1;
+}
+
+void OpenSslFake_SetSniHostnameFails(bool fails)
+{
+    sniHostnameFails = fails;
 }
 
 int SSL_set1_host(SSL* ssl, const char* hostname)
 {
     lastSet1HostSslArg = ssl;
     lastSet1Host       = hostname;
-    return 1;
+    return set1HostFails ? 0 : 1;
+}
+
+void OpenSslFake_SetSet1HostFails(bool fails)
+{
+    set1HostFails = fails;
 }
 
 int SSL_connect(SSL* ssl)

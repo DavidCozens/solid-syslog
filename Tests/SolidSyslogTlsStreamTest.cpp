@@ -79,6 +79,40 @@ TEST(SolidSyslogTlsStream, OpenSetsTls12Floor)
     LONGS_EQUAL(TLS1_2_VERSION, OpenSslFake_LastMinProtoVersion());
 }
 
+TEST(SolidSyslogTlsStream, OpenPassesCipherListToSslCtx)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.cipherList = "ECDHE+AESGCM";
+    stream            = SolidSyslogTlsStream_Create(&config);
+    SolidSyslogStream_Open(stream, addr);
+    STRCMP_EQUAL("ECDHE+AESGCM", OpenSslFake_LastCipherList());
+}
+
+TEST(SolidSyslogTlsStream, OpenSkipsCipherListSetupWhenNotConfigured)
+{
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(0, OpenSslFake_SetCipherListCallCount());
+}
+
+TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenCipherListRejected)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.cipherList = "not-a-real-cipher";
+    stream            = SolidSyslogTlsStream_Create(&config);
+    OpenSslFake_SetCipherListFails(true);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(SolidSyslogTlsStream, CipherListFailureFreesCtx)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.cipherList = "not-a-real-cipher";
+    stream            = SolidSyslogTlsStream_Create(&config);
+    OpenSslFake_SetCipherListFails(true);
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(1, OpenSslFake_CtxFreeCallCount());
+}
+
 TEST(SolidSyslogTlsStream, OpenCreatesSslSession)
 {
     SolidSyslogStream_Open(stream, addr);
@@ -271,12 +305,50 @@ TEST(SolidSyslogTlsStream, CloseClosesTransport)
     LONGS_EQUAL(1, StreamFake_CloseCallCount(transport));
 }
 
+TEST(SolidSyslogTlsStream, CloseFreesBioMethod)
+{
+    SolidSyslogStream_Open(stream, addr);
+    SolidSyslogStream_Close(stream);
+    LONGS_EQUAL(1, OpenSslFake_BioMethFreeCallCount());
+}
+
 TEST(SolidSyslogTlsStream, DestroyFreesSslContext)
 {
     SolidSyslogStream_Open(stream, addr);
     SolidSyslogTlsStream_Destroy();
     LONGS_EQUAL(1, OpenSslFake_CtxFreeCallCount());
     /* teardown re-Destroys safely */
+}
+
+TEST(SolidSyslogTlsStream, DestroyFreesBioMethodWhenCloseNotCalled)
+{
+    SolidSyslogStream_Open(stream, addr);
+    SolidSyslogTlsStream_Destroy();
+    LONGS_EQUAL(1, OpenSslFake_BioMethFreeCallCount());
+    /* teardown re-Destroys safely */
+}
+
+TEST(SolidSyslogTlsStream, DestroyAfterCloseDoesNotDoubleFreeBioMethod)
+{
+    SolidSyslogStream_Open(stream, addr);
+    SolidSyslogStream_Close(stream);
+    SolidSyslogTlsStream_Destroy();
+    LONGS_EQUAL(1, OpenSslFake_BioMethFreeCallCount());
+}
+
+TEST(SolidSyslogTlsStream, DestroyFreesSslWhenCloseNotCalled)
+{
+    SolidSyslogStream_Open(stream, addr);
+    SolidSyslogTlsStream_Destroy();
+    LONGS_EQUAL(1, OpenSslFake_FreeCallCount());
+}
+
+TEST(SolidSyslogTlsStream, DestroyAfterCloseDoesNotDoubleFreeSsl)
+{
+    SolidSyslogStream_Open(stream, addr);
+    SolidSyslogStream_Close(stream);
+    SolidSyslogTlsStream_Destroy();
+    LONGS_EQUAL(1, OpenSslFake_FreeCallCount());
 }
 
 /* -------------------------------------------------------------------------
@@ -399,6 +471,82 @@ TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenHandshakeFails)
 {
     OpenSslFake_SetConnectFails(true);
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenSet1HostFails)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.serverName = "logs.example";
+    stream            = SolidSyslogTlsStream_Create(&config);
+    OpenSslFake_SetSet1HostFails(true);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenSniHostnameSetupFails)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.serverName = "logs.example";
+    stream            = SolidSyslogTlsStream_Create(&config);
+    OpenSslFake_SetSniHostnameFails(true);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenCtxNewFails)
+{
+    OpenSslFake_SetCtxNewFails(true);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenSslNewFails)
+{
+    OpenSslFake_SetSslNewFails(true);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenLoadVerifyLocationsFails)
+{
+    OpenSslFake_SetLoadVerifyLocationsFails(true);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(SolidSyslogTlsStream, LoadVerifyLocationsFailureFreesCtx)
+{
+    OpenSslFake_SetLoadVerifyLocationsFails(true);
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(1, OpenSslFake_CtxFreeCallCount());
+}
+
+TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenMinProtoVersionFails)
+{
+    OpenSslFake_SetMinProtoVersionFails(true);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(SolidSyslogTlsStream, MinProtoVersionFailureFreesCtx)
+{
+    OpenSslFake_SetMinProtoVersionFails(true);
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(1, OpenSslFake_CtxFreeCallCount());
+}
+
+TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenBioMethNewFails)
+{
+    OpenSslFake_SetBioMethNewFails(true);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenBioNewFails)
+{
+    OpenSslFake_SetBioNewFails(true);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(SolidSyslogTlsStream, BioNewFailureFreesBioMethodInline)
+{
+    OpenSslFake_SetBioNewFails(true);
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(1, OpenSslFake_BioMethFreeCallCount());
+    /* teardown re-Destroys safely — bioMethod already cleared */
 }
 
 TEST(SolidSyslogTlsStream, SendReturnsTrueOnHappyPath)

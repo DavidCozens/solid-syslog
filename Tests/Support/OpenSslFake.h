@@ -19,6 +19,15 @@ EXTERN_C_BEGIN
     /* Failure-mode switches */
     void OpenSslFake_SetConnectFails(bool fails);
     void OpenSslFake_SetWriteFails(bool fails);
+    void OpenSslFake_SetSet1HostFails(bool fails);
+    void OpenSslFake_SetSniHostnameFails(bool fails);
+    void OpenSslFake_SetCtxNewFails(bool fails);
+    void OpenSslFake_SetSslNewFails(bool fails);
+    void OpenSslFake_SetLoadVerifyLocationsFails(bool fails);
+    void OpenSslFake_SetMinProtoVersionFails(bool fails);
+    void OpenSslFake_SetBioMethNewFails(bool fails);
+    void OpenSslFake_SetBioNewFails(bool fails);
+    void OpenSslFake_SetCipherListFails(bool fails);
 
     /* SSL_CTX_new */
     int                         OpenSslFake_CtxNewCallCount(void);
@@ -37,6 +46,11 @@ EXTERN_C_BEGIN
     struct ssl_ctx_st* OpenSslFake_LastSslCtxCtrlCtxArg(void);
     long               OpenSslFake_LastMinProtoVersion(void);
 
+    /* SSL_CTX_set_cipher_list */
+    int                OpenSslFake_SetCipherListCallCount(void);
+    struct ssl_ctx_st* OpenSslFake_LastSetCipherListCtxArg(void);
+    const char*        OpenSslFake_LastCipherList(void);
+
     /* SSL_new */
     int                OpenSslFake_SslNewCallCount(void);
     struct ssl_ctx_st* OpenSslFake_LastSslNewCtxArg(void);
@@ -44,6 +58,10 @@ EXTERN_C_BEGIN
 
     /* BIO_meth_new */
     struct bio_method_st* OpenSslFake_LastBioMethReturned(void);
+
+    /* BIO_meth_free */
+    int                   OpenSslFake_BioMethFreeCallCount(void);
+    struct bio_method_st* OpenSslFake_LastBioMethFreeArg(void);
 
     /* BIO_meth_set_read */
     struct bio_method_st* OpenSslFake_LastBioMethSetReadMethodArg(void);

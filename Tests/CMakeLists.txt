@@ -112,6 +112,10 @@ if(SOLIDSYSLOG_WINSOCK)
     target_link_libraries(${PROJECT_NAME}Tests PRIVATE WinsockFakes)
 endif()
 
+if(SOLIDSYSLOG_OPENSSL)
+    add_subdirectory(OpenSslIntegration)
+endif()
+
 # Standard CppUTest console output via ctest -V
 add_test(NAME ${PROJECT_NAME}Tests COMMAND ${PROJECT_NAME}Tests)
 
