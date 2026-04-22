@@ -37,15 +37,19 @@ static long             TransportBioCtrl(BIO* bio, int cmd, long larg, void* par
 static int              TransportBioRead(BIO* bio, char* buffer, int size);
 static int              TransportBioWrite(BIO* bio, const char* buffer, int size);
 
+static const struct SolidSyslogStream VTABLE = {
+    .Open  = Open,
+    .Send  = Send,
+    .Read  = Read,
+    .Close = Close,
+};
+
 static struct SolidSyslogTlsStream instance;
 
 struct SolidSyslogStream* SolidSyslogTlsStream_Create(const struct SolidSyslogTlsStreamConfig* config)
 {
-    instance.config     = *config;
-    instance.base.Open  = Open;
-    instance.base.Send  = Send;
-    instance.base.Read  = Read;
-    instance.base.Close = Close;
+    instance.config = *config;
+    instance.base   = VTABLE;
     return &instance.base;
 }
 
