@@ -127,7 +127,14 @@ static BIO* CreateTransportBio(struct SolidSyslogTlsStream* stream)
     BIO_meth_set_write(method, TransportBioWrite);
     BIO_meth_set_ctrl(method, TransportBioCtrl);
     stream->bioMethod = method;
-    return BIO_new(method);
+    BIO* bio = BIO_new(method);
+    if (bio == NULL)
+    {
+        BIO_meth_free(method);
+        stream->bioMethod = NULL;
+        return NULL;
+    }
+    return bio;
 }
 
 /* Called when BIO_new instantiates a BIO from our method. Marking init=1 tells

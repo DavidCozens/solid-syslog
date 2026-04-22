@@ -501,6 +501,20 @@ TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenBioMethNewFails)
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
 }
 
+TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenBioNewFails)
+{
+    OpenSslFake_SetBioNewFails(true);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(SolidSyslogTlsStream, BioNewFailureFreesBioMethodInline)
+{
+    OpenSslFake_SetBioNewFails(true);
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(1, OpenSslFake_BioMethFreeCallCount());
+    /* teardown re-Destroys safely — bioMethod already cleared */
+}
+
 TEST(SolidSyslogTlsStream, SendReturnsTrueOnHappyPath)
 {
     SolidSyslogStream_Open(stream, addr);

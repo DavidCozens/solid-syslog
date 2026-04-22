@@ -62,6 +62,7 @@ static int (*lastBioWriteCallback)(BIO*, const char*, int);
 /* BIO_new */
 static int               bioNewCallCount;
 static const BIO_METHOD* lastBioNewMethodArg;
+static bool              bioNewFails;
 
 /* BIO_set_data / BIO_get_data */
 static BIO*  lastSetDataBioArg;
@@ -146,6 +147,7 @@ void OpenSslFake_Reset(void)
     lastBioWriteCallback          = NULL;
     bioNewCallCount               = 0;
     lastBioNewMethodArg           = NULL;
+    bioNewFails                   = false;
     lastSetDataBioArg             = NULL;
     lastSetDataArg                = NULL;
     lastGetDataBioArg             = NULL;
@@ -577,7 +579,12 @@ BIO* BIO_new(const BIO_METHOD* type)
 {
     bioNewCallCount++;
     lastBioNewMethodArg = type;
-    return (BIO*) &fakeBioStorage;
+    return bioNewFails ? NULL : (BIO*) &fakeBioStorage;
+}
+
+void OpenSslFake_SetBioNewFails(bool fails)
+{
+    bioNewFails = fails;
 }
 
 void BIO_set_data(BIO* a, void* ptr)

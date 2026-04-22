@@ -26,6 +26,7 @@ EXTERN_C_BEGIN
     void OpenSslFake_SetLoadVerifyLocationsFails(bool fails);
     void OpenSslFake_SetMinProtoVersionFails(bool fails);
     void OpenSslFake_SetBioMethNewFails(bool fails);
+    void OpenSslFake_SetBioNewFails(bool fails);
 
     /* SSL_CTX_new */
     int                         OpenSslFake_CtxNewCallCount(void);
