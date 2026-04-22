@@ -9,10 +9,6 @@ if(SOLIDSYSLOG_POSIX)
         Common/ExampleSwitchConfig.c
     )
 
-    if(SOLIDSYSLOG_OPENSSL)
-        list(APPEND COMMON_SOURCES Common/ExampleTlsConfig.c Common/ExampleMtlsConfig.c)
-    endif()
-
     # Single-task example: NullBuffer, direct send, bare-metal model
     add_executable(SolidSyslogExample SingleTask/main.c SingleTask/SolidSyslogExample.c ${COMMON_SOURCES})
     target_link_libraries(SolidSyslogExample PRIVATE ${PROJECT_NAME})
@@ -22,15 +18,26 @@ if(SOLIDSYSLOG_POSIX)
     )
 
     # Threaded example: PosixMessageQueueBuffer, two pthreads (requires POSIX threads and mqueue).
-    # TLS transport (optional via SOLIDSYSLOG_OPENSSL) adds OpenSSL linkage.
-    add_executable(SolidSyslogThreadedExample Threaded/main.c ${COMMON_SOURCES})
+    # TLS transport is selected at link time via the ExampleTlsSender_<backend>.c
+    # source file — OpenSSL when SOLIDSYSLOG_OPENSSL, nil-object stub otherwise.
+    set(THREADED_SOURCES Threaded/main.c ${COMMON_SOURCES})
+    if(SOLIDSYSLOG_OPENSSL)
+        list(APPEND THREADED_SOURCES
+            Threaded/ExampleTlsSender_OpenSsl.c
+            Common/ExampleTlsConfig.c
+            Common/ExampleMtlsConfig.c
+        )
+    else()
+        list(APPEND THREADED_SOURCES Threaded/ExampleTlsSender_Unavailable.c)
+    endif()
+    add_executable(SolidSyslogThreadedExample ${THREADED_SOURCES})
     target_link_libraries(SolidSyslogThreadedExample PRIVATE ${PROJECT_NAME} Threads::Threads)
     target_include_directories(SolidSyslogThreadedExample PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/Common
+        ${CMAKE_CURRENT_SOURCE_DIR}/Threaded
     )
     if(SOLIDSYSLOG_OPENSSL)
         target_link_libraries(SolidSyslogThreadedExample PRIVATE OpenSSL::SSL OpenSSL::Crypto)
-        target_compile_definitions(SolidSyslogThreadedExample PRIVATE SOLIDSYSLOG_HAVE_OPENSSL=1)
     endif()
 elseif(SOLIDSYSLOG_WINSOCK AND HAVE_WINDOWS_PLATFORM)
     # Windows example: NullBuffer + Winsock UDP + Windows clock/hostname/process-id.

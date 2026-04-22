@@ -1,5 +1,49 @@
 # Dev Log
 
+## 2026-04-22 — S03.13 TLS backend composition via CMake
+
+### Decisions
+- Factored TLS sender construction out of `Example/Threaded/main.c` into
+  per-backend files selected at CMake link time, matching the existing
+  repo idiom of link-time composition (platform subdirectories,
+  `POSIX_FAKES_SOURCES`, etc.). `main.c` now has zero TLS `#ifdef`s, no
+  `SOLIDSYSLOG_HAVE_OPENSSL` compile define, and no knowledge of whether
+  the TLS backend is real or a stub — it just calls
+  `ExampleTlsSender_Create(resolver, mtls)` / `_Destroy()`.
+- Two backends today: `ExampleTlsSender_OpenSsl.c` (the real wiring
+  previously inside `main.c::CreateSender`) and
+  `ExampleTlsSender_Unavailable.c` (nil-object stub). A third
+  `ExampleTlsSender_WolfSsl.c` is deliberately not created here — the
+  `_<Backend>.c` filename convention is the extension point for future
+  backends; adding wolfSSL is its own story.
+- Stub is a nil-object, not an exit-on-create. Under S03.12 all three
+  switching-slot senders are created on startup regardless of the
+  launch-time transport, so exiting from the stub's `_Create` would kill
+  UDP/TCP launches too. The nil sender's `Send` prints a one-shot stderr
+  message ("TLS support not compiled in — messages routed to the TLS slot
+  will be dropped") and returns false; `Disconnect` is a no-op. Not a
+  silent fallback (user sees the message), not an abrupt exit (UDP/TCP
+  keep working), consistent with existing null-object conventions
+  (NullBuffer, NullStore, NullSecurityPolicy). `warned` latch is reset in
+  `_Create` so repeated Create/Destroy cycles stay quiet on subsequent
+  Sends in the normal case but re-warn after any genuine re-setup.
+- Dropped the draft `ExampleTlsSender_Available()` function — the
+  nil-object approach makes it unnecessary. `main.c` doesn't branch on
+  availability; it just wires whatever the linker gave it.
+- `ExampleTlsConfig.c` and `ExampleMtlsConfig.c` link alongside the
+  OpenSSL backend, dropped with the Unavailable one. The Unavailable
+  build no longer compiles the TLS/mTLS config modules at all.
+
+### Deferred
+- Actual wolfSSL / mbedTLS backends — separate future story per-backend.
+- Extending the same composition idiom to other transports (UDP / plain
+  TCP) — only TLS has the optional-dependency problem today.
+- Runtime backend registration / dynamic plugin loading — not needed in
+  the foreseeable roadmap.
+
+### Open questions
+- None.
+
 ## 2026-04-22 — S03.12 multi-instance senders and streams
 
 ### Decisions
