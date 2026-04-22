@@ -26,8 +26,11 @@ jobs:
       - name: Compute source-tarball hash
         id: hash
         run: |
+          # Product scope per docs/security/sbom.md: Core/ + Platform/.
+          # Example/, Tests/, Bdd/, ci/, docs/, .devcontainer/, .github/
+          # are reference / test-harness / infrastructure and out of scope.
           TARBALL=$(mktemp)
-          git archive --format=tar.gz HEAD -- Core/ > "$TARBALL"
+          git archive --format=tar.gz HEAD -- Core/ Platform/ > "$TARBALL"
           HASH=$(sha256sum "$TARBALL" | cut -d' ' -f1)
           echo "hash=$HASH" >> "$GITHUB_OUTPUT"
           rm "$TARBALL"

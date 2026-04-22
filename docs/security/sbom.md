@@ -1,9 +1,37 @@
 # Software Bill of Materials (SBOM)
 
-SolidSyslog publishes a [CycloneDX](https://cyclonedx.org/) 1.5 SBOM describing
-the `Core/` subtree — the supported library. The Platform, Example, Tests and
-Bdd directories are explicitly out of scope: they are reference integrations
-and test harnesses, not the shipped product.
+SolidSyslog publishes a [CycloneDX](https://cyclonedx.org/) 1.5 SBOM for the
+shipped library. SBOMs come in three flavours that answer three different
+questions — this document is only concerned with the first.
+
+| Flavour | Question it answers | Status here |
+|---|---|---|
+| **Product SBOM** | "What am I linking against in my deployment?" | Covered by this workflow (see below). |
+| **Build / dev-env SBOM** | "What tools, containers, and test harnesses were used to produce the release?" | Not yet — deferred to a separate story. Container image SHAs are tracked in `docs/containers.md` for now. |
+| **Source SBOM** | "What third-party source code is embedded in the product?" | Empty — SolidSyslog vendors no third-party source. |
+
+## Product SBOM scope
+
+The product SBOM covers the `Core/` and `Platform/` subdirectories — the
+source the integrator consumes from this repository. `Core/` is Tier 1
+(full support, stable API); `Platform/` is Tier 2 (supported; API may
+evolve per target). Both ship.
+
+Out of scope:
+- `Example/` — reference integrations, not product.
+- `Tests/`, `Bdd/` — test harnesses.
+- `ci/`, `docs/`, `.devcontainer/`, `.github/` — infrastructure.
+
+Runtime dependencies we declare but do not bundle:
+- **OpenSSL** — optional, only when `SOLIDSYSLOG_OPENSSL=ON`. Listed as a
+  CycloneDX component with `scope: optional`. No version pinned —
+  integrators select their own OpenSSL and capture it in their own SBOM
+  alongside the specific licence terms of the version they ship.
+
+Runtime dependencies we document as environment (not components):
+- **POSIX libc / Winsock / POSIX message queues** — host OS APIs, not
+  shipped software. Recorded as `metadata.properties` rather than
+  components.
 
 ## What the SBOM says
 

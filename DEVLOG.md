@@ -9,11 +9,27 @@
   Primary driver: a maintainer rehearsal workflow, runnable via
   `workflow_dispatch`, before next week's client conversation about SBOMs.
 - **Format: CycloneDX 1.5 JSON** (primary; E19 locks this in, no SPDX).
-- **Scope:** `Core/` subtree. Single-component SBOM — `metadata.component`
-  is SolidSyslog, `components: []`. Platform / Example / Tests / Bdd
-  directories excluded. POSIX / Windows runtime facts captured as
-  `metadata.properties`, not as components (they are *deployment
-  requirements*, not *shipped software*).
+- **Scope:** `Core/` + `Platform/` subdirectories. Initially drafted as
+  `Core/` only, widened on review — `Platform/` code ships with the
+  repo and the integrator consumes it as source. `Example/`, `Tests/`,
+  `Bdd/`, `ci/`, `docs/`, `.devcontainer/`, `.github/` stay out of scope
+  (reference / harness / infrastructure, not product). POSIX / Windows
+  runtime facts stay as `metadata.properties`, not components (they are
+  *deployment requirements*, not *shipped software*).
+- **SBOM kind disclosed.** Added `solidsyslog:sbom-kind: product` as a
+  top-level property so a consumer can tell this apart from the future
+  build-env SBOM and source SBOM. Framing captured in
+  `docs/security/sbom.md` as "three flavours, three questions".
+- **OpenSSL declared as an optional dependency.** When
+  `SOLIDSYSLOG_OPENSSL=ON`, the integrator links against OpenSSL for
+  the reference TLS Stream. We don't bundle it, but transparency
+  matters for CRA readiness, so OpenSSL appears in the product SBOM as
+  `components[0]` with `scope: optional`, supplier = OpenSSL Project,
+  and no version or licence pinned. Licence terms depend on which
+  OpenSSL version the integrator chooses (Apache-2.0 for ≥ 3.0,
+  OpenSSL + SSLeay for ≤ 1.1.1); the integrator's own product SBOM
+  records the specific version and licence. `dependencies[]` wires the
+  relationship so tooling can walk it.
 - **Template-based generation, not tool-scanning.** The project is a
   pure-C library with no runtime dependencies — a static template with
   env-substituted placeholders for version / commit SHA / source hash /
