@@ -27,7 +27,10 @@ static bool             InitSslSession(struct SolidSyslogTlsStream* stream);
 static bool             Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr);
 static bool             PerformHandshake(struct SolidSyslogTlsStream* stream);
 static SolidSyslogSsize Read(struct SolidSyslogStream* self, void* buffer, size_t size);
+static void             ReleaseBioMethod(struct SolidSyslogTlsStream* stream);
 static void             ReleaseHandshakeState(struct SolidSyslogTlsStream* stream);
+static void             ReleaseSsl(struct SolidSyslogTlsStream* stream);
+static void             ReleaseSslContext(struct SolidSyslogTlsStream* stream);
 static bool             Send(struct SolidSyslogStream* self, const void* buffer, size_t size);
 static int              TransportBioCreate(BIO* bio);
 static long             TransportBioCtrl(BIO* bio, int cmd, long larg, void* parg);
@@ -49,24 +52,39 @@ struct SolidSyslogStream* SolidSyslogTlsStream_Create(const struct SolidSyslogTl
 void SolidSyslogTlsStream_Destroy(void)
 {
     ReleaseHandshakeState(&instance);
-    if (instance.ctx != NULL)
-    {
-        SSL_CTX_free(instance.ctx);
-        instance.ctx = NULL;
-    }
+    ReleaseSslContext(&instance);
 }
 
 static void ReleaseHandshakeState(struct SolidSyslogTlsStream* stream)
+{
+    ReleaseSsl(stream);
+    ReleaseBioMethod(stream);
+}
+
+static void ReleaseSsl(struct SolidSyslogTlsStream* stream)
 {
     if (stream->ssl != NULL)
     {
         SSL_free(stream->ssl);
         stream->ssl = NULL;
     }
+}
+
+static void ReleaseBioMethod(struct SolidSyslogTlsStream* stream)
+{
     if (stream->bioMethod != NULL)
     {
         BIO_meth_free(stream->bioMethod);
         stream->bioMethod = NULL;
+    }
+}
+
+static void ReleaseSslContext(struct SolidSyslogTlsStream* stream)
+{
+    if (stream->ctx != NULL)
+    {
+        SSL_CTX_free(stream->ctx);
+        stream->ctx = NULL;
     }
 }
 
@@ -157,8 +175,7 @@ static BIO* CreateTransportBio(struct SolidSyslogTlsStream* stream)
         bio = BIO_new(stream->bioMethod);
         if (bio == NULL)
         {
-            BIO_meth_free(stream->bioMethod);
-            stream->bioMethod = NULL;
+            ReleaseBioMethod(stream);
         }
     }
     return bio;
