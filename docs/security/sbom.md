@@ -78,10 +78,53 @@ cyclonedx validate --input-file sbom.cdx.json --input-format json --input-versio
 The CI workflow already runs this; the command is useful if you've fetched
 the artifact locally and want to re-verify independently.
 
+## Verifying a signed SBOM
+
+Every GitHub Release created by Release Please gets four assets attached:
+
+| Asset | Contents |
+|---|---|
+| `sbom.cdx.json` | The SBOM itself. |
+| `sbom.cdx.json.bundle` | [sigstore/cosign](https://docs.sigstore.dev/) signature bundle — signature + ephemeral signing certificate + Rekor inclusion proof, in a single JSON blob. |
+| `source-sha256.txt` | One line: SHA-256 of `git archive --format=tar.gz HEAD -- Core/ Platform/`. |
+| `source-sha256.txt.bundle` | cosign bundle for the above. |
+
+Signing is **keyless** via GitHub OIDC — no private keys live in this repo.
+The signature commits to the specific workflow run (`sbom.yml` in this repo
+at the tagged commit) that produced the SBOM; a verifier checks the
+certificate identity against an expected workflow identity to tell "this
+SBOM" apart from any other CycloneDX document.
+
+To verify a downloaded asset set:
+
+```shell
+cosign verify-blob \
+  --bundle sbom.cdx.json.bundle \
+  --certificate-identity "https://github.com/DavidCozens/solid-syslog/.github/workflows/sbom.yml@refs/tags/v<version>" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+  sbom.cdx.json
+```
+
+The same pattern verifies `source-sha256.txt.bundle` against `source-sha256.txt`.
+
+Every cosign signature is also logged to [Rekor](https://docs.sigstore.dev/logging/overview/),
+Sigstore's public transparency log. Anyone can look up the signature entry
+by its hash and confirm it was issued at the stated time — independent of
+whether GitHub, Sigstore, or this project still exist at the time of audit.
+
+For a step-by-step verification guide aimed at downstream integrators, see
+[`release-verification.md`](./release-verification.md).
+
 ## Deferred
 
-Release-time publication — attaching the SBOM to every GitHub Release as an
-asset, plus [sigstore/cosign](https://docs.sigstore.dev/) keyless signing
-under the repository's GitHub OIDC — is the next story (S19.02). Until that
-lands, this workflow is manual-only and the rendered SBOM lives only as a
-workflow artifact.
+- **Signed SLSA provenance attestation.** `cosign attest` on top of
+  `sign-blob` is a natural next step — it produces an attestation
+  statement that says "this SBOM was produced by this workflow from
+  these inputs" rather than just "this SBOM was signed by this
+  workflow." Separate E19 follow-on.
+- **Binary-artefact signing.** The project is source-only; nothing to
+  sign beyond the SBOM and source-tarball hash.
+- **Flip the signing/attach steps off `continue-on-error: true`.** The
+  initial rollout keeps those steps advisory so a signing infrastructure
+  outage doesn't block a release. Tighten to hard-fail after the first
+  real release has demonstrated the pipeline works.

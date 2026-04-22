@@ -2,15 +2,17 @@ name: Generate SBOM
 
 on:
   workflow_dispatch:
-  # S19.02 will switch on the `release: published` trigger and add signing
-  # + release-asset attachment. Until then, this workflow is on-demand only.
-
-permissions:
-  contents: read
+  release:
+    types: [published]
 
 jobs:
   sbom:
+    # Generation + validation — shared by both triggers. Read-only; no secrets.
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -68,9 +70,66 @@ jobs:
         run: |
           /tmp/cyclonedx validate --input-file sbom/sbom.cdx.json --input-format json --input-version v1_5 --fail-on-errors
 
-      - name: Upload SBOM artifact
+      - name: Write source-sha256.txt
+        run: |
+          echo "${{ steps.hash.outputs.hash }}  solid-syslog-${{ steps.version.outputs.version }}.tar.gz" > sbom/source-sha256.txt
+          cat sbom/source-sha256.txt
+
+      - name: Upload workflow artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: sbom-cyclonedx-${{ steps.version.outputs.version }}
-          path: sbom/sbom.cdx.json
+          path: |
+            sbom/sbom.cdx.json
+            sbom/source-sha256.txt
           if-no-files-found: error
+
+  publish:
+    # Release-only: keyless-sign the SBOM and source hash file, attach both
+    # (plus signatures) to the GitHub Release as assets. Advisory-only on
+    # initial rollout (per E19 guidance) — continue-on-error is set on the
+    # sign + attach steps so a signing failure does not block the release.
+    if: github.event_name == 'release'
+    needs: sbom
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Download SBOM workflow artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: sbom-cyclonedx-${{ needs.sbom.outputs.version }}
+          path: sbom/
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+        with:
+          cosign-release: 'v3.0.6'
+        continue-on-error: true
+
+      - name: Sign SBOM (keyless, GitHub OIDC)
+        continue-on-error: true
+        run: |
+          cosign sign-blob --yes \
+            --bundle sbom/sbom.cdx.json.bundle \
+            sbom/sbom.cdx.json
+
+      - name: Sign source-sha256.txt (keyless, GitHub OIDC)
+        continue-on-error: true
+        run: |
+          cosign sign-blob --yes \
+            --bundle sbom/source-sha256.txt.bundle \
+            sbom/source-sha256.txt
+
+      - name: Attach assets to Release
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" \
+            sbom/sbom.cdx.json \
+            sbom/sbom.cdx.json.bundle \
+            sbom/source-sha256.txt \
+            sbom/source-sha256.txt.bundle \
+            --clobber
