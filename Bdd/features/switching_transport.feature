@@ -13,3 +13,14 @@ Feature: Switch transport at runtime
     And the client sends a message
     Then syslog-ng receives 1 message over tcp
     And syslog-ng receives 1 message over udp
+
+  @tls
+  Scenario: Switch from TCP to TLS mid-run delivers via both reliable transports
+    Given syslog-ng is running
+    And the switching example is running with default transport tcp
+    When the client sends a message
+    Then syslog-ng receives 1 message over tcp
+    When the client switches to transport tls
+    And the client sends a message
+    Then syslog-ng receives 1 message over tls
+    And syslog-ng receives 1 message over tcp
