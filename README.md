@@ -1,8 +1,11 @@
 # SolidSyslog
 
 A structured syslog client library for embedded and industrial systems, implementing
-RFC 5424 (structured syslog), RFC 5426 (UDP transport), RFC 6587 (TCP transport),
-and RFC 5425 (TLS transport).
+RFC 5424 (structured syslog) with RFC 5426 (UDP) and RFC 6587 (TCP) transports.
+TLS per RFC 5425 is available via a pluggable Stream abstraction — the repo ships
+a reference OpenSSL integration, and callers can plug in any TLS library (wolfSSL,
+mbedTLS, hardware-offload, …) by implementing the same Stream vtable. TLS itself
+is not a core dependency; Core has zero OpenSSL references.
 
 Designed for resource-constrained environments:
 - C99, no dynamic memory allocation required — allocator is caller-injected
