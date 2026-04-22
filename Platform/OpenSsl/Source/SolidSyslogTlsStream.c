@@ -125,8 +125,14 @@ static inline bool TlsStream_ConfigureSslContext(SSL_CTX* ctx, const struct Soli
 
 static inline bool TlsStream_ConfigureClientIdentity(SSL_CTX* ctx, const struct SolidSyslogTlsStreamConfig* config)
 {
-    bool ok = true;
-    if (config->clientCertChainPath != NULL)
+    bool hasCert = config->clientCertChainPath != NULL;
+    bool hasKey  = config->clientKeyPath != NULL;
+    bool ok      = true;
+    if (hasCert != hasKey)
+    {
+        ok = false; /* mTLS is all-or-nothing — partial config is a setup error */
+    }
+    else if (hasCert)
     {
         ok = (SSL_CTX_use_certificate_chain_file(ctx, config->clientCertChainPath) == 1) &&
              (SSL_CTX_use_PrivateKey_file(ctx, config->clientKeyPath, SSL_FILETYPE_PEM) == 1) && (SSL_CTX_check_private_key(ctx) == 1);

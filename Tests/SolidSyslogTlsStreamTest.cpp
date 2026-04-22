@@ -663,3 +663,55 @@ TEST(SolidSyslogTlsStream, OpenChecksClientKeyMatchesCert)
     SolidSyslogStream_Open(stream, addr);
     LONGS_EQUAL(1, OpenSslFake_CheckPrivateKeyCallCount());
 }
+
+TEST(SolidSyslogTlsStream, OpenFailsWhenOnlyClientCertIsSet)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.clientCertChainPath = "/some/path/client.pem";
+    config.clientKeyPath       = nullptr;
+    stream                     = SolidSyslogTlsStream_Create(&config);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(SolidSyslogTlsStream, OpenMakesNoClientIdentityCallsWhenOnlyClientCertIsSet)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.clientCertChainPath = "/some/path/client.pem";
+    config.clientKeyPath       = nullptr;
+    stream                     = SolidSyslogTlsStream_Create(&config);
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(0, OpenSslFake_UseCertChainFileCallCount());
+    LONGS_EQUAL(0, OpenSslFake_UsePrivateKeyFileCallCount());
+    LONGS_EQUAL(0, OpenSslFake_CheckPrivateKeyCallCount());
+}
+
+TEST(SolidSyslogTlsStream, OpenFailsWhenOnlyClientKeyIsSet)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.clientCertChainPath = nullptr;
+    config.clientKeyPath       = "/some/path/client.key";
+    stream                     = SolidSyslogTlsStream_Create(&config);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(SolidSyslogTlsStream, OpenMakesNoClientIdentityCallsWhenOnlyClientKeyIsSet)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.clientCertChainPath = nullptr;
+    config.clientKeyPath       = "/some/path/client.key";
+    stream                     = SolidSyslogTlsStream_Create(&config);
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(0, OpenSslFake_UseCertChainFileCallCount());
+    LONGS_EQUAL(0, OpenSslFake_UsePrivateKeyFileCallCount());
+    LONGS_EQUAL(0, OpenSslFake_CheckPrivateKeyCallCount());
+}
+
+TEST(SolidSyslogTlsStream, PartialClientIdentityConfigFreesCtx)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.clientCertChainPath = "/some/path/client.pem";
+    config.clientKeyPath       = nullptr;
+    stream                     = SolidSyslogTlsStream_Create(&config);
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(1, OpenSslFake_CtxFreeCallCount());
+}
