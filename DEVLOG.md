@@ -1,5 +1,76 @@
 # Dev Log
 
+## 2026-04-22 — S19.02 SBOM signing and release-asset attachment
+
+### Decisions
+- Extended `sbom.yml` with a second trigger (`release: published`) and a
+  second job (`publish`) that keyless-signs the SBOM and a source-hash
+  file with cosign, then attaches four assets to the GitHub Release.
+  `workflow_dispatch` remains as the rehearsal path — generates the SBOM
+  and source hash, uploads as a workflow artifact, does no signing or
+  release interaction.
+- **Keyless signing via GitHub OIDC** (cosign + Fulcio + Rekor). Zero
+  long-lived keys or secrets in the repo; every signature is a
+  short-lived certificate issued to the workflow's OIDC identity and
+  recorded in Sigstore's public transparency log. The `id-token: write`
+  permission is on the `publish` job only, not the `sbom` job — keeps
+  the generation path read-only.
+- **Two-job split with narrow permissions.** The `sbom` job runs with
+  `contents: read` only (no write permissions, no OIDC token). The
+  `publish` job depends on it via `needs:`, only runs on `release`, and
+  gets `contents: write` (for `gh release upload`) plus `id-token:
+  write` (for cosign). Minimises permission surface on the workflow
+  that runs on every rehearsal.
+- **cosign signature bundles**, not raw `.sig` files. A `.bundle` is a
+  single JSON blob containing signature + certificate + Rekor inclusion
+  proof, which is what a downstream verifier needs for offline checks.
+  Two files per signed artefact (original + `.bundle`) instead of three
+  (original + `.sig` + `.pem`).
+- **Source-hash file committed to the signed set.** A one-line
+  `source-sha256.txt` captures the SHA-256 of
+  `git archive --format=tar.gz HEAD -- Core/ Platform/` — the same hash
+  value as the SBOM's `solidsyslog:source-hash-sha256` property. A
+  verifier can reproduce from `git archive` at the release tag and
+  cross-check. Caveat: `git archive` byte-output can vary slightly
+  across git versions — documented as a gotcha in
+  `docs/security/release-verification.md`.
+- **Cert-identity convention:** signatures pin to
+  `https://github.com/DavidCozens/solid-syslog/.github/workflows/sbom.yml@refs/tags/v<version>`.
+  That binds the signing event to "this workflow, this repo, this tag"
+  — the mechanism a verifier uses to tell apart a real SolidSyslog SBOM
+  from any other CycloneDX document claiming the same name. Fork
+  signatures, random-branch signatures, and impersonator workflows all
+  fail verification.
+- **Advisory-only rollout.** All signing + upload steps carry
+  `continue-on-error: true` per E19 guidance — a signing-infrastructure
+  outage at release time should not block the release itself. Tighten
+  after the first real release (`v0.1.0`) demonstrates the pipeline
+  works. Follow-on `chore:` PR.
+- **New doc: `docs/security/release-verification.md`** — step-by-step
+  guide for a downstream integrator, ordered the way they'd actually
+  run verification (source-hash → SBOM signature → source-hash
+  signature → optional SBOM re-validation). Includes "what verification
+  does not tell you" so a reader doesn't over-interpret a green
+  result.
+
+### Deferred
+- **`cosign attest`** (signed SLSA provenance statement on top of raw
+  signatures). Natural next step; separate E19 follow-on.
+- **Flipping `continue-on-error` off.** Deliberate. First real release
+  gets to prove the pipeline works; the tightening is a `chore:` PR
+  after that.
+- **Backfilling signatures for old releases.** No prior releases exist
+  (manifest was `0.0.0` before `initial-version: 0.1.0` pinned the
+  first release target).
+
+### Open questions
+- None blocking. Live test will be the first `release: published` event
+  — covered by the rehearsal plan in the S19.02 issue (#196). Plan is
+  to cut a throwaway `v0.0.1-sbom-test` pre-release on `main`, verify
+  all four assets land, verify `cosign verify-blob` passes, then delete
+  the throwaway. After that the first real release (`v0.1.0`) will
+  exercise it for real.
+
 ## 2026-04-22 — S19.01 SBOM rehearsal workflow (CycloneDX template + on-demand generate)
 
 ### Decisions
