@@ -1,5 +1,34 @@
 # Dev Log
 
+## 2026-04-22 — S03.10 retired (cert rotation covered by reconnect)
+
+### Decisions
+- Closed S03.10 (cert rotation via version-fingerprint callback) as not
+  planned. `SolidSyslogTlsStream` rebuilds `SSL_CTX` on every `Open` and
+  re-reads cert material from disk, so replacing `client.pem` / `client.key`
+  (or `caBundlePath`) and waiting for reconnect — or calling
+  `SolidSyslogSender_Disconnect` — picks up new material without any
+  callback plumbing.
+- Maps cleanly onto IEC 62443-4-2 **CR 1.5 c** (authenticator
+  change/refresh) and **CR 1.8 c** (PKI update) — both are *capability*
+  requirements, satisfied by file-replacement-on-reconnect. A
+  version-fingerprint callback would only add value for forced
+  mid-connection rotation; no deployment has surfaced that need.
+- `docs/iec62443.md` updated: rotation is now a first-class bullet in the
+  TLS hardening section (with explicit CR 1.5 / CR 1.8 attribution),
+  and the "Remaining E03 work" paragraph no longer lists S03.10 — only
+  S03.11 (Planned → Available promotion) remains.
+- Epic #5 story table updated: S03.10 row marked Retired with the same
+  rationale. Removed stale "cert-version callback" mention from the
+  Example architecture-boundary bullet.
+
+### Deferred
+- None. If a concrete deployment later needs forced mid-connection
+  rotation, reopen a fresh story designed to that requirement.
+
+### Open questions
+- None.
+
 ## 2026-04-22 — S03.09 mutual TLS (SL4 CR 2.12)
 
 ### Decisions
