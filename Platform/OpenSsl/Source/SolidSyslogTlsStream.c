@@ -16,6 +16,7 @@ static bool             Open(struct SolidSyslogStream* self, const struct SolidS
 static bool             Send(struct SolidSyslogStream* self, const void* buffer, size_t size);
 static SolidSyslogSsize Read(struct SolidSyslogStream* self, void* buffer, size_t size);
 static void             Close(struct SolidSyslogStream* self);
+static bool             ConfigureExpectedHostname(struct SolidSyslogTlsStream* stream);
 static SSL_CTX*         CreateSslContext(const struct SolidSyslogTlsStreamConfig* config);
 static BIO*             CreateTransportBio(struct SolidSyslogTlsStream* stream);
 static int              TransportBioCreate(BIO* bio);
@@ -78,16 +79,9 @@ static bool Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress
     }
     BIO_set_data(bio, stream->config.transport);
     SSL_set_bio(stream->ssl, bio, bio);
-    if (stream->config.serverName != NULL)
+    if (!ConfigureExpectedHostname(stream))
     {
-        if (SSL_set_tlsext_host_name(stream->ssl, stream->config.serverName) != 1)
-        {
-            return false;
-        }
-        if (SSL_set1_host(stream->ssl, stream->config.serverName) != 1)
-        {
-            return false;
-        }
+        return false;
     }
     return SSL_connect(stream->ssl) > 0;
 }
@@ -113,6 +107,17 @@ static void Close(struct SolidSyslogStream* self)
     BIO_meth_free(stream->bioMethod);
     stream->bioMethod = NULL;
     SolidSyslogStream_Close(stream->config.transport);
+}
+
+static bool ConfigureExpectedHostname(struct SolidSyslogTlsStream* stream)
+{
+    bool ok = true;
+    if (stream->config.serverName != NULL)
+    {
+        ok = (SSL_set_tlsext_host_name(stream->ssl, stream->config.serverName) == 1)
+          && (SSL_set1_host(stream->ssl, stream->config.serverName) == 1);
+    }
+    return ok;
 }
 
 static BIO* CreateTransportBio(struct SolidSyslogTlsStream* stream)
