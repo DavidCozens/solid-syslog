@@ -1,5 +1,71 @@
 # Dev Log
 
+## 2026-04-22 — S19.01 SBOM rehearsal workflow (CycloneDX template + on-demand generate)
+
+### Decisions
+- First story decomposed out of E19 (#155). Two-story split for SBOM work —
+  this one (`S19.01`) does template + on-demand generation + validation; the
+  follow-on (`S19.02`) adds cosign signing and release-time attachment.
+  Primary driver: a maintainer rehearsal workflow, runnable via
+  `workflow_dispatch`, before next week's client conversation about SBOMs.
+- **Format: CycloneDX 1.5 JSON** (primary; E19 locks this in, no SPDX).
+- **Scope:** `Core/` + `Platform/` subdirectories. Initially drafted as
+  `Core/` only, widened on review — `Platform/` code ships with the
+  repo and the integrator consumes it as source. `Example/`, `Tests/`,
+  `Bdd/`, `ci/`, `docs/`, `.devcontainer/`, `.github/` stay out of scope
+  (reference / harness / infrastructure, not product). POSIX / Windows
+  runtime facts stay as `metadata.properties`, not components (they are
+  *deployment requirements*, not *shipped software*).
+- **SBOM kind disclosed.** Added `solidsyslog:sbom-kind: product` as a
+  top-level property so a consumer can tell this apart from the future
+  build-env SBOM and source SBOM. Framing captured in
+  `docs/security/sbom.md` as "three flavours, three questions".
+- **OpenSSL declared as an optional dependency.** When
+  `SOLIDSYSLOG_OPENSSL=ON`, the integrator links against OpenSSL for
+  the reference TLS Stream. We don't bundle it, but transparency
+  matters for CRA readiness, so OpenSSL appears in the product SBOM as
+  `components[0]` with `scope: optional`, supplier = OpenSSL Project,
+  and no version or licence pinned. Licence terms depend on which
+  OpenSSL version the integrator chooses (Apache-2.0 for ≥ 3.0,
+  OpenSSL + SSLeay for ≤ 1.1.1); the integrator's own product SBOM
+  records the specific version and licence. `dependencies[]` wires the
+  relationship so tooling can walk it.
+- **Template-based generation, not tool-scanning.** The project is a
+  pure-C library with no runtime dependencies — a static template with
+  env-substituted placeholders for version / commit SHA / source hash /
+  timestamp / serial UUID gives a more precise and more honest SBOM than
+  `syft` or similar would (those over-report test fakes, build tooling,
+  etc.). `envsubst` is given an explicit variable allowlist so no
+  unrelated environment variables get expanded.
+- **Validation: `cyclonedx-cli` (official OWASP tool).** Does JSON-Schema
+  checks plus semantic validation (PURL syntax, SPDX licence identifier,
+  external-reference type enum). `--input-version v1_5 --fail-on-errors`
+  locks the validation to the spec version the template claims and fails
+  the workflow if anything drifts. Binary pinned by release tag
+  (`v0.30.0`) and SHA-256 checksum.
+- **Licence identifier.** `PolyForm-Noncommercial-1.0.0` is on the SPDX
+  list, so the library's licence can be expressed via the preferred
+  `license.id` field rather than a free-form name. Good signal for
+  regulated-industry consumers who parse SBOM licences.
+- **Versions via release-please manifest.** The rendered SBOM's
+  `metadata.component.version` is read from
+  `.release-please-manifest.json`. Today that's `0.0.0` pre-first-release;
+  when we cut 0.1.0 it flows through automatically.
+
+### Deferred
+- **Signing + release attachment → S19.02.** Out of scope here; this
+  workflow is manual-only and produces a workflow artifact, not a Release
+  asset.
+- **Dependency scanning** — revisit only if the single-component
+  assumption stops holding (e.g. if `Core/` ever gains a build-time
+  dependency bundled into shipped headers).
+- **SPDX output** — E19 says CycloneDX primary, no SPDX.
+
+### Open questions
+- None blocking. Follow-on (S19.02) will need a judgement call on whether
+  cosign signing applies to the SBOM only or also to a source-tarball
+  hash file; defer until we draft that story.
+
 ## 2026-04-22 — S03.14 BDD exercises TLS 1.3
 
 ### Decisions
