@@ -199,16 +199,19 @@ static long TransportBioCtrl(BIO* bio, int cmd, long larg, void* parg)
     (void) bio;
     (void) larg;
     (void) parg;
+    long result = 0;
     switch (cmd)
     {
         case BIO_CTRL_FLUSH:
         case BIO_CTRL_PUSH:
         case BIO_CTRL_POP:
         case BIO_CTRL_DUP:
-            return 1;
+            result = 1;
+            break;
         default:
-            return 0;
+            break;
     }
+    return result;
 }
 
 static SSL_CTX* CreateSslContext(const struct SolidSyslogTlsStreamConfig* config)
