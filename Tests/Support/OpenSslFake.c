@@ -17,7 +17,24 @@ static char fakeCtxStorage;
 static char fakeMethodStorage;
 static char fakeSslStorage;
 static char fakeBioMethStorage;
-static char fakeBioStorage;
+
+/* Pool of fake BIOs. Each slot is independent so callers can exercise
+ * multiple BIOs without aliasing. The address of `slot` is the BIO handle
+ * returned from BIO_new; `data` is the per-BIO storage that backs
+ * BIO_set_data / BIO_get_data. */
+typedef struct
+{
+    char  slot;
+    void* data;
+} FakeBio;
+
+enum
+{
+    FAKE_BIO_POOL_SIZE = 4
+};
+
+static FakeBio fakeBios[FAKE_BIO_POOL_SIZE];
+static int     fakeBioCount;
 
 /* SSL_CTX_new */
 static int               ctxNewCallCount;
@@ -158,37 +175,42 @@ void OpenSslFake_Reset(void)
     bioNewCallCount               = 0;
     lastBioNewMethodArg           = NULL;
     bioNewFails                   = false;
-    lastSetDataBioArg             = NULL;
-    lastSetDataArg                = NULL;
-    lastGetDataBioArg             = NULL;
-    setBioCallCount               = 0;
-    lastSetBioSslArg              = NULL;
-    lastSetBioReadBioArg          = NULL;
-    lastSetBioWriteBioArg         = NULL;
-    lastSslCtrlSslArg             = NULL;
-    lastSniHostname               = NULL;
-    sniHostnameFails              = false;
-    lastSet1HostSslArg            = NULL;
-    lastSet1Host                  = NULL;
-    set1HostFails                 = false;
-    connectCallCount              = 0;
-    lastConnectSslArg             = NULL;
-    connectFails                  = false;
-    writeCallCount                = 0;
-    lastWriteSslArg               = NULL;
-    lastWriteBuf                  = NULL;
-    lastWriteSize                 = 0;
-    writeFails                    = false;
-    sslReadCallCount              = 0;
-    lastSslReadSslArg             = NULL;
-    lastSslReadBuf                = NULL;
-    lastSslReadSize               = 0;
-    shutdownCallCount             = 0;
-    lastShutdownSslArg            = NULL;
-    freeCallCount                 = 0;
-    lastFreeSslArg                = NULL;
-    ctxFreeCallCount              = 0;
-    lastCtxFreeCtxArg             = NULL;
+    fakeBioCount                  = 0;
+    for (int i = 0; i < FAKE_BIO_POOL_SIZE; i++)
+    {
+        fakeBios[i].data = NULL;
+    }
+    lastSetDataBioArg     = NULL;
+    lastSetDataArg        = NULL;
+    lastGetDataBioArg     = NULL;
+    setBioCallCount       = 0;
+    lastSetBioSslArg      = NULL;
+    lastSetBioReadBioArg  = NULL;
+    lastSetBioWriteBioArg = NULL;
+    lastSslCtrlSslArg     = NULL;
+    lastSniHostname       = NULL;
+    sniHostnameFails      = false;
+    lastSet1HostSslArg    = NULL;
+    lastSet1Host          = NULL;
+    set1HostFails         = false;
+    connectCallCount      = 0;
+    lastConnectSslArg     = NULL;
+    connectFails          = false;
+    writeCallCount        = 0;
+    lastWriteSslArg       = NULL;
+    lastWriteBuf          = NULL;
+    lastWriteSize         = 0;
+    writeFails            = false;
+    sslReadCallCount      = 0;
+    lastSslReadSslArg     = NULL;
+    lastSslReadBuf        = NULL;
+    lastSslReadSize       = 0;
+    shutdownCallCount     = 0;
+    lastShutdownSslArg    = NULL;
+    freeCallCount         = 0;
+    lastFreeSslArg        = NULL;
+    ctxFreeCallCount      = 0;
+    lastCtxFreeCtxArg     = NULL;
 }
 
 /* -------------------------------------------------------------------------
@@ -307,7 +329,7 @@ const BIO_METHOD* OpenSslFake_LastBioNewMethodArg(void)
 
 BIO* OpenSslFake_LastBioReturned(void)
 {
-    return (BIO*) &fakeBioStorage;
+    return fakeBioCount > 0 ? (BIO*) &fakeBios[fakeBioCount - 1].slot : NULL;
 }
 
 BIO* OpenSslFake_LastSetDataBioArg(void)
@@ -617,7 +639,13 @@ BIO* BIO_new(const BIO_METHOD* type)
 {
     bioNewCallCount++;
     lastBioNewMethodArg = type;
-    return bioNewFails ? NULL : (BIO*) &fakeBioStorage;
+    BIO* bio            = NULL;
+    if (!bioNewFails && fakeBioCount < FAKE_BIO_POOL_SIZE)
+    {
+        bio = (BIO*) &fakeBios[fakeBioCount].slot;
+        fakeBioCount++;
+    }
+    return bio;
 }
 
 void OpenSslFake_SetBioNewFails(bool fails)
@@ -629,12 +657,27 @@ void BIO_set_data(BIO* a, void* ptr)
 {
     lastSetDataBioArg = a;
     lastSetDataArg    = ptr;
+    for (int i = 0; i < fakeBioCount; i++)
+    {
+        if ((BIO*) &fakeBios[i].slot == a)
+        {
+            fakeBios[i].data = ptr;
+        }
+    }
 }
 
 void* BIO_get_data(BIO* a)
 {
     lastGetDataBioArg = a;
-    return lastSetDataArg;
+    void* result      = NULL;
+    for (int i = 0; i < fakeBioCount; i++)
+    {
+        if ((BIO*) &fakeBios[i].slot == a)
+        {
+            result = fakeBios[i].data;
+        }
+    }
+    return result;
 }
 
 void SSL_set_bio(SSL* ssl, BIO* rbio, BIO* wbio)

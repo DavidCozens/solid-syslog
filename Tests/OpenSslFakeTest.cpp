@@ -179,6 +179,19 @@ TEST(OpenSslFake, BioGetDataReturnsPreviouslySetData)
     POINTERS_EQUAL(&sentinel, BIO_get_data(bio));
 }
 
+TEST(OpenSslFake, BioDataIsStoredPerInstance)
+{
+    BIO_METHOD* method = BIO_meth_new(0, "fake");
+    BIO*        bio1   = BIO_new(method);
+    BIO*        bio2   = BIO_new(method);
+    int         a      = 0;
+    int         b      = 0;
+    BIO_set_data(bio1, &a);
+    BIO_set_data(bio2, &b);
+    POINTERS_EQUAL(&a, BIO_get_data(bio1));
+    POINTERS_EQUAL(&b, BIO_get_data(bio2));
+}
+
 // NOLINTNEXTLINE(readability-non-const-parameter) -- signature fixed by OpenSSL BIO_meth_set_read contract
 static int DummyRead(BIO* bio, char* buf, int size)
 {
