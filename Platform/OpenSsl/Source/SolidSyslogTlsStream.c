@@ -9,6 +9,7 @@ struct SolidSyslogTlsStream
     struct SolidSyslogTlsStreamConfig config;
     SSL_CTX*                          ctx;
     SSL*                              ssl;
+    BIO_METHOD*                       bioMethod;
 };
 
 static bool             Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr);
@@ -16,7 +17,7 @@ static bool             Send(struct SolidSyslogStream* self, const void* buffer,
 static SolidSyslogSsize Read(struct SolidSyslogStream* self, void* buffer, size_t size);
 static void             Close(struct SolidSyslogStream* self);
 static SSL_CTX*         CreateSslContext(const char* caBundlePath);
-static BIO*             CreateTransportBio(void);
+static BIO*             CreateTransportBio(struct SolidSyslogTlsStream* stream);
 static int              TransportBioCreate(BIO* bio);
 static int              TransportBioRead(BIO* bio, char* buffer, int size);
 static int              TransportBioWrite(BIO* bio, const char* buffer, int size);
@@ -60,7 +61,7 @@ static bool Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress
     {
         return false;
     }
-    BIO* bio = CreateTransportBio();
+    BIO* bio = CreateTransportBio(stream);
     BIO_set_data(bio, stream->config.transport);
     SSL_set_bio(stream->ssl, bio, bio);
     if (stream->config.serverName != NULL)
@@ -94,16 +95,18 @@ static void Close(struct SolidSyslogStream* self)
     struct SolidSyslogTlsStream* stream = (struct SolidSyslogTlsStream*) self;
     SSL_shutdown(stream->ssl);
     SSL_free(stream->ssl);
+    BIO_meth_free(stream->bioMethod);
     SolidSyslogStream_Close(stream->config.transport);
 }
 
-static BIO* CreateTransportBio(void)
+static BIO* CreateTransportBio(struct SolidSyslogTlsStream* stream)
 {
     BIO_METHOD* method = BIO_meth_new(BIO_TYPE_SOURCE_SINK, "SolidSyslog transport BIO");
     BIO_meth_set_create(method, TransportBioCreate);
     BIO_meth_set_read(method, TransportBioRead);
     BIO_meth_set_write(method, TransportBioWrite);
     BIO_meth_set_ctrl(method, TransportBioCtrl);
+    stream->bioMethod = method;
     return BIO_new(method);
 }
 

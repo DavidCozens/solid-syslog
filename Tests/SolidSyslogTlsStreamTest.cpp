@@ -271,6 +271,13 @@ TEST(SolidSyslogTlsStream, CloseClosesTransport)
     LONGS_EQUAL(1, StreamFake_CloseCallCount(transport));
 }
 
+TEST(SolidSyslogTlsStream, CloseFreesBioMethod)
+{
+    SolidSyslogStream_Open(stream, addr);
+    SolidSyslogStream_Close(stream);
+    LONGS_EQUAL(1, OpenSslFake_BioMethFreeCallCount());
+}
+
 TEST(SolidSyslogTlsStream, DestroyFreesSslContext)
 {
     SolidSyslogStream_Open(stream, addr);

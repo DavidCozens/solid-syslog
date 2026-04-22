@@ -51,6 +51,10 @@ EXTERN_C_BEGIN
     /* BIO_meth_new */
     struct bio_method_st* OpenSslFake_LastBioMethReturned(void);
 
+    /* BIO_meth_free */
+    int                   OpenSslFake_BioMethFreeCallCount(void);
+    struct bio_method_st* OpenSslFake_LastBioMethFreeArg(void);
+
     /* BIO_meth_set_read */
     struct bio_method_st* OpenSslFake_LastBioMethSetReadMethodArg(void);
     int (*OpenSslFake_LastBioReadCallback(void))(struct bio_st*, char*, int);
