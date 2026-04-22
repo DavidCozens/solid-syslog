@@ -18,29 +18,71 @@ All four Release assets should be present:
 ```text
 sbom.cdx.json
 sbom.cdx.json.bundle
-source-sha256.txt
-source-sha256.txt.bundle
+source-tree-sha256.txt
+source-tree-sha256.txt.bundle
 ```
 
 ## 1. Verify the source is what we claim
 
-`source-sha256.txt` contains one line: the SHA-256 of
-`git archive --format=tar.gz HEAD -- Core/ Platform/` at the release tag.
-To reproduce:
+`source-tree-sha256.txt` records the content-tree SHA-256 of the `Core/` and
+`Platform/` subdirectories at the release commit. The hash is deterministic
+across git versions, archive formats, locales, and tooling — it depends only
+on the bytes of each tracked file and the sorted list of paths.
+
+### Reproduce with git (authoritative)
 
 ```shell
 git clone --depth 1 --branch v<version> https://github.com/DavidCozens/solid-syslog.git
 cd solid-syslog
-git archive --format=tar.gz HEAD -- Core/ Platform/ | sha256sum
+git ls-tree -r --name-only HEAD -- Core/ Platform/ \
+  | LC_ALL=C sort \
+  | while IFS= read -r path; do
+      printf "%s  %s\n" "$(git show "HEAD:$path" | sha256sum | cut -d' ' -f1)" "$path"
+    done \
+  | sha256sum | cut -d' ' -f1
 ```
 
-Compare the hash to the one in `source-sha256.txt`. If they match, the source
-you just cloned is byte-identical to the source the SBOM describes.
+Compare the output to the hash in `source-tree-sha256.txt`. The file has a
+few `#`-prefixed header lines (scope / commit / algorithm / pointer) and one
+blank line before the hash, so extract the value with:
 
-(Note: `git archive` output can vary slightly across git versions — if the
-hash doesn't match, try a recent git; if it still doesn't match, cross-check
-the content against the SBOM's `metadata.properties[solidsyslog:commit-sha]`
-property and inspect the source directly.)
+```shell
+grep -v '^#' source-tree-sha256.txt | grep -v '^$' | head -n 1
+```
+
+If that matches your computed hash, your source tree is byte-identical to
+the tree the SBOM describes.
+
+### Reproduce without git (fallback, working tree only)
+
+If you don't have a git clone — e.g. you received a source archive instead —
+but you do have an extracted `Core/` and `Platform/` directory tree:
+
+```shell
+find Core Platform -type f \
+  | LC_ALL=C sort \
+  | while IFS= read -r path; do
+      printf "%s  %s\n" "$(sha256sum "$path" | cut -d' ' -f1)" "$path"
+    done \
+  | sha256sum | cut -d' ' -f1
+```
+
+Same hash expected, same comparison. Caveat: this form assumes the working
+tree is clean — any untracked or locally-modified file under `Core/` or
+`Platform/` will change the hash. The git form is stricter because it
+always reads from the committed tree.
+
+### If the hashes don't match
+
+The SBOM's `metadata.properties[solidsyslog:commit-sha]` property names the
+exact commit the hash was computed at. Verify you're on that commit:
+
+```shell
+git rev-parse HEAD
+```
+
+If the commit matches and the hash still doesn't, something on your side
+has modified a file; `git status --short` and `git diff` will show what.
 
 ## 2. Verify the SBOM signature
 
@@ -72,19 +114,19 @@ conditions fail the verification loudly:
 - The signature was produced against a different tag.
 - The Sigstore transparency log entry is missing or doesn't match.
 
-## 3. Verify the source-hash signature
+## 3. Verify the source-tree-hash signature
 
 ```shell
 cosign verify-blob \
-  --bundle source-sha256.txt.bundle \
+  --bundle source-tree-sha256.txt.bundle \
   --certificate-identity "https://github.com/DavidCozens/solid-syslog/.github/workflows/sbom.yml@refs/tags/v<version>" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-  source-sha256.txt
+  source-tree-sha256.txt
 ```
 
-Same guarantees as step 2, but for the source-hash file. Combined with the
-hash match from step 1, you now know the source you have is the source the
-SBOM describes, and the SBOM is the one the workflow produced.
+Same guarantees as step 2, but for the content-tree-hash file. Combined
+with the hash match from step 1, you now know the source you have is the
+source the SBOM describes, and the SBOM is the one the workflow produced.
 
 ## 4. (Optional) Re-validate the SBOM against CycloneDX
 

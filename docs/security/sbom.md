@@ -51,7 +51,7 @@ Key fields worth reading:
 | `metadata.component.purl` | Package URL keyed to the exact commit SHA — unambiguous pointer back to the source. |
 | `metadata.component.supplier.name` | `COSOSO (Cozens Software Solutions Limited)`. |
 | `metadata.component.licenses[0].license.id` | `PolyForm-Noncommercial-1.0.0` — SPDX identifier. |
-| `metadata.properties[solidsyslog:source-hash-sha256]` | SHA-256 of a deterministic `git archive` of the `Core/` subtree. A consumer with the same commit can independently reproduce it. |
+| `metadata.properties[solidsyslog:source-tree-sha256]` | Content-tree hash: SHA-256 of a sorted list of `<content-sha256>  <path>` lines for every tracked file in `Core/` and `Platform/` at the commit. Reproducible byte-for-byte from any clone, with no dependency on `git archive` output format or git version. |
 
 ## How to generate one (rehearsal)
 
@@ -86,8 +86,8 @@ Every GitHub Release created by Release Please gets four assets attached:
 |---|---|
 | `sbom.cdx.json` | The SBOM itself. |
 | `sbom.cdx.json.bundle` | [sigstore/cosign](https://docs.sigstore.dev/) signature bundle — signature + ephemeral signing certificate + Rekor inclusion proof, in a single JSON blob. |
-| `source-sha256.txt` | One line: SHA-256 of `git archive --format=tar.gz HEAD -- Core/ Platform/`. |
-| `source-sha256.txt.bundle` | cosign bundle for the above. |
+| `source-tree-sha256.txt` | The content-tree SHA-256 with a human-readable header. Reproducible from any clone at the SBOM's commit with `git ls-tree` + `git show` + `sha256sum` + `sort`. |
+| `source-tree-sha256.txt.bundle` | cosign bundle for the above. |
 
 Signing is **keyless** via GitHub OIDC — no private keys live in this repo.
 The signature commits to the specific workflow run (`sbom.yml` in this repo
@@ -105,7 +105,7 @@ cosign verify-blob \
   sbom.cdx.json
 ```
 
-The same pattern verifies `source-sha256.txt.bundle` against `source-sha256.txt`.
+The same pattern verifies `source-tree-sha256.txt.bundle` against `source-tree-sha256.txt`.
 
 Every cosign signature is also logged to [Rekor](https://docs.sigstore.dev/logging/overview/),
 Sigstore's public transparency log. Anyone can look up the signature entry
@@ -123,7 +123,7 @@ For a step-by-step verification guide aimed at downstream integrators, see
   these inputs" rather than just "this SBOM was signed by this
   workflow." Separate E19 follow-on.
 - **Binary-artefact signing.** The project is source-only; nothing to
-  sign beyond the SBOM and source-tarball hash.
+  sign beyond the SBOM and content-tree hash.
 - **Flip the signing/attach steps off `continue-on-error: true`.** The
   initial rollout keeps those steps advisory so a signing infrastructure
   outage doesn't block a release. Tighten to hard-fail after the first

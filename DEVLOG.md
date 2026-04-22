@@ -1,5 +1,56 @@
 # Dev Log
 
+## 2026-04-23 — S19.02 swap source-tarball hash for content-tree hash
+
+### Decisions
+- Rehearsal of the signing pipeline against `v0.0.2-sbom-test` surfaced
+  a reproducibility caveat: the original `source-sha256.txt` hashed the
+  output of `git archive --format=tar.gz HEAD -- Core/ Platform/`. Git
+  archive's byte output is not guaranteed stable across git versions —
+  the runner (recent git) and a local WSL Ubuntu (git 2.25.1) produced
+  different hashes for the same commit. Commit-SHA and signatures all
+  matched, but the convenience hash didn't, which is exactly the kind
+  of "why doesn't this match" conversation a client-facing asset
+  shouldn't invite.
+- **Swap to a content-tree hash.** Deterministic across git versions,
+  archive formats, locales, and tooling. Algorithm:
+  ```shell
+  git ls-tree -r --name-only HEAD -- Core/ Platform/ \
+    | LC_ALL=C sort \
+    | while IFS= read -r path; do
+        printf "%s  %s\n" "$(git show "HEAD:$path" | sha256sum | cut -d' ' -f1)" "$path"
+      done \
+    | sha256sum
+  ```
+  A consumer can reproduce with `git ls-tree` + `git show` + `sha256sum`
+  + `sort` (LC_ALL=C) and have no sensitivity to `git archive` output
+  formatting, gzip implementation, or locale collation.
+- **Portable non-git fallback.** If a consumer has an extracted source
+  tree but no git clone, `find Core Platform -type f | sort | ... |
+  sha256sum` produces the same hash. Documented as the secondary path
+  in `docs/security/release-verification.md`.
+- **File renamed** `source-sha256.txt` → `source-tree-sha256.txt` so
+  the filename signals the algorithm change. SBOM template property
+  correspondingly renamed from `solidsyslog:source-hash-sha256` to
+  `solidsyslog:source-tree-sha256`. No prior releases shipped the old
+  name (both throwaway `v0.0.*-sbom-test` releases were deleted), so
+  this is a clean replace — no backwards-compatibility concern.
+- **Self-documenting file content.** The new `source-tree-sha256.txt`
+  opens with comment-prefixed header lines (scope, commit, algorithm,
+  pointer to the verification guide) before the hash itself. `#`-lines
+  are ignored by `sha256sum -c` so the file remains machine-friendly.
+
+### Deferred
+- **Mode-aware content-tree hash.** Current form hashes contents only,
+  not file modes. Source files are all `100644`; a mode flip on a
+  source file would be unusual. If regulated use ever needs it, extend
+  the format to `<mode>\t<content-sha>\t<path>` and document. Not
+  worth the complexity cost today.
+
+### Open questions
+- None. Next rehearsal (throwaway pre-release) will re-verify the new
+  path end-to-end; I'll drive that after this PR merges.
+
 ## 2026-04-22 — S19.02 SBOM signing and release-asset attachment
 
 ### Decisions

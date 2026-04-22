@@ -53,7 +53,7 @@
     },
     "properties": [
       {
-        "name": "solidsyslog:source-hash-sha256",
+        "name": "solidsyslog:source-tree-sha256",
         "value": "${SOURCE_HASH}"
       },
       {
