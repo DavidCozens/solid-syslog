@@ -17,6 +17,7 @@ cd "$(dirname "$0")"
 DAYS=3650
 SUBJECT_CA="/CN=SolidSyslog BDD Test CA"
 SUBJECT_SRV="/CN=syslog-ng"
+SUBJECT_CLIENT="/CN=solidsyslog-bdd-client"
 SAN="subjectAltName = DNS:syslog-ng, DNS:localhost, IP:127.0.0.1"
 
 # 1. CA key + self-signed CA cert
@@ -33,10 +34,18 @@ openssl x509 -req -in server.csr -CA ca.pem -CAkey ca.key -CAcreateserial \
     -out server.pem -days "$DAYS" -sha256 \
     -extfile <(printf "%s\n" "$SAN")
 
-# Remove the CSR and CA serial — only the keys + certs need to be committed
-rm -f server.csr ca.srl
+# 4. Client key + CSR (mTLS identity for SolidSyslog under test)
+openssl genrsa -out client.key 2048
+openssl req -new -key client.key -subj "$SUBJECT_CLIENT" -out client.csr
 
-chmod 0644 ca.pem server.pem
-chmod 0600 ca.key server.key
+# 5. Sign client cert with the same CA — no SAN needed for client auth
+openssl x509 -req -in client.csr -CA ca.pem -CAkey ca.key -CAcreateserial \
+    -out client.pem -days "$DAYS" -sha256
+
+# Remove the CSRs and CA serial — only the keys + certs need to be committed
+rm -f server.csr client.csr ca.srl
+
+chmod 0644 ca.pem server.pem client.pem
+chmod 0600 ca.key server.key client.key
 
 echo "Regenerated test certs in $(pwd)"

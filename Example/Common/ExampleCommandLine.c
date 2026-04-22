@@ -81,7 +81,8 @@ int ExampleCommandLine_Parse(int argc, char* argv[], struct ExampleOptions* opti
                 options->msg = optarg;
                 break;
             case 't':
-                if ((strcmp(optarg, "udp") != 0) && (strcmp(optarg, "tcp") != 0) && (strcmp(optarg, "tls") != 0))
+                if ((strcmp(optarg, "udp") != 0) && (strcmp(optarg, "tcp") != 0) && (strcmp(optarg, "tls") != 0) &&
+                    (strcmp(optarg, "mtls") != 0))
                 {
                     return 1;
                 }

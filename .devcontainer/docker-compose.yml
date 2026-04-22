@@ -30,6 +30,7 @@ services:
       - "5514:5514/udp"
       - "5514:5514/tcp"
       - "6514:6514/tcp"
+      - "6515:6515/tcp"
     working_dir: /workspaces/SolidSyslog
     entrypoint: ["bash", "-c"]
     command:

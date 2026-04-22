@@ -10,7 +10,7 @@ if(SOLIDSYSLOG_POSIX)
     )
 
     if(SOLIDSYSLOG_OPENSSL)
-        list(APPEND COMMON_SOURCES Common/ExampleTlsConfig.c)
+        list(APPEND COMMON_SOURCES Common/ExampleTlsConfig.c Common/ExampleMtlsConfig.c)
     endif()
 
     # Single-task example: NullBuffer, direct send, bare-metal model

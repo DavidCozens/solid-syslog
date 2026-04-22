@@ -18,6 +18,12 @@ void ExampleSwitchConfig_SetByName(const char* name)
     {
         selectedIndex = EXAMPLE_SWITCH_TLS;
     }
+    else if (strcmp(name, "mtls") == 0)
+    {
+        /* mTLS shares the reliable/TLS slot; the TLS stream is configured
+         * with client cert+key at startup when --transport mtls is selected. */
+        selectedIndex = EXAMPLE_SWITCH_TLS;
+    }
 }
 
 uint8_t ExampleSwitchConfig_Selector(void)
