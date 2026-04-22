@@ -9,7 +9,7 @@ static const char* const TEST_PATH = "/tmp/test_posix_file.dat";
 // clang-format off
 TEST_GROUP(SolidSyslogPosixFile)
 {
-    struct SolidSyslogPosixFileStorage storage = {};
+    SolidSyslogPosixFileStorage storage = {};
     struct SolidSyslogFile* file = nullptr;
 
     void setup() override
@@ -37,6 +37,14 @@ TEST_GROUP(SolidSyslogPosixFile)
 TEST(SolidSyslogPosixFile, CreateReturnsNonNull)
 {
     CHECK_TRUE(file != nullptr);
+}
+
+TEST(SolidSyslogPosixFile, CreateReturnsHandleInsideCallerSuppliedStorage)
+{
+    SolidSyslogPosixFileStorage localStorage{};
+    struct SolidSyslogFile*     localFile = SolidSyslogPosixFile_Create(&localStorage);
+    POINTERS_EQUAL(&localStorage, localFile);
+    SolidSyslogPosixFile_Destroy(localFile);
 }
 
 TEST(SolidSyslogPosixFile, IsOpenReturnsFalseBeforeOpen)

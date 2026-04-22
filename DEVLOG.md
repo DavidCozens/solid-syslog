@@ -1,5 +1,57 @@
 # Dev Log
 
+## 2026-04-22 — S03.12 multi-instance senders and streams
+
+### Decisions
+- Converted `SolidSyslogStreamSender`, `SolidSyslogPosixTcpStream`,
+  `SolidSyslogTlsStream`, and `SolidSyslogPosixFile` from static-singleton
+  `_Create(config)` / `_Destroy()` pairs to multi-instance with
+  caller-supplied storage. `_Create` now takes a `SolidSyslog<X>Storage*` and
+  the config; `_Destroy` takes the returned handle. Heap stays out —
+  caller owns the memory, static / stack / pool allocation all work.
+- Settled on one canonical "opaque storage" pattern for fixed-size classes
+  and codified it in memory (`feedback_storage_pattern.md`): `SOLIDSYSLOG_<X>_SIZE`
+  as its own enum with `(sizeof(intptr_t) * N) + sizeof(uint32_t) + ...`;
+  storage typedef using ceiling-divided `intptr_t slots[...]`; static_assert
+  `sizeof(struct) <= sizeof(storage)`; `DEFAULT_INSTANCE` / `DESTROYED_INSTANCE`
+  + struct assignment in Create/Destroy. One spelling across the library,
+  Formatter's variable-size macro remains the documented exception. Picked
+  the `intptr_t slots` flavour over PosixFile's original `uint8_t opaque[...]`
+  for pointer-alignment; realigned PosixFile in the same pass.
+- Size formula authoring rule: each `sizeof(intptr_t) * N` slot covers
+  pointer-scaling fields (function pointers, object pointers, `int`, `bool`,
+  enums) so 16/32/64-bit targets pay only for what they need, and each
+  explicit `sizeof(uint32_t)` / `sizeof(uint64_t)` term covers a fixed-width
+  stdint field. Ceiling division in the slot count stops a stdint-tail size
+  (e.g. StreamSender's `(sizeof(intptr_t)*7) + sizeof(uint32_t)` = 60 on
+  64-bit) from silently under-allocating when a future field is added.
+- Added exactly one new regression-net test per class:
+  `CreateReturnsHandleInsideCallerSuppliedStorage` with
+  `POINTERS_EQUAL(&storage, handle)`. That single check proves the storage
+  contract and, by extension, multi-instance independence — didn't write a
+  separate "create two, they don't collide" test.
+- Threaded example rewired to always wire UDP + plain TCP + TLS
+  simultaneously at launch. `--transport` now only sets the initial selector;
+  runtime `switch` works across all three. New BDD scenario
+  (`switching_transport.feature`) covers the TCP↔TLS path.
+
+### Deferred
+- Audit of the remaining static-singleton `_Create` pairs (UdpSender,
+  PosixDatagram, MetaSd, OriginSd, TimeQualitySd, Crc16Policy,
+  NullBuffer / NullStore / NullSecurityPolicy, GetAddrInfoResolver,
+  AtomicCounter, FileStore, PosixMessageQueueBuffer, SwitchingSender)
+  to the future allocation-strategy epic. S03.12 was the tactical enabler
+  for TLS + TCP coexistence; the broader dual-API (heap vs caller-storage)
+  redesign is out of scope.
+- Stored-length vs null-termination tightening on Origin SD (project
+  memory already records this).
+- Error-reporting integration — still on E12.
+
+### Open questions
+- None — pattern is locked in via `feedback_storage_pattern.md`, ready to
+  be applied consistently as further classes get converted under the future
+  allocation-strategy epic.
+
 ## 2026-04-22 — S03.11 TLS promoted to Available + docs sanity pass
 
 ### Decisions

@@ -11,6 +11,7 @@ TEST_GROUP(SolidSyslogTlsStream)
 {
     struct SolidSyslogStream*         transport   = nullptr;
     struct SolidSyslogTlsStreamConfig config      = {};
+    SolidSyslogTlsStreamStorage       streamStorage{};
     struct SolidSyslogStream*         stream      = nullptr;
     SolidSyslogAddressStorage         addrStorage = {0};
     struct SolidSyslogAddress*        addr        = nullptr;
@@ -21,14 +22,14 @@ TEST_GROUP(SolidSyslogTlsStream)
         transport        = StreamFake_Create();
         config.transport = transport;
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        stream = SolidSyslogTlsStream_Create(&config);
+        stream = SolidSyslogTlsStream_Create(&streamStorage, &config);
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
         addr = SolidSyslogAddress_FromStorage(&addrStorage);
     }
 
     void teardown() override
     {
-        SolidSyslogTlsStream_Destroy();
+        SolidSyslogTlsStream_Destroy(stream);
         StreamFake_Destroy(transport);
     }
 };
@@ -38,6 +39,16 @@ TEST_GROUP(SolidSyslogTlsStream)
 TEST(SolidSyslogTlsStream, CreateSucceeds)
 {
     CHECK_TRUE(stream != nullptr);
+}
+
+TEST(SolidSyslogTlsStream, CreateReturnsHandleInsideCallerSuppliedStorage)
+{
+    SolidSyslogTlsStreamStorage       localStorage{};
+    struct SolidSyslogTlsStreamConfig localConfig = {};
+    localConfig.transport                         = transport;
+    struct SolidSyslogStream* localStream         = SolidSyslogTlsStream_Create(&localStorage, &localConfig);
+    POINTERS_EQUAL(&localStorage, localStream);
+    SolidSyslogTlsStream_Destroy(localStream);
 }
 
 TEST(SolidSyslogTlsStream, OpenOpensTransport)
@@ -60,9 +71,9 @@ TEST(SolidSyslogTlsStream, OpenCreatesSslContext)
 
 TEST(SolidSyslogTlsStream, OpenLoadsCaBundleFromConfig)
 {
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     config.caBundlePath = "/some/path/ca.pem";
-    stream              = SolidSyslogTlsStream_Create(&config);
+    stream              = SolidSyslogTlsStream_Create(&streamStorage, &config);
     SolidSyslogStream_Open(stream, addr);
     STRCMP_EQUAL("/some/path/ca.pem", OpenSslFake_LastCaBundlePath());
 }
@@ -81,9 +92,9 @@ TEST(SolidSyslogTlsStream, OpenSetsTls12Floor)
 
 TEST(SolidSyslogTlsStream, OpenPassesCipherListToSslCtx)
 {
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     config.cipherList = "ECDHE+AESGCM";
-    stream            = SolidSyslogTlsStream_Create(&config);
+    stream            = SolidSyslogTlsStream_Create(&streamStorage, &config);
     SolidSyslogStream_Open(stream, addr);
     STRCMP_EQUAL("ECDHE+AESGCM", OpenSslFake_LastCipherList());
 }
@@ -96,18 +107,18 @@ TEST(SolidSyslogTlsStream, OpenSkipsCipherListSetupWhenNotConfigured)
 
 TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenCipherListRejected)
 {
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     config.cipherList = "not-a-real-cipher";
-    stream            = SolidSyslogTlsStream_Create(&config);
+    stream            = SolidSyslogTlsStream_Create(&streamStorage, &config);
     OpenSslFake_SetCipherListFails(true);
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
 }
 
 TEST(SolidSyslogTlsStream, CipherListFailureFreesCtx)
 {
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     config.cipherList = "not-a-real-cipher";
-    stream            = SolidSyslogTlsStream_Create(&config);
+    stream            = SolidSyslogTlsStream_Create(&streamStorage, &config);
     OpenSslFake_SetCipherListFails(true);
     SolidSyslogStream_Open(stream, addr);
     LONGS_EQUAL(1, OpenSslFake_CtxFreeCallCount());
@@ -163,18 +174,18 @@ TEST(SolidSyslogTlsStream, OpenPassesSslToConnect)
 
 TEST(SolidSyslogTlsStream, OpenSetsSniHostnameFromConfig)
 {
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     config.serverName = "logs.example";
-    stream            = SolidSyslogTlsStream_Create(&config);
+    stream            = SolidSyslogTlsStream_Create(&streamStorage, &config);
     SolidSyslogStream_Open(stream, addr);
     STRCMP_EQUAL("logs.example", OpenSslFake_LastSniHostname());
 }
 
 TEST(SolidSyslogTlsStream, OpenSetsExpectedCertHostname)
 {
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     config.serverName = "logs.example";
-    stream            = SolidSyslogTlsStream_Create(&config);
+    stream            = SolidSyslogTlsStream_Create(&streamStorage, &config);
     SolidSyslogStream_Open(stream, addr);
     STRCMP_EQUAL("logs.example", OpenSslFake_LastSet1Host());
 }
@@ -315,7 +326,7 @@ TEST(SolidSyslogTlsStream, CloseFreesBioMethod)
 TEST(SolidSyslogTlsStream, DestroyFreesSslContext)
 {
     SolidSyslogStream_Open(stream, addr);
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     LONGS_EQUAL(1, OpenSslFake_CtxFreeCallCount());
     /* teardown re-Destroys safely */
 }
@@ -323,7 +334,7 @@ TEST(SolidSyslogTlsStream, DestroyFreesSslContext)
 TEST(SolidSyslogTlsStream, DestroyFreesBioMethodWhenCloseNotCalled)
 {
     SolidSyslogStream_Open(stream, addr);
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     LONGS_EQUAL(1, OpenSslFake_BioMethFreeCallCount());
     /* teardown re-Destroys safely */
 }
@@ -332,14 +343,14 @@ TEST(SolidSyslogTlsStream, DestroyAfterCloseDoesNotDoubleFreeBioMethod)
 {
     SolidSyslogStream_Open(stream, addr);
     SolidSyslogStream_Close(stream);
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     LONGS_EQUAL(1, OpenSslFake_BioMethFreeCallCount());
 }
 
 TEST(SolidSyslogTlsStream, DestroyFreesSslWhenCloseNotCalled)
 {
     SolidSyslogStream_Open(stream, addr);
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     LONGS_EQUAL(1, OpenSslFake_FreeCallCount());
 }
 
@@ -347,7 +358,7 @@ TEST(SolidSyslogTlsStream, DestroyAfterCloseDoesNotDoubleFreeSsl)
 {
     SolidSyslogStream_Open(stream, addr);
     SolidSyslogStream_Close(stream);
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     LONGS_EQUAL(1, OpenSslFake_FreeCallCount());
 }
 
@@ -412,18 +423,18 @@ TEST(SolidSyslogTlsStream, OpenPassesSameBioForReadAndWrite)
 
 TEST(SolidSyslogTlsStream, OpenPassesSslToSniCtrl)
 {
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     config.serverName = "logs.example";
-    stream            = SolidSyslogTlsStream_Create(&config);
+    stream            = SolidSyslogTlsStream_Create(&streamStorage, &config);
     SolidSyslogStream_Open(stream, addr);
     POINTERS_EQUAL(OpenSslFake_LastSslReturned(), OpenSslFake_LastSslCtrlSslArg());
 }
 
 TEST(SolidSyslogTlsStream, OpenPassesSslFromNewToSet1Host)
 {
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     config.serverName = "logs.example";
-    stream            = SolidSyslogTlsStream_Create(&config);
+    stream            = SolidSyslogTlsStream_Create(&streamStorage, &config);
     SolidSyslogStream_Open(stream, addr);
     POINTERS_EQUAL(OpenSslFake_LastSslReturned(), OpenSslFake_LastSet1HostSslArg());
 }
@@ -454,7 +465,7 @@ TEST(SolidSyslogTlsStream, ClosePassesSslFromNewToFree)
 TEST(SolidSyslogTlsStream, DestroyPassesCtxFromNewToCtxFree)
 {
     SolidSyslogStream_Open(stream, addr);
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     POINTERS_EQUAL(OpenSslFake_LastCtxReturned(), OpenSslFake_LastCtxFreeCtxArg());
 }
 
@@ -475,18 +486,18 @@ TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenHandshakeFails)
 
 TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenSet1HostFails)
 {
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     config.serverName = "logs.example";
-    stream            = SolidSyslogTlsStream_Create(&config);
+    stream            = SolidSyslogTlsStream_Create(&streamStorage, &config);
     OpenSslFake_SetSet1HostFails(true);
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
 }
 
 TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenSniHostnameSetupFails)
 {
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     config.serverName = "logs.example";
-    stream            = SolidSyslogTlsStream_Create(&config);
+    stream            = SolidSyslogTlsStream_Create(&streamStorage, &config);
     OpenSslFake_SetSniHostnameFails(true);
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
 }
@@ -636,20 +647,20 @@ TEST(SolidSyslogTlsStream, OpenSkipsClientIdentityWhenBothPathsAreNull)
 
 TEST(SolidSyslogTlsStream, OpenLoadsClientCertChainFromConfig)
 {
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     config.clientCertChainPath = "/some/path/client.pem";
     config.clientKeyPath       = "/some/path/client.key";
-    stream                     = SolidSyslogTlsStream_Create(&config);
+    stream                     = SolidSyslogTlsStream_Create(&streamStorage, &config);
     SolidSyslogStream_Open(stream, addr);
     STRCMP_EQUAL("/some/path/client.pem", OpenSslFake_LastClientCertChainPath());
 }
 
 TEST(SolidSyslogTlsStream, OpenLoadsClientKeyFromConfig)
 {
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     config.clientCertChainPath = "/some/path/client.pem";
     config.clientKeyPath       = "/some/path/client.key";
-    stream                     = SolidSyslogTlsStream_Create(&config);
+    stream                     = SolidSyslogTlsStream_Create(&streamStorage, &config);
     SolidSyslogStream_Open(stream, addr);
     STRCMP_EQUAL("/some/path/client.key", OpenSslFake_LastClientKeyPath());
     LONGS_EQUAL(SSL_FILETYPE_PEM, OpenSslFake_LastClientKeyFileType());
@@ -657,29 +668,29 @@ TEST(SolidSyslogTlsStream, OpenLoadsClientKeyFromConfig)
 
 TEST(SolidSyslogTlsStream, OpenChecksClientKeyMatchesCert)
 {
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     config.clientCertChainPath = "/some/path/client.pem";
     config.clientKeyPath       = "/some/path/client.key";
-    stream                     = SolidSyslogTlsStream_Create(&config);
+    stream                     = SolidSyslogTlsStream_Create(&streamStorage, &config);
     SolidSyslogStream_Open(stream, addr);
     LONGS_EQUAL(1, OpenSslFake_CheckPrivateKeyCallCount());
 }
 
 TEST(SolidSyslogTlsStream, OpenFailsWhenOnlyClientCertIsSet)
 {
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     config.clientCertChainPath = "/some/path/client.pem";
     config.clientKeyPath       = nullptr;
-    stream                     = SolidSyslogTlsStream_Create(&config);
+    stream                     = SolidSyslogTlsStream_Create(&streamStorage, &config);
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
 }
 
 TEST(SolidSyslogTlsStream, OpenMakesNoClientIdentityCallsWhenOnlyClientCertIsSet)
 {
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     config.clientCertChainPath = "/some/path/client.pem";
     config.clientKeyPath       = nullptr;
-    stream                     = SolidSyslogTlsStream_Create(&config);
+    stream                     = SolidSyslogTlsStream_Create(&streamStorage, &config);
     SolidSyslogStream_Open(stream, addr);
     LONGS_EQUAL(0, OpenSslFake_UseCertChainFileCallCount());
     LONGS_EQUAL(0, OpenSslFake_UsePrivateKeyFileCallCount());
@@ -688,19 +699,19 @@ TEST(SolidSyslogTlsStream, OpenMakesNoClientIdentityCallsWhenOnlyClientCertIsSet
 
 TEST(SolidSyslogTlsStream, OpenFailsWhenOnlyClientKeyIsSet)
 {
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     config.clientCertChainPath = nullptr;
     config.clientKeyPath       = "/some/path/client.key";
-    stream                     = SolidSyslogTlsStream_Create(&config);
+    stream                     = SolidSyslogTlsStream_Create(&streamStorage, &config);
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
 }
 
 TEST(SolidSyslogTlsStream, OpenMakesNoClientIdentityCallsWhenOnlyClientKeyIsSet)
 {
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     config.clientCertChainPath = nullptr;
     config.clientKeyPath       = "/some/path/client.key";
-    stream                     = SolidSyslogTlsStream_Create(&config);
+    stream                     = SolidSyslogTlsStream_Create(&streamStorage, &config);
     SolidSyslogStream_Open(stream, addr);
     LONGS_EQUAL(0, OpenSslFake_UseCertChainFileCallCount());
     LONGS_EQUAL(0, OpenSslFake_UsePrivateKeyFileCallCount());
@@ -709,30 +720,30 @@ TEST(SolidSyslogTlsStream, OpenMakesNoClientIdentityCallsWhenOnlyClientKeyIsSet)
 
 TEST(SolidSyslogTlsStream, PartialClientIdentityConfigFreesCtx)
 {
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     config.clientCertChainPath = "/some/path/client.pem";
     config.clientKeyPath       = nullptr;
-    stream                     = SolidSyslogTlsStream_Create(&config);
+    stream                     = SolidSyslogTlsStream_Create(&streamStorage, &config);
     SolidSyslogStream_Open(stream, addr);
     LONGS_EQUAL(1, OpenSslFake_CtxFreeCallCount());
 }
 
 TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenUseCertChainFileFails)
 {
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     config.clientCertChainPath = "/some/path/client.pem";
     config.clientKeyPath       = "/some/path/client.key";
-    stream                     = SolidSyslogTlsStream_Create(&config);
+    stream                     = SolidSyslogTlsStream_Create(&streamStorage, &config);
     OpenSslFake_SetUseCertChainFileFails(true);
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
 }
 
 TEST(SolidSyslogTlsStream, UseCertChainFileFailureFreesCtx)
 {
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     config.clientCertChainPath = "/some/path/client.pem";
     config.clientKeyPath       = "/some/path/client.key";
-    stream                     = SolidSyslogTlsStream_Create(&config);
+    stream                     = SolidSyslogTlsStream_Create(&streamStorage, &config);
     OpenSslFake_SetUseCertChainFileFails(true);
     SolidSyslogStream_Open(stream, addr);
     LONGS_EQUAL(1, OpenSslFake_CtxFreeCallCount());
@@ -740,20 +751,20 @@ TEST(SolidSyslogTlsStream, UseCertChainFileFailureFreesCtx)
 
 TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenUsePrivateKeyFileFails)
 {
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     config.clientCertChainPath = "/some/path/client.pem";
     config.clientKeyPath       = "/some/path/client.key";
-    stream                     = SolidSyslogTlsStream_Create(&config);
+    stream                     = SolidSyslogTlsStream_Create(&streamStorage, &config);
     OpenSslFake_SetUsePrivateKeyFileFails(true);
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
 }
 
 TEST(SolidSyslogTlsStream, UsePrivateKeyFileFailureFreesCtx)
 {
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     config.clientCertChainPath = "/some/path/client.pem";
     config.clientKeyPath       = "/some/path/client.key";
-    stream                     = SolidSyslogTlsStream_Create(&config);
+    stream                     = SolidSyslogTlsStream_Create(&streamStorage, &config);
     OpenSslFake_SetUsePrivateKeyFileFails(true);
     SolidSyslogStream_Open(stream, addr);
     LONGS_EQUAL(1, OpenSslFake_CtxFreeCallCount());
@@ -761,20 +772,20 @@ TEST(SolidSyslogTlsStream, UsePrivateKeyFileFailureFreesCtx)
 
 TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenCheckPrivateKeyFails)
 {
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     config.clientCertChainPath = "/some/path/client.pem";
     config.clientKeyPath       = "/some/path/client.key";
-    stream                     = SolidSyslogTlsStream_Create(&config);
+    stream                     = SolidSyslogTlsStream_Create(&streamStorage, &config);
     OpenSslFake_SetCheckPrivateKeyFails(true);
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
 }
 
 TEST(SolidSyslogTlsStream, CheckPrivateKeyFailureFreesCtx)
 {
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     config.clientCertChainPath = "/some/path/client.pem";
     config.clientKeyPath       = "/some/path/client.key";
-    stream                     = SolidSyslogTlsStream_Create(&config);
+    stream                     = SolidSyslogTlsStream_Create(&streamStorage, &config);
     OpenSslFake_SetCheckPrivateKeyFails(true);
     SolidSyslogStream_Open(stream, addr);
     LONGS_EQUAL(1, OpenSslFake_CtxFreeCallCount());
@@ -782,30 +793,30 @@ TEST(SolidSyslogTlsStream, CheckPrivateKeyFailureFreesCtx)
 
 TEST(SolidSyslogTlsStream, OpenPassesCtxFromNewToUseCertChainFile)
 {
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     config.clientCertChainPath = "/some/path/client.pem";
     config.clientKeyPath       = "/some/path/client.key";
-    stream                     = SolidSyslogTlsStream_Create(&config);
+    stream                     = SolidSyslogTlsStream_Create(&streamStorage, &config);
     SolidSyslogStream_Open(stream, addr);
     POINTERS_EQUAL(OpenSslFake_LastCtxReturned(), OpenSslFake_LastUseCertChainFileCtxArg());
 }
 
 TEST(SolidSyslogTlsStream, OpenPassesCtxFromNewToUsePrivateKeyFile)
 {
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     config.clientCertChainPath = "/some/path/client.pem";
     config.clientKeyPath       = "/some/path/client.key";
-    stream                     = SolidSyslogTlsStream_Create(&config);
+    stream                     = SolidSyslogTlsStream_Create(&streamStorage, &config);
     SolidSyslogStream_Open(stream, addr);
     POINTERS_EQUAL(OpenSslFake_LastCtxReturned(), OpenSslFake_LastUsePrivateKeyFileCtxArg());
 }
 
 TEST(SolidSyslogTlsStream, OpenPassesCtxFromNewToCheckPrivateKey)
 {
-    SolidSyslogTlsStream_Destroy();
+    SolidSyslogTlsStream_Destroy(stream);
     config.clientCertChainPath = "/some/path/client.pem";
     config.clientKeyPath       = "/some/path/client.key";
-    stream                     = SolidSyslogTlsStream_Create(&config);
+    stream                     = SolidSyslogTlsStream_Create(&streamStorage, &config);
     SolidSyslogStream_Open(stream, addr);
     POINTERS_EQUAL(OpenSslFake_LastCtxReturned(), OpenSslFake_LastCheckPrivateKeyCtxArg());
 }

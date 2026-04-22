@@ -5,6 +5,8 @@
 #include "SolidSyslogResolver.h"
 #include "SolidSyslogStream.h"
 
+#include <stdint.h>
+
 EXTERN_C_BEGIN
 
     struct SolidSyslogSender;
@@ -17,8 +19,18 @@ EXTERN_C_BEGIN
         SolidSyslogEndpointVersionFunction endpointVersion; /* polled cheaply on every Send for stale check */
     };
 
-    struct SolidSyslogSender* SolidSyslogStreamSender_Create(const struct SolidSyslogStreamSenderConfig* config);
-    void                      SolidSyslogStreamSender_Destroy(void);
+    enum
+    {
+        SOLIDSYSLOG_STREAM_SENDER_SIZE = (sizeof(intptr_t) * 7) + sizeof(uint32_t)
+    };
+
+    typedef struct
+    {
+        intptr_t slots[(SOLIDSYSLOG_STREAM_SENDER_SIZE + sizeof(intptr_t) - 1) / sizeof(intptr_t)];
+    } SolidSyslogStreamSenderStorage;
+
+    struct SolidSyslogSender* SolidSyslogStreamSender_Create(SolidSyslogStreamSenderStorage * storage, const struct SolidSyslogStreamSenderConfig* config);
+    void                      SolidSyslogStreamSender_Destroy(struct SolidSyslogSender * sender);
 
 EXTERN_C_END
 

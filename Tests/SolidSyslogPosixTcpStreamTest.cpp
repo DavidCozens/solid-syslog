@@ -17,6 +17,7 @@ static const int         TEST_PORT        = 514;
 
 TEST_GROUP(SolidSyslogPosixTcpStream)
 {
+    SolidSyslogPosixTcpStreamStorage streamStorage{};
     // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
     struct SolidSyslogStream* stream = nullptr;
     SolidSyslogAddressStorage addrStorage{};
@@ -27,7 +28,7 @@ TEST_GROUP(SolidSyslogPosixTcpStream)
     {
         SocketFake_Reset();
         // cppcheck-suppress unreadVariable -- used in tests; cppcheck does not model CppUTest macros
-        stream = SolidSyslogPosixTcpStream_Create();
+        stream = SolidSyslogPosixTcpStream_Create(&streamStorage);
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) -- char-type aliasing, legal and necessary
         auto* bytes = reinterpret_cast<std::uint8_t*>(&addrStorage);
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) -- reinterpret to platform layout, storage is intptr_t-aligned
@@ -41,7 +42,7 @@ TEST_GROUP(SolidSyslogPosixTcpStream)
 
     void teardown() override
     {
-        SolidSyslogPosixTcpStream_Destroy();
+        SolidSyslogPosixTcpStream_Destroy(stream);
     }
 };
 
@@ -49,6 +50,14 @@ TEST_GROUP(SolidSyslogPosixTcpStream)
 
 TEST(SolidSyslogPosixTcpStream, CreateDestroyWorksWithoutCrashing)
 {
+}
+
+TEST(SolidSyslogPosixTcpStream, CreateReturnsHandleInsideCallerSuppliedStorage)
+{
+    SolidSyslogPosixTcpStreamStorage storage{};
+    struct SolidSyslogStream*        localStream = SolidSyslogPosixTcpStream_Create(&storage);
+    POINTERS_EQUAL(&storage, localStream);
+    SolidSyslogPosixTcpStream_Destroy(localStream);
 }
 
 TEST(SolidSyslogPosixTcpStream, OpenCallsSocketOnce)
@@ -230,14 +239,14 @@ TEST(SolidSyslogPosixTcpStream, ReadReturnsRecvReturnValue)
 TEST(SolidSyslogPosixTcpStream, DestroyClosesOpenSocket)
 {
     SolidSyslogStream_Open(stream, addr);
-    SolidSyslogPosixTcpStream_Destroy();
+    SolidSyslogPosixTcpStream_Destroy(stream);
     LONGS_EQUAL(1, SocketFake_CloseCallCount());
 }
 
 TEST(SolidSyslogPosixTcpStream, DestroyClosesWithSocketFd)
 {
     SolidSyslogStream_Open(stream, addr);
-    SolidSyslogPosixTcpStream_Destroy();
+    SolidSyslogPosixTcpStream_Destroy(stream);
     LONGS_EQUAL(SocketFake_SocketFd(), SocketFake_LastClosedFd());
 }
 

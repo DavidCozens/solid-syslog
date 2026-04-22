@@ -22,6 +22,7 @@ TEST_GROUP(TlsStreamIntegration)
     struct TlsTestServer*             server         = nullptr;
     struct SolidSyslogStream*         transport      = nullptr;
     struct SolidSyslogTlsStreamConfig tlsConfig      = {};
+    SolidSyslogTlsStreamStorage       tlsStreamStorage{};
     struct SolidSyslogStream*         tlsStream      = nullptr;
     SolidSyslogAddressStorage         addrStorage    = {};
     struct SolidSyslogAddress*        addr           = nullptr;
@@ -36,7 +37,7 @@ TEST_GROUP(TlsStreamIntegration)
 
     void teardown() override
     {
-        if (tlsStream != nullptr)         { SolidSyslogTlsStream_Destroy(); }
+        if (tlsStream != nullptr)         { SolidSyslogTlsStream_Destroy(tlsStream); }
         if (transport != nullptr)         { BioPairStream_Destroy(transport); }
         if (server != nullptr)            { TlsTestServer_Destroy(server); }
         if (cert.cert != nullptr)         { TlsTestCert_Destroy(&cert); }
@@ -77,7 +78,7 @@ TEST_GROUP(TlsStreamIntegration)
         tlsConfig.transport    = transport;
         tlsConfig.caBundlePath = caPath;
         tlsConfig.serverName   = clientServerName;
-        tlsStream              = SolidSyslogTlsStream_Create(&tlsConfig);
+        tlsStream              = SolidSyslogTlsStream_Create(&tlsStreamStorage, &tlsConfig);
     }
 
     /* Creates the client-side mTLS material and writes it to disk.

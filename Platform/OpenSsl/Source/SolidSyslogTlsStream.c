@@ -1,3 +1,4 @@
+#include "SolidSyslogMacros.h"
 #include "SolidSyslogStreamDefinition.h"
 #include "SolidSyslogTlsStream.h"
 
@@ -11,6 +12,9 @@ struct SolidSyslogTlsStream
     SSL*                              ssl;
     BIO_METHOD*                       bioMethod;
 };
+
+SOLIDSYSLOG_STATIC_ASSERT(sizeof(struct SolidSyslogTlsStream) <= sizeof(SolidSyslogTlsStreamStorage),
+                          "SOLIDSYSLOG_TLS_STREAM_SIZE is too small for struct SolidSyslogTlsStream");
 
 static inline bool             TlsStream_AttachTransportBio(struct SolidSyslogTlsStream* stream);
 static inline void             TlsStream_Close(struct SolidSyslogStream* self);
@@ -38,26 +42,28 @@ static inline long             TlsStream_TransportBioCtrl(BIO* bio, int cmd, lon
 static inline int              TlsStream_TransportBioRead(BIO* bio, char* buffer, int size);
 static inline int              TlsStream_TransportBioWrite(BIO* bio, const char* buffer, int size);
 
-static const struct SolidSyslogStream VTABLE = {
-    .Open  = TlsStream_Open,
-    .Send  = TlsStream_Send,
-    .Read  = TlsStream_Read,
-    .Close = TlsStream_Close,
+static const struct SolidSyslogTlsStream DEFAULT_INSTANCE = {
+    {TlsStream_Open, TlsStream_Send, TlsStream_Read, TlsStream_Close}, {NULL, NULL, NULL, NULL, NULL, NULL}, NULL, NULL, NULL,
 };
 
-static struct SolidSyslogTlsStream instance;
+static const struct SolidSyslogTlsStream DESTROYED_INSTANCE = {
+    {NULL, NULL, NULL, NULL}, {NULL, NULL, NULL, NULL, NULL, NULL}, NULL, NULL, NULL,
+};
 
-struct SolidSyslogStream* SolidSyslogTlsStream_Create(const struct SolidSyslogTlsStreamConfig* config)
+struct SolidSyslogStream* SolidSyslogTlsStream_Create(SolidSyslogTlsStreamStorage* storage, const struct SolidSyslogTlsStreamConfig* config)
 {
-    instance.config = *config;
-    instance.base   = VTABLE;
-    return &instance.base;
+    struct SolidSyslogTlsStream* stream = (struct SolidSyslogTlsStream*) storage;
+    *stream                             = DEFAULT_INSTANCE;
+    stream->config                      = *config;
+    return &stream->base;
 }
 
-void SolidSyslogTlsStream_Destroy(void)
+void SolidSyslogTlsStream_Destroy(struct SolidSyslogStream* stream)
 {
-    TlsStream_ReleaseHandshakeState(&instance);
-    TlsStream_ReleaseSslContext(&instance);
+    struct SolidSyslogTlsStream* self = (struct SolidSyslogTlsStream*) stream;
+    TlsStream_ReleaseHandshakeState(self);
+    TlsStream_ReleaseSslContext(self);
+    *self = DESTROYED_INSTANCE;
 }
 
 static inline void TlsStream_ReleaseHandshakeState(struct SolidSyslogTlsStream* stream)

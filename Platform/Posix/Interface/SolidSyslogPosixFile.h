@@ -9,15 +9,15 @@ EXTERN_C_BEGIN
 
     enum
     {
-        SOLIDSYSLOG_POSIX_FILE_STORAGE_SLOTS = 11
+        SOLIDSYSLOG_POSIX_FILE_SIZE = sizeof(intptr_t) * 11
     };
 
-    struct SolidSyslogPosixFileStorage
+    typedef struct
     {
-        uint8_t opaque[SOLIDSYSLOG_POSIX_FILE_STORAGE_SLOTS * sizeof(void*)];
-    };
+        intptr_t slots[(SOLIDSYSLOG_POSIX_FILE_SIZE + sizeof(intptr_t) - 1) / sizeof(intptr_t)];
+    } SolidSyslogPosixFileStorage;
 
-    struct SolidSyslogFile* SolidSyslogPosixFile_Create(struct SolidSyslogPosixFileStorage * storage);
+    struct SolidSyslogFile* SolidSyslogPosixFile_Create(SolidSyslogPosixFileStorage * storage);
     void                    SolidSyslogPosixFile_Destroy(struct SolidSyslogFile * file);
 
 EXTERN_C_END
