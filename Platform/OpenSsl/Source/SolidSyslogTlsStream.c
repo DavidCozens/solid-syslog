@@ -28,6 +28,7 @@ static bool             ConfigureTrustAnchors(SSL_CTX* ctx, const char* caBundle
 static bool             ConfigureProtocolFloor(SSL_CTX* ctx);
 static bool             ConfigureCipherList(SSL_CTX* ctx, const char* cipherList);
 static BIO*             CreateTransportBio(struct SolidSyslogTlsStream* stream);
+static BIO_METHOD*      CreateTransportBioMethod(void);
 static int              TransportBioCreate(BIO* bio);
 static int              TransportBioRead(BIO* bio, char* buffer, int size);
 static int              TransportBioWrite(BIO* bio, const char* buffer, int size);
@@ -142,24 +143,31 @@ static void ReleaseHandshakeState(struct SolidSyslogTlsStream* stream)
 
 static BIO* CreateTransportBio(struct SolidSyslogTlsStream* stream)
 {
-    BIO_METHOD* method = BIO_meth_new(BIO_TYPE_SOURCE_SINK, "SolidSyslog transport BIO");
-    if (method == NULL)
+    stream->bioMethod = CreateTransportBioMethod();
+    BIO* bio          = NULL;
+    if (stream->bioMethod != NULL)
     {
-        return NULL;
-    }
-    BIO_meth_set_create(method, TransportBioCreate);
-    BIO_meth_set_read(method, TransportBioRead);
-    BIO_meth_set_write(method, TransportBioWrite);
-    BIO_meth_set_ctrl(method, TransportBioCtrl);
-    stream->bioMethod = method;
-    BIO* bio = BIO_new(method);
-    if (bio == NULL)
-    {
-        BIO_meth_free(method);
-        stream->bioMethod = NULL;
-        return NULL;
+        bio = BIO_new(stream->bioMethod);
+        if (bio == NULL)
+        {
+            BIO_meth_free(stream->bioMethod);
+            stream->bioMethod = NULL;
+        }
     }
     return bio;
+}
+
+static BIO_METHOD* CreateTransportBioMethod(void)
+{
+    BIO_METHOD* method = BIO_meth_new(BIO_TYPE_SOURCE_SINK, "SolidSyslog transport BIO");
+    if (method != NULL)
+    {
+        BIO_meth_set_create(method, TransportBioCreate);
+        BIO_meth_set_read(method, TransportBioRead);
+        BIO_meth_set_write(method, TransportBioWrite);
+        BIO_meth_set_ctrl(method, TransportBioCtrl);
+    }
+    return method;
 }
 
 /* Called when BIO_new instantiates a BIO from our method. Marking init=1 tells
