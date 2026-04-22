@@ -26,6 +26,7 @@ EXTERN_C_BEGIN
     void TlsTestCert_Create(const struct TlsTestCertConfig* config, struct TlsTestCert* out);
     void TlsTestCert_Destroy(struct TlsTestCert * cert);
     void TlsTestCert_WritePemToFile(const struct TlsTestCert* cert, const char* path);
+    void TlsTestCert_WritePrivateKeyPemToFile(const struct TlsTestCert* cert, const char* path);
 
 EXTERN_C_END
 

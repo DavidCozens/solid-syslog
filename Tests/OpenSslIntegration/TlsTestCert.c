@@ -19,6 +19,7 @@ enum
 static void SetValidity(X509* cert, const struct TlsTestCertConfig* config);
 static void SetSubject(X509* cert, const char* commonName);
 static void AddSubjectAltNames(X509* cert, const char* const * dnsNames);
+static void AddBasicConstraintsCa(X509* cert);
 
 void TlsTestCert_Create(const struct TlsTestCertConfig* config, struct TlsTestCert* out)
 {
@@ -31,6 +32,7 @@ void TlsTestCert_Create(const struct TlsTestCertConfig* config, struct TlsTestCe
     SetValidity(cert, config);
     SetSubject(cert, config->commonName);
     AddSubjectAltNames(cert, config->subjectAltDnsNames);
+    AddBasicConstraintsCa(cert);
 
     X509*     issuerCert = (config->issuer != NULL) ? config->issuer->cert : cert;
     EVP_PKEY* issuerKey  = (config->issuer != NULL) ? config->issuer->key : key;
@@ -67,6 +69,17 @@ void TlsTestCert_WritePemToFile(const struct TlsTestCert* cert, const char* path
     fclose(file);
 }
 
+void TlsTestCert_WritePrivateKeyPemToFile(const struct TlsTestCert* cert, const char* path)
+{
+    FILE* file = fopen(path, "w");
+    if (file == NULL)
+    {
+        return;
+    }
+    PEM_write_PrivateKey(file, cert->key, NULL, NULL, 0, NULL, NULL);
+    fclose(file);
+}
+
 static void SetValidity(X509* cert, const struct TlsTestCertConfig* config)
 {
     time_t now   = time(NULL);
@@ -99,4 +112,15 @@ static void AddSubjectAltNames(X509* cert, const char* const * dnsNames)
     }
     X509_add1_ext_i2d(cert, NID_subject_alt_name, sans, 0, 0);
     sk_GENERAL_NAME_pop_free(sans, GENERAL_NAME_free);
+}
+
+/* OpenSSL 3 chain validation requires issuer certs to carry
+ * basicConstraints=CA:TRUE. All test certs get it — it's harmless on leaves
+ * for our purposes and lets any generated cert act as an issuer if needed. */
+static void AddBasicConstraintsCa(X509* cert)
+{
+    BASIC_CONSTRAINTS* bc = BASIC_CONSTRAINTS_new();
+    bc->ca                = 1;
+    X509_add1_ext_i2d(cert, NID_basic_constraints, bc, 1 /* critical */, 0);
+    BASIC_CONSTRAINTS_free(bc);
 }

@@ -138,6 +138,24 @@ static SSL* lastFreeSslArg;
 static int      ctxFreeCallCount;
 static SSL_CTX* lastCtxFreeCtxArg;
 
+/* SSL_CTX_use_certificate_chain_file */
+static int         useCertChainFileCallCount;
+static SSL_CTX*    lastUseCertChainFileCtxArg;
+static const char* lastClientCertChainPath;
+static bool        useCertChainFileFails;
+
+/* SSL_CTX_use_PrivateKey_file */
+static int         usePrivateKeyFileCallCount;
+static SSL_CTX*    lastUsePrivateKeyFileCtxArg;
+static const char* lastClientKeyPath;
+static int         lastClientKeyFileType;
+static bool        usePrivateKeyFileFails;
+
+/* SSL_CTX_check_private_key */
+static int      checkPrivateKeyCallCount;
+static SSL_CTX* lastCheckPrivateKeyCtxArg;
+static bool     checkPrivateKeyFails;
+
 /* -------------------------------------------------------------------------
  * Reset — zero every captured value.
  * ------------------------------------------------------------------------- */
@@ -180,37 +198,49 @@ void OpenSslFake_Reset(void)
     {
         fakeBios[i].data = NULL;
     }
-    lastSetDataBioArg     = NULL;
-    lastSetDataArg        = NULL;
-    lastGetDataBioArg     = NULL;
-    setBioCallCount       = 0;
-    lastSetBioSslArg      = NULL;
-    lastSetBioReadBioArg  = NULL;
-    lastSetBioWriteBioArg = NULL;
-    lastSslCtrlSslArg     = NULL;
-    lastSniHostname       = NULL;
-    sniHostnameFails      = false;
-    lastSet1HostSslArg    = NULL;
-    lastSet1Host          = NULL;
-    set1HostFails         = false;
-    connectCallCount      = 0;
-    lastConnectSslArg     = NULL;
-    connectFails          = false;
-    writeCallCount        = 0;
-    lastWriteSslArg       = NULL;
-    lastWriteBuf          = NULL;
-    lastWriteSize         = 0;
-    writeFails            = false;
-    sslReadCallCount      = 0;
-    lastSslReadSslArg     = NULL;
-    lastSslReadBuf        = NULL;
-    lastSslReadSize       = 0;
-    shutdownCallCount     = 0;
-    lastShutdownSslArg    = NULL;
-    freeCallCount         = 0;
-    lastFreeSslArg        = NULL;
-    ctxFreeCallCount      = 0;
-    lastCtxFreeCtxArg     = NULL;
+    lastSetDataBioArg           = NULL;
+    lastSetDataArg              = NULL;
+    lastGetDataBioArg           = NULL;
+    setBioCallCount             = 0;
+    lastSetBioSslArg            = NULL;
+    lastSetBioReadBioArg        = NULL;
+    lastSetBioWriteBioArg       = NULL;
+    lastSslCtrlSslArg           = NULL;
+    lastSniHostname             = NULL;
+    sniHostnameFails            = false;
+    lastSet1HostSslArg          = NULL;
+    lastSet1Host                = NULL;
+    set1HostFails               = false;
+    connectCallCount            = 0;
+    lastConnectSslArg           = NULL;
+    connectFails                = false;
+    writeCallCount              = 0;
+    lastWriteSslArg             = NULL;
+    lastWriteBuf                = NULL;
+    lastWriteSize               = 0;
+    writeFails                  = false;
+    sslReadCallCount            = 0;
+    lastSslReadSslArg           = NULL;
+    lastSslReadBuf              = NULL;
+    lastSslReadSize             = 0;
+    shutdownCallCount           = 0;
+    lastShutdownSslArg          = NULL;
+    freeCallCount               = 0;
+    lastFreeSslArg              = NULL;
+    ctxFreeCallCount            = 0;
+    lastCtxFreeCtxArg           = NULL;
+    useCertChainFileCallCount   = 0;
+    lastUseCertChainFileCtxArg  = NULL;
+    lastClientCertChainPath     = NULL;
+    useCertChainFileFails       = false;
+    usePrivateKeyFileCallCount  = 0;
+    lastUsePrivateKeyFileCtxArg = NULL;
+    lastClientKeyPath           = NULL;
+    lastClientKeyFileType       = 0;
+    usePrivateKeyFileFails      = false;
+    checkPrivateKeyCallCount    = 0;
+    lastCheckPrivateKeyCtxArg   = NULL;
+    checkPrivateKeyFails        = false;
 }
 
 /* -------------------------------------------------------------------------
@@ -772,4 +802,89 @@ void SSL_CTX_free(SSL_CTX* ctx)
 {
     ctxFreeCallCount++;
     lastCtxFreeCtxArg = ctx;
+}
+
+int SSL_CTX_use_certificate_chain_file(SSL_CTX* ctx, const char* file)
+{
+    useCertChainFileCallCount++;
+    lastUseCertChainFileCtxArg = ctx;
+    lastClientCertChainPath    = file;
+    return useCertChainFileFails ? 0 : 1;
+}
+
+int OpenSslFake_UseCertChainFileCallCount(void)
+{
+    return useCertChainFileCallCount;
+}
+
+SSL_CTX* OpenSslFake_LastUseCertChainFileCtxArg(void)
+{
+    return lastUseCertChainFileCtxArg;
+}
+
+const char* OpenSslFake_LastClientCertChainPath(void)
+{
+    return lastClientCertChainPath;
+}
+
+void OpenSslFake_SetUseCertChainFileFails(bool fails)
+{
+    useCertChainFileFails = fails;
+}
+
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- signature fixed by OpenSSL API
+int SSL_CTX_use_PrivateKey_file(SSL_CTX* ctx, const char* file, int type)
+{
+    usePrivateKeyFileCallCount++;
+    lastUsePrivateKeyFileCtxArg = ctx;
+    lastClientKeyPath           = file;
+    lastClientKeyFileType       = type;
+    return usePrivateKeyFileFails ? 0 : 1;
+}
+
+int OpenSslFake_UsePrivateKeyFileCallCount(void)
+{
+    return usePrivateKeyFileCallCount;
+}
+
+SSL_CTX* OpenSslFake_LastUsePrivateKeyFileCtxArg(void)
+{
+    return lastUsePrivateKeyFileCtxArg;
+}
+
+const char* OpenSslFake_LastClientKeyPath(void)
+{
+    return lastClientKeyPath;
+}
+
+int OpenSslFake_LastClientKeyFileType(void)
+{
+    return lastClientKeyFileType;
+}
+
+void OpenSslFake_SetUsePrivateKeyFileFails(bool fails)
+{
+    usePrivateKeyFileFails = fails;
+}
+
+int SSL_CTX_check_private_key(const SSL_CTX* ctx)
+{
+    checkPrivateKeyCallCount++;
+    lastCheckPrivateKeyCtxArg = (SSL_CTX*) ctx;
+    return checkPrivateKeyFails ? 0 : 1;
+}
+
+int OpenSslFake_CheckPrivateKeyCallCount(void)
+{
+    return checkPrivateKeyCallCount;
+}
+
+SSL_CTX* OpenSslFake_LastCheckPrivateKeyCtxArg(void)
+{
+    return lastCheckPrivateKeyCtxArg;
+}
+
+void OpenSslFake_SetCheckPrivateKeyFails(bool fails)
+{
+    checkPrivateKeyFails = fails;
 }

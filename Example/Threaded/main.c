@@ -29,6 +29,7 @@
 /* TODO(S3.13, #171): replace these three #ifdef blocks with a per-backend
  * ExampleTlsSender factory selected at CMake time. */
 #ifdef SOLIDSYSLOG_HAVE_OPENSSL
+#include "ExampleMtlsConfig.h"
 #include "ExampleTlsConfig.h"
 #include "SolidSyslogTlsStream.h"
 #endif
@@ -66,7 +67,8 @@ static void* ServiceThreadEntry(void* arg)
  */
 static struct SolidSyslogSender* CreateSender(const struct ExampleOptions* options)
 {
-    tlsModeActive = (strcmp(options->transport, "tls") == 0);
+    bool mtlsModeActive = (strcmp(options->transport, "mtls") == 0);
+    tlsModeActive       = (strcmp(options->transport, "tls") == 0) || mtlsModeActive;
 
     struct SolidSyslogResolver* resolver = SolidSyslogGetAddrInfoResolver_Create();
 
@@ -83,18 +85,28 @@ static struct SolidSyslogSender* CreateSender(const struct ExampleOptions* optio
 #ifdef SOLIDSYSLOG_HAVE_OPENSSL
         static struct SolidSyslogTlsStreamConfig tlsStreamConfig = {0};
         tlsStreamConfig.transport                                = SolidSyslogPosixTcpStream_Create();
-        tlsStreamConfig.caBundlePath                             = ExampleTlsConfig_GetCaBundlePath();
-        tlsStreamConfig.serverName                               = ExampleTlsConfig_GetServerName();
-        struct SolidSyslogStream* tlsStream                      = SolidSyslogTlsStream_Create(&tlsStreamConfig);
+        if (mtlsModeActive)
+        {
+            tlsStreamConfig.caBundlePath        = ExampleMtlsConfig_GetCaBundlePath();
+            tlsStreamConfig.serverName          = ExampleMtlsConfig_GetServerName();
+            tlsStreamConfig.clientCertChainPath = ExampleMtlsConfig_GetClientCertChainPath();
+            tlsStreamConfig.clientKeyPath       = ExampleMtlsConfig_GetClientKeyPath();
+        }
+        else
+        {
+            tlsStreamConfig.caBundlePath = ExampleTlsConfig_GetCaBundlePath();
+            tlsStreamConfig.serverName   = ExampleTlsConfig_GetServerName();
+        }
+        struct SolidSyslogStream* tlsStream = SolidSyslogTlsStream_Create(&tlsStreamConfig);
 
         static struct SolidSyslogStreamSenderConfig tlsSenderConfig = {0};
         tlsSenderConfig.resolver                                    = resolver;
         tlsSenderConfig.stream                                      = tlsStream;
-        tlsSenderConfig.endpoint                                    = ExampleTlsConfig_GetEndpoint;
-        tlsSenderConfig.endpointVersion                             = ExampleTlsConfig_GetEndpointVersion;
-        reliableSender                                              = SolidSyslogStreamSender_Create(&tlsSenderConfig);
+        tlsSenderConfig.endpoint                                    = mtlsModeActive ? ExampleMtlsConfig_GetEndpoint : ExampleTlsConfig_GetEndpoint;
+        tlsSenderConfig.endpointVersion = mtlsModeActive ? ExampleMtlsConfig_GetEndpointVersion : ExampleTlsConfig_GetEndpointVersion;
+        reliableSender                  = SolidSyslogStreamSender_Create(&tlsSenderConfig);
 #else
-        /* --transport tls requested but the build has no OpenSSL — fall through to TCP. */
+        /* --transport tls/mtls requested but the build has no OpenSSL — falls back to plain TCP sender; TLS slot maps to UDP at runtime. */
         tlsModeActive = false;
 #endif
     }

@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 
 from behave import given, when, then
 from environment import (
+    RECEIVED_MTLS_LOG,
     RECEIVED_TCP_LOG,
     RECEIVED_TLS_LOG,
     RECEIVED_UDP_LOG,
@@ -22,6 +23,7 @@ PER_TRANSPORT_LOG = {
     "udp": RECEIVED_UDP_LOG,
     "tcp": RECEIVED_TCP_LOG,
     "tls": RECEIVED_TLS_LOG,
+    "mtls": RECEIVED_MTLS_LOG,
 }
 
 # POSIX-only paths used by the @buffered/threaded scenarios. The cross-platform

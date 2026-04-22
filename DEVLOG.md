@@ -1,5 +1,42 @@
 # Dev Log
 
+## 2026-04-22 — S03.09 mutual TLS (SL4 CR 2.12)
+
+### Decisions
+- Added opt-in `clientCertChainPath` + `clientKeyPath` to
+  `SolidSyslogTlsStreamConfig`. Both NULL = server-auth TLS (existing
+  behaviour). Both set = mTLS. Exactly one set = Open fails — no silent
+  downgrade. Implementation uses `SSL_CTX_use_certificate_chain_file`,
+  `SSL_CTX_use_PrivateKey_file`, and `SSL_CTX_check_private_key` with
+  each return value checked and ctx freed on any failure.
+- Rejected a callback-based cert-rotation API for this story. The
+  `SSL_CTX` is rebuilt on every Open, so on-disk cert rotation is
+  picked up automatically on the next reconnect. S03.10 can revisit.
+- `TlsTestServer` pins TLS 1.2 when client-cert verification is
+  enabled. In TLS 1.3 the client's `SSL_connect` can return before the
+  server has verified the client cert, which would hide a server-side
+  rejection behind the next read. TLS 1.2 keeps the handshake
+  synchronous so integration tests observe the rejection within Open.
+- `TlsTestCert` now emits `basicConstraints=CA:TRUE`. OpenSSL 3's chain
+  validation requires it on issuer certs; previously-working self-signed
+  scenarios are unaffected.
+- BDD adds a second TLS source to `syslog-ng.conf` on port 6515 with
+  `peer-verify(required-trusted)`, leaving the existing 6514 source on
+  `optional-untrusted`. Both paths stay under test.
+- `ExampleSwitchConfig` maps `mtls` onto the TLS slot rather than
+  introducing a fourth slot — the TlsStream is a singleton, so mtls is
+  a flavour of tls rather than a parallel transport. New slot would
+  wait on the multi-instance allocation-strategy epic.
+
+### Deferred
+- Password-protected client keys — OpenSSL's default pw callback
+  prompts stdin, not what embedded callers want. Follow-on if asked.
+- Cert-rotation callback — reconnect-driven rotation was judged
+  sufficient. S03.10 may still exist as a doc+test story.
+
+### Open questions
+- None.
+
 ## 2026-03-28 — GitHub project setup
 
 - Created `epic` label on DavidCozens/solid-syslog

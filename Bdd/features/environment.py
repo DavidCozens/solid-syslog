@@ -15,6 +15,7 @@ STORE_PATH_PREFIX = "/tmp/STORE"
 RECEIVED_UDP_LOG = "Bdd/output/received_udp.log"
 RECEIVED_TCP_LOG = "Bdd/output/received_tcp.log"
 RECEIVED_TLS_LOG = "Bdd/output/received_tls.log"
+RECEIVED_MTLS_LOG = "Bdd/output/received_mtls.log"
 
 
 def wait_for_tcp_port_open(host="syslog-ng", port=5514, timeout=5):

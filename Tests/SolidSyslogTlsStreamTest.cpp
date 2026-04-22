@@ -620,3 +620,192 @@ TEST(SolidSyslogTlsStream, BioCreateCallbackMarksBioInitialised)
     createFn(OpenSslFake_LastBioReturned());
     LONGS_EQUAL(1, OpenSslFake_LastSetInitArg());
 }
+
+/* -------------------------------------------------------------------------
+ * Mutual TLS — client certificate + private key (S03.09).
+ * ------------------------------------------------------------------------- */
+
+TEST(SolidSyslogTlsStream, OpenSkipsClientIdentityWhenBothPathsAreNull)
+{
+    /* Default config: clientCertChainPath and clientKeyPath both NULL. */
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(0, OpenSslFake_UseCertChainFileCallCount());
+    LONGS_EQUAL(0, OpenSslFake_UsePrivateKeyFileCallCount());
+    LONGS_EQUAL(0, OpenSslFake_CheckPrivateKeyCallCount());
+}
+
+TEST(SolidSyslogTlsStream, OpenLoadsClientCertChainFromConfig)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.clientCertChainPath = "/some/path/client.pem";
+    config.clientKeyPath       = "/some/path/client.key";
+    stream                     = SolidSyslogTlsStream_Create(&config);
+    SolidSyslogStream_Open(stream, addr);
+    STRCMP_EQUAL("/some/path/client.pem", OpenSslFake_LastClientCertChainPath());
+}
+
+TEST(SolidSyslogTlsStream, OpenLoadsClientKeyFromConfig)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.clientCertChainPath = "/some/path/client.pem";
+    config.clientKeyPath       = "/some/path/client.key";
+    stream                     = SolidSyslogTlsStream_Create(&config);
+    SolidSyslogStream_Open(stream, addr);
+    STRCMP_EQUAL("/some/path/client.key", OpenSslFake_LastClientKeyPath());
+    LONGS_EQUAL(SSL_FILETYPE_PEM, OpenSslFake_LastClientKeyFileType());
+}
+
+TEST(SolidSyslogTlsStream, OpenChecksClientKeyMatchesCert)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.clientCertChainPath = "/some/path/client.pem";
+    config.clientKeyPath       = "/some/path/client.key";
+    stream                     = SolidSyslogTlsStream_Create(&config);
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(1, OpenSslFake_CheckPrivateKeyCallCount());
+}
+
+TEST(SolidSyslogTlsStream, OpenFailsWhenOnlyClientCertIsSet)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.clientCertChainPath = "/some/path/client.pem";
+    config.clientKeyPath       = nullptr;
+    stream                     = SolidSyslogTlsStream_Create(&config);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(SolidSyslogTlsStream, OpenMakesNoClientIdentityCallsWhenOnlyClientCertIsSet)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.clientCertChainPath = "/some/path/client.pem";
+    config.clientKeyPath       = nullptr;
+    stream                     = SolidSyslogTlsStream_Create(&config);
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(0, OpenSslFake_UseCertChainFileCallCount());
+    LONGS_EQUAL(0, OpenSslFake_UsePrivateKeyFileCallCount());
+    LONGS_EQUAL(0, OpenSslFake_CheckPrivateKeyCallCount());
+}
+
+TEST(SolidSyslogTlsStream, OpenFailsWhenOnlyClientKeyIsSet)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.clientCertChainPath = nullptr;
+    config.clientKeyPath       = "/some/path/client.key";
+    stream                     = SolidSyslogTlsStream_Create(&config);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(SolidSyslogTlsStream, OpenMakesNoClientIdentityCallsWhenOnlyClientKeyIsSet)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.clientCertChainPath = nullptr;
+    config.clientKeyPath       = "/some/path/client.key";
+    stream                     = SolidSyslogTlsStream_Create(&config);
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(0, OpenSslFake_UseCertChainFileCallCount());
+    LONGS_EQUAL(0, OpenSslFake_UsePrivateKeyFileCallCount());
+    LONGS_EQUAL(0, OpenSslFake_CheckPrivateKeyCallCount());
+}
+
+TEST(SolidSyslogTlsStream, PartialClientIdentityConfigFreesCtx)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.clientCertChainPath = "/some/path/client.pem";
+    config.clientKeyPath       = nullptr;
+    stream                     = SolidSyslogTlsStream_Create(&config);
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(1, OpenSslFake_CtxFreeCallCount());
+}
+
+TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenUseCertChainFileFails)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.clientCertChainPath = "/some/path/client.pem";
+    config.clientKeyPath       = "/some/path/client.key";
+    stream                     = SolidSyslogTlsStream_Create(&config);
+    OpenSslFake_SetUseCertChainFileFails(true);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(SolidSyslogTlsStream, UseCertChainFileFailureFreesCtx)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.clientCertChainPath = "/some/path/client.pem";
+    config.clientKeyPath       = "/some/path/client.key";
+    stream                     = SolidSyslogTlsStream_Create(&config);
+    OpenSslFake_SetUseCertChainFileFails(true);
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(1, OpenSslFake_CtxFreeCallCount());
+}
+
+TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenUsePrivateKeyFileFails)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.clientCertChainPath = "/some/path/client.pem";
+    config.clientKeyPath       = "/some/path/client.key";
+    stream                     = SolidSyslogTlsStream_Create(&config);
+    OpenSslFake_SetUsePrivateKeyFileFails(true);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(SolidSyslogTlsStream, UsePrivateKeyFileFailureFreesCtx)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.clientCertChainPath = "/some/path/client.pem";
+    config.clientKeyPath       = "/some/path/client.key";
+    stream                     = SolidSyslogTlsStream_Create(&config);
+    OpenSslFake_SetUsePrivateKeyFileFails(true);
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(1, OpenSslFake_CtxFreeCallCount());
+}
+
+TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenCheckPrivateKeyFails)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.clientCertChainPath = "/some/path/client.pem";
+    config.clientKeyPath       = "/some/path/client.key";
+    stream                     = SolidSyslogTlsStream_Create(&config);
+    OpenSslFake_SetCheckPrivateKeyFails(true);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(SolidSyslogTlsStream, CheckPrivateKeyFailureFreesCtx)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.clientCertChainPath = "/some/path/client.pem";
+    config.clientKeyPath       = "/some/path/client.key";
+    stream                     = SolidSyslogTlsStream_Create(&config);
+    OpenSslFake_SetCheckPrivateKeyFails(true);
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(1, OpenSslFake_CtxFreeCallCount());
+}
+
+TEST(SolidSyslogTlsStream, OpenPassesCtxFromNewToUseCertChainFile)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.clientCertChainPath = "/some/path/client.pem";
+    config.clientKeyPath       = "/some/path/client.key";
+    stream                     = SolidSyslogTlsStream_Create(&config);
+    SolidSyslogStream_Open(stream, addr);
+    POINTERS_EQUAL(OpenSslFake_LastCtxReturned(), OpenSslFake_LastUseCertChainFileCtxArg());
+}
+
+TEST(SolidSyslogTlsStream, OpenPassesCtxFromNewToUsePrivateKeyFile)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.clientCertChainPath = "/some/path/client.pem";
+    config.clientKeyPath       = "/some/path/client.key";
+    stream                     = SolidSyslogTlsStream_Create(&config);
+    SolidSyslogStream_Open(stream, addr);
+    POINTERS_EQUAL(OpenSslFake_LastCtxReturned(), OpenSslFake_LastUsePrivateKeyFileCtxArg());
+}
+
+TEST(SolidSyslogTlsStream, OpenPassesCtxFromNewToCheckPrivateKey)
+{
+    SolidSyslogTlsStream_Destroy();
+    config.clientCertChainPath = "/some/path/client.pem";
+    config.clientKeyPath       = "/some/path/client.key";
+    stream                     = SolidSyslogTlsStream_Create(&config);
+    SolidSyslogStream_Open(stream, addr);
+    POINTERS_EQUAL(OpenSslFake_LastCtxReturned(), OpenSslFake_LastCheckPrivateKeyCtxArg());
+}

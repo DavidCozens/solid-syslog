@@ -15,6 +15,7 @@ struct SolidSyslogTlsStream
 static inline bool             TlsStream_AttachTransportBio(struct SolidSyslogTlsStream* stream);
 static inline void             TlsStream_Close(struct SolidSyslogStream* self);
 static inline bool             TlsStream_ConfigureCipherList(SSL_CTX* ctx, const char* cipherList);
+static inline bool             TlsStream_ConfigureClientIdentity(SSL_CTX* ctx, const struct SolidSyslogTlsStreamConfig* config);
 static inline bool             TlsStream_ConfigureExpectedHostname(struct SolidSyslogTlsStream* stream);
 static inline bool             TlsStream_ConfigureProtocolFloor(SSL_CTX* ctx);
 static inline bool             TlsStream_ConfigureSslContext(SSL_CTX* ctx, const struct SolidSyslogTlsStreamConfig* config);
@@ -118,8 +119,25 @@ static inline SSL_CTX* TlsStream_CreateSslContext(const struct SolidSyslogTlsStr
 
 static inline bool TlsStream_ConfigureSslContext(SSL_CTX* ctx, const struct SolidSyslogTlsStreamConfig* config)
 {
-    return TlsStream_ConfigureTrustAnchors(ctx, config->caBundlePath) && TlsStream_ConfigureProtocolFloor(ctx) &&
-           TlsStream_ConfigureCipherList(ctx, config->cipherList);
+    return TlsStream_ConfigureTrustAnchors(ctx, config->caBundlePath) && TlsStream_ConfigureClientIdentity(ctx, config) &&
+           TlsStream_ConfigureProtocolFloor(ctx) && TlsStream_ConfigureCipherList(ctx, config->cipherList);
+}
+
+static inline bool TlsStream_ConfigureClientIdentity(SSL_CTX* ctx, const struct SolidSyslogTlsStreamConfig* config)
+{
+    bool hasCert = config->clientCertChainPath != NULL;
+    bool hasKey  = config->clientKeyPath != NULL;
+    bool ok      = true;
+    if (hasCert != hasKey)
+    {
+        ok = false; /* mTLS is all-or-nothing — partial config is a setup error */
+    }
+    else if (hasCert)
+    {
+        ok = (SSL_CTX_use_certificate_chain_file(ctx, config->clientCertChainPath) == 1) &&
+             (SSL_CTX_use_PrivateKey_file(ctx, config->clientKeyPath, SSL_FILETYPE_PEM) == 1) && (SSL_CTX_check_private_key(ctx) == 1);
+    }
+    return ok;
 }
 
 static inline bool TlsStream_ConfigureTrustAnchors(SSL_CTX* ctx, const char* caBundlePath)
