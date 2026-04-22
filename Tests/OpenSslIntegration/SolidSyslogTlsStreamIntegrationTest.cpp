@@ -118,3 +118,14 @@ TEST(TlsStreamIntegration, HandshakeRejectedWhenClientDoesNotTrustServerCert)
 
     TlsTestCert_Destroy(&untrusted);
 }
+
+TEST(TlsStreamIntegration, HandshakeRejectedWhenCipherListIsUnsupported)
+{
+    struct TlsTestCertConfig certConfig = {};
+    certConfig.commonName               = "localhost";
+    certConfig.subjectAltDnsNames       = LOCALHOST_SANS;
+    tlsConfig.cipherList                = "NOT-A-REAL-CIPHER";
+    buildScenario(certConfig);
+
+    CHECK_FALSE(SolidSyslogStream_Open(tlsStream, addr));
+}
