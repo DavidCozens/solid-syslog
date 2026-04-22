@@ -16,6 +16,7 @@ static bool             Open(struct SolidSyslogStream* self, const struct SolidS
 static bool             Send(struct SolidSyslogStream* self, const void* buffer, size_t size);
 static SolidSyslogSsize Read(struct SolidSyslogStream* self, void* buffer, size_t size);
 static void             Close(struct SolidSyslogStream* self);
+static bool             AttachTransportBio(struct SolidSyslogTlsStream* stream);
 static bool             ConfigureExpectedHostname(struct SolidSyslogTlsStream* stream);
 static SSL_CTX*         CreateSslContext(const struct SolidSyslogTlsStreamConfig* config);
 static BIO*             CreateTransportBio(struct SolidSyslogTlsStream* stream);
@@ -72,13 +73,10 @@ static bool Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress
     {
         return false;
     }
-    BIO* bio = CreateTransportBio(stream);
-    if (bio == NULL)
+    if (!AttachTransportBio(stream))
     {
         return false;
     }
-    BIO_set_data(bio, stream->config.transport);
-    SSL_set_bio(stream->ssl, bio, bio);
     if (!ConfigureExpectedHostname(stream))
     {
         return false;
@@ -107,6 +105,18 @@ static void Close(struct SolidSyslogStream* self)
     BIO_meth_free(stream->bioMethod);
     stream->bioMethod = NULL;
     SolidSyslogStream_Close(stream->config.transport);
+}
+
+static bool AttachTransportBio(struct SolidSyslogTlsStream* stream)
+{
+    BIO* bio = CreateTransportBio(stream);
+    bool ok  = bio != NULL;
+    if (ok)
+    {
+        BIO_set_data(bio, stream->config.transport);
+        SSL_set_bio(stream->ssl, bio, bio);
+    }
+    return ok;
 }
 
 static bool ConfigureExpectedHostname(struct SolidSyslogTlsStream* stream)
