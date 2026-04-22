@@ -10,22 +10,25 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define TLS_TEST_CERT_RSA_BITS     2048
-#define TLS_TEST_CERT_DEFAULT_VALIDITY_SECONDS 3600
+enum
+{
+    RSA_BITS                 = 2048,
+    DEFAULT_VALIDITY_SECONDS = 3600,
+};
 
-static void SetValidity(X509* cert, time_t notBefore, time_t notAfter);
+static void SetValidity(X509* cert, const struct TlsTestCertConfig* config);
 static void SetSubject(X509* cert, const char* commonName);
-static void AddSubjectAltNames(X509* cert, const char* const* dnsNames);
+static void AddSubjectAltNames(X509* cert, const char* const * dnsNames);
 
 void TlsTestCert_Create(const struct TlsTestCertConfig* config, struct TlsTestCert* out)
 {
-    EVP_PKEY* key  = EVP_RSA_gen(TLS_TEST_CERT_RSA_BITS);
+    EVP_PKEY* key  = EVP_RSA_gen(RSA_BITS);
     X509*     cert = X509_new();
 
     X509_set_version(cert, 2); /* X.509 v3 */
     ASN1_INTEGER_set(X509_get_serialNumber(cert), 1);
 
-    SetValidity(cert, config->notBefore, config->notAfter);
+    SetValidity(cert, config);
     SetSubject(cert, config->commonName);
     AddSubjectAltNames(cert, config->subjectAltDnsNames);
 
@@ -56,15 +59,19 @@ void TlsTestCert_Destroy(struct TlsTestCert* cert)
 void TlsTestCert_WritePemToFile(const struct TlsTestCert* cert, const char* path)
 {
     FILE* file = fopen(path, "w");
+    if (file == NULL)
+    {
+        return;
+    }
     PEM_write_X509(file, cert->cert);
     fclose(file);
 }
 
-static void SetValidity(X509* cert, time_t notBefore, time_t notAfter)
+static void SetValidity(X509* cert, const struct TlsTestCertConfig* config)
 {
     time_t now   = time(NULL);
-    time_t start = (notBefore != 0) ? notBefore : now;
-    time_t end   = (notAfter != 0) ? notAfter : now + TLS_TEST_CERT_DEFAULT_VALIDITY_SECONDS;
+    time_t start = (config->notBefore != 0) ? config->notBefore : now;
+    time_t end   = (config->notAfter != 0) ? config->notAfter : now + DEFAULT_VALIDITY_SECONDS;
     X509_time_adj_ex(X509_getm_notBefore(cert), 0, 0, &start);
     X509_time_adj_ex(X509_getm_notAfter(cert), 0, 0, &end);
 }
@@ -75,7 +82,7 @@ static void SetSubject(X509* cert, const char* commonName)
     X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, (const unsigned char*) commonName, -1, -1, 0);
 }
 
-static void AddSubjectAltNames(X509* cert, const char* const* dnsNames)
+static void AddSubjectAltNames(X509* cert, const char* const * dnsNames)
 {
     if (dnsNames == NULL)
     {

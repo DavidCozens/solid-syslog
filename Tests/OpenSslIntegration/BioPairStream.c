@@ -72,11 +72,7 @@ static SolidSyslogSsize Read(struct SolidSyslogStream* self, void* buffer, size_
             result = (SolidSyslogSsize) bytesRead;
             done   = true;
         }
-        else if (!BIO_should_retry(stream->bio))
-        {
-            done = true;
-        }
-        else if (stream->pump == NULL)
+        else if (!BIO_should_retry(stream->bio) || stream->pump == NULL)
         {
             done = true;
         }

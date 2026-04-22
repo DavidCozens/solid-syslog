@@ -60,6 +60,7 @@ TEST_GROUP(TlsStreamIntegration)
         tlsStream              = SolidSyslogTlsStream_Create(&tlsConfig);
     }
 };
+
 // clang-format on
 
 static const char* const LOCALHOST_SANS[] = {"localhost", nullptr};

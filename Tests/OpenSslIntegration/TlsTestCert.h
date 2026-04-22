@@ -17,14 +17,14 @@ EXTERN_C_BEGIN
     struct TlsTestCertConfig
     {
         const char*               commonName;
-        const char* const*        subjectAltDnsNames; /* NULL-terminated array; NULL if no SAN */
+        const char* const *       subjectAltDnsNames; /* NULL-terminated array; NULL if no SAN */
         time_t                    notBefore;          /* 0 = now */
         time_t                    notAfter;           /* 0 = now + 3600 */
         const struct TlsTestCert* issuer;             /* NULL = self-signed */
     };
 
     void TlsTestCert_Create(const struct TlsTestCertConfig* config, struct TlsTestCert* out);
-    void TlsTestCert_Destroy(struct TlsTestCert* cert);
+    void TlsTestCert_Destroy(struct TlsTestCert * cert);
     void TlsTestCert_WritePemToFile(const struct TlsTestCert* cert, const char* path);
 
 EXTERN_C_END

@@ -16,11 +16,11 @@ EXTERN_C_BEGIN
     };
 
     struct TlsTestServer* TlsTestServer_Create(const struct TlsTestServerConfig* config);
-    void                  TlsTestServer_Destroy(struct TlsTestServer* self);
+    void                  TlsTestServer_Destroy(struct TlsTestServer * self);
 
     /* Returns the client-facing end of the internal BIO pair. Pass to
      * BioPairStream_Create and use as the transport for SolidSyslogTlsStream. */
-    BIO* TlsTestServer_ClientSideBio(struct TlsTestServer* self);
+    BIO* TlsTestServer_ClientSideBio(struct TlsTestServer * self);
 
     /* Advances the server's state machine one step. Used as a pump callback
      * so client-side reads can make cooperative progress. Context is the

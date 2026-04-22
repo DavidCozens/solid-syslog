@@ -9,11 +9,9 @@ EXTERN_C_BEGIN
 
     typedef void (*BioPairStreamPumpFunction)(void* context);
 
-    struct SolidSyslogStream* BioPairStream_Create(BIO* bio);
-    void                      BioPairStream_Destroy(struct SolidSyslogStream* self);
-    void                      BioPairStream_SetPump(struct SolidSyslogStream* self,
-                                                    BioPairStreamPumpFunction pump,
-                                                    void*                     context);
+    struct SolidSyslogStream* BioPairStream_Create(BIO * bio);
+    void                      BioPairStream_Destroy(struct SolidSyslogStream * self);
+    void                      BioPairStream_SetPump(struct SolidSyslogStream * self, BioPairStreamPumpFunction pump, void* context);
 
 EXTERN_C_END
 

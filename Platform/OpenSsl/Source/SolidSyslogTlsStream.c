@@ -16,7 +16,7 @@ static bool             Open(struct SolidSyslogStream* self, const struct SolidS
 static bool             Send(struct SolidSyslogStream* self, const void* buffer, size_t size);
 static SolidSyslogSsize Read(struct SolidSyslogStream* self, void* buffer, size_t size);
 static void             Close(struct SolidSyslogStream* self);
-static SSL_CTX*         CreateSslContext(const char* caBundlePath, const char* cipherList);
+static SSL_CTX*         CreateSslContext(const struct SolidSyslogTlsStreamConfig* config);
 static BIO*             CreateTransportBio(struct SolidSyslogTlsStream* stream);
 static int              TransportBioCreate(BIO* bio);
 static int              TransportBioRead(BIO* bio, char* buffer, int size);
@@ -61,7 +61,7 @@ static bool Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress
     {
         return false;
     }
-    stream->ctx = CreateSslContext(stream->config.caBundlePath, stream->config.cipherList);
+    stream->ctx = CreateSslContext(&stream->config);
     if (stream->ctx == NULL)
     {
         return false;
@@ -178,14 +178,14 @@ static long TransportBioCtrl(BIO* bio, int cmd, long larg, void* parg)
     }
 }
 
-static SSL_CTX* CreateSslContext(const char* caBundlePath, const char* cipherList)
+static SSL_CTX* CreateSslContext(const struct SolidSyslogTlsStreamConfig* config)
 {
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
     if (ctx == NULL)
     {
         return NULL;
     }
-    if (SSL_CTX_load_verify_locations(ctx, caBundlePath, NULL) != 1)
+    if (SSL_CTX_load_verify_locations(ctx, config->caBundlePath, NULL) != 1)
     {
         SSL_CTX_free(ctx);
         return NULL;
@@ -196,7 +196,7 @@ static SSL_CTX* CreateSslContext(const char* caBundlePath, const char* cipherLis
         SSL_CTX_free(ctx);
         return NULL;
     }
-    if (cipherList != NULL && SSL_CTX_set_cipher_list(ctx, cipherList) != 1)
+    if (config->cipherList != NULL && SSL_CTX_set_cipher_list(ctx, config->cipherList) != 1)
     {
         SSL_CTX_free(ctx);
         return NULL;

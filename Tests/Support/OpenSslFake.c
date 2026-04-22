@@ -50,7 +50,7 @@ static SSL_CTX* lastSslNewCtxArg;
 static bool     sslNewFails;
 
 /* BIO_meth_new */
-static bool        bioMethNewFails;
+static bool bioMethNewFails;
 
 /* BIO_meth_free */
 static int         bioMethFreeCallCount;
