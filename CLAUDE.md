@@ -316,7 +316,7 @@ Headers in `Core/Interface/` are split by audience — each user includes only w
 | `SolidSyslogSenderDefinition.h` | Sender implementors (extension point) | `SolidSyslogSender` vtable struct (`Send`, `Disconnect`) |
 | `SolidSyslogResolver.h` | Any code that needs to resolve a destination | `SolidSyslogResolver_Resolve(resolver, transport, host, port, *out)` |
 | `SolidSyslogUdpSender.h` | System setup code using UDP transport | `SolidSyslogUdpSenderConfig` (resolver, datagram, endpoint, endpointVersion), `SolidSyslogUdpSender_Create`, `_Destroy`, `SOLIDSYSLOG_UDP_DEFAULT_PORT` |
-| `SolidSyslogStreamSender.h` | System setup code using octet-framed transport (RFC 6587) over any Stream — TCP today, TLS in future | `SolidSyslogStreamSenderConfig` (resolver, stream, endpoint, endpointVersion), `SolidSyslogStreamSender_Create`, `_Destroy` |
+| `SolidSyslogStreamSender.h` | System setup code using octet-framed transport (RFC 6587) over any Stream — `SolidSyslogPosixTcpStream` (TCP), `SolidSyslogTlsStream` (TLS; OpenSSL reference integration), or a caller-supplied Stream backend | `SolidSyslogStreamSenderConfig` (resolver, stream, endpoint, endpointVersion), `SolidSyslogStreamSender_Create`, `_Destroy` |
 | `SolidSyslogSwitchingSender.h` | System setup code composing multiple inner senders | `SolidSyslogSwitchingSenderConfig` (senders, senderCount, selector), `SolidSyslogSwitchingSenderSelector`, `SolidSyslogSwitchingSender_Create`, `_Destroy` |
 | `SolidSyslogBufferDefinition.h` | Buffer implementors (extension point) | `SolidSyslogBuffer` vtable struct |
 | `SolidSyslogNullBuffer.h` | System setup code (single-task, no buffering) | `SolidSyslogNullBuffer_Create`, `_Destroy` |
