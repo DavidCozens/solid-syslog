@@ -1,5 +1,38 @@
 # Dev Log
 
+## 2026-04-22 — S03.14 BDD exercises TLS 1.3
+
+### Decisions
+- Tightened syslog-ng's TLS and mTLS receivers
+  (`syslog-ng-full.conf`) to require TLS 1.3 only by adding
+  `ssl-options("no-sslv2", "no-sslv3", "no-tlsv1", "no-tlsv11", "no-tlsv12")`
+  to both `tls(...)` blocks. Existing `@tls` / `@mtls` / switching-TCP↔TLS
+  scenarios remain unmodified and now prove 1.3 negotiation implicitly —
+  they all pass because our TLS stream's minimum-version floor is 1.2
+  (allows 1.3) and OpenSSL prefers the highest mutually-supported version.
+- Added one new explicit scenario to `tls_transport.feature` tagged
+  `@tls13`, with comment noting that message delivery here proves TLS 1.3
+  negotiation because the receiver refuses anything else. The
+  `syslog-ng-full.conf` is the contract; any future loosening of the
+  receiver would turn the scenario back into a generic "TLS works" test,
+  so the contract-via-config is self-documenting.
+- No library code changes. Current code already negotiates 1.3
+  transparently. 1.3-specific cipher pinning via
+  `SSL_CTX_set_ciphersuites` is a separate concern; deferred to a future
+  story if a deployment needs it. The existing 1.2 cipher-list pin is
+  ignored under 1.3 (different OpenSSL API path) — no breakage.
+
+### Deferred
+- 1.3 cipher-suite pinning API exposure.
+- Explicit assertion in BDD that reads the negotiated version from
+  syslog-ng logs — not worth the template + oracle plumbing while the
+  syslog-ng receiver config is the binding contract.
+- Running the library against a 1.3-only server on a different OpenSSL
+  version (e.g. boringssl) — separate TLS-backend story.
+
+### Open questions
+- None. E03 is now story-complete; closing the epic on merge.
+
 ## 2026-04-22 — S03.13 TLS backend composition via CMake
 
 ### Decisions
