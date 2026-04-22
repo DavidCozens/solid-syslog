@@ -60,13 +60,13 @@ Status key:
 
 | Section | Requirement | Status | Notes |
 |---|---|---|---|
-| 4.1 | TLS over TCP | Planned | [E3](https://github.com/DavidCozens/solid-syslog/issues/5) |
-| 4.2 | Default port 6514 | Planned | [E3](https://github.com/DavidCozens/solid-syslog/issues/5) |
-| 5.1 | Server certificate validation | Planned | [E3](https://github.com/DavidCozens/solid-syslog/issues/5) |
-| 5.2 | Mutual TLS (client certificate) | Planned | [E3](https://github.com/DavidCozens/solid-syslog/issues/5) |
-| 5.3 | TLS 1.2+ cipher suites | Planned | [E3](https://github.com/DavidCozens/solid-syslog/issues/5) |
-| 5.4 | Octet counting framing (mandatory for TLS) | Planned | Will reuse existing octet counting from TCP sender |
-| 5.5 | TLS close_notify handling | Planned | [E3](https://github.com/DavidCozens/solid-syslog/issues/5) |
+| 4.1 | TLS over TCP | Supported | `SolidSyslogTlsStream` wraps a TCP `Stream` (typically `SolidSyslogPosixTcpStream`) |
+| 4.2 | Default port 6514 | Partial | Caller-supplied via endpoint callback; no `SOLIDSYSLOG_TLS_DEFAULT_PORT` constant shipped. The Threaded example uses 6514 |
+| 5.1 | Server certificate validation | Supported | `SSL_VERIFY_PEER` + `SSL_CTX_load_verify_locations` + `SSL_set1_host` hostname check |
+| 5.2 | Mutual TLS (client certificate) | Supported | Optional `clientCertChainPath` / `clientKeyPath` on `SolidSyslogTlsStreamConfig`; `SSL_CTX_check_private_key` confirms pairing |
+| 5.3 | TLS 1.2+ cipher suites | Supported | `SSL_CTX_set_min_proto_version(TLS1_2_VERSION)` pinned; caller-supplied `cipherList` via `SSL_CTX_set_cipher_list` |
+| 5.4 | Octet counting framing (mandatory for TLS) | Supported | Reuses `SolidSyslogStreamSender` (RFC 6587 framing is identical) |
+| 5.5 | TLS close_notify handling | Supported | `SSL_shutdown` in `TlsStream_Close` |
 
 ## Summary
 
@@ -75,4 +75,4 @@ Status key:
 | RFC 5424 | 17 | 10 | 5 | 2 | 0 |
 | RFC 5426 | 6 | 3 | 1 | 0 | 2 |
 | RFC 6587 | 6 | 2 | 2 | 2 | 0 |
-| RFC 5425 | 7 | 0 | 0 | 7 | 0 |
+| RFC 5425 | 7 | 6 | 1 | 0 | 0 |

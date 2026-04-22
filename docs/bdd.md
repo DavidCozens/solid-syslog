@@ -24,7 +24,8 @@ fail here.
                               │   binary     ││
                               └──────┬───────┘│
                                      │        │
-                                UDP 5514      │
+                            UDP 5514 / TCP 5514│
+                            TLS 6514 / mTLS 6515
                                      │        │
                                      ▼        │
                               ┌──────────────┐│
@@ -33,14 +34,14 @@ fail here.
                               └──────┬───────┘│
                                      │ writes │
                                      ▼        ▼
-                              Bdd/output/received.log
+                              Bdd/output/received*.log
 ```
 
 Two Docker Compose services collaborate:
 
 | Service | Role |
 |---|---|
-| `syslog-ng` | Receives UDP syslog on port 5514, parses RFC 5424, writes parsed fields to a log file |
+| `syslog-ng` | Receives syslog on UDP / TCP 5514, TLS 6514, and mTLS 6515; parses RFC 5424; writes parsed fields to per-transport log files |
 | `behave` | Runs Gherkin scenarios that invoke the example binary and assert on the parsed output |
 
 The example binary is built in the `gcc` container but executed by Behave via `subprocess.run`.
@@ -60,9 +61,11 @@ syslog-ng (writer) and Behave (reader) without any network file transfer.
 
 ## syslog-ng configuration
 
-The syslog-ng config (`Bdd/syslog-ng/syslog-ng.conf`) uses the `syslog()` source driver,
-which understands RFC 5424 natively. It writes one line per received message using a key=value
-template:
+The syslog-ng config (`Bdd/syslog-ng/syslog-ng.conf`) declares four `syslog()` sources —
+UDP and TCP on 5514, server-auth TLS on 6514, and mutual TLS (`peer-verify(required-trusted)`)
+on 6515 — all parsing RFC 5424 natively. Every message is tee'd to both `received.log`
+(catch-all) and a per-transport log file (`received_udp.log`, `received_tcp.log`,
+`received_tls.log`, `received_mtls.log`) using a key=value template:
 
 ```
 PRIORITY=14 TIMESTAMP=2009-03-23T00:00:00+00:00 HOSTNAME=TestHost APP_NAME=TestApp PROCID=1234 MSGID=TestMsgId STRUCTURED_DATA= MSG=Test message
@@ -103,8 +106,9 @@ response = sock.recv(1024)  # b'OK Config reload successful\n.\n'
 sock.close()
 ```
 
-This will be needed when BDD scenarios require different syslog-ng source configurations —
-for example, switching from UDP to TLS transport in E3.
+This is exercised by scenarios that need a different syslog-ng source configuration — for
+example, the TLS and mTLS scenarios swap in tighter `peer-verify` settings and reload without
+restarting the container.
 
 ## Feature tags
 
@@ -117,6 +121,8 @@ etc.) without rewriting feature tags.
 | --- | --- |
 | `@udp` | Needs UDP transport |
 | `@tcp` | Needs TCP transport (RFC 6587 framing) |
+| `@tls` | Needs TLS transport (RFC 5425, server-auth) |
+| `@mtls` | Needs mutual TLS (client cert + key) |
 | `@buffered` | Drives the long-running threaded example (interactive process protocol — buffer + service thread; transitively covers store-and-forward, oracle reload, signal-kill scenarios) |
 
 Two rollout markers are also used (temporary; remove once the scenario passes):

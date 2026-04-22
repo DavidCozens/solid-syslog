@@ -14,7 +14,25 @@ Designed for resource-constrained environments:
 
 ## Status
 
-Early development. Walking skeleton in place. Not yet suitable for production use.
+Approaching feature-complete for POSIX and Windows: RFC 5424 structured
+formatting, UDP / TCP / TLS / mTLS transport, asynchronous buffering, rotating
+file store-and-forward with CRC-16 integrity, and the full
+[IEC 62443 SL1–SL4 component set](docs/iec62443.md).
+
+**Not yet production-ready**, and no API stability guarantee yet. Known gaps:
+
+- Public API may evolve — multi-instance senders / streams
+  ([#169](https://github.com/DavidCozens/solid-syslog/issues/169)) and
+  additional platform backends (RTOS, custom) are still to land.
+- At-rest integrity is CRC-16 only; HMAC + AES-at-rest are planned for SL4
+  ([E17 #105](https://github.com/DavidCozens/solid-syslog/issues/105)).
+- TLS revocation (CRL / OCSP) is deferred to the OS trust store; the library
+  itself does not perform revocation checks.
+- PRINTUSASCII header validation and UTF-8-safe body truncation not yet
+  enforced ([#120](https://github.com/DavidCozens/solid-syslog/issues/120),
+  [#121](https://github.com/DavidCozens/solid-syslog/issues/121)).
+- Comprehensive error guards still rolling out
+  ([E12 #31](https://github.com/DavidCozens/solid-syslog/issues/31)).
 
 ## Building and testing
 
@@ -34,9 +52,12 @@ Public headers are split by audience (Interface Segregation Principle):
 - **`SolidSyslogNullBuffer.h`** — direct-send buffer for single-task systems
 - **`SolidSyslogPosixMessageQueueBuffer.h`** — thread-safe POSIX message queue buffer
 - **`SolidSyslogUdpSender.h`** — UDP transport (RFC 5426)
-- **`SolidSyslogStreamSender.h`** — octet-framed syslog (RFC 6587) over any Stream (TCP today, TLS in future). Note: RFC 6587
+- **`SolidSyslogStreamSender.h`** — octet-framed syslog (RFC 6587) over any Stream. Note: RFC 6587
   is a Historic RFC — the IESG recommends TLS (RFC 5425) over plain TCP for new deployments.
   TCP is provided for interoperability with existing infrastructure
+- **`SolidSyslogTlsStream.h`** — OpenSSL-backed TLS 1.2+ Stream (RFC 5425): server cert validation,
+  hostname verification, cipher pinning, optional mutual TLS. Plugs into `SolidSyslogStreamSender`
+  as a drop-in for `SolidSyslogPosixTcpStream`
 - **`SolidSyslogSwitchingSender.h`** — composition sender delegating to one of several
   inner senders via an application-supplied selector callback; `Disconnect`s the
   outgoing inner on every change
@@ -54,7 +75,7 @@ Public headers are split by audience (Interface Segregation Principle):
 
 Two example programs demonstrate usage:
 - **`Example/SingleTask/`** — NullBuffer, single-task bare-metal model
-- **`Example/Threaded/`** — PosixMessageQueueBuffer, two pthreads (logger + service), SwitchingSender over UDP + TCP; `--transport` sets the initial transport, `switch <name>` flips it at runtime
+- **`Example/Threaded/`** — PosixMessageQueueBuffer, two pthreads (logger + service), SwitchingSender over UDP + TCP + TLS + mTLS (TLS build required for the last two); `--transport` sets the initial transport, `switch <name>` flips it at runtime
 
 ## Compliance
 
