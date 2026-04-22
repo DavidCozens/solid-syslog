@@ -127,9 +127,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # --repo is required here: the publish job doesn't check out the
+          # source, so `gh` has no git config to infer the repo from.
           gh release upload "${{ github.event.release.tag_name }}" \
             sbom/sbom.cdx.json \
             sbom/sbom.cdx.json.bundle \
             sbom/source-sha256.txt \
             sbom/source-sha256.txt.bundle \
-            --clobber
+            --clobber \
+            --repo "${{ github.repository }}"
