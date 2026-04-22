@@ -106,7 +106,7 @@ static struct SolidSyslogSender* CreateSender(const struct ExampleOptions* optio
         tlsSenderConfig.endpointVersion = mtlsModeActive ? ExampleMtlsConfig_GetEndpointVersion : ExampleTlsConfig_GetEndpointVersion;
         reliableSender                  = SolidSyslogStreamSender_Create(&tlsSenderConfig);
 #else
-        /* --transport tls/mtls requested but the build has no OpenSSL — fall through to TCP. */
+        /* --transport tls/mtls requested but the build has no OpenSSL — falls back to plain TCP sender; TLS slot maps to UDP at runtime. */
         tlsModeActive = false;
 #endif
     }

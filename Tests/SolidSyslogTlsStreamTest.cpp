@@ -652,6 +652,7 @@ TEST(SolidSyslogTlsStream, OpenLoadsClientKeyFromConfig)
     stream                     = SolidSyslogTlsStream_Create(&config);
     SolidSyslogStream_Open(stream, addr);
     STRCMP_EQUAL("/some/path/client.key", OpenSslFake_LastClientKeyPath());
+    LONGS_EQUAL(SSL_FILETYPE_PEM, OpenSslFake_LastClientKeyFileType());
 }
 
 TEST(SolidSyslogTlsStream, OpenChecksClientKeyMatchesCert)

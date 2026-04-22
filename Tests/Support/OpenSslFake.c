@@ -148,6 +148,7 @@ static bool        useCertChainFileFails;
 static int         usePrivateKeyFileCallCount;
 static SSL_CTX*    lastUsePrivateKeyFileCtxArg;
 static const char* lastClientKeyPath;
+static int         lastClientKeyFileType;
 static bool        usePrivateKeyFileFails;
 
 /* SSL_CTX_check_private_key */
@@ -235,6 +236,7 @@ void OpenSslFake_Reset(void)
     usePrivateKeyFileCallCount  = 0;
     lastUsePrivateKeyFileCtxArg = NULL;
     lastClientKeyPath           = NULL;
+    lastClientKeyFileType       = 0;
     usePrivateKeyFileFails      = false;
     checkPrivateKeyCallCount    = 0;
     lastCheckPrivateKeyCtxArg   = NULL;
@@ -833,10 +835,10 @@ void OpenSslFake_SetUseCertChainFileFails(bool fails)
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- signature fixed by OpenSSL API
 int SSL_CTX_use_PrivateKey_file(SSL_CTX* ctx, const char* file, int type)
 {
-    (void) type;
     usePrivateKeyFileCallCount++;
     lastUsePrivateKeyFileCtxArg = ctx;
     lastClientKeyPath           = file;
+    lastClientKeyFileType       = type;
     return usePrivateKeyFileFails ? 0 : 1;
 }
 
@@ -853,6 +855,11 @@ SSL_CTX* OpenSslFake_LastUsePrivateKeyFileCtxArg(void)
 const char* OpenSslFake_LastClientKeyPath(void)
 {
     return lastClientKeyPath;
+}
+
+int OpenSslFake_LastClientKeyFileType(void)
+{
+    return lastClientKeyFileType;
 }
 
 void OpenSslFake_SetUsePrivateKeyFileFails(bool fails)

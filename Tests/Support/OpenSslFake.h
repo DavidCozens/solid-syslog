@@ -138,6 +138,7 @@ EXTERN_C_BEGIN
     int                OpenSslFake_UsePrivateKeyFileCallCount(void);
     struct ssl_ctx_st* OpenSslFake_LastUsePrivateKeyFileCtxArg(void);
     const char*        OpenSslFake_LastClientKeyPath(void);
+    int                OpenSslFake_LastClientKeyFileType(void);
     void               OpenSslFake_SetUsePrivateKeyFileFails(bool fails);
 
     /* SSL_CTX_check_private_key */
