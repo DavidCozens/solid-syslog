@@ -128,6 +128,23 @@ EXTERN_C_BEGIN
     int                OpenSslFake_CtxFreeCallCount(void);
     struct ssl_ctx_st* OpenSslFake_LastCtxFreeCtxArg(void);
 
+    /* SSL_CTX_use_certificate_chain_file */
+    int                OpenSslFake_UseCertChainFileCallCount(void);
+    struct ssl_ctx_st* OpenSslFake_LastUseCertChainFileCtxArg(void);
+    const char*        OpenSslFake_LastClientCertChainPath(void);
+    void               OpenSslFake_SetUseCertChainFileFails(bool fails);
+
+    /* SSL_CTX_use_PrivateKey_file */
+    int                OpenSslFake_UsePrivateKeyFileCallCount(void);
+    struct ssl_ctx_st* OpenSslFake_LastUsePrivateKeyFileCtxArg(void);
+    const char*        OpenSslFake_LastClientKeyPath(void);
+    void               OpenSslFake_SetUsePrivateKeyFileFails(bool fails);
+
+    /* SSL_CTX_check_private_key */
+    int                OpenSslFake_CheckPrivateKeyCallCount(void);
+    struct ssl_ctx_st* OpenSslFake_LastCheckPrivateKeyCtxArg(void);
+    void               OpenSslFake_SetCheckPrivateKeyFails(bool fails);
+
 EXTERN_C_END
 
 #endif /* OPENSSLFAKE_H */

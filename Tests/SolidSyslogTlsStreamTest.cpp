@@ -620,3 +620,16 @@ TEST(SolidSyslogTlsStream, BioCreateCallbackMarksBioInitialised)
     createFn(OpenSslFake_LastBioReturned());
     LONGS_EQUAL(1, OpenSslFake_LastSetInitArg());
 }
+
+/* -------------------------------------------------------------------------
+ * Mutual TLS — client certificate + private key (S03.09).
+ * ------------------------------------------------------------------------- */
+
+TEST(SolidSyslogTlsStream, OpenSkipsClientIdentityWhenBothPathsAreNull)
+{
+    /* Default config: clientCertChainPath and clientKeyPath both NULL. */
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(0, OpenSslFake_UseCertChainFileCallCount());
+    LONGS_EQUAL(0, OpenSslFake_UsePrivateKeyFileCallCount());
+    LONGS_EQUAL(0, OpenSslFake_CheckPrivateKeyCallCount());
+}
