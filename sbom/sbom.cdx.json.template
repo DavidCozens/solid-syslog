@@ -1,0 +1,66 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:${SERIAL_NUMBER}",
+  "version": 1,
+  "metadata": {
+    "timestamp": "${TIMESTAMP}",
+    "tools": [
+      {
+        "vendor": "COSOSO",
+        "name": "solid-syslog-sbom-generator",
+        "version": "${TOOLS_VERSION}"
+      }
+    ],
+    "component": {
+      "bom-ref": "pkg:github/DavidCozens/solid-syslog@${COMMIT_SHA}",
+      "type": "library",
+      "name": "SolidSyslog",
+      "version": "${VERSION}",
+      "description": "A structured syslog client library for embedded and industrial systems, implementing RFC 5424, RFC 5426 (UDP), RFC 6587 (TCP), and RFC 5425 (TLS via a pluggable Stream abstraction).",
+      "purl": "pkg:github/DavidCozens/solid-syslog@${COMMIT_SHA}",
+      "supplier": {
+        "name": "COSOSO (Cozens Software Solutions Limited)",
+        "url": ["https://cososo.co.uk"]
+      },
+      "licenses": [
+        {
+          "license": {
+            "id": "PolyForm-Noncommercial-1.0.0"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/DavidCozens/solid-syslog"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/DavidCozens/solid-syslog/issues"
+        }
+      ],
+      "properties": [
+        {
+          "name": "solidsyslog:scope",
+          "value": "Core/ subtree only — Platform/, Example/, Tests/, Bdd/, ci/, docs/ are out of scope"
+        },
+        {
+          "name": "solidsyslog:runtime",
+          "value": "POSIX or Windows host; TLS requires an integrator-supplied Stream implementation (OpenSSL reference integration shipped)"
+        }
+      ]
+    },
+    "properties": [
+      {
+        "name": "solidsyslog:source-hash-sha256",
+        "value": "${SOURCE_HASH}"
+      },
+      {
+        "name": "solidsyslog:commit-sha",
+        "value": "${COMMIT_SHA}"
+      }
+    ]
+  },
+  "components": []
+}
