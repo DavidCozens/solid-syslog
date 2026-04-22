@@ -302,6 +302,21 @@ TEST(SolidSyslogTlsStream, DestroyAfterCloseDoesNotDoubleFreeBioMethod)
     LONGS_EQUAL(1, OpenSslFake_BioMethFreeCallCount());
 }
 
+TEST(SolidSyslogTlsStream, DestroyFreesSslWhenCloseNotCalled)
+{
+    SolidSyslogStream_Open(stream, addr);
+    SolidSyslogTlsStream_Destroy();
+    LONGS_EQUAL(1, OpenSslFake_FreeCallCount());
+}
+
+TEST(SolidSyslogTlsStream, DestroyAfterCloseDoesNotDoubleFreeSsl)
+{
+    SolidSyslogStream_Open(stream, addr);
+    SolidSyslogStream_Close(stream);
+    SolidSyslogTlsStream_Destroy();
+    LONGS_EQUAL(1, OpenSslFake_FreeCallCount());
+}
+
 /* -------------------------------------------------------------------------
  * Pointer-chain assertions: each OpenSSL call must receive the handle
  * returned by the preceding call, not some stale or NULL pointer.

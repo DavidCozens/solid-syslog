@@ -37,6 +37,11 @@ struct SolidSyslogStream* SolidSyslogTlsStream_Create(const struct SolidSyslogTl
 
 void SolidSyslogTlsStream_Destroy(void)
 {
+    if (instance.ssl != NULL)
+    {
+        SSL_free(instance.ssl);
+        instance.ssl = NULL;
+    }
     if (instance.bioMethod != NULL)
     {
         BIO_meth_free(instance.bioMethod);
@@ -100,6 +105,7 @@ static void Close(struct SolidSyslogStream* self)
     struct SolidSyslogTlsStream* stream = (struct SolidSyslogTlsStream*) self;
     SSL_shutdown(stream->ssl);
     SSL_free(stream->ssl);
+    stream->ssl = NULL;
     BIO_meth_free(stream->bioMethod);
     stream->bioMethod = NULL;
     SolidSyslogStream_Close(stream->config.transport);
