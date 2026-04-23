@@ -360,3 +360,78 @@ TEST(SolidSyslogFormatter, EscapedStringMaxRawLengthBoundsInputNotOutput)
 
     CHECK_FORMATTED(R"(\"\")");
 }
+
+TEST(SolidSyslogFormatter, PrintUsAsciiStringWithEmptyInputWritesNothing)
+{
+    SolidSyslogFormatter_PrintUsAsciiString(formatter, "", 0);
+
+    CHECK_FORMATTED("");
+}
+
+TEST(SolidSyslogFormatter, PrintUsAsciiStringPassesPrintableCharacterThrough)
+{
+    SolidSyslogFormatter_PrintUsAsciiString(formatter, "A", 1);
+
+    CHECK_FORMATTED("A");
+}
+
+TEST(SolidSyslogFormatter, PrintUsAsciiStringTruncatesAtMaxLength)
+{
+    SolidSyslogFormatter_PrintUsAsciiString(formatter, "hello", 3);
+
+    CHECK_FORMATTED("hel");
+}
+
+TEST(SolidSyslogFormatter, PrintUsAsciiStringSubstitutesSpace)
+{
+    SolidSyslogFormatter_PrintUsAsciiString(formatter, "a b", 3);
+
+    CHECK_FORMATTED("a?b");
+}
+
+TEST(SolidSyslogFormatter, PrintUsAsciiStringSubstitutesControlCharacter)
+{
+    SolidSyslogFormatter_PrintUsAsciiString(formatter,
+                                            "a\x01"
+                                            "b",
+                                            3);
+
+    CHECK_FORMATTED("a?b");
+}
+
+TEST(SolidSyslogFormatter, PrintUsAsciiStringSubstitutesDel)
+{
+    SolidSyslogFormatter_PrintUsAsciiString(formatter,
+                                            "a\x7F"
+                                            "b",
+                                            3);
+
+    CHECK_FORMATTED("a?b");
+}
+
+TEST(SolidSyslogFormatter, PrintUsAsciiStringSubstitutesHighBitByte)
+{
+    SolidSyslogFormatter_PrintUsAsciiString(formatter,
+                                            "a\xC3"
+                                            "b",
+                                            3);
+
+    CHECK_FORMATTED("a?b");
+}
+
+TEST(SolidSyslogFormatter, PrintUsAsciiStringPassesBangAndTildeBoundariesThrough)
+{
+    SolidSyslogFormatter_PrintUsAsciiString(formatter, "!~", 2);
+
+    CHECK_FORMATTED("!~");
+}
+
+TEST(SolidSyslogFormatter, PrintUsAsciiStringTruncationBoundsSubstitution)
+{
+    SolidSyslogFormatter_PrintUsAsciiString(formatter,
+                                            "abc\x01"
+                                            "def",
+                                            3);
+
+    CHECK_FORMATTED("abc");
+}

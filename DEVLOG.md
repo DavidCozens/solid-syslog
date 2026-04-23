@@ -1,5 +1,64 @@
 # Dev Log
 
+## 2026-04-23 — S12.09 PRINTUSASCII validation for RFC 5424 header fields
+
+### Decisions
+- **New formatter primitive `SolidSyslogFormatter_PrintUsAsciiString`.**
+  Sits alongside `BoundedString` and `EscapedString` in the same family
+  — same call shape, same null-terminate discipline, same bounded-loop
+  semantics. Validation lives in the primitive, not in
+  `FormatStringField` or `FormatMsgId`, because MSGID goes through a
+  different call path than the three callback-driven fields;
+  primitive-level keeps the rule in one place and the adoption a
+  one-line swap per call site.
+- **Substitute non-PRINTUSASCII bytes with `?`.** Matches syslog-ng /
+  rsyslog convention. Silent — no PRIVAL flag, no counter SD-ELEMENT.
+  PRIVAL is `facility × 8 + severity`, not a flag carrier; flipping a
+  severity bit would lose semantic information. SIEMs that care detect
+  `?` themselves.
+- **Signed / unsigned `char` both handled.** The RFC's PRINTUSASCII
+  range `[33, 126]` implemented as
+  `(value >= LOWEST_PRINTABLE_US_ASCII) && (value <= HIGHEST_PRINTABLE_US_ASCII)`
+  — `'~'` is 126, so a `signed char` high-bit byte (negative) and an
+  `unsigned char` high-bit byte (> 126) both fail the upper bound.
+  No explicit `unsigned char` cast needed.
+- **Same truncation semantic as `BoundedString`.** Substitution is
+  1-byte-in / 1-byte-out, so `maxLength` bounds input consumed and
+  output bytes identically. No 2× storage considerations like
+  `EscapedString`.
+- **Name registers split deliberately.** Public API
+  `SolidSyslogFormatter_PrintUsAsciiString` echoes the RFC token
+  `PRINTUSASCII`. Internal helpers and constants use the English
+  descriptor "Printable" (`IsPrintableUsAscii`, `LOWEST_PRINTABLE_US_ASCII`,
+  `NON_PRINTABLE_SUBSTITUTE`) because they read as prose in context.
+
+### Deferred
+- **Oracle round-trip BDD.** No parameterised fixture today that drives
+  non-printable bytes through hostname/app-name/procid/msgid
+  end-to-end. Same argument as S07.04 — cost of scaffolding exceeds
+  benefit given how well unit tests cover the primitive. If a
+  parameterised BDD fixture arrives later (E14 is one candidate host),
+  PRINTUSASCII scenarios plug into it.
+
+### Open questions for the blog source
+- **What makes a primitive promotion-worthy?** `EscapedString` and
+  `PrintUsAsciiString` both started as "do one thing at each char".
+  They earned their place in the formatter family because (a) every
+  call site that needed the rule could get it with a one-line swap,
+  and (b) the rule was uniform across call sites. If either failed,
+  you'd want the rule expressed inline or in a higher-level helper.
+  That's a clean heuristic for future policy primitives (UTF-8 safe
+  truncation next).
+- **Duplication of idiom vs duplication of logic.** Three of the
+  formatter primitives now share
+  `while ((len < maxLength) && (source[len] != '\0'))`. Considered
+  extracting — function pointer, macro, `MoreToFormat()` helper — all
+  rejected: the repeated thing is a C idiom for bounded-nul iteration,
+  the distinctive content is the one-line per-char dispatch, and
+  future divergence (UTF-8 boundary-walk in S12.10) would fight a
+  shared abstraction. Rule of three presumes repeated *logic*, not
+  repeated *idiom*.
+
 ## 2026-04-23 — S07.04 escape RFC 5424 PARAM-VALUE specials
 
 ### Decisions

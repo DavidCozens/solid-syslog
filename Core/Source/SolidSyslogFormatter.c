@@ -14,15 +14,20 @@ struct SolidSyslogFormatter
 SOLIDSYSLOG_STATIC_ASSERT(sizeof(struct SolidSyslogFormatter) == SOLIDSYSLOG_FORMATTER_OVERHEAD * sizeof(SolidSyslogFormatterStorage),
                           "SOLIDSYSLOG_FORMATTER_OVERHEAD does not match struct layout");
 
-static const char QUOTE         = '"';
-static const char BACKSLASH     = '\\';
-static const char CLOSE_BRACKET = ']';
-static const char ESCAPE_PREFIX = '\\';
+static const char QUOTE                      = '"';
+static const char BACKSLASH                  = '\\';
+static const char CLOSE_BRACKET              = ']';
+static const char ESCAPE_PREFIX              = '\\';
+static const char LOWEST_PRINTABLE_US_ASCII  = '!';
+static const char HIGHEST_PRINTABLE_US_ASCII = '~';
+static const char NON_PRINTABLE_SUBSTITUTE   = '?';
 
 static inline void WriteChar(struct SolidSyslogFormatter* formatter, char value);
 static inline void WriteEscapedChar(struct SolidSyslogFormatter* formatter, char value);
+static inline void WritePrintableUsAsciiChar(struct SolidSyslogFormatter* formatter, char value);
 static inline void NullTerminate(struct SolidSyslogFormatter* formatter);
 static inline bool NeedsEscape(char value);
+static inline bool IsPrintableUsAscii(char value);
 static inline char DigitToChar(uint32_t value);
 static size_t      CountDigits(uint32_t value);
 
@@ -99,6 +104,35 @@ static inline void WriteEscapedChar(struct SolidSyslogFormatter* formatter, char
 static inline bool NeedsEscape(char value)
 {
     return (value == QUOTE) || (value == BACKSLASH) || (value == CLOSE_BRACKET);
+}
+
+void SolidSyslogFormatter_PrintUsAsciiString(struct SolidSyslogFormatter* formatter, const char* source, size_t maxLength)
+{
+    size_t len = 0;
+
+    while ((len < maxLength) && (source[len] != '\0'))
+    {
+        WritePrintableUsAsciiChar(formatter, source[len]);
+        len++;
+    }
+    NullTerminate(formatter);
+}
+
+static inline void WritePrintableUsAsciiChar(struct SolidSyslogFormatter* formatter, char value)
+{
+    if (IsPrintableUsAscii(value))
+    {
+        WriteChar(formatter, value);
+    }
+    else
+    {
+        WriteChar(formatter, NON_PRINTABLE_SUBSTITUTE);
+    }
+}
+
+static inline bool IsPrintableUsAscii(char value)
+{
+    return (value >= LOWEST_PRINTABLE_US_ASCII) && (value <= HIGHEST_PRINTABLE_US_ASCII);
 }
 
 void SolidSyslogFormatter_Uint32(struct SolidSyslogFormatter* formatter, uint32_t value)
