@@ -24,17 +24,20 @@ source-tree-sha256.txt.bundle
 
 ## 1. Verify the source is what we claim
 
-`source-tree-sha256.txt` records the content-tree SHA-256 of the `Core/` and
-`Platform/` subdirectories at the release commit. The hash is deterministic
-across git versions, archive formats, locales, and tooling — it depends only
-on the bytes of each tracked file and the sorted list of paths.
+`source-tree-sha256.txt` records the content-tree SHA-256 of the product at
+the release commit. The product scope is `Core/` + `Platform/` plus the
+root-level `CMakeLists.txt`, `CMakePresets.json`, and `LICENSE.md`. The hash
+is deterministic across git versions, archive formats, locales, and tooling
+— it depends only on the bytes of each tracked file and the sorted list of
+paths.
 
 ### Reproduce with git (authoritative)
 
 ```shell
 git clone --depth 1 --branch v<version> https://github.com/DavidCozens/solid-syslog.git
 cd solid-syslog
-git ls-tree -r --name-only HEAD -- Core/ Platform/ \
+git ls-tree -r --name-only HEAD -- \
+    Core/ Platform/ CMakeLists.txt CMakePresets.json LICENSE.md \
   | LC_ALL=C sort \
   | while IFS= read -r path; do
       printf "%s  %s\n" "$(git show "HEAD:$path" | sha256sum | cut -d' ' -f1)" "$path"
@@ -56,10 +59,10 @@ the tree the SBOM describes.
 ### Reproduce without git (fallback, working tree only)
 
 If you don't have a git clone — e.g. you received a source archive instead —
-but you do have an extracted `Core/` and `Platform/` directory tree:
+but you do have an extracted working tree with the product files present:
 
 ```shell
-find Core Platform -type f \
+find Core Platform CMakeLists.txt CMakePresets.json LICENSE.md -type f \
   | LC_ALL=C sort \
   | while IFS= read -r path; do
       printf "%s  %s\n" "$(sha256sum "$path" | cut -d' ' -f1)" "$path"
@@ -67,10 +70,14 @@ find Core Platform -type f \
   | sha256sum | cut -d' ' -f1
 ```
 
-Same hash expected, same comparison. Caveat: this form assumes the working
-tree is clean — any untracked or locally-modified file under `Core/` or
-`Platform/` will change the hash. The git form is stricter because it
-always reads from the committed tree.
+Same hash expected, same comparison. Caveats:
+- Assumes the working tree is clean — any untracked or locally-modified
+  file under the in-scope paths will change the hash.
+- Assumes line endings are LF on disk (git's `.gitattributes` enforces
+  this at checkout; some extraction tools may convert on platforms that
+  default to CRLF).
+
+The git form is stricter because it always reads from the committed tree.
 
 ### If the hashes don't match
 

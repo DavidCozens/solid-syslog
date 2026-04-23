@@ -43,7 +43,7 @@
       "properties": [
         {
           "name": "solidsyslog:scope",
-          "value": "Core/ and Platform/ subdirectories — Example/, Tests/, Bdd/, ci/, docs/, .devcontainer/, .github/ are out of scope (reference / harness / infrastructure, not shipped product)"
+          "value": "Core/ and Platform/ subdirectories, plus root-level CMakeLists.txt, CMakePresets.json, and LICENSE.md (shipped library source + build contract + licence text). Example/, Tests/, Bdd/, ci/, docs/, .devcontainer/, .github/, sbom/, scripts/, and the other root-level docs/meta files are out of scope (reference / harness / CI / dev-infra / meta, not shipped product)."
         },
         {
           "name": "solidsyslog:runtime-environment",

@@ -1,5 +1,34 @@
 # Dev Log
 
+## 2026-04-23 — S19.02 widen SBOM product scope to include build contract and licence
+
+### Decisions
+- SBOM product scope widened from `Core/` + `Platform/` to
+  `Core/` + `Platform/` + root `CMakeLists.txt` + `CMakePresets.json`
+  + `LICENSE.md`. Rationale: the earlier scope matched the CLAUDE.md
+  support tiers (Tier 1 Core, Tier 2 Platform) but missed two
+  integrator-facing realities — the top-level build contract
+  (CMakeLists.txt, CMakePresets.json) and the licence text
+  (LICENSE.md). Tampering with either is a genuine integrity concern;
+  not covering them left a gap a careful client would notice.
+- Deliberately still excluded: docs, tests, examples, CI, dev-env,
+  VSCode config, scripts, the SBOM template itself, and the root-level
+  meta files (README, CHANGELOG, CLAUDE, SKILL, DEVLOG, .clang-format,
+  .clang-tidy, .gitattributes, .gitignore, .release-please-manifest).
+  Informational or agent-facing, not library source. Including them
+  would inflate the scope without reducing integrity risk.
+- Content-tree hash algorithm unchanged — just the pathspec list
+  widens. Primary (git-based) and fallback (find-based) recipes both
+  updated. Local double-check: both recipes produce the same hash for
+  the new 110-file scope.
+
+### Deferred
+- None for this scope decision.
+
+### Open questions
+- None. Next rehearsal throwaway release will demonstrate the new
+  hash value flows through cleanly, as before.
+
 ## 2026-04-23 — S19.02 swap source-tarball hash for content-tree hash
 
 ### Decisions
