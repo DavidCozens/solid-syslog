@@ -1,1 +1,28 @@
+# Default: auto-detect text vs binary, store and check out text as LF.
+# This is the strong guarantee the content-tree hash relies on.
 * text=auto eol=lf
+
+# Explicit LF for the file types integrators interact with most. Redundant
+# with the default rule but acts as documentation of intent.
+*.c        text eol=lf
+*.h        text eol=lf
+*.cpp      text eol=lf
+*.hpp      text eol=lf
+*.cmake    text eol=lf
+*.md       text eol=lf
+*.yml      text eol=lf
+*.yaml     text eol=lf
+*.json     text eol=lf
+*.sh       text eol=lf
+*.py       text eol=lf
+
+# Windows-native scripts — the batch interpreter and older PowerShell require
+# CRLF for specific constructs (here-strings, multi-line control flow).
+# Override the default so these land as CRLF on every platform, including
+# Linux checkouts. The repo has no such files today; these entries are
+# prophylactic so the first one added doesn't immediately break.
+*.bat      text eol=crlf
+*.cmd      text eol=crlf
+*.ps1      text eol=crlf
+*.psm1     text eol=crlf
+*.psd1     text eol=crlf
