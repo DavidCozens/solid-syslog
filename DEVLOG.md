@@ -1,5 +1,58 @@
 # Dev Log
 
+## 2026-04-23 — S07.04 escape RFC 5424 PARAM-VALUE specials
+
+### Decisions
+- **Escape is a formatter primitive, not an SD helper.** New
+  `SolidSyslogFormatter_EscapedString(formatter, source, maxRawLength)`
+  lives alongside `BoundedString` and the digit formatters. Avoids
+  mixing dispatch and format-time plumbing in `StructuredData.c`, and
+  gives E14 custom-SD writers the same primitive to compose into their
+  pre-formatted storage.
+- **`maxRawLength` bounds raw input, not output bytes.** Follows from
+  the RFC's "the documented field limits apply to source content".
+  Each of the escape tests uses `maxRawLength = strlen(input)` so the
+  bound is only satisfied under raw-input semantics; an additional
+  test (`EscapedStringMaxRawLengthBoundsInputNotOutput`) sets the
+  bound below the input length and relies on the resulting output
+  being 2×-not-1× the bound to prove the semantic.
+- **SD pre-format storage sized for worst-case 2× expansion.**
+  `OriginSd`'s storage moved from 115 to 194 bytes (193 content + null).
+  Expressed as a sum of named parts (`ORIGIN_LITERAL_BYTES`,
+  `ORIGIN_CONTENT_MAX`, null terminator) using the new
+  `SOLIDSYSLOG_ESCAPED_MAX_SIZE(rawMax)` macro. Drift-protected by a
+  worst-case test (48 × `]` + 32 × `"`).
+- **Truncation in the main message buffer is the SIEM's concern.**
+  Considered atomic-escape-pair behaviour to avoid dangling `\` on
+  overflow; rejected because no rewind produces a valid message once
+  we're inside an unterminated SD — all strategies (drop char / drop
+  SD / drop message) produce RFC-invalid fragments, same as any
+  truncated datagram. Don't smooth it over at the primitive level.
+
+### Deferred
+- **SD-NAME syntax validation** (RFC 5424 §6.3.2) — the three
+  standard SDs have compile-time-constant names, so validation
+  protects nothing until callers supply names. Moved to E14 (#64)
+  with an explicit scope bullet; original story (#68) updated to
+  reflect the deferral.
+- **Oracle round-trip BDD for escape rules** — proving syslog-ng
+  decodes our escaped output back to the intended value needs a
+  parameterised example fixture. Deferred to E14 where caller-supplied
+  PARAM-VALUE is the natural API surface to drive such scenarios.
+
+### Open questions for the blog source
+- **When does a sizing constant earn a macro?** Between "the magic 194"
+  and "an enum computed from parts via `SOLIDSYSLOG_ESCAPED_MAX_SIZE`
+  plus a null-terminator addend" there's a taste call about how much
+  structure pays for itself. The DRY argument — E14 custom SDs will
+  size the same way — is load-bearing here; for a one-off it would be
+  over-engineered.
+- **Test-double vs. oracle in test helpers.** `escapeEach` in the
+  worst-case test is functionally the escape function, hand-written
+  to match RFC 5424. Not circular (it's the specification oracle)
+  but worth noting the smell: if the oracle drifts from the RFC, both
+  the helper and the production code could be wrong together.
+
 ## 2026-04-23 — S19.02 widen SBOM product scope to include build contract and licence
 
 ### Decisions

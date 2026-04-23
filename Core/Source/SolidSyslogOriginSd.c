@@ -6,7 +6,9 @@ enum
 {
     ORIGIN_SOFTWARE_MAX  = 48,
     ORIGIN_SWVERSION_MAX = 32,
-    ORIGIN_FORMATTED_MAX = 115
+    ORIGIN_LITERAL_BYTES = 33, /* [origin software="" swVersion=""] */
+    ORIGIN_CONTENT_MAX   = ORIGIN_LITERAL_BYTES + SOLIDSYSLOG_ESCAPED_MAX_SIZE(ORIGIN_SOFTWARE_MAX) + SOLIDSYSLOG_ESCAPED_MAX_SIZE(ORIGIN_SWVERSION_MAX),
+    ORIGIN_FORMATTED_MAX = ORIGIN_CONTENT_MAX + 1 /* null terminator */
 };
 
 struct SolidSyslogOriginSd
@@ -34,9 +36,9 @@ struct SolidSyslogStructuredData* SolidSyslogOriginSd_Create(const char* softwar
 
     instance.base.Format = Format;
     SolidSyslogFormatter_BoundedString(f, SD_SOFTWARE_PREFIX, sizeof(SD_SOFTWARE_PREFIX) - 1);
-    SolidSyslogFormatter_BoundedString(f, software, ORIGIN_SOFTWARE_MAX);
+    SolidSyslogFormatter_EscapedString(f, software, ORIGIN_SOFTWARE_MAX);
     SolidSyslogFormatter_BoundedString(f, SD_VERSION_PREFIX, sizeof(SD_VERSION_PREFIX) - 1);
-    SolidSyslogFormatter_BoundedString(f, swVersion, ORIGIN_SWVERSION_MAX);
+    SolidSyslogFormatter_EscapedString(f, swVersion, ORIGIN_SWVERSION_MAX);
     SolidSyslogFormatter_BoundedString(f, SD_SUFFIX, sizeof(SD_SUFFIX) - 1);
 
     return &instance.base;

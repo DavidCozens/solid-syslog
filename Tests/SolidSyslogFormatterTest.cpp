@@ -304,3 +304,59 @@ TEST(SolidSyslogFormatter, Uint32FitsExactly)
 
     CHECK_FORMATTED("123");
 }
+
+TEST(SolidSyslogFormatter, EscapedStringWithEmptyInputWritesNothing)
+{
+    SolidSyslogFormatter_EscapedString(formatter, "", 0);
+
+    CHECK_FORMATTED("");
+}
+
+TEST(SolidSyslogFormatter, EscapedStringPassesOrdinaryCharacterThrough)
+{
+    SolidSyslogFormatter_EscapedString(formatter, "a", 1);
+
+    CHECK_FORMATTED("a");
+}
+
+TEST(SolidSyslogFormatter, EscapedStringTruncatesAtMaxRawLength)
+{
+    SolidSyslogFormatter_EscapedString(formatter, "hello", 3);
+
+    CHECK_FORMATTED("hel");
+}
+
+TEST(SolidSyslogFormatter, EscapedStringEscapesDoubleQuote)
+{
+    SolidSyslogFormatter_EscapedString(formatter, "a\"b", 3);
+
+    CHECK_FORMATTED("a\\\"b");
+}
+
+TEST(SolidSyslogFormatter, EscapedStringEscapesBackslash)
+{
+    SolidSyslogFormatter_EscapedString(formatter, "a\\b", 3);
+
+    CHECK_FORMATTED("a\\\\b");
+}
+
+TEST(SolidSyslogFormatter, EscapedStringEscapesCloseBracket)
+{
+    SolidSyslogFormatter_EscapedString(formatter, "a]b", 3);
+
+    CHECK_FORMATTED("a\\]b");
+}
+
+TEST(SolidSyslogFormatter, EscapedStringEscapesAllThreeSpecialsInOneValue)
+{
+    SolidSyslogFormatter_EscapedString(formatter, "\"\\]", 3);
+
+    CHECK_FORMATTED("\\\"\\\\\\]");
+}
+
+TEST(SolidSyslogFormatter, EscapedStringMaxRawLengthBoundsInputNotOutput)
+{
+    SolidSyslogFormatter_EscapedString(formatter, R"(""""")", 2);
+
+    CHECK_FORMATTED(R"(\"\")");
+}
