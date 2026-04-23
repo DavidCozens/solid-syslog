@@ -323,7 +323,7 @@ static inline void FormatStringField(struct SolidSyslogFormatter* f, SolidSyslog
 
     if (fieldLength > 0)
     {
-        SolidSyslogFormatter_BoundedString(f, SolidSyslogFormatter_AsString(field), fieldLength);
+        SolidSyslogFormatter_PrintUsAsciiString(f, SolidSyslogFormatter_AsString(field), fieldLength);
     }
     else
     {
@@ -337,7 +337,7 @@ static inline void FormatMsgId(struct SolidSyslogFormatter* f, const char* messa
 
     if (StringIsValid(messageId))
     {
-        SolidSyslogFormatter_BoundedString(f, messageId, SOLIDSYSLOG_MAX_MSGID_SIZE - 1);
+        SolidSyslogFormatter_PrintUsAsciiString(f, messageId, SOLIDSYSLOG_MAX_MSGID_SIZE - 1);
     }
 
     if (SolidSyslogFormatter_Length(f) == lengthBefore)

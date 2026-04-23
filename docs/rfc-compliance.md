@@ -18,10 +18,10 @@ Status key:
 | 6.2.1 | VERSION = 1 | Supported | |
 | 6.2.2 | TIMESTAMP — ISO 8601 with microseconds | Supported | 6-digit fractional seconds, UTC offset or `Z` |
 | 6.2.2 | TIMESTAMP — NILVALUE when clock unavailable | Supported | NilClock produces `-` |
-| 6.2.3 | HOSTNAME — max 255 chars, PRINTUSASCII | Partial | Truncated to 255. PRINTUSASCII validation planned — [S12.9](https://github.com/DavidCozens/solid-syslog/issues/120) |
-| 6.2.4 | APP-NAME — max 48 chars, PRINTUSASCII | Partial | Truncated to 48. PRINTUSASCII validation planned — [S12.9](https://github.com/DavidCozens/solid-syslog/issues/120) |
-| 6.2.5 | PROCID — max 128 chars, PRINTUSASCII | Partial | Truncated to 128. PRINTUSASCII validation planned — [S12.9](https://github.com/DavidCozens/solid-syslog/issues/120) |
-| 6.2.6 | MSGID — max 32 chars, PRINTUSASCII | Partial | Truncated to 32. PRINTUSASCII validation planned — [S12.9](https://github.com/DavidCozens/solid-syslog/issues/120) |
+| 6.2.3 | HOSTNAME — max 255 chars, PRINTUSASCII | Supported | Truncated to 255. Non-PRINTUSASCII bytes substituted with `?` via `SolidSyslogFormatter_PrintUsAsciiString` |
+| 6.2.4 | APP-NAME — max 48 chars, PRINTUSASCII | Supported | Truncated to 48. Non-PRINTUSASCII bytes substituted with `?` |
+| 6.2.5 | PROCID — max 128 chars, PRINTUSASCII | Supported | Truncated to 128. Non-PRINTUSASCII bytes substituted with `?` |
+| 6.2.6 | MSGID — max 32 chars, PRINTUSASCII | Supported | Truncated to 32. Non-PRINTUSASCII bytes substituted with `?` |
 | 6.3 | STRUCTURED-DATA — SD-ELEMENTs or NILVALUE | Supported | Extensible via `SolidSyslogStructuredData` vtable |
 | 6.3.3 | SD-PARAM value escaping (`]`, `\`, `"`) | Supported | `SolidSyslogFormatter_EscapedString`; `OriginSd` escapes software/swVersion. SD-NAME syntax validation planned — [E14](https://github.com/DavidCozens/solid-syslog/issues/64) |
 | 6.3.3 | timeQuality SD — tzKnown, isSynced, syncAccuracy | Supported | `SolidSyslogTimeQualitySd` |
@@ -30,7 +30,7 @@ Status key:
 | 6.3.5 | meta SD — sequenceId wraps at 2147483647 to 1 | Not yet | Planned — see [sequenceId rules](https://github.com/DavidCozens/solid-syslog/issues/31) |
 | 6.4 | MSG — UTF-8 preferred | Partial | Passes through caller's encoding. No BOM prefix. UTF-8 safe truncation planned — [S12.10](https://github.com/DavidCozens/solid-syslog/issues/121) |
 | 8.1 | Message size — max 2048 recommended | Supported | Default `SOLIDSYSLOG_MAX_MESSAGE_SIZE` = 512. Configurable via CMake |
-| 9 | PRINTUSASCII in header fields (codes 33-126) | Not yet | Planned — [S12.9](https://github.com/DavidCozens/solid-syslog/issues/120) |
+| 9 | PRINTUSASCII in header fields (codes 33-126) | Supported | Non-compliant bytes substituted with `?` at format time (HOSTNAME, APP-NAME, PROCID, MSGID) |
 
 ## RFC 5426 — Transmission of Syslog Messages over UDP
 
@@ -72,7 +72,7 @@ Status key:
 
 | RFC | Total requirements | Supported | Partial | Planned | N/A |
 |---|---|---|---|---|---|
-| RFC 5424 | 17 | 10 | 5 | 2 | 0 |
+| RFC 5424 | 17 | 15 | 1 | 1 | 0 |
 | RFC 5426 | 6 | 3 | 1 | 0 | 2 |
 | RFC 6587 | 6 | 2 | 2 | 2 | 0 |
 | RFC 5425 | 7 | 6 | 1 | 0 | 0 |

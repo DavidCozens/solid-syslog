@@ -454,6 +454,13 @@ TEST(SolidSyslog, MessageIdAt33CharsIsTruncatedTo32)
     CHECK_MSGID(expected.c_str());
 }
 
+TEST(SolidSyslog, MessageIdNonPrintableByteIsSubstitutedWithQuestionMark)
+{
+    message.messageId = "a b";
+    Log();
+    CHECK_MSGID("a?b");
+}
+
 TEST(SolidSyslog, StructuredDataIsNilValue)
 {
     Log();
@@ -990,6 +997,14 @@ TEST(SolidSyslog, HostnameAt256CharsIsTruncatedTo255)
     CHECK_HOSTNAME(expected.c_str());
 }
 
+TEST(SolidSyslog, HostnameNonPrintableByteIsSubstitutedWithQuestionMark)
+{
+    StringFake_SetHostname("a\x01"
+                           "b");
+    Log();
+    CHECK_HOSTNAME("a?b");
+}
+
 TEST(SolidSyslog, AppNameAt48CharsIsAccepted)
 {
     std::string longAppName(48, 'A');
@@ -1007,6 +1022,14 @@ TEST(SolidSyslog, AppNameAt49CharsIsTruncatedTo48)
     CHECK_APP_NAME(expected.c_str());
 }
 
+TEST(SolidSyslog, AppNameNonPrintableByteIsSubstitutedWithQuestionMark)
+{
+    StringFake_SetAppName("a\x7F"
+                          "b");
+    Log();
+    CHECK_APP_NAME("a?b");
+}
+
 TEST(SolidSyslog, ProcessIdAt128CharsIsAccepted)
 {
     std::string longProcessId(128, 'P');
@@ -1022,6 +1045,14 @@ TEST(SolidSyslog, ProcessIdAt129CharsIsTruncatedTo128)
     Log();
     std::string expected(128, 'P');
     CHECK_PROCID(expected.c_str());
+}
+
+TEST(SolidSyslog, ProcessIdNonPrintableByteIsSubstitutedWithQuestionMark)
+{
+    StringFake_SetProcessId("a\xC3"
+                            "b");
+    Log();
+    CHECK_PROCID("a?b");
 }
 
 TEST(SolidSyslog, AllFieldsAtMaxLengthProducesValidMessage)
