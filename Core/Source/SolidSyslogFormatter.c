@@ -22,14 +22,15 @@ static const char LOWEST_PRINTABLE_US_ASCII  = '!';
 static const char HIGHEST_PRINTABLE_US_ASCII = '~';
 static const char NON_PRINTABLE_SUBSTITUTE   = '?';
 
-static inline void WriteChar(struct SolidSyslogFormatter* formatter, char value);
-static inline void WriteEscapedChar(struct SolidSyslogFormatter* formatter, char value);
-static inline void WritePrintableUsAsciiChar(struct SolidSyslogFormatter* formatter, char value);
-static inline void NullTerminate(struct SolidSyslogFormatter* formatter);
-static inline bool NeedsEscape(char value);
-static inline bool IsPrintableUsAscii(char value);
-static inline char DigitToChar(uint32_t value);
-static size_t      CountDigits(uint32_t value);
+static inline void   WriteChar(struct SolidSyslogFormatter* formatter, char value);
+static inline void   WriteEscapedChar(struct SolidSyslogFormatter* formatter, char value);
+static inline void   WritePrintableUsAsciiChar(struct SolidSyslogFormatter* formatter, char value);
+static inline void   NullTerminate(struct SolidSyslogFormatter* formatter);
+static inline bool   NeedsEscape(char value);
+static inline bool   IsPrintableUsAscii(char value);
+static inline size_t SkipBadUtf8(const char* source);
+static inline char   DigitToChar(uint32_t value);
+static size_t        CountDigits(uint32_t value);
 
 static inline bool HasCapacity(const struct SolidSyslogFormatter* formatter)
 {
@@ -74,10 +75,34 @@ void SolidSyslogFormatter_BoundedString(struct SolidSyslogFormatter* formatter, 
 
     while ((len < maxLength) && (source[len] != '\0'))
     {
-        WriteChar(formatter, source[len]);
-        len++;
+        size_t skipped = SkipBadUtf8(&source[len]);
+        if (skipped > 0)
+        {
+            WriteChar(formatter, '\xEF');
+            WriteChar(formatter, '\xBF');
+            WriteChar(formatter, '\xBD');
+            len += skipped;
+        }
+        else
+        {
+            WriteChar(formatter, source[len]);
+            len++;
+        }
     }
     NullTerminate(formatter);
+}
+
+static inline size_t SkipBadUtf8(const char* source)
+{
+    size_t skip  = 0;
+    char   value = source[0];
+
+    if (((value & 0xC0) == 0x80) || ((value & 0xFE) == 0xC0) || (value == '\xF5') || ((value & 0xF8) == 0xF8))
+    {
+        skip = 1;
+    }
+
+    return skip;
 }
 
 void SolidSyslogFormatter_EscapedString(struct SolidSyslogFormatter* formatter, const char* source, size_t maxRawLength)

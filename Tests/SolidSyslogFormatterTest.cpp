@@ -65,6 +65,56 @@ TEST(SolidSyslogFormatter, BoundedStringWritesStringIntoBuffer)
     CHECK_FORMATTED("hello");
 }
 
+TEST(SolidSyslogFormatter, BoundedStringReplacesInvalidLeadByteWithReplacementChar)
+{
+    formatBoundedString("\x85", 1);
+
+    CHECK_FORMATTED("\xEF\xBF\xBD");
+}
+
+TEST(SolidSyslogFormatter, BoundedStringReplacesSmallestContinuationByte)
+{
+    formatBoundedString("\x80", 1);
+
+    CHECK_FORMATTED("\xEF\xBF\xBD");
+}
+
+TEST(SolidSyslogFormatter, BoundedStringReplacesOverlongTwoByteEncodingPerByte)
+{
+    /* \xC1\x81 — overlong 2-byte form of U+0041. Per RFC 3629 §10 and Unicode
+     * §3.9, each invalid byte becomes its own U+FFFD substitution. */
+    formatBoundedString("\xC1\x81", 2);
+
+    CHECK_FORMATTED("\xEF\xBF\xBD\xEF\xBF\xBD");
+}
+
+TEST(SolidSyslogFormatter, BoundedStringReplacesOverlongLeadC0)
+{
+    /* \xC0 — the other overlong 2-byte lead forbidden by RFC 3629 §4. */
+    formatBoundedString("\xC0", 1);
+
+    CHECK_FORMATTED("\xEF\xBF\xBD");
+}
+
+TEST(SolidSyslogFormatter, BoundedStringReplacesInvalidLeadsF5ToFF)
+{
+    /* F5-F7: would encode codepoint > U+10FFFF (outside Unicode range).
+     * F8-FF: 5+ byte prefix patterns, removed by RFC 3629.
+     * \xF5 and \xFF exercise both ends of the range. */
+    formatBoundedString("\xF5\xFF", 2);
+
+    CHECK_FORMATTED("\xEF\xBF\xBD\xEF\xBF\xBD");
+}
+
+TEST(SolidSyslogFormatter, BoundedStringReplacesInvalidLeadsInF8ToFFMid)
+{
+    /* Interior of the 5+ byte prefix range — drives a mask that covers F8-FF,
+     * rather than enumerating each value. */
+    formatBoundedString("\xF8\xFE", 2);
+
+    CHECK_FORMATTED("\xEF\xBF\xBD\xEF\xBF\xBD");
+}
+
 TEST(SolidSyslogFormatter, BoundedStringTruncatesAtMaxLength)
 {
     formatBoundedString("hello", 3);
