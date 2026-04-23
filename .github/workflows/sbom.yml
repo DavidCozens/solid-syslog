@@ -29,19 +29,28 @@ jobs:
         id: hash
         run: |
           # Content-tree hash: sha256 of sorted "<content-sha256>  <path>"
-          # lines for every tracked file in Core/ + Platform/ at HEAD.
+          # lines for every tracked file in the product scope at HEAD.
           # Reproducible byte-for-byte across git versions, archive formats,
           # locales, and tooling — only needs sha256sum + sort + either
           # `git ls-tree + git show` or an extracted working tree.
           #
-          # Product scope per docs/security/sbom.md: Core/ + Platform/.
-          # Example/, Tests/, Bdd/, ci/, docs/, .devcontainer/, .github/
-          # are reference / test-harness / infrastructure and out of scope.
+          # Product scope per docs/security/sbom.md:
+          #   - Core/ + Platform/ subdirectories (shipped library source)
+          #   - Top-level CMakeLists.txt + CMakePresets.json (build contract
+          #     an integrator invokes directly)
+          #   - LICENSE.md (licence text we are legally bound by)
+          #
+          # Example/, Tests/, Bdd/, ci/, docs/, .devcontainer/, .github/,
+          # sbom/, scripts/, and the other root-level docs/meta files are
+          # reference / test-harness / CI / dev-infra / meta — out of scope.
           set -euo pipefail
           HASHLIST=$(mktemp)
           PATHS=$(mktemp)
           trap 'rm -f "$HASHLIST" "$PATHS"' EXIT
-          git ls-tree -r --name-only HEAD -- Core/ Platform/ | LC_ALL=C sort > "$PATHS"
+          git ls-tree -r --name-only HEAD -- \
+              Core/ Platform/ \
+              CMakeLists.txt CMakePresets.json LICENSE.md \
+            | LC_ALL=C sort > "$PATHS"
           while IFS= read -r path; do
             # pipefail propagates a failing `git show` through the pipeline;
             # the explicit length check catches any degenerate empty-string
@@ -94,7 +103,7 @@ jobs:
         run: |
           cat > sbom/source-tree-sha256.txt <<EOF
           # SolidSyslog content-tree SHA-256
-          # Scope: Core/ + Platform/ subdirectories (shipped library).
+          # Scope: Core/ + Platform/ + top-level CMakeLists.txt, CMakePresets.json, LICENSE.md.
           # Commit: ${{ github.sha }}
           # Algorithm: sha256 of sorted "<content-sha256>  <path>" lines (LC_ALL=C sort).
           # Verification guide: docs/security/release-verification.md

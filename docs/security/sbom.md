@@ -12,15 +12,24 @@ questions — this document is only concerned with the first.
 
 ## Product SBOM scope
 
-The product SBOM covers the `Core/` and `Platform/` subdirectories — the
-source the integrator consumes from this repository. `Core/` is Tier 1
-(full support, stable API); `Platform/` is Tier 2 (supported; API may
-evolve per target). Both ship.
+In scope:
+- `Core/` — Tier 1 (full support, stable API).
+- `Platform/` — Tier 2 (supported; API may evolve per target).
+- Root `CMakeLists.txt` + `CMakePresets.json` — the build contract an
+  integrator invokes directly. Tampering here affects the built library.
+- Root `LICENSE.md` — the licence text we are legally bound by and that
+  downstream integrators inherit. Tampering here is a compliance issue.
 
 Out of scope:
 - `Example/` — reference integrations, not product.
 - `Tests/`, `Bdd/` — test harnesses.
-- `ci/`, `docs/`, `.devcontainer/`, `.github/` — infrastructure.
+- `ci/`, `docs/`, `.devcontainer/`, `.github/`, `.vscode/` — dev/CI infrastructure.
+- `sbom/` — the SBOM template itself (meta; including it would be self-referential).
+- `scripts/` — utility scripts not consumed by the integrator.
+- Other root-level meta files (`CLAUDE.md`, `SKILL.md`, `DEVLOG.md`,
+  `README.md`, `CHANGELOG.md`, `.clang-format`, `.clang-tidy`,
+  `.gitattributes`, `.gitignore`, `.release-please-manifest.json`).
+  Informational / agent-facing / git configuration, not library source.
 
 Runtime dependencies we declare but do not bundle:
 - **OpenSSL** — optional, only when `SOLIDSYSLOG_OPENSSL=ON`. Listed as a
