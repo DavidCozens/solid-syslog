@@ -23,7 +23,7 @@ Status key:
 | 6.2.5 | PROCID — max 128 chars, PRINTUSASCII | Partial | Truncated to 128. PRINTUSASCII validation planned — [S12.9](https://github.com/DavidCozens/solid-syslog/issues/120) |
 | 6.2.6 | MSGID — max 32 chars, PRINTUSASCII | Partial | Truncated to 32. PRINTUSASCII validation planned — [S12.9](https://github.com/DavidCozens/solid-syslog/issues/120) |
 | 6.3 | STRUCTURED-DATA — SD-ELEMENTs or NILVALUE | Supported | Extensible via `SolidSyslogStructuredData` vtable |
-| 6.3 | SD-PARAM value escaping (`]`, `\`, `"`) | Not yet | Planned — [E14](https://github.com/DavidCozens/solid-syslog/issues/64) |
+| 6.3.3 | SD-PARAM value escaping (`]`, `\`, `"`) | Supported | `SolidSyslogFormatter_EscapedString`; `OriginSd` escapes software/swVersion. SD-NAME syntax validation planned — [E14](https://github.com/DavidCozens/solid-syslog/issues/64) |
 | 6.3.3 | timeQuality SD — tzKnown, isSynced, syncAccuracy | Supported | `SolidSyslogTimeQualitySd` |
 | 6.3.4 | origin SD — software, swVersion | Supported | `SolidSyslogOriginSd`. `ip` and `enterpriseId` not implemented |
 | 6.3.5 | meta SD — sequenceId | Supported | `SolidSyslogMetaSd`. Starts at 1, increments per message. `sysUpTime` and `language` not implemented |
