@@ -19,6 +19,9 @@ EXTERN_C_BEGIN
 #define SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(bufferSize) \
     (SOLIDSYSLOG_FORMATTER_OVERHEAD + (((bufferSize) + sizeof(SolidSyslogFormatterStorage) - 1) / sizeof(SolidSyslogFormatterStorage)))
 
+/* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- compile-time worst-case size for EscapedString output */
+#define SOLIDSYSLOG_ESCAPED_MAX_SIZE(rawMax) (2 * (rawMax))
+
     struct SolidSyslogFormatter;
 
     static inline struct SolidSyslogFormatter* SolidSyslogFormatter_FromStorage(SolidSyslogFormatterStorage * storage)
@@ -29,6 +32,7 @@ EXTERN_C_BEGIN
     struct SolidSyslogFormatter* SolidSyslogFormatter_Create(SolidSyslogFormatterStorage * storage, size_t bufferSize);
     void                         SolidSyslogFormatter_Character(struct SolidSyslogFormatter * formatter, char value);
     void                         SolidSyslogFormatter_BoundedString(struct SolidSyslogFormatter * formatter, const char* source, size_t maxLength);
+    void                         SolidSyslogFormatter_EscapedString(struct SolidSyslogFormatter * formatter, const char* source, size_t maxRawLength);
     void                         SolidSyslogFormatter_Uint32(struct SolidSyslogFormatter * formatter, uint32_t value);
     void                         SolidSyslogFormatter_TwoDigit(struct SolidSyslogFormatter * formatter, uint32_t value);
     void                         SolidSyslogFormatter_FourDigit(struct SolidSyslogFormatter * formatter, uint32_t value);

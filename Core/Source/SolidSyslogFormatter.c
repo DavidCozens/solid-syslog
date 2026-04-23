@@ -14,8 +14,15 @@ struct SolidSyslogFormatter
 SOLIDSYSLOG_STATIC_ASSERT(sizeof(struct SolidSyslogFormatter) == SOLIDSYSLOG_FORMATTER_OVERHEAD * sizeof(SolidSyslogFormatterStorage),
                           "SOLIDSYSLOG_FORMATTER_OVERHEAD does not match struct layout");
 
+static const char QUOTE         = '"';
+static const char BACKSLASH     = '\\';
+static const char CLOSE_BRACKET = ']';
+static const char ESCAPE_PREFIX = '\\';
+
 static inline void WriteChar(struct SolidSyslogFormatter* formatter, char value);
+static inline void WriteEscapedChar(struct SolidSyslogFormatter* formatter, char value);
 static inline void NullTerminate(struct SolidSyslogFormatter* formatter);
+static inline bool NeedsEscape(char value);
 static inline char DigitToChar(uint32_t value);
 static size_t      CountDigits(uint32_t value);
 
@@ -66,6 +73,32 @@ void SolidSyslogFormatter_BoundedString(struct SolidSyslogFormatter* formatter, 
         len++;
     }
     NullTerminate(formatter);
+}
+
+void SolidSyslogFormatter_EscapedString(struct SolidSyslogFormatter* formatter, const char* source, size_t maxRawLength)
+{
+    size_t len = 0;
+
+    while ((len < maxRawLength) && (source[len] != '\0'))
+    {
+        WriteEscapedChar(formatter, source[len]);
+        len++;
+    }
+    NullTerminate(formatter);
+}
+
+static inline void WriteEscapedChar(struct SolidSyslogFormatter* formatter, char value)
+{
+    if (NeedsEscape(value))
+    {
+        WriteChar(formatter, ESCAPE_PREFIX);
+    }
+    WriteChar(formatter, value);
+}
+
+static inline bool NeedsEscape(char value)
+{
+    return (value == QUOTE) || (value == BACKSLASH) || (value == CLOSE_BRACKET);
 }
 
 void SolidSyslogFormatter_Uint32(struct SolidSyslogFormatter* formatter, uint32_t value)

@@ -4,11 +4,37 @@
 #include "SolidSyslogStructuredData.h"
 
 #include <cstring>
+#include <string>
 
 enum
 {
     TEST_BUFFER_SIZE = 256
 };
+
+namespace
+{
+std::string repeated(char c, size_t n)
+{
+    std::string result(n, c);
+    return result;
+}
+
+std::string escapeEach(const std::string& allSpecials)
+{
+    std::string out;
+    for (char c : allSpecials)
+    {
+        out += '\\';
+        out += c;
+    }
+    return out;
+}
+
+std::string originSdWith(const std::string& software, const std::string& swVersion)
+{
+    return "[origin software=\"" + software + "\" swVersion=\"" + swVersion + "\"]";
+}
+} // namespace
 
 // clang-format off
 TEST_GROUP(SolidSyslogOriginSd)
@@ -163,4 +189,37 @@ TEST(SolidSyslogOriginSd, NullSwVersionReturnsNull)
 TEST(SolidSyslogOriginSd, DestroyDoesNotCrash)
 {
     // Covered by teardown — this test documents the intent
+}
+
+TEST(SolidSyslogOriginSd, SoftwareContainingSpecialsIsEscaped)
+{
+    SolidSyslogOriginSd_Destroy();
+    sd = SolidSyslogOriginSd_Create("a\"b\\c]d", "1.0");
+
+    resetFormatter();
+    format();
+    STRCMP_EQUAL("[origin software=\"a\\\"b\\\\c\\]d\" swVersion=\"1.0\"]", SolidSyslogFormatter_AsString(formatter));
+}
+
+TEST(SolidSyslogOriginSd, SwVersionContainingSpecialsIsEscaped)
+{
+    SolidSyslogOriginSd_Destroy();
+    sd = SolidSyslogOriginSd_Create("S", "1\"2\\3]4");
+
+    resetFormatter();
+    format();
+    STRCMP_EQUAL("[origin software=\"S\" swVersion=\"1\\\"2\\\\3\\]4\"]", SolidSyslogFormatter_AsString(formatter));
+}
+
+TEST(SolidSyslogOriginSd, WorstCaseFullyEscapedInputFitsPreFormattedStorage)
+{
+    const std::string software  = repeated(']', 48); /* ORIGIN_SOFTWARE_MAX */
+    const std::string swVersion = repeated('"', 32); /* ORIGIN_SWVERSION_MAX */
+
+    SolidSyslogOriginSd_Destroy();
+    sd = SolidSyslogOriginSd_Create(software.c_str(), swVersion.c_str());
+
+    resetFormatter();
+    format();
+    STRCMP_EQUAL(originSdWith(escapeEach(software), escapeEach(swVersion)).c_str(), SolidSyslogFormatter_AsString(formatter));
 }
