@@ -26,6 +26,7 @@ static const char NON_PRINTABLE_SUBSTITUTE   = '?';
  * byte per Unicode §3.9 best practice for per-byte maximal subpart. */
 static const char REPLACEMENT_CHARACTER[] = {'\xEF', '\xBF', '\xBD'};
 
+static inline bool   CodepointFits(size_t codepointLength, size_t remaining);
 static inline bool   HasCapacity(const struct SolidSyslogFormatter* formatter);
 static inline bool   IsAboveUnicodeMaxEncoding(char lead, char continuation1);
 static inline bool   IsFourByteLead(char byte);
@@ -123,22 +124,25 @@ void SolidSyslogFormatter_BoundedString(struct SolidSyslogFormatter* formatter, 
 
     while ((len < maxLength) && (source[len] != '\0'))
     {
-        const char* bytes           = REPLACEMENT_CHARACTER;
-        size_t      count           = sizeof(REPLACEMENT_CHARACTER);
-        size_t      advance         = 1;
-        size_t      codepointLength = Utf8CodepointLength(&source[len]);
+        size_t codepointLength = Utf8CodepointLength(&source[len]);
 
-        if ((codepointLength > 0) && (codepointLength <= (maxLength - len)))
+        if (CodepointFits(codepointLength, maxLength - len))
         {
-            bytes   = &source[len];
-            count   = codepointLength;
-            advance = codepointLength;
+            WriteBytes(formatter, &source[len], codepointLength);
+            len += codepointLength;
         }
-
-        WriteBytes(formatter, bytes, count);
-        len += advance;
+        else
+        {
+            WriteBytes(formatter, REPLACEMENT_CHARACTER, sizeof(REPLACEMENT_CHARACTER));
+            len += 1;
+        }
     }
     NullTerminate(formatter);
+}
+
+static inline bool CodepointFits(size_t codepointLength, size_t remaining)
+{
+    return (codepointLength > 0) && (codepointLength <= remaining);
 }
 
 static inline size_t Utf8CodepointLength(const char* source)
