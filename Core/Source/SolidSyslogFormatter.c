@@ -22,21 +22,9 @@ static const char LOWEST_PRINTABLE_US_ASCII  = '!';
 static const char HIGHEST_PRINTABLE_US_ASCII = '~';
 static const char NON_PRINTABLE_SUBSTITUTE   = '?';
 
+/* UTF-8 replacement character U+FFFD, emitted in place of each invalid
+ * byte per Unicode §3.9 best practice for per-byte maximal subpart. */
 static const char REPLACEMENT_CHARACTER[] = {'\xEF', '\xBF', '\xBD'};
-
-static inline void   WriteChar(struct SolidSyslogFormatter* formatter, char value);
-static inline void   WriteEscapedChar(struct SolidSyslogFormatter* formatter, char value);
-static inline void   WritePrintableUsAsciiChar(struct SolidSyslogFormatter* formatter, char value);
-static inline void   NullTerminate(struct SolidSyslogFormatter* formatter);
-static inline bool   NeedsEscape(char value);
-static inline bool   IsPrintableUsAscii(char value);
-static inline bool   IsValidUtf8SingleByte(char value);
-static inline bool   IsValidUtf8TwoByte(char lead, char continuation);
-static inline bool   IsValidUtf8ThreeByte(char lead, char continuation1, char continuation2);
-static inline bool   IsValidUtf8FourByte(char lead, char continuation1, char continuation2, char continuation3);
-static inline size_t Utf8CodepointLength(const char* source);
-static inline char   DigitToChar(uint32_t value);
-static size_t        CountDigits(uint32_t value);
 
 static inline bool HasCapacity(const struct SolidSyslogFormatter* formatter)
 {
@@ -75,20 +63,137 @@ void SolidSyslogFormatter_Character(struct SolidSyslogFormatter* formatter, char
     NullTerminate(formatter);
 }
 
+/*
+ * UTF-8 validation per RFC 3629 §4 and Unicode §3.9.
+ *
+ *   1-byte  0xxxxxxx                                   U+0000  - U+007F
+ *   2-byte  110xxxxx 10xxxxxx                          U+0080  - U+07FF    lead C2-DF
+ *   3-byte  1110xxxx 10xxxxxx 10xxxxxx                 U+0800  - U+FFFF    lead E0-EF
+ *   4-byte  11110xxx 10xxxxxx 10xxxxxx 10xxxxxx        U+10000 - U+10FFFF  lead F0-F4
+ *
+ * Excluded sequences:
+ *   C0, C1             overlong 2-byte encodings
+ *   E0 + cont1 80-9F   overlong 3-byte encodings
+ *   ED + cont1 A0-BF   UTF-16 surrogate range (U+D800..U+DFFF)
+ *   F0 + cont1 80-8F   overlong 4-byte encodings
+ *   F4 + cont1 90-BF   codepoints above U+10FFFF
+ *   F5-F7              codepoints above U+10FFFF
+ *   F8-FF              5+ byte prefix patterns removed by RFC 3629
+ */
+
+static inline bool IsUtf8Continuation(char byte)
+{
+    return (byte & 0xC0) == 0x80;
+}
+
+static inline bool IsTwoByteLead(char byte)
+{
+    return (byte & 0xE0) == 0xC0;
+}
+
+static inline bool IsThreeByteLead(char byte)
+{
+    return (byte & 0xF0) == 0xE0;
+}
+
+static inline bool IsFourByteLead(char byte)
+{
+    return (byte & 0xF8) == 0xF0;
+}
+
+static inline bool IsOverlongTwoByteLead(char byte)
+{
+    return (byte & 0xFE) == 0xC0;
+}
+
+static inline bool IsOverlongThreeByteEncoding(char lead, char continuation1)
+{
+    return (lead == '\xE0') && ((continuation1 & 0xE0) == 0x80);
+}
+
+static inline bool IsUtf16SurrogateEncoding(char lead, char continuation1)
+{
+    return (lead == '\xED') && ((continuation1 & 0xE0) == 0xA0);
+}
+
+static inline bool IsOverlongFourByteEncoding(char lead, char continuation1)
+{
+    return (lead == '\xF0') && ((continuation1 & 0xF0) == 0x80);
+}
+
+static inline bool IsAboveUnicodeMaxEncoding(char lead, char continuation1)
+{
+    bool f4WithCont1Above8F = (lead == '\xF4') && ((continuation1 & 0xF0) != 0x80);
+    bool f5OrHigherLead     = (lead == '\xF5') || (lead == '\xF6') || (lead == '\xF7');
+    return f4WithCont1Above8F || f5OrHigherLead;
+}
+
+static inline bool IsValidUtf8SingleByte(char byte)
+{
+    return (byte & 0x80) == 0;
+}
+
+static inline bool IsValidUtf8TwoByte(char lead, char continuation1)
+{
+    return IsTwoByteLead(lead) && !IsOverlongTwoByteLead(lead) && IsUtf8Continuation(continuation1);
+}
+
+static inline bool IsValidUtf8ThreeByte(char lead, char continuation1, char continuation2)
+{
+    return IsThreeByteLead(lead) && IsUtf8Continuation(continuation1) && IsUtf8Continuation(continuation2) &&
+           !IsOverlongThreeByteEncoding(lead, continuation1) && !IsUtf16SurrogateEncoding(lead, continuation1);
+}
+
+static inline bool IsValidUtf8FourByte(char lead, char continuation1, char continuation2, char continuation3)
+{
+    return IsFourByteLead(lead) && IsUtf8Continuation(continuation1) && IsUtf8Continuation(continuation2) && IsUtf8Continuation(continuation3) &&
+           !IsOverlongFourByteEncoding(lead, continuation1) && !IsAboveUnicodeMaxEncoding(lead, continuation1);
+}
+
+static inline size_t Utf8CodepointLength(const char* source)
+{
+    size_t length = 0;
+
+    if (IsValidUtf8SingleByte(source[0]))
+    {
+        length = 1;
+    }
+    else if (IsValidUtf8TwoByte(source[0], source[1]))
+    {
+        length = 2;
+    }
+    else if (IsValidUtf8ThreeByte(source[0], source[1], source[2]))
+    {
+        length = 3;
+    }
+    else if (IsValidUtf8FourByte(source[0], source[1], source[2], source[3]))
+    {
+        length = 4;
+    }
+
+    return length;
+}
+
+static inline void WriteBytes(struct SolidSyslogFormatter* formatter, const char* bytes, size_t count)
+{
+    for (size_t i = 0; i < count; i++)
+    {
+        WriteChar(formatter, bytes[i]);
+    }
+}
+
 void SolidSyslogFormatter_BoundedString(struct SolidSyslogFormatter* formatter, const char* source, size_t maxLength)
 {
     size_t len = 0;
 
     while ((len < maxLength) && (source[len] != '\0'))
     {
-        const char* copyFrom = &source[len];
-        size_t      copyCount;
+        const char* copyFrom  = &source[len];
+        size_t      copyCount = Utf8CodepointLength(&source[len]);
 
-        size_t length = Utf8CodepointLength(&source[len]);
-        if (length > 0)
+        if (copyCount > 0)
         {
-            copyCount = length;
-            len += length;
+            len += copyCount;
         }
         else
         {
@@ -97,57 +202,23 @@ void SolidSyslogFormatter_BoundedString(struct SolidSyslogFormatter* formatter, 
             len += 1;
         }
 
-        for (size_t i = 0; i < copyCount; i++)
-        {
-            WriteChar(formatter, copyFrom[i]);
-        }
+        WriteBytes(formatter, copyFrom, copyCount);
     }
     NullTerminate(formatter);
 }
 
-static inline bool IsValidUtf8SingleByte(char value)
+static inline bool NeedsEscape(char value)
 {
-    return (value & 0x80) == 0x00;
+    return (value == QUOTE) || (value == BACKSLASH) || (value == CLOSE_BRACKET);
 }
 
-static inline bool IsValidUtf8TwoByte(char lead, char continuation)
+static inline void WriteEscapedChar(struct SolidSyslogFormatter* formatter, char value)
 {
-    return ((lead & 0xE0) == 0xC0) && ((lead & 0xFE) != 0xC0) && ((continuation & 0xC0) == 0x80);
-}
-
-static inline bool IsValidUtf8ThreeByte(char lead, char continuation1, char continuation2)
-{
-    return ((lead & 0xF0) == 0xE0) && ((continuation1 & 0xC0) == 0x80) && ((continuation2 & 0xC0) == 0x80)
-           && !((lead == '\xE0') && ((continuation1 & 0xE0) == 0x80))
-           && !((lead == '\xED') && ((continuation1 & 0xE0) == 0xA0));
-}
-
-static inline bool IsValidUtf8FourByte(char lead, char continuation1, char continuation2, char continuation3)
-{
-    return (((lead & 0xFC) == 0xF0) || (lead == '\xF4')) && ((continuation1 & 0xC0) == 0x80) && ((continuation2 & 0xC0) == 0x80) && ((continuation3 & 0xC0) == 0x80)
-           && !((lead == '\xF0') && ((continuation1 & 0xF0) == 0x80))
-           && !((lead == '\xF4') && ((continuation1 & 0xF0) != 0x80));
-}
-
-static inline size_t Utf8CodepointLength(const char* source)
-{
-    if (IsValidUtf8SingleByte(source[0]))
+    if (NeedsEscape(value))
     {
-        return 1;
+        WriteChar(formatter, ESCAPE_PREFIX);
     }
-    if (IsValidUtf8TwoByte(source[0], source[1]))
-    {
-        return 2;
-    }
-    if (IsValidUtf8ThreeByte(source[0], source[1], source[2]))
-    {
-        return 3;
-    }
-    if (IsValidUtf8FourByte(source[0], source[1], source[2], source[3]))
-    {
-        return 4;
-    }
-    return 0;
+    WriteChar(formatter, value);
 }
 
 void SolidSyslogFormatter_EscapedString(struct SolidSyslogFormatter* formatter, const char* source, size_t maxRawLength)
@@ -162,30 +233,9 @@ void SolidSyslogFormatter_EscapedString(struct SolidSyslogFormatter* formatter, 
     NullTerminate(formatter);
 }
 
-static inline void WriteEscapedChar(struct SolidSyslogFormatter* formatter, char value)
+static inline bool IsPrintableUsAscii(char value)
 {
-    if (NeedsEscape(value))
-    {
-        WriteChar(formatter, ESCAPE_PREFIX);
-    }
-    WriteChar(formatter, value);
-}
-
-static inline bool NeedsEscape(char value)
-{
-    return (value == QUOTE) || (value == BACKSLASH) || (value == CLOSE_BRACKET);
-}
-
-void SolidSyslogFormatter_PrintUsAsciiString(struct SolidSyslogFormatter* formatter, const char* source, size_t maxLength)
-{
-    size_t len = 0;
-
-    while ((len < maxLength) && (source[len] != '\0'))
-    {
-        WritePrintableUsAsciiChar(formatter, source[len]);
-        len++;
-    }
-    NullTerminate(formatter);
+    return (value >= LOWEST_PRINTABLE_US_ASCII) && (value <= HIGHEST_PRINTABLE_US_ASCII);
 }
 
 static inline void WritePrintableUsAsciiChar(struct SolidSyslogFormatter* formatter, char value)
@@ -200,9 +250,34 @@ static inline void WritePrintableUsAsciiChar(struct SolidSyslogFormatter* format
     }
 }
 
-static inline bool IsPrintableUsAscii(char value)
+void SolidSyslogFormatter_PrintUsAsciiString(struct SolidSyslogFormatter* formatter, const char* source, size_t maxLength)
 {
-    return (value >= LOWEST_PRINTABLE_US_ASCII) && (value <= HIGHEST_PRINTABLE_US_ASCII);
+    size_t len = 0;
+
+    while ((len < maxLength) && (source[len] != '\0'))
+    {
+        WritePrintableUsAsciiChar(formatter, source[len]);
+        len++;
+    }
+    NullTerminate(formatter);
+}
+
+static inline char DigitToChar(uint32_t value)
+{
+    return (char) ('0' + (value % 10U));
+}
+
+static size_t CountDigits(uint32_t value)
+{
+    size_t count = 1;
+
+    while (value >= 10U)
+    {
+        count++;
+        value /= 10U;
+    }
+
+    return count;
 }
 
 void SolidSyslogFormatter_Uint32(struct SolidSyslogFormatter* formatter, uint32_t value)
@@ -259,22 +334,4 @@ const char* SolidSyslogFormatter_AsString(const struct SolidSyslogFormatter* for
 size_t SolidSyslogFormatter_Length(const struct SolidSyslogFormatter* formatter)
 {
     return formatter->position;
-}
-
-static inline char DigitToChar(uint32_t value)
-{
-    return (char) ('0' + (value % 10U));
-}
-
-static size_t CountDigits(uint32_t value)
-{
-    size_t count = 1;
-
-    while (value >= 10U)
-    {
-        count++;
-        value /= 10U;
-    }
-
-    return count;
 }
