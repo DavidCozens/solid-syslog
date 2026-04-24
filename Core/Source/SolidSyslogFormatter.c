@@ -27,6 +27,7 @@ static const char NON_PRINTABLE_SUBSTITUTE   = '?';
 static const char REPLACEMENT_CHARACTER[] = {'\xEF', '\xBF', '\xBD'};
 
 static inline bool   HasCapacity(const struct SolidSyslogFormatter* formatter);
+static inline bool   HasCapacityFor(const struct SolidSyslogFormatter* formatter, size_t count);
 static inline bool   IsAboveUnicodeMaxEncoding(char lead, char continuation1);
 static inline bool   IsFourByteLead(char byte);
 static inline bool   IsOverlongFourByteEncoding(char lead, char continuation1);
@@ -115,13 +116,21 @@ void SolidSyslogFormatter_BoundedString(struct SolidSyslogFormatter* formatter, 
     {
         size_t codepointLength = Utf8CodepointLength(&source[len]);
 
-        if (codepointLength > 0)
+        if ((codepointLength > 0) && (codepointLength <= (maxLength - len)))
         {
+            if (!HasCapacityFor(formatter, codepointLength))
+            {
+                break;
+            }
             WriteBytes(formatter, &source[len], codepointLength);
             len += codepointLength;
         }
         else
         {
+            if (!HasCapacityFor(formatter, sizeof(REPLACEMENT_CHARACTER)))
+            {
+                break;
+            }
             WriteReplacementCharacter(formatter);
             len += 1;
         }
@@ -220,6 +229,11 @@ static inline bool IsAboveUnicodeMaxEncoding(char lead, char continuation1)
     bool f4WithCont1Above8F = (lead == '\xF4') && ((continuation1 & 0xF0) != 0x80);
     bool f5OrHigherLead     = (lead == '\xF5') || (lead == '\xF6') || (lead == '\xF7');
     return f4WithCont1Above8F || f5OrHigherLead;
+}
+
+static inline bool HasCapacityFor(const struct SolidSyslogFormatter* formatter, size_t count)
+{
+    return (formatter->size > 0) && ((formatter->position + count) <= (formatter->size - 1));
 }
 
 static inline void WriteReplacementCharacter(struct SolidSyslogFormatter* formatter)

@@ -285,6 +285,35 @@ TEST(SolidSyslogFormatter, BoundedStringTruncatesAtMaxLength)
     CHECK_FORMATTED("hel");
 }
 
+TEST(SolidSyslogFormatter, BoundedStringReplacesStragglingTwoByteLeadWhenSourceTruncated)
+{
+    /* maxLength caps source at 1 byte, but \xC2 followed by \x80 in memory
+     * would be a valid 2-byte codepoint. Per Unicode §3.9, a lead that
+     * can't complete a codepoint within the input bound becomes a single
+     * U+FFFD; the continuation beyond the cap is never consumed. */
+    formatBoundedString("\xC2\x80", 1);
+
+    CHECK_FORMATTED("\xEF\xBF\xBD");
+}
+
+TEST(SolidSyslogFormatter, BoundedStringReplacesStragglingThreeByteLeadWhenSourceTruncated)
+{
+    /* maxLength caps source at 1 byte of an otherwise-valid 3-byte
+     * sequence. The same truncation rule as the 2-byte case applies. */
+    formatBoundedString("\xE0\xA0\x80", 1);
+
+    CHECK_FORMATTED("\xEF\xBF\xBD");
+}
+
+TEST(SolidSyslogFormatter, BoundedStringReplacesStragglingFourByteLeadWhenSourceTruncated)
+{
+    /* maxLength caps source at 1 byte of an otherwise-valid 4-byte
+     * sequence. The same truncation rule applies. */
+    formatBoundedString("\xF0\x90\x80\x80", 1);
+
+    CHECK_FORMATTED("\xEF\xBF\xBD");
+}
+
 TEST(SolidSyslogFormatter, BoundedStringAppendsAfterCharacter)
 {
     formatCharacter('<');
@@ -487,6 +516,32 @@ TEST(SolidSyslogFormatter, BoundedStringWritesNothingWhenFull)
     formatBoundedString("xyz", 3);
 
     CHECK_FORMATTED("abc");
+}
+
+TEST(SolidSyslogFormatter, BoundedStringDropsReplacementWhenOutputTooSmall)
+{
+    /* Replacement is 3 bytes. A 3-byte buffer provides 2 usable bytes
+     * (one reserved for NUL), so an invalid input's replacement does not
+     * fit. Writing a partial U+FFFD would leave truncated UTF-8 in the
+     * output tail, so the whole replacement is dropped. */
+    CREATE_FORMATTER(3);
+
+    formatBoundedString("\xC3", 1);
+
+    CHECK_FORMATTED("");
+}
+
+TEST(SolidSyslogFormatter, BoundedStringDropsValidCodepointWhenOutputTooSmall)
+{
+    /* After writing 'a', only 1 usable byte remains in the 3-byte buffer.
+     * A valid 3-byte codepoint cannot fit, and writing a partial one would
+     * leave truncated UTF-8 at the output tail. The codepoint is dropped
+     * and the loop stops. */
+    CREATE_FORMATTER(3);
+
+    formatBoundedString("a\xE0\xA0\x80", 4);
+
+    CHECK_FORMATTED("a");
 }
 
 TEST(SolidSyslogFormatter, CharacterStopsWhenFull)
