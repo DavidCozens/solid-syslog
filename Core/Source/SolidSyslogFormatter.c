@@ -152,15 +152,15 @@ static inline size_t Utf8CodepointLength(const char* source)
     {
         length = 1;
     }
-    else if (IsValidUtf8TwoByte(source[0], source[1]))
+    else if ((source[1] != '\0') && IsValidUtf8TwoByte(source[0], source[1]))
     {
         length = 2;
     }
-    else if (IsValidUtf8ThreeByte(source[0], source[1], source[2]))
+    else if ((source[1] != '\0') && (source[2] != '\0') && IsValidUtf8ThreeByte(source[0], source[1], source[2]))
     {
         length = 3;
     }
-    else if (IsValidUtf8FourByte(source[0], source[1], source[2], source[3]))
+    else if ((source[1] != '\0') && (source[2] != '\0') && (source[3] != '\0') && IsValidUtf8FourByte(source[0], source[1], source[2], source[3]))
     {
         length = 4;
     }
