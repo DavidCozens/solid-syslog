@@ -22,13 +22,19 @@ static const char LOWEST_PRINTABLE_US_ASCII  = '!';
 static const char HIGHEST_PRINTABLE_US_ASCII = '~';
 static const char NON_PRINTABLE_SUBSTITUTE   = '?';
 
+static const char REPLACEMENT_CHARACTER[] = {'\xEF', '\xBF', '\xBD'};
+
 static inline void   WriteChar(struct SolidSyslogFormatter* formatter, char value);
 static inline void   WriteEscapedChar(struct SolidSyslogFormatter* formatter, char value);
 static inline void   WritePrintableUsAsciiChar(struct SolidSyslogFormatter* formatter, char value);
 static inline void   NullTerminate(struct SolidSyslogFormatter* formatter);
 static inline bool   NeedsEscape(char value);
 static inline bool   IsPrintableUsAscii(char value);
-static inline size_t SkipBadUtf8(const char* source);
+static inline bool   IsValidUtf8SingleByte(char value);
+static inline bool   IsValidUtf8TwoByte(char lead, char continuation);
+static inline bool   IsValidUtf8ThreeByte(char lead, char continuation1, char continuation2);
+static inline bool   IsValidUtf8FourByte(char lead, char continuation1, char continuation2, char continuation3);
+static inline size_t Utf8CodepointLength(const char* source);
 static inline char   DigitToChar(uint32_t value);
 static size_t        CountDigits(uint32_t value);
 
@@ -75,34 +81,73 @@ void SolidSyslogFormatter_BoundedString(struct SolidSyslogFormatter* formatter, 
 
     while ((len < maxLength) && (source[len] != '\0'))
     {
-        size_t skipped = SkipBadUtf8(&source[len]);
-        if (skipped > 0)
+        const char* copyFrom = &source[len];
+        size_t      copyCount;
+
+        size_t length = Utf8CodepointLength(&source[len]);
+        if (length > 0)
         {
-            WriteChar(formatter, '\xEF');
-            WriteChar(formatter, '\xBF');
-            WriteChar(formatter, '\xBD');
-            len += skipped;
+            copyCount = length;
+            len += length;
         }
         else
         {
-            WriteChar(formatter, source[len]);
-            len++;
+            copyFrom  = REPLACEMENT_CHARACTER;
+            copyCount = sizeof(REPLACEMENT_CHARACTER);
+            len += 1;
+        }
+
+        for (size_t i = 0; i < copyCount; i++)
+        {
+            WriteChar(formatter, copyFrom[i]);
         }
     }
     NullTerminate(formatter);
 }
 
-static inline size_t SkipBadUtf8(const char* source)
+static inline bool IsValidUtf8SingleByte(char value)
 {
-    size_t skip  = 0;
-    char   value = source[0];
+    return (value & 0x80) == 0x00;
+}
 
-    if (((value & 0xC0) == 0x80) || ((value & 0xFE) == 0xC0) || (value == '\xF5') || ((value & 0xF8) == 0xF8))
+static inline bool IsValidUtf8TwoByte(char lead, char continuation)
+{
+    return ((lead & 0xE0) == 0xC0) && ((lead & 0xFE) != 0xC0) && ((continuation & 0xC0) == 0x80);
+}
+
+static inline bool IsValidUtf8ThreeByte(char lead, char continuation1, char continuation2)
+{
+    return ((lead & 0xF0) == 0xE0) && ((continuation1 & 0xC0) == 0x80) && ((continuation2 & 0xC0) == 0x80)
+           && !((lead == '\xE0') && ((continuation1 & 0xE0) == 0x80))
+           && !((lead == '\xED') && ((continuation1 & 0xE0) == 0xA0));
+}
+
+static inline bool IsValidUtf8FourByte(char lead, char continuation1, char continuation2, char continuation3)
+{
+    return (((lead & 0xFC) == 0xF0) || (lead == '\xF4')) && ((continuation1 & 0xC0) == 0x80) && ((continuation2 & 0xC0) == 0x80) && ((continuation3 & 0xC0) == 0x80)
+           && !((lead == '\xF0') && ((continuation1 & 0xF0) == 0x80))
+           && !((lead == '\xF4') && ((continuation1 & 0xF0) != 0x80));
+}
+
+static inline size_t Utf8CodepointLength(const char* source)
+{
+    if (IsValidUtf8SingleByte(source[0]))
     {
-        skip = 1;
+        return 1;
     }
-
-    return skip;
+    if (IsValidUtf8TwoByte(source[0], source[1]))
+    {
+        return 2;
+    }
+    if (IsValidUtf8ThreeByte(source[0], source[1], source[2]))
+    {
+        return 3;
+    }
+    if (IsValidUtf8FourByte(source[0], source[1], source[2], source[3]))
+    {
+        return 4;
+    }
+    return 0;
 }
 
 void SolidSyslogFormatter_EscapedString(struct SolidSyslogFormatter* formatter, const char* source, size_t maxRawLength)

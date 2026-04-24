@@ -115,6 +115,169 @@ TEST(SolidSyslogFormatter, BoundedStringReplacesInvalidLeadsInF8ToFFMid)
     CHECK_FORMATTED("\xEF\xBF\xBD\xEF\xBF\xBD");
 }
 
+TEST(SolidSyslogFormatter, BoundedStringPassesValidTwoByteCodepointThrough)
+{
+    /* \xC2\x80 is the canonical 2-byte encoding of U+0080. Valid UTF-8. */
+    formatBoundedString("\xC2\x80", 2);
+
+    CHECK_FORMATTED("\xC2\x80");
+}
+
+TEST(SolidSyslogFormatter, BoundedStringPassesSecondValidTwoByteCodepointThrough)
+{
+    /* \xC3\xA9 is the canonical 2-byte encoding of U+00E9 (é). Valid UTF-8. */
+    formatBoundedString("\xC3\xA9", 2);
+
+    CHECK_FORMATTED("\xC3\xA9");
+}
+
+TEST(SolidSyslogFormatter, BoundedStringPassesHighestValidTwoByteCodepointThrough)
+{
+    /* \xDF\xBF is the canonical 2-byte encoding of U+07FF, the top of the 2-byte range. */
+    formatBoundedString("\xDF\xBF", 2);
+
+    CHECK_FORMATTED("\xDF\xBF");
+}
+
+TEST(SolidSyslogFormatter, BoundedStringPassesMiddleValidTwoByteCodepointThrough)
+{
+    /* \xCC\x80 is a valid 2-byte codepoint mid-range (U+0300, combining grave accent). */
+    formatBoundedString("\xCC\x80", 2);
+
+    CHECK_FORMATTED("\xCC\x80");
+}
+
+TEST(SolidSyslogFormatter, BoundedStringPassesValidThreeByteCodepointThrough)
+{
+    /* \xE0\xA0\x80 is the canonical 3-byte encoding of U+0800, the smallest
+     * non-overlong 3-byte codepoint. Valid UTF-8. */
+    formatBoundedString("\xE0\xA0\x80", 3);
+
+    CHECK_FORMATTED("\xE0\xA0\x80");
+}
+
+TEST(SolidSyslogFormatter, BoundedStringPassesThreeByteCodepointWithE1LeadThrough)
+{
+    /* \xE1\x80\x80 is the canonical 3-byte encoding of U+1000. Forces the
+     * lead byte check to generalise past \xE0. */
+    formatBoundedString("\xE1\x80\x80", 3);
+
+    CHECK_FORMATTED("\xE1\x80\x80");
+}
+
+TEST(SolidSyslogFormatter, BoundedStringReplacesOverlongThreeByteEncodingPerByte)
+{
+    /* \xE0\x80\x80 — overlong 3-byte encoding of U+0000. The E0 lead
+     * requires a continuation in A0-BF; \x80 is below that subrange, so the
+     * sequence is ill-formed and each invalid byte becomes its own U+FFFD. */
+    formatBoundedString("\xE0\x80\x80", 3);
+
+    CHECK_FORMATTED("\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD");
+}
+
+TEST(SolidSyslogFormatter, BoundedStringReplacesOverlongThreeByteEncodingAtSubrangeTop)
+{
+    /* \xE0\x9F\x80 — also overlong: \x9F is still below the E0 subrange
+     * lower bound of \xA0. Forces the exclusion to widen beyond a single
+     * hardcoded continuation byte to the full 80-9F range. */
+    formatBoundedString("\xE0\x9F\x80", 3);
+
+    CHECK_FORMATTED("\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD");
+}
+
+TEST(SolidSyslogFormatter, BoundedStringReplacesUtf16SurrogateEncodingPerByte)
+{
+    /* \xED\xA0\x80 — UTF-8 encoding of U+D800, a UTF-16 high surrogate.
+     * RFC 3629 §3 forbids encoding surrogates; the ED lead requires a
+     * continuation in 80-9F, not A0-BF. */
+    formatBoundedString("\xED\xA0\x80", 3);
+
+    CHECK_FORMATTED("\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD");
+}
+
+TEST(SolidSyslogFormatter, BoundedStringReplacesThreeByteLeadFollowedByAscii)
+{
+    /* \xE1 is a 3-byte lead; the next byte \x40 ('@') is not a valid
+     * continuation (continuations must be 80-BF). Per maximal-subpart rule
+     * the lead alone becomes U+FFFD; the ASCII byte passes through; the
+     * stray \x80 is another U+FFFD. */
+    formatBoundedString("\xE1\x40\x80", 3);
+
+    CHECK_FORMATTED("\xEF\xBF\xBD\x40\xEF\xBF\xBD");
+}
+
+TEST(SolidSyslogFormatter, BoundedStringReplacesTopOfThreeByteLeadRangeWhenInvalid)
+{
+    /* \xEF is the top of the 3-byte lead range (E0-EF). Here it isn't
+     * followed by a valid continuation, so the lead alone becomes U+FFFD. */
+    formatBoundedString("\xEF\x40\x80", 3);
+
+    CHECK_FORMATTED("\xEF\xBF\xBD\x40\xEF\xBF\xBD");
+}
+
+TEST(SolidSyslogFormatter, BoundedStringPassesValidFourByteCodepointThrough)
+{
+    /* \xF0\x90\x80\x80 is the canonical 4-byte encoding of U+10000, the
+     * smallest non-overlong 4-byte codepoint. Valid UTF-8. */
+    formatBoundedString("\xF0\x90\x80\x80", 4);
+
+    CHECK_FORMATTED("\xF0\x90\x80\x80");
+}
+
+TEST(SolidSyslogFormatter, BoundedStringPassesFourByteCodepointWithF1LeadThrough)
+{
+    /* \xF1\x80\x80\x80 is the canonical 4-byte encoding of U+40000. Forces
+     * the 4-byte lead check to generalise past \xF0. */
+    formatBoundedString("\xF1\x80\x80\x80", 4);
+
+    CHECK_FORMATTED("\xF1\x80\x80\x80");
+}
+
+TEST(SolidSyslogFormatter, BoundedStringReplacesOverlongFourByteEncodingPerByte)
+{
+    /* \xF0\x80\x80\x80 — overlong 4-byte encoding of U+0000. The F0 lead
+     * requires a continuation in 90-BF; \x80 is below that subrange. */
+    formatBoundedString("\xF0\x80\x80\x80", 4);
+
+    CHECK_FORMATTED("\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD");
+}
+
+TEST(SolidSyslogFormatter, BoundedStringReplacesFourByteEncodingBeyondUnicodeRange)
+{
+    /* \xF4\x90\x80\x80 encodes a codepoint beyond U+10FFFF (the top of the
+     * Unicode range). The F4 lead requires cont1 in 80-8F; \x90 is above
+     * that subrange. */
+    formatBoundedString("\xF4\x90\x80\x80", 4);
+
+    CHECK_FORMATTED("\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD");
+}
+
+TEST(SolidSyslogFormatter, BoundedStringReplacesF5AsFourByteLead)
+{
+    /* \xF5 is not a valid 4-byte lead — any codepoint with a F5 lead would
+     * exceed U+10FFFF. RFC 3629 §3 restricts 4-byte leads to F0-F4. */
+    formatBoundedString("\xF5\x80\x80\x80", 4);
+
+    CHECK_FORMATTED("\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD");
+}
+
+TEST(SolidSyslogFormatter, BoundedStringReplacesF6AsFourByteLead)
+{
+    /* \xF6 is not a valid 4-byte lead either — same reason as F5. */
+    formatBoundedString("\xF6\x80\x80\x80", 4);
+
+    CHECK_FORMATTED("\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD");
+}
+
+TEST(SolidSyslogFormatter, BoundedStringReplacesF7AsFourByteLead)
+{
+    /* \xF7 is the top of the would-be 4-byte lead range but is still
+     * outside the valid F0-F4 range. */
+    formatBoundedString("\xF7\x80\x80\x80", 4);
+
+    CHECK_FORMATTED("\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD");
+}
+
 TEST(SolidSyslogFormatter, BoundedStringTruncatesAtMaxLength)
 {
     formatBoundedString("hello", 3);
