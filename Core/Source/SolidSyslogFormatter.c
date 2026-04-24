@@ -47,6 +47,7 @@ static size_t        CountDigits(uint32_t value);
 static inline size_t Utf8CodepointLength(const char* source);
 static inline void   NullTerminate(struct SolidSyslogFormatter* formatter);
 static inline void   WriteBytes(struct SolidSyslogFormatter* formatter, const char* bytes, size_t count);
+static inline void   WriteReplacementCharacter(struct SolidSyslogFormatter* formatter);
 static inline void   WriteChar(struct SolidSyslogFormatter* formatter, char value);
 static inline void   WriteEscapedChar(struct SolidSyslogFormatter* formatter, char value);
 static inline void   WritePrintableUsAsciiChar(struct SolidSyslogFormatter* formatter, char value);
@@ -112,21 +113,18 @@ void SolidSyslogFormatter_BoundedString(struct SolidSyslogFormatter* formatter, 
 
     while ((len < maxLength) && (source[len] != '\0'))
     {
-        const char* copyFrom  = &source[len];
-        size_t      copyCount = Utf8CodepointLength(&source[len]);
+        size_t codepointLength = Utf8CodepointLength(&source[len]);
 
-        if (copyCount > 0)
+        if (codepointLength > 0)
         {
-            len += copyCount;
+            WriteBytes(formatter, &source[len], codepointLength);
+            len += codepointLength;
         }
         else
         {
-            copyFrom  = REPLACEMENT_CHARACTER;
-            copyCount = sizeof(REPLACEMENT_CHARACTER);
+            WriteReplacementCharacter(formatter);
             len += 1;
         }
-
-        WriteBytes(formatter, copyFrom, copyCount);
     }
     NullTerminate(formatter);
 }
@@ -222,6 +220,11 @@ static inline bool IsAboveUnicodeMaxEncoding(char lead, char continuation1)
     bool f4WithCont1Above8F = (lead == '\xF4') && ((continuation1 & 0xF0) != 0x80);
     bool f5OrHigherLead     = (lead == '\xF5') || (lead == '\xF6') || (lead == '\xF7');
     return f4WithCont1Above8F || f5OrHigherLead;
+}
+
+static inline void WriteReplacementCharacter(struct SolidSyslogFormatter* formatter)
+{
+    WriteBytes(formatter, REPLACEMENT_CHARACTER, sizeof(REPLACEMENT_CHARACTER));
 }
 
 static inline void WriteBytes(struct SolidSyslogFormatter* formatter, const char* bytes, size_t count)
