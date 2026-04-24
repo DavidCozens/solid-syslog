@@ -389,10 +389,13 @@ static inline void TrimTruncatedMultiByteTail(struct SolidSyslogFormatter* forma
     else if ((p >= 2) && (IsThreeByteLead(buffer[p - 2]) || IsFourByteLead(buffer[p - 2])))
     {
         buffer[p - 2] = '\0';
+        buffer[p - 1] = '\0';
     }
     else if ((p >= 3) && IsFourByteLead(buffer[p - 3]))
     {
         buffer[p - 3] = '\0';
+        buffer[p - 2] = '\0';
+        buffer[p - 1] = '\0';
     }
 }
 

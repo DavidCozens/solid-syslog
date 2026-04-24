@@ -483,6 +483,49 @@ TEST(SolidSyslogFormatter, AsFormattedBufferTrimsFourByteLeadWithOnlyTwoContinua
     LONGS_EQUAL(3, SolidSyslogFormatter_Length(formatter));
 }
 
+TEST(SolidSyslogFormatter, AsFormattedBufferZerosOrphanContinuationWhenThreeByteTrimmedAtPenultimate)
+{
+    /* Trim masks the 3-byte lead with NUL; the orphan continuation that
+     * followed must also be zeroed so callers forwarding (buffer, Length)
+     * to a byte sink never observe stray UTF-8 past the mask. */
+    CREATE_FORMATTER(3);
+
+    formatBoundedString("\xE0\xA0\x80", 3);
+
+    const char* buffer = SolidSyslogFormatter_AsFormattedBuffer(formatter);
+    LONGS_EQUAL(2, SolidSyslogFormatter_Length(formatter));
+    BYTES_EQUAL('\0', buffer[0]);
+    BYTES_EQUAL('\0', buffer[1]);
+}
+
+TEST(SolidSyslogFormatter, AsFormattedBufferZerosOrphanContinuationWhenFourByteTrimmedAtPenultimate)
+{
+    /* Same rule with a 4-byte codepoint partially clamped to 2 bytes. */
+    CREATE_FORMATTER(3);
+
+    formatBoundedString("\xF0\x90\x80\x80", 4);
+
+    const char* buffer = SolidSyslogFormatter_AsFormattedBuffer(formatter);
+    LONGS_EQUAL(2, SolidSyslogFormatter_Length(formatter));
+    BYTES_EQUAL('\0', buffer[0]);
+    BYTES_EQUAL('\0', buffer[1]);
+}
+
+TEST(SolidSyslogFormatter, AsFormattedBufferZerosBothOrphanContinuationsWhenFourByteTrimmedAtAntepenultimate)
+{
+    /* 4-byte codepoint clamped after 3 bytes — both trailing continuations
+     * must be zeroed alongside the masked lead. */
+    CREATE_FORMATTER(4);
+
+    formatBoundedString("\xF0\x90\x80\x80", 4);
+
+    const char* buffer = SolidSyslogFormatter_AsFormattedBuffer(formatter);
+    LONGS_EQUAL(3, SolidSyslogFormatter_Length(formatter));
+    BYTES_EQUAL('\0', buffer[0]);
+    BYTES_EQUAL('\0', buffer[1]);
+    BYTES_EQUAL('\0', buffer[2]);
+}
+
 TEST(SolidSyslogFormatter, ZeroSizeAsciiCharacterIsNoOp)
 {
     CREATE_FORMATTER(0);
