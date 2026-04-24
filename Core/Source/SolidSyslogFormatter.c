@@ -27,7 +27,6 @@ static const char NON_PRINTABLE_SUBSTITUTE   = '?';
 static const char REPLACEMENT_CHARACTER[] = {'\xEF', '\xBF', '\xBD'};
 
 static inline bool   HasCapacity(const struct SolidSyslogFormatter* formatter);
-static inline bool   HasCapacityFor(const struct SolidSyslogFormatter* formatter, size_t count);
 static inline bool   IsAboveUnicodeMaxEncoding(char lead, char continuation1);
 static inline bool   IsFourByteLead(char byte);
 static inline bool   IsOverlongFourByteEncoding(char lead, char continuation1);
@@ -47,8 +46,8 @@ static inline char   DigitToChar(uint32_t value);
 static size_t        CountDigits(uint32_t value);
 static inline size_t Utf8CodepointLength(const char* source);
 static inline void   NullTerminate(struct SolidSyslogFormatter* formatter);
+static inline void   TrimTruncatedMultiByteTail(struct SolidSyslogFormatter* formatter);
 static inline void   WriteBytes(struct SolidSyslogFormatter* formatter, const char* bytes, size_t count);
-static inline void   WriteReplacementCharacter(struct SolidSyslogFormatter* formatter);
 static inline void   WriteChar(struct SolidSyslogFormatter* formatter, char value);
 static inline void   WriteEscapedChar(struct SolidSyslogFormatter* formatter, char value);
 static inline void   WritePrintableUsAsciiChar(struct SolidSyslogFormatter* formatter, char value);
@@ -114,26 +113,20 @@ void SolidSyslogFormatter_BoundedString(struct SolidSyslogFormatter* formatter, 
 
     while ((len < maxLength) && (source[len] != '\0'))
     {
-        size_t codepointLength = Utf8CodepointLength(&source[len]);
+        const char* bytes           = REPLACEMENT_CHARACTER;
+        size_t      count           = sizeof(REPLACEMENT_CHARACTER);
+        size_t      advance         = 1;
+        size_t      codepointLength = Utf8CodepointLength(&source[len]);
 
         if ((codepointLength > 0) && (codepointLength <= (maxLength - len)))
         {
-            if (!HasCapacityFor(formatter, codepointLength))
-            {
-                break;
-            }
-            WriteBytes(formatter, &source[len], codepointLength);
-            len += codepointLength;
+            bytes   = &source[len];
+            count   = codepointLength;
+            advance = codepointLength;
         }
-        else
-        {
-            if (!HasCapacityFor(formatter, sizeof(REPLACEMENT_CHARACTER)))
-            {
-                break;
-            }
-            WriteReplacementCharacter(formatter);
-            len += 1;
-        }
+
+        WriteBytes(formatter, bytes, count);
+        len += advance;
     }
     NullTerminate(formatter);
 }
@@ -229,16 +222,6 @@ static inline bool IsAboveUnicodeMaxEncoding(char lead, char continuation1)
     bool f4WithCont1Above8F = (lead == '\xF4') && ((continuation1 & 0xF0) != 0x80);
     bool f5OrHigherLead     = (lead == '\xF5') || (lead == '\xF6') || (lead == '\xF7');
     return f4WithCont1Above8F || f5OrHigherLead;
-}
-
-static inline bool HasCapacityFor(const struct SolidSyslogFormatter* formatter, size_t count)
-{
-    return (formatter->size > 0) && ((formatter->position + count) <= (formatter->size - 1));
-}
-
-static inline void WriteReplacementCharacter(struct SolidSyslogFormatter* formatter)
-{
-    WriteBytes(formatter, REPLACEMENT_CHARACTER, sizeof(REPLACEMENT_CHARACTER));
 }
 
 static inline void WriteBytes(struct SolidSyslogFormatter* formatter, const char* bytes, size_t count)
@@ -370,7 +353,27 @@ void SolidSyslogFormatter_SixDigit(struct SolidSyslogFormatter* formatter, uint3
 
 const char* SolidSyslogFormatter_AsString(const struct SolidSyslogFormatter* formatter)
 {
+    TrimTruncatedMultiByteTail((struct SolidSyslogFormatter*) formatter);
     return formatter->buffer;
+}
+
+static inline void TrimTruncatedMultiByteTail(struct SolidSyslogFormatter* formatter)
+{
+    char*  buffer = formatter->buffer;
+    size_t p      = formatter->position;
+
+    if ((p >= 1) && (IsTwoByteLead(buffer[p - 1]) || IsThreeByteLead(buffer[p - 1]) || IsFourByteLead(buffer[p - 1])))
+    {
+        buffer[p - 1] = '\0';
+    }
+    else if ((p >= 2) && (IsThreeByteLead(buffer[p - 2]) || IsFourByteLead(buffer[p - 2])))
+    {
+        buffer[p - 2] = '\0';
+    }
+    else if ((p >= 3) && IsFourByteLead(buffer[p - 3]))
+    {
+        buffer[p - 3] = '\0';
+    }
 }
 
 size_t SolidSyslogFormatter_Length(const struct SolidSyslogFormatter* formatter)

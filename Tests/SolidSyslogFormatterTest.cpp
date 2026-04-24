@@ -370,6 +370,69 @@ TEST(SolidSyslogFormatter, AsStringReturnsFormattedContent)
     CHECK_FORMATTED("test");
 }
 
+TEST(SolidSyslogFormatter, AsStringTrimsTruncatedTwoByteLeadAtBufferTail)
+{
+    /* \xC2 alone is a truncated 2-byte lead. AsString must hide it with a
+     * NUL so callers never observe invalid UTF-8 at the tail. Length still
+     * reports the raw byte count so the gap records what was trimmed. */
+    formatCharacter('\xC2');
+
+    STRCMP_EQUAL("", SolidSyslogFormatter_AsString(formatter));
+    LONGS_EQUAL(1, SolidSyslogFormatter_Length(formatter));
+}
+
+TEST(SolidSyslogFormatter, AsStringTrimsTruncatedThreeByteLeadAtBufferTail)
+{
+    /* \xE0 alone is a truncated 3-byte lead. */
+    formatCharacter('\xE0');
+
+    STRCMP_EQUAL("", SolidSyslogFormatter_AsString(formatter));
+    LONGS_EQUAL(1, SolidSyslogFormatter_Length(formatter));
+}
+
+TEST(SolidSyslogFormatter, AsStringTrimsTruncatedFourByteLeadAtBufferTail)
+{
+    /* \xF0 alone is a truncated 4-byte lead. */
+    formatCharacter('\xF0');
+
+    STRCMP_EQUAL("", SolidSyslogFormatter_AsString(formatter));
+    LONGS_EQUAL(1, SolidSyslogFormatter_Length(formatter));
+}
+
+TEST(SolidSyslogFormatter, AsStringTrimsThreeByteLeadWithOnlyOneContinuation)
+{
+    /* \xE0\xA0 is a valid 3-byte prefix waiting for its final continuation.
+     * Without the third byte the codepoint is truncated and both bytes
+     * must be hidden from AsString. */
+    formatCharacter('\xE0');
+    formatCharacter('\xA0');
+
+    STRCMP_EQUAL("", SolidSyslogFormatter_AsString(formatter));
+    LONGS_EQUAL(2, SolidSyslogFormatter_Length(formatter));
+}
+
+TEST(SolidSyslogFormatter, AsStringTrimsFourByteLeadWithOnlyOneContinuation)
+{
+    /* \xF0\x90 is the first two bytes of a 4-byte sequence; still truncated. */
+    formatCharacter('\xF0');
+    formatCharacter('\x90');
+
+    STRCMP_EQUAL("", SolidSyslogFormatter_AsString(formatter));
+    LONGS_EQUAL(2, SolidSyslogFormatter_Length(formatter));
+}
+
+TEST(SolidSyslogFormatter, AsStringTrimsFourByteLeadWithOnlyTwoContinuations)
+{
+    /* \xF0\x90\x80 is the first three bytes of a 4-byte sequence; still
+     * one continuation short of a complete codepoint. */
+    formatCharacter('\xF0');
+    formatCharacter('\x90');
+    formatCharacter('\x80');
+
+    STRCMP_EQUAL("", SolidSyslogFormatter_AsString(formatter));
+    LONGS_EQUAL(3, SolidSyslogFormatter_Length(formatter));
+}
+
 TEST(SolidSyslogFormatter, ZeroSizeCharacterIsNoOp)
 {
     CREATE_FORMATTER(0);
@@ -518,30 +581,32 @@ TEST(SolidSyslogFormatter, BoundedStringWritesNothingWhenFull)
     CHECK_FORMATTED("abc");
 }
 
-TEST(SolidSyslogFormatter, BoundedStringDropsReplacementWhenOutputTooSmall)
+TEST(SolidSyslogFormatter, BoundedStringReplacementHiddenFromAsStringWhenOutputTooSmall)
 {
     /* Replacement is 3 bytes. A 3-byte buffer provides 2 usable bytes
-     * (one reserved for NUL), so an invalid input's replacement does not
-     * fit. Writing a partial U+FFFD would leave truncated UTF-8 in the
-     * output tail, so the whole replacement is dropped. */
+     * (one reserved for NUL), so U+FFFD cannot be fully written. The
+     * formatter clamps the third byte; AsString trims the truncated
+     * lead so callers see no invalid UTF-8. Length still reflects the
+     * raw bytes the formatter absorbed, making the gap observable. */
     CREATE_FORMATTER(3);
 
     formatBoundedString("\xC3", 1);
 
-    CHECK_FORMATTED("");
+    STRCMP_EQUAL("", SolidSyslogFormatter_AsString(formatter));
+    LONGS_EQUAL(2, SolidSyslogFormatter_Length(formatter));
 }
 
-TEST(SolidSyslogFormatter, BoundedStringDropsValidCodepointWhenOutputTooSmall)
+TEST(SolidSyslogFormatter, BoundedStringValidCodepointHiddenFromAsStringWhenOutputTooSmall)
 {
-    /* After writing 'a', only 1 usable byte remains in the 3-byte buffer.
-     * A valid 3-byte codepoint cannot fit, and writing a partial one would
-     * leave truncated UTF-8 at the output tail. The codepoint is dropped
-     * and the loop stops. */
+    /* After writing 'a', only 1 usable byte remains in the 3-byte
+     * buffer. The 3-byte codepoint clamps after one byte; AsString
+     * trims the truncated lead so the visible tail is clean. */
     CREATE_FORMATTER(3);
 
     formatBoundedString("a\xE0\xA0\x80", 4);
 
-    CHECK_FORMATTED("a");
+    STRCMP_EQUAL("a", SolidSyslogFormatter_AsString(formatter));
+    LONGS_EQUAL(2, SolidSyslogFormatter_Length(formatter));
 }
 
 TEST(SolidSyslogFormatter, CharacterStopsWhenFull)
