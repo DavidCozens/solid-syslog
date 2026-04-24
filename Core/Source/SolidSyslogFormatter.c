@@ -51,7 +51,6 @@ static inline void   NullTerminate(struct SolidSyslogFormatter* formatter);
 static inline void   TrimTruncatedMultiByteTail(struct SolidSyslogFormatter* formatter);
 static inline void   WriteBytes(struct SolidSyslogFormatter* formatter, const char* bytes, size_t count);
 static inline void   WriteChar(struct SolidSyslogFormatter* formatter, char value);
-static inline void   WriteEscapedChar(struct SolidSyslogFormatter* formatter, char value);
 static inline void   WritePrintableUsAsciiChar(struct SolidSyslogFormatter* formatter, char value);
 
 struct SolidSyslogFormatter* SolidSyslogFormatter_Create(SolidSyslogFormatterStorage* storage, size_t bufferSize)
@@ -252,19 +251,26 @@ void SolidSyslogFormatter_EscapedString(struct SolidSyslogFormatter* formatter, 
 
     while ((len < maxRawLength) && (source[len] != '\0'))
     {
-        WriteEscapedChar(formatter, source[len]);
-        len++;
+        size_t codepointLength = Utf8CodepointLength(&source[len]);
+
+        if (CodepointFits(codepointLength, maxRawLength - len))
+        {
+            if ((codepointLength == 1) && NeedsEscape(source[len]))
+            {
+                /* Escape prefix is an output byte, not a source byte; len
+                 * advances only by the codepoint's own length. */
+                WriteChar(formatter, ESCAPE_PREFIX);
+            }
+            WriteBytes(formatter, &source[len], codepointLength);
+            len += codepointLength;
+        }
+        else
+        {
+            WriteBytes(formatter, REPLACEMENT_CHARACTER, sizeof(REPLACEMENT_CHARACTER));
+            len += 1;
+        }
     }
     NullTerminate(formatter);
-}
-
-static inline void WriteEscapedChar(struct SolidSyslogFormatter* formatter, char value)
-{
-    if (NeedsEscape(value))
-    {
-        WriteChar(formatter, ESCAPE_PREFIX);
-    }
-    WriteChar(formatter, value);
 }
 
 static inline bool NeedsEscape(char value)

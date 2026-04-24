@@ -744,6 +744,43 @@ TEST(SolidSyslogFormatter, EscapedStringMaxRawLengthBoundsInputNotOutput)
     CHECK_FORMATTED(R"(\"\")");
 }
 
+TEST(SolidSyslogFormatter, EscapedStringPassesValidUtf8CodepointsThroughAroundEscapedSpecial)
+{
+    /* \xC2\x80 is a valid 2-byte UTF-8 codepoint. The embedded \" is the
+     * only byte requiring escape; the UTF-8 codepoints on either side ride
+     * through unchanged. Proves the shared UTF-8 core composes with the
+     * single-byte escape decoration. */
+    SolidSyslogFormatter_EscapedString(formatter, "\xC2\x80\"\xC2\x80", 5);
+
+    CHECK_FORMATTED("\xC2\x80\\\"\xC2\x80");
+}
+
+TEST(SolidSyslogFormatter, EscapedStringReplacesInvalidUtf8ByteWithReplacementChar)
+{
+    /* \xC0 is an invalid 2-byte lead (overlong); EscapedString must
+     * substitute it with U+FFFD via the shared UTF-8 core. The surrounding
+     * ASCII rides through unescaped. Proves the invalid-path substitution
+     * is inherited, not a separate implementation. */
+    SolidSyslogFormatter_EscapedString(formatter,
+                                       "a\xC0"
+                                       "b",
+                                       3);
+
+    CHECK_FORMATTED("a\xEF\xBF\xBD"
+                    "b");
+}
+
+TEST(SolidSyslogFormatter, EscapedStringReplacesStragglingMultiByteLeadWhenSourceTruncated)
+{
+    /* maxRawLength caps source at 1 byte, but \xC2 followed by \x80 in
+     * memory would be a valid 2-byte codepoint. The source-bound check in
+     * the shared UTF-8 core demotes the lead to U+FFFD — EscapedString
+     * inherits truncation handling for free. */
+    SolidSyslogFormatter_EscapedString(formatter, "\xC2\x80", 1);
+
+    CHECK_FORMATTED("\xEF\xBF\xBD");
+}
+
 TEST(SolidSyslogFormatter, PrintUsAsciiStringWithEmptyInputWritesNothing)
 {
     SolidSyslogFormatter_PrintUsAsciiString(formatter, "", 0);
