@@ -128,7 +128,8 @@ static bool ResolveDestination(struct SolidSyslogStreamSender* sender, struct So
 
     sender->config.endpoint(&endpoint);
 
-    return SolidSyslogResolver_Resolve(sender->config.resolver, SOLIDSYSLOG_TRANSPORT_TCP, SolidSyslogFormatter_AsFormattedBuffer(hostFormatter), endpoint.port, addr);
+    return SolidSyslogResolver_Resolve(sender->config.resolver, SOLIDSYSLOG_TRANSPORT_TCP, SolidSyslogFormatter_AsFormattedBuffer(hostFormatter), endpoint.port,
+                                       addr);
 }
 
 static void Disconnect(struct SolidSyslogSender* self)
