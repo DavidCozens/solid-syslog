@@ -27,7 +27,7 @@ TEST_GROUP(StringFake)
 TEST(StringFake, ReturnsEmptyStringAfterReset)
 {
     StringFake_GetHostname(formatter);
-    STRCMP_EQUAL("", SolidSyslogFormatter_AsString(formatter));
+    STRCMP_EQUAL("", SolidSyslogFormatter_AsFormattedBuffer(formatter));
     LONGS_EQUAL(0, SolidSyslogFormatter_Length(formatter));
 }
 
@@ -35,6 +35,6 @@ TEST(StringFake, ReturnsConfiguredHostname)
 {
     StringFake_SetHostname("MyHost");
     StringFake_GetHostname(formatter);
-    STRCMP_EQUAL("MyHost", SolidSyslogFormatter_AsString(formatter));
+    STRCMP_EQUAL("MyHost", SolidSyslogFormatter_AsFormattedBuffer(formatter));
     LONGS_EQUAL(6, SolidSyslogFormatter_Length(formatter));
 }

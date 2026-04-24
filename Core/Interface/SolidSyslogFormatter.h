@@ -38,8 +38,13 @@ EXTERN_C_BEGIN
     void                         SolidSyslogFormatter_TwoDigit(struct SolidSyslogFormatter * formatter, uint32_t value);
     void                         SolidSyslogFormatter_FourDigit(struct SolidSyslogFormatter * formatter, uint32_t value);
     void                         SolidSyslogFormatter_SixDigit(struct SolidSyslogFormatter * formatter, uint32_t value);
-    const char*                  SolidSyslogFormatter_AsString(const struct SolidSyslogFormatter* formatter);
-    size_t                       SolidSyslogFormatter_Length(const struct SolidSyslogFormatter* formatter);
+    /* Returns a pointer to the formatted bytes. The buffer is NUL-terminated for
+     * convenience but the content is not a C string: UTF-8 content may contain
+     * embedded NUL (U+0000) and a truncated multi-byte tail is masked with a NUL
+     * so strlen stops before any invalid UTF-8. Pair with _Length to get the
+     * full byte count the formatter has written. */
+    const char* SolidSyslogFormatter_AsFormattedBuffer(const struct SolidSyslogFormatter* formatter);
+    size_t      SolidSyslogFormatter_Length(const struct SolidSyslogFormatter* formatter);
 
 EXTERN_C_END
 

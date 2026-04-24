@@ -128,7 +128,7 @@ static bool ResolveDestination(struct SolidSyslogStreamSender* sender, struct So
 
     sender->config.endpoint(&endpoint);
 
-    return SolidSyslogResolver_Resolve(sender->config.resolver, SOLIDSYSLOG_TRANSPORT_TCP, SolidSyslogFormatter_AsString(hostFormatter), endpoint.port, addr);
+    return SolidSyslogResolver_Resolve(sender->config.resolver, SOLIDSYSLOG_TRANSPORT_TCP, SolidSyslogFormatter_AsFormattedBuffer(hostFormatter), endpoint.port, addr);
 }
 
 static void Disconnect(struct SolidSyslogSender* self)
@@ -152,7 +152,7 @@ static bool TransmitFramed(struct SolidSyslogStreamSender* sender, const void* b
     SolidSyslogFormatterStorage  prefixStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(OCTET_COUNTING_PREFIX_CAPACITY)];
     struct SolidSyslogFormatter* prefix = FormatOctetCountingPrefix(prefixStorage, size);
 
-    return SendBytes(sender, SolidSyslogFormatter_AsString(prefix), SolidSyslogFormatter_Length(prefix)) && SendBytes(sender, buffer, size);
+    return SendBytes(sender, SolidSyslogFormatter_AsFormattedBuffer(prefix), SolidSyslogFormatter_Length(prefix)) && SendBytes(sender, buffer, size);
 }
 
 static struct SolidSyslogFormatter* FormatOctetCountingPrefix(SolidSyslogFormatterStorage* storage, size_t messageSize)

@@ -7,8 +7,8 @@
 
 #define CREATE_FORMATTER(bufferSize) formatter = SolidSyslogFormatter_Create(storage, bufferSize)
 
-#define CHECK_FORMATTED(expected)                                     \
-    STRCMP_EQUAL(expected, SolidSyslogFormatter_AsString(formatter)); \
+#define CHECK_FORMATTED(expected)                                              \
+    STRCMP_EQUAL(expected, SolidSyslogFormatter_AsFormattedBuffer(formatter)); \
     LONGS_EQUAL(strlen(expected), SolidSyslogFormatter_Length(formatter))
 
 #define CHECK_LENGTH(expected) LONGS_EQUAL(expected, SolidSyslogFormatter_Length(formatter))
@@ -363,65 +363,65 @@ TEST(SolidSyslogFormatter, LengthAdvancesWithWrites)
     CHECK_LENGTH(5);
 }
 
-TEST(SolidSyslogFormatter, AsStringReturnsFormattedContent)
+TEST(SolidSyslogFormatter, AsFormattedBufferReturnsFormattedContent)
 {
     formatBoundedString("test", 4);
 
     CHECK_FORMATTED("test");
 }
 
-TEST(SolidSyslogFormatter, AsStringTrimsTruncatedTwoByteLeadAtBufferTail)
+TEST(SolidSyslogFormatter, AsFormattedBufferTrimsTruncatedTwoByteLeadAtBufferTail)
 {
-    /* \xC2 alone is a truncated 2-byte lead. AsString must hide it with a
+    /* \xC2 alone is a truncated 2-byte lead. AsFormattedBuffer must hide it with a
      * NUL so callers never observe invalid UTF-8 at the tail. Length still
      * reports the raw byte count so the gap records what was trimmed. */
     formatCharacter('\xC2');
 
-    STRCMP_EQUAL("", SolidSyslogFormatter_AsString(formatter));
+    STRCMP_EQUAL("", SolidSyslogFormatter_AsFormattedBuffer(formatter));
     LONGS_EQUAL(1, SolidSyslogFormatter_Length(formatter));
 }
 
-TEST(SolidSyslogFormatter, AsStringTrimsTruncatedThreeByteLeadAtBufferTail)
+TEST(SolidSyslogFormatter, AsFormattedBufferTrimsTruncatedThreeByteLeadAtBufferTail)
 {
     /* \xE0 alone is a truncated 3-byte lead. */
     formatCharacter('\xE0');
 
-    STRCMP_EQUAL("", SolidSyslogFormatter_AsString(formatter));
+    STRCMP_EQUAL("", SolidSyslogFormatter_AsFormattedBuffer(formatter));
     LONGS_EQUAL(1, SolidSyslogFormatter_Length(formatter));
 }
 
-TEST(SolidSyslogFormatter, AsStringTrimsTruncatedFourByteLeadAtBufferTail)
+TEST(SolidSyslogFormatter, AsFormattedBufferTrimsTruncatedFourByteLeadAtBufferTail)
 {
     /* \xF0 alone is a truncated 4-byte lead. */
     formatCharacter('\xF0');
 
-    STRCMP_EQUAL("", SolidSyslogFormatter_AsString(formatter));
+    STRCMP_EQUAL("", SolidSyslogFormatter_AsFormattedBuffer(formatter));
     LONGS_EQUAL(1, SolidSyslogFormatter_Length(formatter));
 }
 
-TEST(SolidSyslogFormatter, AsStringTrimsThreeByteLeadWithOnlyOneContinuation)
+TEST(SolidSyslogFormatter, AsFormattedBufferTrimsThreeByteLeadWithOnlyOneContinuation)
 {
     /* \xE0\xA0 is a valid 3-byte prefix waiting for its final continuation.
      * Without the third byte the codepoint is truncated and both bytes
-     * must be hidden from AsString. */
+     * must be hidden from AsFormattedBuffer. */
     formatCharacter('\xE0');
     formatCharacter('\xA0');
 
-    STRCMP_EQUAL("", SolidSyslogFormatter_AsString(formatter));
+    STRCMP_EQUAL("", SolidSyslogFormatter_AsFormattedBuffer(formatter));
     LONGS_EQUAL(2, SolidSyslogFormatter_Length(formatter));
 }
 
-TEST(SolidSyslogFormatter, AsStringTrimsFourByteLeadWithOnlyOneContinuation)
+TEST(SolidSyslogFormatter, AsFormattedBufferTrimsFourByteLeadWithOnlyOneContinuation)
 {
     /* \xF0\x90 is the first two bytes of a 4-byte sequence; still truncated. */
     formatCharacter('\xF0');
     formatCharacter('\x90');
 
-    STRCMP_EQUAL("", SolidSyslogFormatter_AsString(formatter));
+    STRCMP_EQUAL("", SolidSyslogFormatter_AsFormattedBuffer(formatter));
     LONGS_EQUAL(2, SolidSyslogFormatter_Length(formatter));
 }
 
-TEST(SolidSyslogFormatter, AsStringTrimsFourByteLeadWithOnlyTwoContinuations)
+TEST(SolidSyslogFormatter, AsFormattedBufferTrimsFourByteLeadWithOnlyTwoContinuations)
 {
     /* \xF0\x90\x80 is the first three bytes of a 4-byte sequence; still
      * one continuation short of a complete codepoint. */
@@ -429,7 +429,7 @@ TEST(SolidSyslogFormatter, AsStringTrimsFourByteLeadWithOnlyTwoContinuations)
     formatCharacter('\x90');
     formatCharacter('\x80');
 
-    STRCMP_EQUAL("", SolidSyslogFormatter_AsString(formatter));
+    STRCMP_EQUAL("", SolidSyslogFormatter_AsFormattedBuffer(formatter));
     LONGS_EQUAL(3, SolidSyslogFormatter_Length(formatter));
 }
 
@@ -581,31 +581,31 @@ TEST(SolidSyslogFormatter, BoundedStringWritesNothingWhenFull)
     CHECK_FORMATTED("abc");
 }
 
-TEST(SolidSyslogFormatter, BoundedStringReplacementHiddenFromAsStringWhenOutputTooSmall)
+TEST(SolidSyslogFormatter, BoundedStringReplacementHiddenFromAsFormattedBufferWhenOutputTooSmall)
 {
     /* Replacement is 3 bytes. A 3-byte buffer provides 2 usable bytes
      * (one reserved for NUL), so U+FFFD cannot be fully written. The
-     * formatter clamps the third byte; AsString trims the truncated
+     * formatter clamps the third byte; AsFormattedBuffer trims the truncated
      * lead so callers see no invalid UTF-8. Length still reflects the
      * raw bytes the formatter absorbed, making the gap observable. */
     CREATE_FORMATTER(3);
 
     formatBoundedString("\xC3", 1);
 
-    STRCMP_EQUAL("", SolidSyslogFormatter_AsString(formatter));
+    STRCMP_EQUAL("", SolidSyslogFormatter_AsFormattedBuffer(formatter));
     LONGS_EQUAL(2, SolidSyslogFormatter_Length(formatter));
 }
 
-TEST(SolidSyslogFormatter, BoundedStringValidCodepointHiddenFromAsStringWhenOutputTooSmall)
+TEST(SolidSyslogFormatter, BoundedStringValidCodepointHiddenFromAsFormattedBufferWhenOutputTooSmall)
 {
     /* After writing 'a', only 1 usable byte remains in the 3-byte
-     * buffer. The 3-byte codepoint clamps after one byte; AsString
+     * buffer. The 3-byte codepoint clamps after one byte; AsFormattedBuffer
      * trims the truncated lead so the visible tail is clean. */
     CREATE_FORMATTER(3);
 
     formatBoundedString("a\xE0\xA0\x80", 4);
 
-    STRCMP_EQUAL("a", SolidSyslogFormatter_AsString(formatter));
+    STRCMP_EQUAL("a", SolidSyslogFormatter_AsFormattedBuffer(formatter));
     LONGS_EQUAL(2, SolidSyslogFormatter_Length(formatter));
 }
 

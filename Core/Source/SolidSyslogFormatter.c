@@ -351,7 +351,7 @@ void SolidSyslogFormatter_SixDigit(struct SolidSyslogFormatter* formatter, uint3
     NullTerminate(formatter);
 }
 
-const char* SolidSyslogFormatter_AsString(const struct SolidSyslogFormatter* formatter)
+const char* SolidSyslogFormatter_AsFormattedBuffer(const struct SolidSyslogFormatter* formatter)
 {
     TrimTruncatedMultiByteTail((struct SolidSyslogFormatter*) formatter);
     return formatter->buffer;

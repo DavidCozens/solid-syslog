@@ -34,7 +34,7 @@ TEST_GROUP(SolidSyslogWindowsProcessId)
 
     const char* formatted() const
     {
-        return SolidSyslogFormatter_AsString(formatter);
+        return SolidSyslogFormatter_AsFormattedBuffer(formatter);
     }
 };
 

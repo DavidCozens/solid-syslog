@@ -51,7 +51,7 @@ TEST_GROUP(SolidSyslogWindowsHostname)
 
     const char* formatted() const
     {
-        return SolidSyslogFormatter_AsString(formatter);
+        return SolidSyslogFormatter_AsFormattedBuffer(formatter);
     }
 };
 

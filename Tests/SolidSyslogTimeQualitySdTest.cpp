@@ -59,7 +59,7 @@ TEST(SolidSyslogTimeQualitySd, CreateReturnsNonNull)
 TEST(SolidSyslogTimeQualitySd, FormatProducesTzKnownAndIsSynced)
 {
     format();
-    STRCMP_EQUAL("[timeQuality tzKnown=\"1\" isSynced=\"1\"]", SolidSyslogFormatter_AsString(formatter));
+    STRCMP_EQUAL("[timeQuality tzKnown=\"1\" isSynced=\"1\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter));
 }
 
 TEST(SolidSyslogTimeQualitySd, FormatWithFalseValues)
@@ -67,46 +67,46 @@ TEST(SolidSyslogTimeQualitySd, FormatWithFalseValues)
     stubTimeQuality.tzKnown  = false;
     stubTimeQuality.isSynced = false;
     format();
-    STRCMP_EQUAL("[timeQuality tzKnown=\"0\" isSynced=\"0\"]", SolidSyslogFormatter_AsString(formatter));
+    STRCMP_EQUAL("[timeQuality tzKnown=\"0\" isSynced=\"0\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter));
 }
 
 TEST(SolidSyslogTimeQualitySd, FormatIncludesSyncAccuracyWhenNonZero)
 {
     stubTimeQuality.syncAccuracyMicroseconds = 50;
     format();
-    STRCMP_EQUAL("[timeQuality tzKnown=\"1\" isSynced=\"1\" syncAccuracy=\"50\"]", SolidSyslogFormatter_AsString(formatter));
+    STRCMP_EQUAL("[timeQuality tzKnown=\"1\" isSynced=\"1\" syncAccuracy=\"50\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter));
 }
 
 TEST(SolidSyslogTimeQualitySd, SyncAccuracyOfOneIsSmallestNonOmitValue)
 {
     stubTimeQuality.syncAccuracyMicroseconds = 1;
     format();
-    STRCMP_EQUAL("[timeQuality tzKnown=\"1\" isSynced=\"1\" syncAccuracy=\"1\"]", SolidSyslogFormatter_AsString(formatter));
+    STRCMP_EQUAL("[timeQuality tzKnown=\"1\" isSynced=\"1\" syncAccuracy=\"1\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter));
 }
 
 TEST(SolidSyslogTimeQualitySd, SyncAccuracyAtMaxUint32)
 {
     stubTimeQuality.syncAccuracyMicroseconds = UINT32_MAX;
     format();
-    STRCMP_EQUAL("[timeQuality tzKnown=\"1\" isSynced=\"1\" syncAccuracy=\"4294967295\"]", SolidSyslogFormatter_AsString(formatter));
+    STRCMP_EQUAL("[timeQuality tzKnown=\"1\" isSynced=\"1\" syncAccuracy=\"4294967295\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter));
 }
 
 TEST(SolidSyslogTimeQualitySd, OmitSyncAccuracyUsesDefinedConstant)
 {
     stubTimeQuality.syncAccuracyMicroseconds = SOLIDSYSLOG_SYNC_ACCURACY_OMIT;
     format();
-    STRCMP_EQUAL("[timeQuality tzKnown=\"1\" isSynced=\"1\"]", SolidSyslogFormatter_AsString(formatter));
+    STRCMP_EQUAL("[timeQuality tzKnown=\"1\" isSynced=\"1\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter));
 }
 
 TEST(SolidSyslogTimeQualitySd, CallbackIsInvokedOnEachFormat)
 {
     format();
-    STRCMP_EQUAL("[timeQuality tzKnown=\"1\" isSynced=\"1\"]", SolidSyslogFormatter_AsString(formatter));
+    STRCMP_EQUAL("[timeQuality tzKnown=\"1\" isSynced=\"1\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter));
 
     stubTimeQuality.isSynced = false;
     resetFormatter();
     format();
-    STRCMP_EQUAL("[timeQuality tzKnown=\"1\" isSynced=\"0\"]", SolidSyslogFormatter_AsString(formatter));
+    STRCMP_EQUAL("[timeQuality tzKnown=\"1\" isSynced=\"0\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter));
 }
 
 TEST(SolidSyslogTimeQualitySd, FormatAdvancesFormatterLength)
@@ -114,14 +114,14 @@ TEST(SolidSyslogTimeQualitySd, FormatAdvancesFormatterLength)
     LONGS_EQUAL(0, SolidSyslogFormatter_Length(formatter));
     format();
     CHECK(SolidSyslogFormatter_Length(formatter) > 0);
-    LONGS_EQUAL(strlen(SolidSyslogFormatter_AsString(formatter)), SolidSyslogFormatter_Length(formatter));
+    LONGS_EQUAL(strlen(SolidSyslogFormatter_AsFormattedBuffer(formatter)), SolidSyslogFormatter_Length(formatter));
 }
 
 TEST(SolidSyslogTimeQualitySd, FormatAdvancesLengthWithSyncAccuracy)
 {
     stubTimeQuality.syncAccuracyMicroseconds = 50;
     format();
-    LONGS_EQUAL(strlen(SolidSyslogFormatter_AsString(formatter)), SolidSyslogFormatter_Length(formatter));
+    LONGS_EQUAL(strlen(SolidSyslogFormatter_AsFormattedBuffer(formatter)), SolidSyslogFormatter_Length(formatter));
 }
 
 TEST(SolidSyslogTimeQualitySd, DestroyDoesNotCrash)
