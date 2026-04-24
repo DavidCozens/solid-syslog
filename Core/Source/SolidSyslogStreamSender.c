@@ -159,7 +159,7 @@ static struct SolidSyslogFormatter* FormatOctetCountingPrefix(SolidSyslogFormatt
 {
     struct SolidSyslogFormatter* f = SolidSyslogFormatter_Create(storage, OCTET_COUNTING_PREFIX_CAPACITY);
     SolidSyslogFormatter_Uint32(f, (uint32_t) messageSize);
-    SolidSyslogFormatter_Character(f, ' ');
+    SolidSyslogFormatter_AsciiCharacter(f, ' ');
     return f;
 }
 

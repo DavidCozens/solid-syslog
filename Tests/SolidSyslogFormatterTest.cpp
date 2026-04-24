@@ -33,7 +33,7 @@ TEST_GROUP(SolidSyslogFormatter)
         CREATE_FORMATTER(TEST_BUFFER_SIZE);
     }
 
-    void formatCharacter(char value) const { SolidSyslogFormatter_Character(formatter, value); }
+    void formatAsciiCharacter(char value) const { SolidSyslogFormatter_AsciiCharacter(formatter, value); }
     void formatBoundedString(const char* source, size_t maxLength) const { SolidSyslogFormatter_BoundedString(formatter, source, maxLength); }
     void formatUint32(uint32_t value) const { SolidSyslogFormatter_Uint32(formatter, value); }
     void formatTwoDigit(uint32_t value) const { SolidSyslogFormatter_TwoDigit(formatter, value); }
@@ -43,19 +43,57 @@ TEST_GROUP(SolidSyslogFormatter)
 
 // clang-format on
 
-TEST(SolidSyslogFormatter, CharacterWritesIntoBuffer)
+TEST(SolidSyslogFormatter, AsciiCharacterWritesIntoBuffer)
 {
-    formatCharacter('A');
+    formatAsciiCharacter('A');
 
     CHECK_FORMATTED("A");
 }
 
-TEST(SolidSyslogFormatter, TwoCharactersAppendInSequence)
+TEST(SolidSyslogFormatter, TwoAsciiCharactersAppendInSequence)
 {
-    formatCharacter('A');
-    formatCharacter('B');
+    formatAsciiCharacter('A');
+    formatAsciiCharacter('B');
 
     CHECK_FORMATTED("AB");
+}
+
+TEST(SolidSyslogFormatter, AsciiCharacterSubstitutesHighBitByteWithQuestionMark)
+{
+    /* A high-bit byte (like a UTF-8 lead) is not PRINTUSASCII; it must be
+     * replaced with the substitute '?'. This keeps AsciiCharacter safe to
+     * hand to extension points — no way to smuggle non-ASCII in. */
+    formatAsciiCharacter('\xC3');
+
+    CHECK_FORMATTED("?");
+}
+
+TEST(SolidSyslogFormatter, AsciiCharacterSubstitutesControlCharWithQuestionMark)
+{
+    /* C0 control characters (0x01-0x1F) are not acceptable in the header
+     * fields; AsciiCharacter must substitute them. */
+    formatAsciiCharacter('\x01');
+
+    CHECK_FORMATTED("?");
+}
+
+TEST(SolidSyslogFormatter, AsciiCharacterSubstitutesDelWithQuestionMark)
+{
+    /* DEL (0x7F) sits between the printable range and the high-bit
+     * range; it is still non-printable and must substitute. */
+    formatAsciiCharacter('\x7F');
+
+    CHECK_FORMATTED("?");
+}
+
+TEST(SolidSyslogFormatter, AsciiCharacterAcceptsSpace)
+{
+    /* Space (0x20) is outside PRINTUSASCII but must pass through — the
+     * library uses it as the structural separator between syslog header
+     * fields. */
+    formatAsciiCharacter(' ');
+
+    CHECK_FORMATTED(" ");
 }
 
 TEST(SolidSyslogFormatter, BoundedStringWritesStringIntoBuffer)
@@ -314,9 +352,9 @@ TEST(SolidSyslogFormatter, BoundedStringReplacesStragglingFourByteLeadWhenSource
     CHECK_FORMATTED("\xEF\xBF\xBD");
 }
 
-TEST(SolidSyslogFormatter, BoundedStringAppendsAfterCharacter)
+TEST(SolidSyslogFormatter, BoundedStringAppendsAfterAsciiCharacter)
 {
-    formatCharacter('<');
+    formatAsciiCharacter('<');
     formatBoundedString("hello", 10);
 
     CHECK_FORMATTED("<hello");
@@ -343,9 +381,9 @@ TEST(SolidSyslogFormatter, Uint32FormatsMultipleDigits)
     CHECK_FORMATTED("134");
 }
 
-TEST(SolidSyslogFormatter, Uint32AppendsAfterCharacter)
+TEST(SolidSyslogFormatter, Uint32AppendsAfterAsciiCharacter)
 {
-    formatCharacter('<');
+    formatAsciiCharacter('<');
     formatUint32(42);
 
     CHECK_FORMATTED("<42");
@@ -445,11 +483,11 @@ TEST(SolidSyslogFormatter, AsFormattedBufferTrimsFourByteLeadWithOnlyTwoContinua
     LONGS_EQUAL(3, SolidSyslogFormatter_Length(formatter));
 }
 
-TEST(SolidSyslogFormatter, ZeroSizeCharacterIsNoOp)
+TEST(SolidSyslogFormatter, ZeroSizeAsciiCharacterIsNoOp)
 {
     CREATE_FORMATTER(0);
 
-    formatCharacter('A');
+    formatAsciiCharacter('A');
 
     CHECK_LENGTH(0);
 }
@@ -476,7 +514,7 @@ TEST(SolidSyslogFormatter, OneByteBufferHoldsOnlyNullTerminator)
 {
     CREATE_FORMATTER(1);
 
-    formatCharacter('X');
+    formatAsciiCharacter('X');
 
     CHECK_FORMATTED("");
 }
@@ -621,13 +659,13 @@ TEST(SolidSyslogFormatter, BoundedStringValidCodepointHiddenFromAsFormattedBuffe
     LONGS_EQUAL(2, SolidSyslogFormatter_Length(formatter));
 }
 
-TEST(SolidSyslogFormatter, CharacterStopsWhenFull)
+TEST(SolidSyslogFormatter, AsciiCharacterStopsWhenFull)
 {
     CREATE_FORMATTER(3);
 
-    formatCharacter('A');
-    formatCharacter('B');
-    formatCharacter('C');
+    formatAsciiCharacter('A');
+    formatAsciiCharacter('B');
+    formatAsciiCharacter('C');
 
     CHECK_FORMATTED("AB");
 }

@@ -43,16 +43,16 @@ static void Format(struct SolidSyslogStructuredData* self, struct SolidSyslogFor
     FormatBoolParam(formatter, PARAM_TZ_KNOWN, sizeof(PARAM_TZ_KNOWN) - 1, q.tzKnown);
     FormatBoolParam(formatter, PARAM_IS_SYNCED, sizeof(PARAM_IS_SYNCED) - 1, q.isSynced);
     FormatSyncAccuracy(formatter, q.syncAccuracyMicroseconds);
-    SolidSyslogFormatter_Character(formatter, ']');
+    SolidSyslogFormatter_AsciiCharacter(formatter, ']');
 }
 
 static void FormatBoolParam(struct SolidSyslogFormatter* formatter, const char* name, size_t nameLength, bool value)
 {
     SolidSyslogFormatter_BoundedString(formatter, name, nameLength);
-    SolidSyslogFormatter_Character(formatter, '=');
-    SolidSyslogFormatter_Character(formatter, '"');
-    SolidSyslogFormatter_Character(formatter, value ? '1' : '0');
-    SolidSyslogFormatter_Character(formatter, '"');
+    SolidSyslogFormatter_AsciiCharacter(formatter, '=');
+    SolidSyslogFormatter_AsciiCharacter(formatter, '"');
+    SolidSyslogFormatter_AsciiCharacter(formatter, value ? '1' : '0');
+    SolidSyslogFormatter_AsciiCharacter(formatter, '"');
 }
 
 static void FormatSyncAccuracy(struct SolidSyslogFormatter* formatter, uint32_t value)
@@ -64,5 +64,5 @@ static void FormatSyncAccuracy(struct SolidSyslogFormatter* formatter, uint32_t 
 
     SolidSyslogFormatter_BoundedString(formatter, PARAM_SYNC_ACCURACY, sizeof(PARAM_SYNC_ACCURACY) - 1);
     SolidSyslogFormatter_Uint32(formatter, value);
-    SolidSyslogFormatter_Character(formatter, '"');
+    SolidSyslogFormatter_AsciiCharacter(formatter, '"');
 }

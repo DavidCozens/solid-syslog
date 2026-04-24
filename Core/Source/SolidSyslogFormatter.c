@@ -32,6 +32,7 @@ static inline bool   IsFourByteLead(char byte);
 static inline bool   IsOverlongFourByteEncoding(char lead, char continuation1);
 static inline bool   IsOverlongThreeByteEncoding(char lead, char continuation1);
 static inline bool   IsOverlongTwoByteLead(char byte);
+static inline bool   IsAsciiCharacter(char value);
 static inline bool   IsPrintableUsAscii(char value);
 static inline bool   IsThreeByteLead(char byte);
 static inline bool   IsTwoByteLead(char byte);
@@ -69,10 +70,19 @@ static inline void NullTerminate(struct SolidSyslogFormatter* formatter)
     }
 }
 
-void SolidSyslogFormatter_Character(struct SolidSyslogFormatter* formatter, char value)
+void SolidSyslogFormatter_AsciiCharacter(struct SolidSyslogFormatter* formatter, char value)
 {
+    if (!IsAsciiCharacter(value))
+    {
+        value = NON_PRINTABLE_SUBSTITUTE;
+    }
     WriteChar(formatter, value);
     NullTerminate(formatter);
+}
+
+static inline bool IsAsciiCharacter(char value)
+{
+    return (value == ' ') || IsPrintableUsAscii(value);
 }
 
 static inline void WriteChar(struct SolidSyslogFormatter* formatter, char value)
