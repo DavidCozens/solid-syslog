@@ -377,6 +377,24 @@ Names should be self-documenting — prefer clarity over brevity.
 
 ---
 
+## Function Ordering
+
+Within a source file, functions are ordered top-down so the reader sees the lifecycle and public API
+first, then drills into helpers as they appear:
+
+1. `_Create` function first.
+2. `_Destroy` function second.
+3. Other public functions after, in whatever order reads naturally (often call order).
+4. Helper functions are **forward-declared** at the top of the file (after constants/types, before
+   the first definition), usually `static inline`, and **defined immediately beneath the function
+   that first calls them**. If a second public function also calls that helper, the helper stays
+   where it was — with its first caller.
+
+This puts "what the file does" at the top, and every helper next to its nearest use. Forward
+declarations are the price paid to keep that top-down reading order.
+
+---
+
 ## Container Images
 
 See [`docs/containers.md`](docs/containers.md) for the full image reference, Docker Compose setup,
