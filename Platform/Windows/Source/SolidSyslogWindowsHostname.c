@@ -28,6 +28,6 @@ void SolidSyslogWindowsHostname_Get(struct SolidSyslogFormatter* formatter)
     if (WindowsHostname_GetComputerNameExA(ComputerNamePhysicalDnsHostname, hostname, &size))
     {
         hostname[sizeof(hostname) - 1] = '\0';
-        SolidSyslogFormatter_BoundedString(formatter, hostname, sizeof(hostname));
+        SolidSyslogFormatter_RawBoundedString(formatter, hostname, sizeof(hostname));
     }
 }

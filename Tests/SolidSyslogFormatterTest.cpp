@@ -35,6 +35,7 @@ TEST_GROUP(SolidSyslogFormatter)
 
     void formatCharacter(char value) const { SolidSyslogFormatter_Character(formatter, value); }
     void formatBoundedString(const char* source, size_t maxLength) const { SolidSyslogFormatter_BoundedString(formatter, source, maxLength); }
+    void formatRawBoundedString(const char* source, size_t maxLength) const { SolidSyslogFormatter_RawBoundedString(formatter, source, maxLength); }
     void formatUint32(uint32_t value) const { SolidSyslogFormatter_Uint32(formatter, value); }
     void formatTwoDigit(uint32_t value) const { SolidSyslogFormatter_TwoDigit(formatter, value); }
     void formatFourDigit(uint32_t value) const { SolidSyslogFormatter_FourDigit(formatter, value); }
@@ -607,6 +608,24 @@ TEST(SolidSyslogFormatter, BoundedStringValidCodepointHiddenFromAsFormattedBuffe
 
     STRCMP_EQUAL("a", SolidSyslogFormatter_AsFormattedBuffer(formatter));
     LONGS_EQUAL(2, SolidSyslogFormatter_Length(formatter));
+}
+
+TEST(SolidSyslogFormatter, RawBoundedStringWritesAsciiVerbatim)
+{
+    formatRawBoundedString("hello", 5);
+
+    CHECK_FORMATTED("hello");
+}
+
+TEST(SolidSyslogFormatter, RawBoundedStringPassesInvalidUtf8ByteThroughUnchanged)
+{
+    /* Distinguishing property from BoundedString: raw passthrough, no
+     * UTF-8 validation, no U+FFFD substitution. \x85 alone is an invalid
+     * UTF-8 byte (stray continuation); RawBoundedString writes it as-is. */
+    formatRawBoundedString("\x85", 1);
+
+    STRCMP_EQUAL("\x85", SolidSyslogFormatter_AsFormattedBuffer(formatter));
+    LONGS_EQUAL(1, SolidSyslogFormatter_Length(formatter));
 }
 
 TEST(SolidSyslogFormatter, CharacterStopsWhenFull)

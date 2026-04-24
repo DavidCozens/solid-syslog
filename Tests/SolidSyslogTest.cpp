@@ -1047,14 +1047,8 @@ TEST(SolidSyslog, ProcessIdAt129CharsIsTruncatedTo128)
     CHECK_PROCID(expected.c_str());
 }
 
-IGNORE_TEST(SolidSyslog, ProcessIdNonPrintableByteIsSubstitutedWithQuestionMark)
+TEST(SolidSyslog, ProcessIdNonPrintableByteIsSubstitutedWithQuestionMark)
 {
-    /* Ignored pending follow-up commit on this branch: ASCII-only fields
-     * (PROCID, APP-NAME, HOSTNAME, MSGID) should not be passed through the
-     * UTF-8 BoundedString sanitiser before PrintUsAsciiString. With per-byte
-     * U+FFFD substitution in BoundedString, a single invalid byte now
-     * expands to three '?' characters here instead of one. Fix is to bypass
-     * BoundedString for ASCII-only fields. */
     StringFake_SetProcessId("a\xC3"
                             "b");
     Log();

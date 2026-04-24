@@ -232,6 +232,18 @@ static inline void WriteBytes(struct SolidSyslogFormatter* formatter, const char
     }
 }
 
+void SolidSyslogFormatter_RawBoundedString(struct SolidSyslogFormatter* formatter, const char* source, size_t maxLength)
+{
+    size_t len = 0;
+
+    while ((len < maxLength) && (source[len] != '\0'))
+    {
+        WriteChar(formatter, source[len]);
+        len++;
+    }
+    NullTerminate(formatter);
+}
+
 void SolidSyslogFormatter_EscapedString(struct SolidSyslogFormatter* formatter, const char* source, size_t maxRawLength)
 {
     size_t len = 0;
