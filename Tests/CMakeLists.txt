@@ -55,6 +55,12 @@ if(HAVE_STDATOMIC_H)
     )
 endif()
 
+if(HAVE_WINDOWS_INTERLOCKED)
+    list(APPEND TEST_SOURCES
+        SolidSyslogWindowsAtomicOpsTest.cpp
+    )
+endif()
+
 if(SOLIDSYSLOG_POSIX)
     list(APPEND TEST_SOURCES
         SolidSyslogPosixClockTest.cpp

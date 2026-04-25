@@ -72,7 +72,7 @@ Status key:
 
 | RFC | Total requirements | Supported | Partial | Planned | N/A |
 |---|---|---|---|---|---|
-| RFC 5424 | 17 | 15 | 1 | 1 | 0 |
+| RFC 5424 | 17 | 17 | 0 | 0 | 0 |
 | RFC 5426 | 6 | 3 | 1 | 0 | 2 |
 | RFC 6587 | 6 | 2 | 2 | 2 | 0 |
 | RFC 5425 | 7 | 6 | 1 | 0 | 0 |
