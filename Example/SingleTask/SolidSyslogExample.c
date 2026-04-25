@@ -43,7 +43,7 @@ int SolidSyslogExample_Run(int argc, char* argv[])
     struct SolidSyslogSender*         sender      = SolidSyslogUdpSender_Create(&udpConfig);
     struct SolidSyslogBuffer*         buffer      = SolidSyslogNullBuffer_Create(sender);
     struct SolidSyslogStore*          store       = SolidSyslogNullStore_Create();
-    struct SolidSyslogAtomicCounter*  counter     = SolidSyslogAtomicCounter_CreateWithOps(SolidSyslogStdAtomicOps_Create());
+    struct SolidSyslogAtomicCounter*  counter     = SolidSyslogAtomicCounter_Create(SolidSyslogStdAtomicOps_Create());
     struct SolidSyslogStructuredData* metaSd      = SolidSyslogMetaSd_Create(counter);
     struct SolidSyslogStructuredData* timeQuality = SolidSyslogTimeQualitySd_Create(GetTimeQuality);
     struct SolidSyslogStructuredData* originSd    = SolidSyslogOriginSd_Create("SolidSyslogExample", "0.7.0");

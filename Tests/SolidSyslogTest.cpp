@@ -481,7 +481,7 @@ TEST(SolidSyslog, InjectedSdObjectFormatIsCalledDuringLog)
 
 TEST(SolidSyslog, MetaSdProducesSequenceIdInStructuredData)
 {
-    SolidSyslogAtomicCounter*  counter  = SolidSyslogAtomicCounter_CreateWithOps(SolidSyslogStdAtomicOps_Create());
+    SolidSyslogAtomicCounter*  counter  = SolidSyslogAtomicCounter_Create(SolidSyslogStdAtomicOps_Create());
     SolidSyslogStructuredData* metaSd   = SolidSyslogMetaSd_Create(counter);
     SolidSyslogStructuredData* sdList[] = {metaSd};
     config.sd                           = sdList;
@@ -497,7 +497,7 @@ TEST(SolidSyslog, MetaSdProducesSequenceIdInStructuredData)
 
 TEST(SolidSyslog, MetaSdSequenceIdIncrementsAcrossLogCalls)
 {
-    SolidSyslogAtomicCounter*  counter  = SolidSyslogAtomicCounter_CreateWithOps(SolidSyslogStdAtomicOps_Create());
+    SolidSyslogAtomicCounter*  counter  = SolidSyslogAtomicCounter_Create(SolidSyslogStdAtomicOps_Create());
     SolidSyslogStructuredData* metaSd   = SolidSyslogMetaSd_Create(counter);
     SolidSyslogStructuredData* sdList[] = {metaSd};
     config.sd                           = sdList;
@@ -514,7 +514,7 @@ TEST(SolidSyslog, MetaSdSequenceIdIncrementsAcrossLogCalls)
 
 TEST(SolidSyslog, MsgFieldPreservedWithMetaSd)
 {
-    SolidSyslogAtomicCounter*  counter  = SolidSyslogAtomicCounter_CreateWithOps(SolidSyslogStdAtomicOps_Create());
+    SolidSyslogAtomicCounter*  counter  = SolidSyslogAtomicCounter_Create(SolidSyslogStdAtomicOps_Create());
     SolidSyslogStructuredData* metaSd   = SolidSyslogMetaSd_Create(counter);
     SolidSyslogStructuredData* sdList[] = {metaSd};
     config.sd                           = sdList;
@@ -575,7 +575,7 @@ TEST(SolidSyslog, AllSdFailingProducesNilvalue)
 
 TEST(SolidSyslog, MetaSdAndTimeQualitySdCoexistInSdArray)
 {
-    SolidSyslogAtomicCounter*  counter     = SolidSyslogAtomicCounter_CreateWithOps(SolidSyslogStdAtomicOps_Create());
+    SolidSyslogAtomicCounter*  counter     = SolidSyslogAtomicCounter_Create(SolidSyslogStdAtomicOps_Create());
     SolidSyslogStructuredData* metaSd      = SolidSyslogMetaSd_Create(counter);
     SolidSyslogStructuredData* timeQuality = SolidSyslogTimeQualitySd_Create(IntegrationGetTimeQuality);
     SolidSyslogStructuredData* sdList[]    = {metaSd, timeQuality};

@@ -18,7 +18,7 @@ set(SOURCES
     SolidSyslogFileStore.c
 )
 
-if(HAVE_STDATOMIC_H)
+if(HAVE_ATOMIC_COUNTER)
     list(APPEND SOURCES SolidSyslogAtomicCounter.c)
 endif()
 

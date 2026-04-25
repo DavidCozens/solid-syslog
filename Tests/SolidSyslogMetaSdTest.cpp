@@ -26,7 +26,7 @@ TEST_GROUP(SolidSyslogMetaSd)
     void setup() override
     {
         formatter = SolidSyslogFormatter_Create(storage, TEST_BUFFER_SIZE);
-        counter = SolidSyslogAtomicCounter_CreateWithOps(SolidSyslogStdAtomicOps_Create());
+        counter = SolidSyslogAtomicCounter_Create(SolidSyslogStdAtomicOps_Create());
         sd = SolidSyslogMetaSd_Create(counter);
     }
 

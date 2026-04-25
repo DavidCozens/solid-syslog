@@ -18,7 +18,7 @@ TEST_GROUP(SolidSyslogAtomicCounter)
     void setup() override
     {
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        counter = SolidSyslogAtomicCounter_CreateWithOps(SolidSyslogStdAtomicOps_Create());
+        counter = SolidSyslogAtomicCounter_Create(SolidSyslogStdAtomicOps_Create());
     }
 
     void teardown() override
@@ -37,7 +37,7 @@ TEST_GROUP(SolidSyslogAtomicCounterWithOps)
     {
         AtomicOpsFake_Reset();
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        counter = SolidSyslogAtomicCounter_CreateWithOps(AtomicOpsFake_Get());
+        counter = SolidSyslogAtomicCounter_Create(AtomicOpsFake_Get());
     }
 
     void teardown() override

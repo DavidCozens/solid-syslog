@@ -10,10 +10,9 @@ EXTERN_C_BEGIN
     struct SolidSyslogAtomicCounter;
     struct SolidSyslogAtomicOps;
 
-    struct SolidSyslogAtomicCounter* SolidSyslogAtomicCounter_Create(void);
-    struct SolidSyslogAtomicCounter* SolidSyslogAtomicCounter_CreateWithOps(struct SolidSyslogAtomicOps * ops);
+    struct SolidSyslogAtomicCounter* SolidSyslogAtomicCounter_Create(struct SolidSyslogAtomicOps * ops);
     void                             SolidSyslogAtomicCounter_Destroy(void);
-    uint_fast32_t                    SolidSyslogAtomicCounter_Increment(struct SolidSyslogAtomicCounter * counter);
+    uint32_t                         SolidSyslogAtomicCounter_Increment(struct SolidSyslogAtomicCounter * counter);
 
 EXTERN_C_END
 

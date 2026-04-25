@@ -184,7 +184,7 @@ int main(int argc, char* argv[])
     struct SolidSyslogStore*  store  = CreateStore(&options);
 
     struct SolidSyslogBuffer*         buffer  = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
-    struct SolidSyslogAtomicCounter*  counter = SolidSyslogAtomicCounter_CreateWithOps(SolidSyslogStdAtomicOps_Create());
+    struct SolidSyslogAtomicCounter*  counter = SolidSyslogAtomicCounter_Create(SolidSyslogStdAtomicOps_Create());
     struct SolidSyslogStructuredData* metaSd  = SolidSyslogMetaSd_Create(counter);
 
     struct SolidSyslogStructuredData* timeQuality = SolidSyslogTimeQualitySd_Create(GetTimeQuality);
