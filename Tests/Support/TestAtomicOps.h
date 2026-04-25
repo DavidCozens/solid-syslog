@@ -7,11 +7,11 @@
    falls back to the StdAtomicOps default from Platform/Atomics. */
 #if defined(SOLIDSYSLOG_TEST_USE_WINDOWS_ATOMIC_OPS)
 #include "SolidSyslogWindowsAtomicOps.h"
-#define TestAtomicOps_Create  SolidSyslogWindowsAtomicOps_Create
+#define TestAtomicOps_Create SolidSyslogWindowsAtomicOps_Create
 #define TestAtomicOps_Destroy SolidSyslogWindowsAtomicOps_Destroy
 #else
 #include "SolidSyslogStdAtomicOps.h"
-#define TestAtomicOps_Create  SolidSyslogStdAtomicOps_Create
+#define TestAtomicOps_Create SolidSyslogStdAtomicOps_Create
 #define TestAtomicOps_Destroy SolidSyslogStdAtomicOps_Destroy
 #endif
 
