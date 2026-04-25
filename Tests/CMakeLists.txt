@@ -45,6 +45,7 @@ endif()
 if(HAVE_ATOMIC_COUNTER)
     list(APPEND TEST_SOURCES
         SolidSyslogAtomicCounterTest.cpp
+        Support/AtomicOpsFake.c
     )
 endif()
 
