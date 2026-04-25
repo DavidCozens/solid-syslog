@@ -10,6 +10,7 @@
 #include "SolidSyslogConfig.h"
 #include "SolidSyslogMetaSd.h"
 #include "SolidSyslogOriginSd.h"
+#include "SolidSyslogStdAtomicOps.h"
 #include "SolidSyslogTimeQualitySd.h"
 #include "SolidSyslogNullBuffer.h"
 #include "SolidSyslogNullStore.h"
@@ -42,7 +43,7 @@ int SolidSyslogExample_Run(int argc, char* argv[])
     struct SolidSyslogSender*         sender      = SolidSyslogUdpSender_Create(&udpConfig);
     struct SolidSyslogBuffer*         buffer      = SolidSyslogNullBuffer_Create(sender);
     struct SolidSyslogStore*          store       = SolidSyslogNullStore_Create();
-    struct SolidSyslogAtomicCounter*  counter     = SolidSyslogAtomicCounter_Create();
+    struct SolidSyslogAtomicCounter*  counter     = SolidSyslogAtomicCounter_CreateWithOps(SolidSyslogStdAtomicOps_Create());
     struct SolidSyslogStructuredData* metaSd      = SolidSyslogMetaSd_Create(counter);
     struct SolidSyslogStructuredData* timeQuality = SolidSyslogTimeQualitySd_Create(GetTimeQuality);
     struct SolidSyslogStructuredData* originSd    = SolidSyslogOriginSd_Create("SolidSyslogExample", "0.7.0");
@@ -76,6 +77,7 @@ int SolidSyslogExample_Run(int argc, char* argv[])
     SolidSyslogTimeQualitySd_Destroy();
     SolidSyslogMetaSd_Destroy();
     SolidSyslogAtomicCounter_Destroy();
+    SolidSyslogStdAtomicOps_Destroy();
     SolidSyslogNullStore_Destroy();
     SolidSyslogNullBuffer_Destroy();
     SolidSyslogUdpSender_Destroy();

@@ -20,6 +20,7 @@
 #include "SolidSyslogPosixHostname.h"
 #include "SolidSyslogPosixMessageQueueBuffer.h"
 #include "SolidSyslogPosixProcessId.h"
+#include "SolidSyslogStdAtomicOps.h"
 #include "SolidSyslogGetAddrInfoResolver.h"
 #include "SolidSyslogPosixDatagram.h"
 #include "SolidSyslogPosixTcpStream.h"
@@ -183,7 +184,7 @@ int main(int argc, char* argv[])
     struct SolidSyslogStore*  store  = CreateStore(&options);
 
     struct SolidSyslogBuffer*         buffer  = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
-    struct SolidSyslogAtomicCounter*  counter = SolidSyslogAtomicCounter_Create();
+    struct SolidSyslogAtomicCounter*  counter = SolidSyslogAtomicCounter_CreateWithOps(SolidSyslogStdAtomicOps_Create());
     struct SolidSyslogStructuredData* metaSd  = SolidSyslogMetaSd_Create(counter);
 
     struct SolidSyslogStructuredData* timeQuality = SolidSyslogTimeQualitySd_Create(GetTimeQuality);
@@ -228,6 +229,7 @@ int main(int argc, char* argv[])
     SolidSyslogTimeQualitySd_Destroy();
     SolidSyslogMetaSd_Destroy();
     SolidSyslogAtomicCounter_Destroy();
+    SolidSyslogStdAtomicOps_Destroy();
     DestroyStore(&options);
     SolidSyslogPosixMessageQueueBuffer_Destroy();
     DestroySender();

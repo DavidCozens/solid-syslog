@@ -1,6 +1,7 @@
 #include "AtomicOpsFake.h"
 #include "CppUTest/TestHarness.h"
 #include "SolidSyslogAtomicCounter.h"
+#include "SolidSyslogStdAtomicOps.h"
 
 enum
 {
@@ -17,12 +18,13 @@ TEST_GROUP(SolidSyslogAtomicCounter)
     void setup() override
     {
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        counter = SolidSyslogAtomicCounter_Create();
+        counter = SolidSyslogAtomicCounter_CreateWithOps(SolidSyslogStdAtomicOps_Create());
     }
 
     void teardown() override
     {
         SolidSyslogAtomicCounter_Destroy();
+        SolidSyslogStdAtomicOps_Destroy();
     }
 };
 
