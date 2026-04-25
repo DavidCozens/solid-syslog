@@ -49,6 +49,12 @@ if(HAVE_ATOMIC_COUNTER)
     )
 endif()
 
+if(HAVE_STDATOMIC_H)
+    list(APPEND TEST_SOURCES
+        SolidSyslogStdAtomicOpsTest.cpp
+    )
+endif()
+
 if(SOLIDSYSLOG_POSIX)
     list(APPEND TEST_SOURCES
         SolidSyslogPosixClockTest.cpp
