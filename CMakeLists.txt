@@ -99,6 +99,10 @@ endif()
 
 add_subdirectory(Core/Source)
 
+if(HAVE_STDATOMIC_H)
+    add_subdirectory(Platform/Atomics)
+endif()
+
 if(SOLIDSYSLOG_POSIX)
     add_subdirectory(Platform/Posix)
 endif()

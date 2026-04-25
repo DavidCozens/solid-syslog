@@ -27,7 +27,7 @@ Status key:
 | 6.3.3 | timeQuality SD — tzKnown, isSynced, syncAccuracy | Supported | `SolidSyslogTimeQualitySd` |
 | 6.3.4 | origin SD — software, swVersion | Supported | `SolidSyslogOriginSd`. `ip` and `enterpriseId` not implemented |
 | 6.3.5 | meta SD — sequenceId | Supported | `SolidSyslogMetaSd`. Starts at 1, increments per message. `sysUpTime` and `language` not implemented |
-| 6.3.5 | meta SD — sequenceId wraps at 2147483647 to 1 | Not yet | Planned — see [sequenceId rules](https://github.com/DavidCozens/solid-syslog/issues/31) |
+| 6.3.5, 7.3.1 | meta SD — sequenceId wraps at 2147483647 to 1 | Supported | `SolidSyslogAtomicCounter` wraps via CAS-loop in [1, 2³¹ - 1]; never returns 0; never above max. AtomicOps seam pluggable per platform — `StdAtomicOps` (C11) on POSIX/clang/gcc/modern MSVC; `WindowsAtomicOps` (`InterlockedCompareExchange`) on legacy MSVC. sequenceId is assigned at the point of message raise (application-layer originator), preserving end-to-end loss-detection across the internal buffer / store-and-forward / transport pipeline. Trade-off: under concurrent raise from multiple threads, a small reorder window may occur in transmitted IDs (adjacent IDs may invert, since buffer/transport scheduling between raise and wire is not under library control). All IDs remain unique and non-zero — SIEMs performing gap detection identify message loss correctly; SIEMs requiring strict monotonic ordering should sort by timestamp |
 | 6.4 | MSG — UTF-8 preferred | Supported | RFC 3629 UTF-8 validated at the formatter primitives (`SolidSyslogFormatter_BoundedString`), with ill-formed input substituted per-byte with U+FFFD (Unicode §3.9). No BOM prefix. MSG body truncation at the wire-buffer limit is the SIEM's responsibility (out-of-scope per [S12.10](https://github.com/DavidCozens/solid-syslog/issues/121)) |
 | 8.1 | Message size — max 2048 recommended | Supported | Default `SOLIDSYSLOG_MAX_MESSAGE_SIZE` = 512. Configurable via CMake |
 | 9 | PRINTUSASCII in header fields (codes 33-126) | Supported | Non-compliant bytes substituted with `?` at format time (HOSTNAME, APP-NAME, PROCID, MSGID) |
@@ -72,7 +72,7 @@ Status key:
 
 | RFC | Total requirements | Supported | Partial | Planned | N/A |
 |---|---|---|---|---|---|
-| RFC 5424 | 17 | 15 | 1 | 1 | 0 |
+| RFC 5424 | 17 | 17 | 0 | 0 | 0 |
 | RFC 5426 | 6 | 3 | 1 | 0 | 2 |
 | RFC 6587 | 6 | 2 | 2 | 2 | 0 |
 | RFC 5425 | 7 | 6 | 1 | 0 | 0 |

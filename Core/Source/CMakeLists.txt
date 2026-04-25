@@ -11,6 +11,7 @@ set(SOURCES
     SolidSyslogNullSecurityPolicy.c
     SolidSyslogCrc16.c
     SolidSyslogCrc16Policy.c
+    SolidSyslogStream.c
     SolidSyslogStructuredData.c
     SolidSyslogTimeQualitySd.c
     SolidSyslogOriginSd.c
@@ -18,7 +19,7 @@ set(SOURCES
     SolidSyslogFileStore.c
 )
 
-if(HAVE_STDATOMIC_H)
+if(HAVE_ATOMIC_COUNTER)
     list(APPEND SOURCES SolidSyslogAtomicCounter.c)
 endif()
 
@@ -27,12 +28,6 @@ if(SOLIDSYSLOG_POSIX OR SOLIDSYSLOG_WINSOCK)
         SolidSyslogResolver.c
         SolidSyslogDatagram.c
         SolidSyslogUdpSender.c
-    )
-endif()
-
-if(SOLIDSYSLOG_POSIX OR SOLIDSYSLOG_OPENSSL)
-    list(APPEND SOURCES
-        SolidSyslogStream.c
     )
 endif()
 
