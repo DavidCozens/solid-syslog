@@ -23,12 +23,12 @@ Status key:
 | 6.2.5 | PROCID — max 128 chars, PRINTUSASCII | Supported | Truncated to 128. Non-PRINTUSASCII bytes substituted with `?` |
 | 6.2.6 | MSGID — max 32 chars, PRINTUSASCII | Supported | Truncated to 32. Non-PRINTUSASCII bytes substituted with `?` |
 | 6.3 | STRUCTURED-DATA — SD-ELEMENTs or NILVALUE | Supported | Extensible via `SolidSyslogStructuredData` vtable |
-| 6.3.3 | SD-PARAM value escaping (`]`, `\`, `"`) | Supported | `SolidSyslogFormatter_EscapedString`; `OriginSd` escapes software/swVersion. SD-NAME syntax validation planned — [E14](https://github.com/DavidCozens/solid-syslog/issues/64) |
+| 6.3.3 | SD-PARAM value escaping (`]`, `\`, `"`) | Supported | `SolidSyslogFormatter_EscapedString` — RFC 3629 UTF-8 validated, ill-formed input substituted per-byte with U+FFFD (Unicode §3.9); `OriginSd` escapes software/swVersion. SD-NAME syntax validation planned — [E14](https://github.com/DavidCozens/solid-syslog/issues/64) |
 | 6.3.3 | timeQuality SD — tzKnown, isSynced, syncAccuracy | Supported | `SolidSyslogTimeQualitySd` |
 | 6.3.4 | origin SD — software, swVersion | Supported | `SolidSyslogOriginSd`. `ip` and `enterpriseId` not implemented |
 | 6.3.5 | meta SD — sequenceId | Supported | `SolidSyslogMetaSd`. Starts at 1, increments per message. `sysUpTime` and `language` not implemented |
 | 6.3.5 | meta SD — sequenceId wraps at 2147483647 to 1 | Not yet | Planned — see [sequenceId rules](https://github.com/DavidCozens/solid-syslog/issues/31) |
-| 6.4 | MSG — UTF-8 preferred | Partial | Passes through caller's encoding. No BOM prefix. UTF-8 safe truncation planned — [S12.10](https://github.com/DavidCozens/solid-syslog/issues/121) |
+| 6.4 | MSG — UTF-8 preferred | Supported | RFC 3629 UTF-8 validated at the formatter primitives (`SolidSyslogFormatter_BoundedString`), with ill-formed input substituted per-byte with U+FFFD (Unicode §3.9). No BOM prefix. MSG body truncation at the wire-buffer limit is the SIEM's responsibility (out-of-scope per [S12.10](https://github.com/DavidCozens/solid-syslog/issues/121)) |
 | 8.1 | Message size — max 2048 recommended | Supported | Default `SOLIDSYSLOG_MAX_MESSAGE_SIZE` = 512. Configurable via CMake |
 | 9 | PRINTUSASCII in header fields (codes 33-126) | Supported | Non-compliant bytes substituted with `?` at format time (HOSTNAME, APP-NAME, PROCID, MSGID) |
 

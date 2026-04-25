@@ -93,7 +93,7 @@ static bool Connect(struct SolidSyslogUdpSender* udp)
 
     udp->config.endpoint(&endpoint);
 
-    udp->connected = OpenSocket(udp) && ResolveDestination(udp, SolidSyslogFormatter_AsString(hostFormatter), endpoint.port);
+    udp->connected = OpenSocket(udp) && ResolveDestination(udp, SolidSyslogFormatter_AsFormattedBuffer(hostFormatter), endpoint.port);
 
     if (!Connected(udp))
     {

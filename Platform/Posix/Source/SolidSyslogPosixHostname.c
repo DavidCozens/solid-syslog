@@ -16,6 +16,6 @@ void SolidSyslogPosixHostname_Get(struct SolidSyslogFormatter* formatter)
     if (gethostname(hostname, sizeof(hostname)) == 0)
     {
         hostname[sizeof(hostname) - 1] = '\0';
-        SolidSyslogFormatter_BoundedString(formatter, hostname, sizeof(hostname));
+        SolidSyslogFormatter_PrintUsAsciiString(formatter, hostname, sizeof(hostname));
     }
 }

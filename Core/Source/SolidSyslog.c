@@ -162,33 +162,33 @@ void SolidSyslog_Log(const struct SolidSyslogMessage* message)
     struct SolidSyslogFormatter* f = SolidSyslogFormatter_Create(storage, SOLIDSYSLOG_MAX_MESSAGE_SIZE);
 
     FormatMessage(f, message);
-    SolidSyslogBuffer_Write(instance.buffer, SolidSyslogFormatter_AsString(f), SolidSyslogFormatter_Length(f));
+    SolidSyslogBuffer_Write(instance.buffer, SolidSyslogFormatter_AsFormattedBuffer(f), SolidSyslogFormatter_Length(f));
 }
 
 static inline void FormatMessage(struct SolidSyslogFormatter* f, const struct SolidSyslogMessage* message)
 {
     FormatPrival(f, MakePrival(message));
-    SolidSyslogFormatter_Character(f, '1');
-    SolidSyslogFormatter_Character(f, ' ');
+    SolidSyslogFormatter_AsciiCharacter(f, '1');
+    SolidSyslogFormatter_AsciiCharacter(f, ' ');
     FormatTimestamp(f, instance.clock);
-    SolidSyslogFormatter_Character(f, ' ');
+    SolidSyslogFormatter_AsciiCharacter(f, ' ');
     FormatStringField(f, instance.getHostname, SOLIDSYSLOG_MAX_HOSTNAME_SIZE);
-    SolidSyslogFormatter_Character(f, ' ');
+    SolidSyslogFormatter_AsciiCharacter(f, ' ');
     FormatStringField(f, instance.getAppName, SOLIDSYSLOG_MAX_APP_NAME_SIZE);
-    SolidSyslogFormatter_Character(f, ' ');
+    SolidSyslogFormatter_AsciiCharacter(f, ' ');
     FormatStringField(f, instance.getProcessId, SOLIDSYSLOG_MAX_PROCESS_ID_SIZE);
-    SolidSyslogFormatter_Character(f, ' ');
+    SolidSyslogFormatter_AsciiCharacter(f, ' ');
     FormatMsgId(f, message->messageId);
-    SolidSyslogFormatter_Character(f, ' ');
+    SolidSyslogFormatter_AsciiCharacter(f, ' ');
     FormatStructuredData(f, instance.sd, instance.sdCount);
     FormatMsg(f, message->msg);
 }
 
 static inline void FormatPrival(struct SolidSyslogFormatter* f, uint8_t prival)
 {
-    SolidSyslogFormatter_Character(f, '<');
+    SolidSyslogFormatter_AsciiCharacter(f, '<');
     SolidSyslogFormatter_Uint32(f, prival);
-    SolidSyslogFormatter_Character(f, '>');
+    SolidSyslogFormatter_AsciiCharacter(f, '>');
 }
 
 static inline uint8_t MakePrival(const struct SolidSyslogMessage* message)
@@ -263,17 +263,17 @@ static inline bool TimestampIsValid(const struct SolidSyslogTimestamp* ts)
 static inline void FormatCapturedTimestamp(struct SolidSyslogFormatter* f, const struct SolidSyslogTimestamp* ts)
 {
     SolidSyslogFormatter_FourDigit(f, ts->year);
-    SolidSyslogFormatter_Character(f, '-');
+    SolidSyslogFormatter_AsciiCharacter(f, '-');
     SolidSyslogFormatter_TwoDigit(f, ts->month);
-    SolidSyslogFormatter_Character(f, '-');
+    SolidSyslogFormatter_AsciiCharacter(f, '-');
     SolidSyslogFormatter_TwoDigit(f, ts->day);
-    SolidSyslogFormatter_Character(f, 'T');
+    SolidSyslogFormatter_AsciiCharacter(f, 'T');
     SolidSyslogFormatter_TwoDigit(f, ts->hour);
-    SolidSyslogFormatter_Character(f, ':');
+    SolidSyslogFormatter_AsciiCharacter(f, ':');
     SolidSyslogFormatter_TwoDigit(f, ts->minute);
-    SolidSyslogFormatter_Character(f, ':');
+    SolidSyslogFormatter_AsciiCharacter(f, ':');
     SolidSyslogFormatter_TwoDigit(f, ts->second);
-    SolidSyslogFormatter_Character(f, '.');
+    SolidSyslogFormatter_AsciiCharacter(f, '.');
     SolidSyslogFormatter_SixDigit(f, ts->microsecond);
     FormatUtcOffset(f, ts->utcOffsetMinutes);
 }
@@ -282,7 +282,7 @@ static inline void FormatUtcOffset(struct SolidSyslogFormatter* f, int16_t offse
 {
     if (offsetMinutes == 0)
     {
-        SolidSyslogFormatter_Character(f, 'Z');
+        SolidSyslogFormatter_AsciiCharacter(f, 'Z');
     }
     else
     {
@@ -294,9 +294,9 @@ static inline void FormatNonZeroUtcOffset(struct SolidSyslogFormatter* f, int16_
 {
     int16_t absoluteMinutes = AbsoluteInt16(offsetMinutes);
 
-    SolidSyslogFormatter_Character(f, (offsetMinutes > 0) ? '+' : '-');
+    SolidSyslogFormatter_AsciiCharacter(f, (offsetMinutes > 0) ? '+' : '-');
     SolidSyslogFormatter_TwoDigit(f, (uint32_t) (absoluteMinutes / 60));
-    SolidSyslogFormatter_Character(f, ':');
+    SolidSyslogFormatter_AsciiCharacter(f, ':');
     SolidSyslogFormatter_TwoDigit(f, (uint32_t) (absoluteMinutes % 60));
 }
 
@@ -323,7 +323,7 @@ static inline void FormatStringField(struct SolidSyslogFormatter* f, SolidSyslog
 
     if (fieldLength > 0)
     {
-        SolidSyslogFormatter_PrintUsAsciiString(f, SolidSyslogFormatter_AsString(field), fieldLength);
+        SolidSyslogFormatter_PrintUsAsciiString(f, SolidSyslogFormatter_AsFormattedBuffer(field), fieldLength);
     }
     else
     {
@@ -370,12 +370,12 @@ static inline void FormatMsg(struct SolidSyslogFormatter* f, const char* msg)
 {
     if (StringIsValid(msg))
     {
-        SolidSyslogFormatter_Character(f, ' ');
+        SolidSyslogFormatter_AsciiCharacter(f, ' ');
         SolidSyslogFormatter_BoundedString(f, msg, SOLIDSYSLOG_MAX_MESSAGE_SIZE);
     }
 }
 
 static inline void FormatNilvalue(struct SolidSyslogFormatter* f)
 {
-    SolidSyslogFormatter_Character(f, '-');
+    SolidSyslogFormatter_AsciiCharacter(f, '-');
 }

@@ -212,7 +212,7 @@ static inline const char* FormatFilename(SolidSyslogFormatterStorage* storage, u
     SolidSyslogFormatter_TwoDigit(f, sequence);
     SolidSyslogFormatter_BoundedString(f, FILE_EXTENSION, sizeof(FILE_EXTENSION) - 1);
 
-    return SolidSyslogFormatter_AsString(f);
+    return SolidSyslogFormatter_AsFormattedBuffer(f);
 }
 
 static inline uint8_t NextSequence(uint8_t current)

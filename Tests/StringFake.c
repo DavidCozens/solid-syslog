@@ -21,7 +21,7 @@ void StringFake_SetHostname(const char* hostname)
 
 void StringFake_GetHostname(struct SolidSyslogFormatter* formatter)
 {
-    SolidSyslogFormatter_BoundedString(formatter, fakeHostname, strlen(fakeHostname));
+    SolidSyslogFormatter_PrintUsAsciiString(formatter, fakeHostname, strlen(fakeHostname));
 }
 
 void StringFake_SetAppName(const char* appName)
@@ -31,7 +31,7 @@ void StringFake_SetAppName(const char* appName)
 
 void StringFake_GetAppName(struct SolidSyslogFormatter* formatter)
 {
-    SolidSyslogFormatter_BoundedString(formatter, fakeAppName, strlen(fakeAppName));
+    SolidSyslogFormatter_PrintUsAsciiString(formatter, fakeAppName, strlen(fakeAppName));
 }
 
 void StringFake_SetProcessId(const char* procId)
@@ -41,5 +41,5 @@ void StringFake_SetProcessId(const char* procId)
 
 void StringFake_GetProcessId(struct SolidSyslogFormatter* formatter)
 {
-    SolidSyslogFormatter_BoundedString(formatter, fakeProcessId, strlen(fakeProcessId));
+    SolidSyslogFormatter_PrintUsAsciiString(formatter, fakeProcessId, strlen(fakeProcessId));
 }

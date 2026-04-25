@@ -308,7 +308,7 @@ Headers in `Core/Interface/` are split by audience — each user includes only w
 |---|---|---|
 | `SolidSyslog.h` | Application code that logs events | `SolidSyslogMessage`, `SolidSyslog_Log`, `SolidSyslog_Service` |
 | `SolidSyslogConfig.h` | System setup code | `SolidSyslogConfig`, `SolidSyslog_Create`, `SolidSyslog_Destroy`, `SolidSyslogStringFunction` |
-| `SolidSyslogFormatter.h` | Any code that formats into a bounded buffer | `SolidSyslogFormatter`, `SolidSyslogFormatterStorage`, `SOLIDSYSLOG_FORMATTER_STORAGE_SIZE`, `_Create`, `_FromStorage`, `_Character`, `_BoundedString`, `_Uint32`, `_TwoDigit`, `_FourDigit`, `_SixDigit`, `_AsString`, `_Length` |
+| `SolidSyslogFormatter.h` | Any code that formats into a bounded buffer | `SolidSyslogFormatter`, `SolidSyslogFormatterStorage`, `SOLIDSYSLOG_FORMATTER_STORAGE_SIZE`, `_Create`, `_FromStorage`, `_AsciiCharacter`, `_BoundedString`, `_Uint32`, `_TwoDigit`, `_FourDigit`, `_SixDigit`, `_AsFormattedBuffer`, `_Length` |
 | `SolidSyslogPrival.h` | Any code that needs facility/severity enums | `SolidSyslog_Facility`, `SolidSyslog_Severity` |
 | `SolidSyslogTimestamp.h` | Any code that needs the timestamp struct | `SolidSyslogTimestamp`, `SolidSyslogClockFunction` |
 | `SolidSyslogEndpoint.h` | System setup code that supplies destination host/port (and version on changes) | `SolidSyslogEndpoint`, `SolidSyslogEndpointFunction`, `SolidSyslogEndpointVersionFunction`, `SOLIDSYSLOG_MAX_HOST_SIZE` |
@@ -374,6 +374,24 @@ Names should be self-documenting — prefer clarity over brevity.
 - All compiler warnings are errors (`-Werror`). Do not suppress warnings without strong justification.
 - cppcheck runs with `--error-exitcode=1`. Inline suppressions (`// cppcheck-suppress`) must include
   a comment explaining why.
+
+---
+
+## Function Ordering
+
+Within a source file, functions are ordered top-down so the reader sees the lifecycle and public API
+first, then drills into helpers as they appear:
+
+1. `_Create` function first.
+2. `_Destroy` function second.
+3. Other public functions after, in whatever order reads naturally (often call order).
+4. Helper functions are **forward-declared** at the top of the file (after constants/types, before
+   the first definition), usually `static inline`, and **defined immediately beneath the function
+   that first calls them**. If a second public function also calls that helper, the helper stays
+   where it was — with its first caller.
+
+This puts "what the file does" at the top, and every helper next to its nearest use. Forward
+declarations are the price paid to keep that top-down reading order.
 
 ---
 
