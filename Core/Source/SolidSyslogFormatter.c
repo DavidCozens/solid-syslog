@@ -30,7 +30,22 @@ static const char REPLACEMENT_CHARACTER[] = {'\xEF', '\xBF', '\xBD'};
  * character it was escaping — one byte in the reader's decoder buffer. */
 static const size_t ESCAPED_CHARACTER_DECODED_LENGTH = 1;
 
+/* Mutable state threaded through the EscapedString writer helpers.
+ * sourcePos walks the source until NUL; decodedLength counts bytes the
+ * reader's decoder would extract; exhausted flips when a writer can't
+ * fit and the loop must terminate. */
+struct EscapedContext
+{
+    struct SolidSyslogFormatter* formatter;
+    const char*                  source;
+    size_t                       sourcePos;
+    size_t                       decodedLength;
+    size_t                       maxDecodedLength;
+    bool                         exhausted;
+};
+
 static inline bool   CodepointFits(size_t codepointLength, size_t remainingDecodedLength);
+static inline bool   Fits(const struct EscapedContext* context, size_t decodedAdvance);
 static inline bool   HasCapacity(const struct SolidSyslogFormatter* formatter);
 static inline bool   IsAboveUnicodeMaxEncoding(char lead, char continuation1);
 static inline bool   IsFourByteLead(char byte);
@@ -38,6 +53,7 @@ static inline bool   IsOverlongFourByteEncoding(char lead, char continuation1);
 static inline bool   IsOverlongThreeByteEncoding(char lead, char continuation1);
 static inline bool   IsOverlongTwoByteLead(char byte);
 static inline bool   IsAsciiCharacter(char value);
+static inline bool   IsExhausted(const struct EscapedContext* context);
 static inline bool   IsPrintableUsAscii(char value);
 static inline bool   IsThreeByteLead(char byte);
 static inline bool   IsTwoByteLead(char byte);
@@ -51,11 +67,16 @@ static inline bool   NeedsEscape(char value);
 static inline char   DigitToChar(uint32_t value);
 static size_t        CountDigits(uint32_t value);
 static inline size_t Utf8CodepointLength(const char* source);
+static inline void   Exhaust(struct EscapedContext* context);
 static inline void   NullTerminate(struct SolidSyslogFormatter* formatter);
 static inline void   TrimTruncatedMultiByteTail(struct SolidSyslogFormatter* formatter);
+static inline void   Write(struct EscapedContext* context, const char* bytes, size_t byteCount, size_t sourceAdvance, size_t decodedAdvance);
 static inline void   WriteBytes(struct SolidSyslogFormatter* formatter, const char* bytes, size_t count);
 static inline void   WriteChar(struct SolidSyslogFormatter* formatter, char value);
+static inline void   WriteCodepoint(struct EscapedContext* context);
+static inline void   WriteEscaped(struct EscapedContext* context);
 static inline void   WritePrintableUsAsciiChar(struct SolidSyslogFormatter* formatter, char value);
+static inline void   WriteReplacement(struct EscapedContext* context);
 
 struct SolidSyslogFormatter* SolidSyslogFormatter_Create(SolidSyslogFormatterStorage* storage, size_t bufferSize)
 {
@@ -251,36 +272,24 @@ static inline void WriteBytes(struct SolidSyslogFormatter* formatter, const char
 
 void SolidSyslogFormatter_EscapedString(struct SolidSyslogFormatter* formatter, const char* source, size_t maxDecodedLength)
 {
-    size_t sourcePos     = 0;
-    size_t decodedLength = 0;
+    struct EscapedContext context = {
+        .formatter        = formatter,
+        .source           = source,
+        .sourcePos        = 0,
+        .decodedLength    = 0,
+        .maxDecodedLength = maxDecodedLength,
+        .exhausted        = false,
+    };
 
-    while (source[sourcePos] != '\0')
+    while ((source[context.sourcePos] != '\0') && !IsExhausted(&context))
     {
-        size_t codepointLength        = Utf8CodepointLength(&source[sourcePos]);
-        size_t remainingDecodedLength = (decodedLength < maxDecodedLength) ? (maxDecodedLength - decodedLength) : 0;
-
-        if (NeedsEscape(source[sourcePos]) && (remainingDecodedLength >= ESCAPED_CHARACTER_DECODED_LENGTH))
+        if (NeedsEscape(source[context.sourcePos]))
         {
-            char escaped[] = {ESCAPE_PREFIX, source[sourcePos]};
-            WriteBytes(formatter, escaped, sizeof(escaped));
-            sourcePos++;
-            decodedLength += ESCAPED_CHARACTER_DECODED_LENGTH;
-        }
-        else if (CodepointFits(codepointLength, remainingDecodedLength))
-        {
-            WriteBytes(formatter, &source[sourcePos], codepointLength);
-            sourcePos += codepointLength;
-            decodedLength += codepointLength;
-        }
-        else if (remainingDecodedLength >= sizeof(REPLACEMENT_CHARACTER))
-        {
-            WriteBytes(formatter, REPLACEMENT_CHARACTER, sizeof(REPLACEMENT_CHARACTER));
-            sourcePos++;
-            decodedLength += sizeof(REPLACEMENT_CHARACTER);
+            WriteEscaped(&context);
         }
         else
         {
-            break;
+            WriteCodepoint(&context);
         }
     }
     NullTerminate(formatter);
@@ -289,6 +298,64 @@ void SolidSyslogFormatter_EscapedString(struct SolidSyslogFormatter* formatter, 
 static inline bool NeedsEscape(char value)
 {
     return (value == QUOTE) || (value == BACKSLASH) || (value == CLOSE_BRACKET);
+}
+
+static inline bool IsExhausted(const struct EscapedContext* context)
+{
+    return context->exhausted;
+}
+
+static inline void WriteEscaped(struct EscapedContext* context)
+{
+    if (Fits(context, ESCAPED_CHARACTER_DECODED_LENGTH))
+    {
+        char escaped[] = {ESCAPE_PREFIX, context->source[context->sourcePos]};
+        Write(context, escaped, sizeof(escaped), 1, ESCAPED_CHARACTER_DECODED_LENGTH);
+        return;
+    }
+    Exhaust(context);
+}
+
+static inline bool Fits(const struct EscapedContext* context, size_t decodedAdvance)
+{
+    return (decodedAdvance > 0) && (decodedAdvance <= context->maxDecodedLength - context->decodedLength);
+}
+
+static inline void Write(struct EscapedContext* context, const char* bytes, size_t byteCount, size_t sourceAdvance, size_t decodedAdvance)
+{
+    WriteBytes(context->formatter, bytes, byteCount);
+    context->sourcePos += sourceAdvance;
+    context->decodedLength += decodedAdvance;
+}
+
+static inline void Exhaust(struct EscapedContext* context)
+{
+    context->exhausted = true;
+}
+
+/* Writes the source codepoint at sourcePos if it fits the decoded budget;
+ * otherwise falls back to WriteReplacement (which emits U+FFFD or marks
+ * the context exhausted). Fits also rejects invalid UTF-8 because
+ * Utf8CodepointLength returns 0 for ill-formed sequences. */
+static inline void WriteCodepoint(struct EscapedContext* context)
+{
+    size_t codepointLength = Utf8CodepointLength(&context->source[context->sourcePos]);
+    if (Fits(context, codepointLength))
+    {
+        Write(context, &context->source[context->sourcePos], codepointLength, codepointLength, codepointLength);
+        return;
+    }
+    WriteReplacement(context);
+}
+
+static inline void WriteReplacement(struct EscapedContext* context)
+{
+    if (Fits(context, sizeof(REPLACEMENT_CHARACTER)))
+    {
+        Write(context, REPLACEMENT_CHARACTER, sizeof(REPLACEMENT_CHARACTER), 1, sizeof(REPLACEMENT_CHARACTER));
+        return;
+    }
+    Exhaust(context);
 }
 
 void SolidSyslogFormatter_PrintUsAsciiString(struct SolidSyslogFormatter* formatter, const char* source, size_t maxLength)
