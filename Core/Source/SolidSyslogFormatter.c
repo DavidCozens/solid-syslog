@@ -70,13 +70,14 @@ static inline size_t Utf8CodepointLength(const char* source);
 static inline void   Exhaust(struct EscapedContext* context);
 static inline void   NullTerminate(struct SolidSyslogFormatter* formatter);
 static inline void   TrimTruncatedMultiByteTail(struct SolidSyslogFormatter* formatter);
-static inline void   Write(struct EscapedContext* context, const char* bytes, size_t byteCount, size_t sourceAdvance, size_t decodedAdvance);
 static inline void   WriteBytes(struct SolidSyslogFormatter* formatter, const char* bytes, size_t count);
 static inline void   WriteChar(struct SolidSyslogFormatter* formatter, char value);
 static inline void   WriteCodepoint(struct EscapedContext* context);
-static inline void   WriteEscaped(struct EscapedContext* context);
-static inline void   WritePrintableUsAsciiChar(struct SolidSyslogFormatter* formatter, char value);
-static inline void   WriteReplacement(struct EscapedContext* context);
+/* NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- 3 callers in this file pass compile-time constants or codepointLength; param names disambiguate */
+static inline void WriteContext(struct EscapedContext* context, const char* bytes, size_t byteCount, size_t sourceAdvance, size_t decodedAdvance);
+static inline void WriteEscaped(struct EscapedContext* context);
+static inline void WritePrintableUsAsciiChar(struct SolidSyslogFormatter* formatter, char value);
+static inline void WriteReplacement(struct EscapedContext* context);
 
 struct SolidSyslogFormatter* SolidSyslogFormatter_Create(SolidSyslogFormatterStorage* storage, size_t bufferSize)
 {
@@ -281,7 +282,7 @@ void SolidSyslogFormatter_EscapedString(struct SolidSyslogFormatter* formatter, 
         .exhausted        = false,
     };
 
-    while ((source[context.sourcePos] != '\0') && !IsExhausted(&context))
+    while (!IsExhausted(&context))
     {
         if (NeedsEscape(source[context.sourcePos]))
         {
@@ -302,7 +303,7 @@ static inline bool NeedsEscape(char value)
 
 static inline bool IsExhausted(const struct EscapedContext* context)
 {
-    return context->exhausted;
+    return context->exhausted || (context->source[context->sourcePos] == '\0');
 }
 
 static inline void WriteEscaped(struct EscapedContext* context)
@@ -310,7 +311,7 @@ static inline void WriteEscaped(struct EscapedContext* context)
     if (Fits(context, ESCAPED_CHARACTER_DECODED_LENGTH))
     {
         char escaped[] = {ESCAPE_PREFIX, context->source[context->sourcePos]};
-        Write(context, escaped, sizeof(escaped), 1, ESCAPED_CHARACTER_DECODED_LENGTH);
+        WriteContext(context, escaped, sizeof(escaped), 1, ESCAPED_CHARACTER_DECODED_LENGTH);
         return;
     }
     Exhaust(context);
@@ -321,7 +322,8 @@ static inline bool Fits(const struct EscapedContext* context, size_t decodedAdva
     return (decodedAdvance > 0) && (decodedAdvance <= context->maxDecodedLength - context->decodedLength);
 }
 
-static inline void Write(struct EscapedContext* context, const char* bytes, size_t byteCount, size_t sourceAdvance, size_t decodedAdvance)
+/* NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- see forward declaration */
+static inline void WriteContext(struct EscapedContext* context, const char* bytes, size_t byteCount, size_t sourceAdvance, size_t decodedAdvance)
 {
     WriteBytes(context->formatter, bytes, byteCount);
     context->sourcePos += sourceAdvance;
@@ -342,7 +344,7 @@ static inline void WriteCodepoint(struct EscapedContext* context)
     size_t codepointLength = Utf8CodepointLength(&context->source[context->sourcePos]);
     if (Fits(context, codepointLength))
     {
-        Write(context, &context->source[context->sourcePos], codepointLength, codepointLength, codepointLength);
+        WriteContext(context, &context->source[context->sourcePos], codepointLength, codepointLength, codepointLength);
         return;
     }
     WriteReplacement(context);
@@ -352,7 +354,7 @@ static inline void WriteReplacement(struct EscapedContext* context)
 {
     if (Fits(context, sizeof(REPLACEMENT_CHARACTER)))
     {
-        Write(context, REPLACEMENT_CHARACTER, sizeof(REPLACEMENT_CHARACTER), 1, sizeof(REPLACEMENT_CHARACTER));
+        WriteContext(context, REPLACEMENT_CHARACTER, sizeof(REPLACEMENT_CHARACTER), 1, sizeof(REPLACEMENT_CHARACTER));
         return;
     }
     Exhaust(context);
