@@ -26,7 +26,11 @@ static const char NON_PRINTABLE_SUBSTITUTE   = '?';
  * byte per Unicode §3.9 best practice for per-byte maximal subpart. */
 static const char REPLACEMENT_CHARACTER[] = {'\xEF', '\xBF', '\xBD'};
 
-static inline bool   CodepointFits(size_t codepointLength, size_t remaining);
+/* An escape pair on the wire ('\' + char) decodes back to the single
+ * character it was escaping — one byte in the reader's decoder buffer. */
+static const size_t ESCAPED_CHARACTER_DECODED_LENGTH = 1;
+
+static inline bool   CodepointFits(size_t codepointLength, size_t remainingDecodedLength);
 static inline bool   HasCapacity(const struct SolidSyslogFormatter* formatter);
 static inline bool   IsAboveUnicodeMaxEncoding(char lead, char continuation1);
 static inline bool   IsFourByteLead(char byte);
@@ -139,9 +143,9 @@ void SolidSyslogFormatter_BoundedString(struct SolidSyslogFormatter* formatter, 
     NullTerminate(formatter);
 }
 
-static inline bool CodepointFits(size_t codepointLength, size_t remaining)
+static inline bool CodepointFits(size_t codepointLength, size_t remainingDecodedLength)
 {
-    return (codepointLength > 0) && (codepointLength <= remaining);
+    return (codepointLength > 0) && (codepointLength <= remainingDecodedLength);
 }
 
 static inline size_t Utf8CodepointLength(const char* source)
@@ -245,29 +249,38 @@ static inline void WriteBytes(struct SolidSyslogFormatter* formatter, const char
     }
 }
 
-void SolidSyslogFormatter_EscapedString(struct SolidSyslogFormatter* formatter, const char* source, size_t maxRawLength)
+void SolidSyslogFormatter_EscapedString(struct SolidSyslogFormatter* formatter, const char* source, size_t maxDecodedLength)
 {
-    size_t len = 0;
+    size_t sourcePos     = 0;
+    size_t decodedLength = 0;
 
-    while ((len < maxRawLength) && (source[len] != '\0'))
+    while (source[sourcePos] != '\0')
     {
-        size_t codepointLength = Utf8CodepointLength(&source[len]);
+        size_t codepointLength        = Utf8CodepointLength(&source[sourcePos]);
+        size_t remainingDecodedLength = (decodedLength < maxDecodedLength) ? (maxDecodedLength - decodedLength) : 0;
 
-        if (CodepointFits(codepointLength, maxRawLength - len))
+        if (NeedsEscape(source[sourcePos]) && (remainingDecodedLength >= ESCAPED_CHARACTER_DECODED_LENGTH))
         {
-            if ((codepointLength == 1) && NeedsEscape(source[len]))
-            {
-                /* Escape prefix is an output byte, not a source byte; len
-                 * advances only by the codepoint's own length. */
-                WriteChar(formatter, ESCAPE_PREFIX);
-            }
-            WriteBytes(formatter, &source[len], codepointLength);
-            len += codepointLength;
+            char escaped[] = {ESCAPE_PREFIX, source[sourcePos]};
+            WriteBytes(formatter, escaped, sizeof(escaped));
+            sourcePos++;
+            decodedLength += ESCAPED_CHARACTER_DECODED_LENGTH;
+        }
+        else if (CodepointFits(codepointLength, remainingDecodedLength))
+        {
+            WriteBytes(formatter, &source[sourcePos], codepointLength);
+            sourcePos += codepointLength;
+            decodedLength += codepointLength;
+        }
+        else if (remainingDecodedLength >= sizeof(REPLACEMENT_CHARACTER))
+        {
+            WriteBytes(formatter, REPLACEMENT_CHARACTER, sizeof(REPLACEMENT_CHARACTER));
+            sourcePos++;
+            decodedLength += sizeof(REPLACEMENT_CHARACTER);
         }
         else
         {
-            WriteBytes(formatter, REPLACEMENT_CHARACTER, sizeof(REPLACEMENT_CHARACTER));
-            len += 1;
+            break;
         }
     }
     NullTerminate(formatter);

@@ -745,7 +745,7 @@ TEST(SolidSyslogFormatter, EscapedStringPassesOrdinaryCharacterThrough)
     CHECK_FORMATTED("a");
 }
 
-TEST(SolidSyslogFormatter, EscapedStringTruncatesAtMaxRawLength)
+TEST(SolidSyslogFormatter, EscapedStringTruncatesAtMaxDecodedLength)
 {
     SolidSyslogFormatter_EscapedString(formatter, "hello", 3);
 
@@ -780,8 +780,12 @@ TEST(SolidSyslogFormatter, EscapedStringEscapesAllThreeSpecialsInOneValue)
     CHECK_FORMATTED("\\\"\\\\\\]");
 }
 
-TEST(SolidSyslogFormatter, EscapedStringMaxRawLengthBoundsInputNotOutput)
+TEST(SolidSyslogFormatter, EscapedStringMaxDecodedLengthBoundsDecoderBufferNotEncodedOutput)
 {
+    /* maxDecodedLength bounds what the reader's decoder would extract
+     * (one byte per unescaped character), not the wire bytes we emit.
+     * Two decoded quotes fit the bound; each expands to a 2-byte escape
+     * pair on the wire, so the output is 4 bytes. */
     SolidSyslogFormatter_EscapedString(formatter, R"(""""")", 2);
 
     CHECK_FORMATTED(R"(\"\")");
@@ -802,12 +806,12 @@ TEST(SolidSyslogFormatter, EscapedStringReplacesInvalidUtf8ByteWithReplacementCh
 {
     /* \xC0 is an invalid 2-byte lead (overlong); EscapedString must
      * substitute it with U+FFFD via the shared UTF-8 core. The surrounding
-     * ASCII rides through unescaped. Proves the invalid-path substitution
-     * is inherited, not a separate implementation. */
+     * ASCII rides through unescaped. The decoded budget must accommodate
+     * the ASCII bytes plus U+FFFD's 3 decoded bytes. */
     SolidSyslogFormatter_EscapedString(formatter,
                                        "a\xC0"
                                        "b",
-                                       3);
+                                       5);
 
     CHECK_FORMATTED("a\xEF\xBF\xBD"
                     "b");
@@ -815,13 +819,38 @@ TEST(SolidSyslogFormatter, EscapedStringReplacesInvalidUtf8ByteWithReplacementCh
 
 TEST(SolidSyslogFormatter, EscapedStringReplacesStragglingMultiByteLeadWhenSourceTruncated)
 {
-    /* maxRawLength caps source at 1 byte, but \xC2 followed by \x80 in
-     * memory would be a valid 2-byte codepoint. The source-bound check in
-     * the shared UTF-8 core demotes the lead to U+FFFD — EscapedString
-     * inherits truncation handling for free. */
-    SolidSyslogFormatter_EscapedString(formatter, "\xC2\x80", 1);
+    /* \xC2 is a 2-byte lead with no continuation available in the source
+     * (NUL-terminator follows). The lead cannot complete a codepoint and
+     * is demoted to U+FFFD — the decoded budget must accommodate the
+     * 3 decoded bytes of the replacement. */
+    SolidSyslogFormatter_EscapedString(formatter, "\xC2", 3);
 
     CHECK_FORMATTED("\xEF\xBF\xBD");
+}
+
+TEST(SolidSyslogFormatter, EscapedStringReplacementClaimsThreeBytesOfDecodedBudget)
+{
+    /* U+FFFD occupies 3 bytes in the reader's decoder buffer. A 4-byte
+     * decoded budget that already holds one ASCII byte can admit the
+     * replacement (1 + 3 = 4), but has no room for a trailing ASCII byte.
+     * This pins both the 3-byte fit check and the += 3 advance for the
+     * replacement branch; a regression to 1 in either would let the
+     * trailing 'b' through. */
+    SolidSyslogFormatter_EscapedString(formatter,
+                                       "a\xC0"
+                                       "b",
+                                       4);
+
+    CHECK_FORMATTED("a\xEF\xBF\xBD");
+}
+
+TEST(SolidSyslogFormatter, EscapedStringBreaksWhenReplacementDoesNotFitDecodedBudget)
+{
+    /* U+FFFD's 3 decoded bytes do not fit a 2-byte decoded budget, so the
+     * replacement cannot be emitted and the loop terminates. */
+    SolidSyslogFormatter_EscapedString(formatter, "\xC0", 2);
+
+    CHECK_FORMATTED("");
 }
 
 TEST(SolidSyslogFormatter, PrintUsAsciiStringWithEmptyInputWritesNothing)
