@@ -453,31 +453,33 @@ void SolidSyslogFormatter_SixDigit(struct SolidSyslogFormatter* formatter, uint3
     NullTerminate(formatter);
 }
 
-const char* SolidSyslogFormatter_AsFormattedBuffer(const struct SolidSyslogFormatter* formatter)
+const char* SolidSyslogFormatter_AsFormattedBuffer(struct SolidSyslogFormatter* formatter)
 {
-    TrimTruncatedMultiByteTail((struct SolidSyslogFormatter*) formatter);
+    TrimTruncatedMultiByteTail(formatter);
     return formatter->buffer;
 }
 
 static inline void TrimTruncatedMultiByteTail(struct SolidSyslogFormatter* formatter)
 {
-    char*  buffer = formatter->buffer;
-    size_t p      = formatter->position;
+    char*  buffer   = formatter->buffer;
+    size_t p        = formatter->position;
+    size_t trimFrom = p;
 
     if ((p >= 1) && (IsTwoByteLead(buffer[p - 1]) || IsThreeByteLead(buffer[p - 1]) || IsFourByteLead(buffer[p - 1])))
     {
-        buffer[p - 1] = '\0';
+        trimFrom = p - 1;
     }
     else if ((p >= 2) && (IsThreeByteLead(buffer[p - 2]) || IsFourByteLead(buffer[p - 2])))
     {
-        buffer[p - 2] = '\0';
-        buffer[p - 1] = '\0';
+        trimFrom = p - 2;
     }
     else if ((p >= 3) && IsFourByteLead(buffer[p - 3]))
     {
-        buffer[p - 3] = '\0';
-        buffer[p - 2] = '\0';
-        buffer[p - 1] = '\0';
+        trimFrom = p - 3;
+    }
+    for (size_t i = trimFrom; i < p; i++)
+    {
+        buffer[i] = '\0';
     }
 }
 
