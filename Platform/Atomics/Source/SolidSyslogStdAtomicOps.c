@@ -20,7 +20,7 @@ struct SolidSyslogAtomicOps* SolidSyslogStdAtomicOps_Create(void)
 {
     instance.base.Load           = Load;
     instance.base.CompareAndSwap = CompareAndSwap;
-    atomic_init(&instance.value, 0);
+    atomic_store_explicit(&instance.value, 0, memory_order_relaxed);
     return &instance.base;
 }
 
@@ -28,7 +28,7 @@ void SolidSyslogStdAtomicOps_Destroy(void)
 {
     instance.base.Load           = NULL;
     instance.base.CompareAndSwap = NULL;
-    atomic_init(&instance.value, 0);
+    atomic_store_explicit(&instance.value, 0, memory_order_relaxed);
 }
 
 static uint32_t Load(struct SolidSyslogAtomicOps* self)
