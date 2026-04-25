@@ -2,8 +2,8 @@
 #include "SolidSyslogAtomicCounter.h"
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogMetaSd.h"
-#include "SolidSyslogStdAtomicOps.h"
 #include "SolidSyslogStructuredData.h"
+#include "TestAtomicOps.h"
 
 #include <cstring>
 
@@ -26,7 +26,7 @@ TEST_GROUP(SolidSyslogMetaSd)
     void setup() override
     {
         formatter = SolidSyslogFormatter_Create(storage, TEST_BUFFER_SIZE);
-        counter = SolidSyslogAtomicCounter_Create(SolidSyslogStdAtomicOps_Create());
+        counter = SolidSyslogAtomicCounter_Create(TestAtomicOps_Create());
         sd = SolidSyslogMetaSd_Create(counter);
     }
 
@@ -34,7 +34,7 @@ TEST_GROUP(SolidSyslogMetaSd)
     {
         SolidSyslogMetaSd_Destroy();
         SolidSyslogAtomicCounter_Destroy();
-        SolidSyslogStdAtomicOps_Destroy();
+        TestAtomicOps_Destroy();
     }
 
     void format() const
