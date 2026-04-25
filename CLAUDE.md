@@ -340,7 +340,10 @@ Headers in `Core/Interface/` are split by audience — each user includes only w
 | `SolidSyslogStructuredData.h` | Library internals (SD dispatch) | `SolidSyslogStructuredData_Format` (writes into `SolidSyslogFormatter*`) |
 | `SolidSyslogStructuredDataDefinition.h` | SD implementors (extension point) | `SolidSyslogStructuredData` vtable struct (Format takes `SolidSyslogFormatter*`) |
 | `SolidSyslogMetaSd.h` | System setup code using sequenceId SD | `SolidSyslogMetaSd_Create`, `_Destroy` |
-| `SolidSyslogAtomicCounter.h` | System setup code on platforms with C11 atomics | `SolidSyslogAtomicCounter_Create`, `_Destroy`, `_Increment` |
+| `SolidSyslogAtomicCounter.h` | System setup code wiring a sequenceId source | `SolidSyslogAtomicCounter_Create(ops)`, `_Destroy`, `_Increment` — wrap-aware in [1, 2³¹ - 1] per RFC 5424 §7.3.1, never returns 0 |
+| `SolidSyslogAtomicOpsDefinition.h` | AtomicOps implementors (extension point) | `SolidSyslogAtomicOps` vtable struct (`Load`, `CompareAndSwap`) |
+| `SolidSyslogStdAtomicOps.h` | System setup code on hosts with C11 `<stdatomic.h>` | `SolidSyslogStdAtomicOps_Create`, `_Destroy` |
+| `SolidSyslogWindowsAtomicOps.h` | System setup code on legacy MSVC without `<stdatomic.h>` | `SolidSyslogWindowsAtomicOps_Create`, `_Destroy` (uses `InterlockedCompareExchange`) |
 | `SolidSyslogTimeQuality.h` | Any code providing time quality data | `SolidSyslogTimeQuality`, `SolidSyslogTimeQualityFunction`, `SOLIDSYSLOG_SYNC_ACCURACY_OMIT` |
 | `SolidSyslogTimeQualitySd.h` | System setup code using timeQuality SD | `SolidSyslogTimeQualitySd_Create`, `_Destroy` |
 | `SolidSyslogOriginSd.h` | System setup code using origin SD | `SolidSyslogOriginSd_Create`, `_Destroy` |

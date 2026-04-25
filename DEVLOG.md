@@ -1,5 +1,58 @@
 # Dev Log
 
+## 2026-04-25 — S07.07 sequenceId rollover and zero-avoidance per RFC 5424 §7.3.1
+
+### Decisions
+- **Wrap policy lives in the library, not in the user's atomic seam.**
+  `AtomicOps` exposes only `Load` and `CompareAndSwap`. The wrap-at-2³¹-1
+  and zero-avoidance rules live in `SolidSyslogAtomicCounter_Increment`'s
+  CAS loop. A user porting to a toolchain without `<stdatomic.h>`
+  (e.g. older VxWorks 7) only has to implement two primitives — they
+  cannot accidentally violate RFC by getting wrap wrong.
+- **`Platform/Atomics/` for cross-platform C11 implementations,
+  `Platform/Windows/` for host-specific.** `<stdatomic.h>` isn't POSIX
+  — it's a C11 language feature available on GCC, clang, and modern MSVC
+  — so it earns a sibling folder. Anything that requires Windows-specific
+  primitives (e.g. `InterlockedCompareExchange` for legacy MSVC) lives
+  in `Platform/Windows/` and CMake selects it in preference where
+  available.
+- **`uint32_t` end-to-end.** The seam, the storage, the RFC range, and
+  `Increment`'s return type are all 32-bit. The original `uint_fast32_t`
+  on `Increment` was incidental and is now narrowed.
+- **sequenceId assigned at raise, not at transport.** Consciously
+  interpreting RFC §7.3.1's "originator" as the application layer rather
+  than the transport socket. SIEMs see one end-to-end loss-detection
+  signal across the internal buffer, store-and-forward, and transport.
+  Cost: a small reorder window under concurrent raise (adjacent IDs
+  may invert). Documented in the RFC compliance row and the IEC 62443
+  cross-reference.
+- **Phased commits.** Branch carries four commits — seam (additive),
+  StdAtomicOps default, consumer cutover (+ Windows path migration),
+  legacy removal. Each is independently revertable. POSIX/clang/gcc
+  validated locally; Windows path is plumbed but only validated under
+  `msvc-debug` in a separate Windows clone session.
+
+### Deferred
+- **Pre-atomics / mutex-based AtomicOps.** Architecture supports it via
+  the seam; no in-tree implementation ships with this story. Add when
+  a concrete toolchain need arises.
+- **Branch-coverage instrumentation.** lcov reports "no data found" for
+  branches across the project — the CMake coverage preset enables
+  branch coverage at the lcov level but no compiler-side `-fprofile-arcs`
+  branch flags. Worth a separate housekeeping story.
+
+### Open questions for the blog source
+- **What's the right shape for an "extension point" header?** This
+  story added `SolidSyslogAtomicOpsDefinition.h` (vtable-only, for
+  implementors) without a sibling `SolidSyslogAtomicOps.h` (forward
+  declaration only, for consumers). Existing extension points in the
+  repo are split — `SolidSyslogBufferDefinition.h` vs `SolidSyslogBuffer.h`.
+  Here the consumer (`AtomicCounter`) needs the full vtable to call
+  through it, so it includes Definition directly, and there's no
+  consumer for whom a forward-declaration-only header would be useful.
+  Open question: should every seam ship both headers symmetrically for
+  consistency, or only when there's a consumer that benefits?
+
 ## 2026-04-23 — S12.09 PRINTUSASCII validation for RFC 5424 header fields
 
 ### Decisions
