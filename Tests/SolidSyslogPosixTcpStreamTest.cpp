@@ -4,6 +4,7 @@
 #include "SolidSyslogStream.h"
 #include "SocketFake.h"
 #include <arpa/inet.h>
+#include <cerrno>
 #include <cstdint>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -81,9 +82,13 @@ TEST(SolidSyslogPosixTcpStream, OpenCallsSocketWithSOCK_STREAM)
 TEST(SolidSyslogPosixTcpStream, OpenEnablesTcpNoDelay)
 {
     SolidSyslogStream_Open(stream, addr);
-    LONGS_EQUAL(1, SocketFake_SetSockOptCallCount());
-    LONGS_EQUAL(IPPROTO_TCP, SocketFake_LastSetSockOptLevel());
-    LONGS_EQUAL(TCP_NODELAY, SocketFake_LastSetSockOptOptname());
+    CHECK_TRUE(SocketFake_HasSetSockOpt(IPPROTO_TCP, TCP_NODELAY));
+}
+
+TEST(SolidSyslogPosixTcpStream, OpenSetsSendTimeout)
+{
+    SolidSyslogStream_Open(stream, addr);
+    CHECK_TRUE(SocketFake_HasSetSockOpt(SOL_SOCKET, SO_SNDTIMEO));
 }
 
 TEST(SolidSyslogPosixTcpStream, OpenCallsConnectWithSocketFd)
@@ -109,6 +114,49 @@ TEST(SolidSyslogPosixTcpStream, OpenReturnsFalseOnConnectFailure)
 {
     SocketFake_SetConnectFails(true);
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(SolidSyslogPosixTcpStream, OpenReturnsFalseWhenSocketFails)
+{
+    SocketFake_SetSocketFails(true);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(SolidSyslogPosixTcpStream, OpenSkipsConnectAndSetsockoptWhenSocketFails)
+{
+    SocketFake_SetSocketFails(true);
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(0, SocketFake_ConnectCallCount());
+    LONGS_EQUAL(0, SocketFake_SetSockOptCallCount());
+}
+
+TEST(SolidSyslogPosixTcpStream, SendReturnsFalseOnShortWrite)
+{
+    SolidSyslogStream_Open(stream, addr);
+    SocketFake_SetSendReturn(3);
+    CHECK_FALSE(SolidSyslogStream_Send(stream, TEST_MESSAGE, TEST_MESSAGE_LEN));
+}
+
+TEST(SolidSyslogPosixTcpStream, SendDoesNotRetryAfterShortWrite)
+{
+    SolidSyslogStream_Open(stream, addr);
+    SocketFake_SetSendReturn(3);
+    SolidSyslogStream_Send(stream, TEST_MESSAGE, TEST_MESSAGE_LEN);
+    LONGS_EQUAL(1, SocketFake_SendCallCount());
+}
+
+TEST(SolidSyslogPosixTcpStream, SendRetriesOnEintrAndSucceeds)
+{
+    SolidSyslogStream_Open(stream, addr);
+    SocketFake_FailNextSendWithErrno(EINTR);
+    CHECK_TRUE(SolidSyslogStream_Send(stream, TEST_MESSAGE, TEST_MESSAGE_LEN));
+}
+
+TEST(SolidSyslogPosixTcpStream, SendReturnsFalseOnEagainTimeout)
+{
+    SolidSyslogStream_Open(stream, addr);
+    SocketFake_FailNextSendWithErrno(EAGAIN);
+    CHECK_FALSE(SolidSyslogStream_Send(stream, TEST_MESSAGE, TEST_MESSAGE_LEN));
 }
 
 TEST(SolidSyslogPosixTcpStream, OpenClosesSocketOnConnectFailure)

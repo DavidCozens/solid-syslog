@@ -144,9 +144,7 @@ TEST(SolidSyslogStreamSender, FirstSendOpensStreamSocket)
 TEST(SolidSyslogStreamSender, FirstSendSetsTcpNoDelay)
 {
     Send();
-    LONGS_EQUAL(1, SocketFake_SetSockOptCallCount());
-    LONGS_EQUAL(IPPROTO_TCP, SocketFake_LastSetSockOptLevel());
-    LONGS_EQUAL(TCP_NODELAY, SocketFake_LastSetSockOptOptname());
+    CHECK_TRUE(SocketFake_HasSetSockOpt(IPPROTO_TCP, TCP_NODELAY));
 }
 
 // clang-format off
@@ -537,9 +535,10 @@ TEST(SolidSyslogStreamSenderFailure, ReconnectSetsTcpNoDelay)
     Send();
     SocketFake_SetSendFails(false);
     Send();
-    LONGS_EQUAL(2, SocketFake_SetSockOptCallCount());
-    LONGS_EQUAL(IPPROTO_TCP, SocketFake_LastSetSockOptLevel());
-    LONGS_EQUAL(TCP_NODELAY, SocketFake_LastSetSockOptOptname());
+    /* Two opens (initial + reconnect); both must set TCP_NODELAY.
+     * Counted indirectly: TCP_NODELAY appears twice, plus SO_SNDTIMEO twice = 4 total. */
+    LONGS_EQUAL(4, SocketFake_SetSockOptCallCount());
+    CHECK_TRUE(SocketFake_HasSetSockOpt(IPPROTO_TCP, TCP_NODELAY));
 }
 
 TEST(SolidSyslogStreamSenderFailure, ReconnectResolvesDns)

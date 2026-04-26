@@ -1,5 +1,56 @@
 # Dev Log
 
+## 2026-04-26 — S12.08 TcpSender error guards (socket(), partial write, SO_SNDTIMEO)
+
+### Decisions
+- **Fail-fast on any short return from `send()`, no internal retry loop.**
+  Considered the SendAll-with-offset pattern but went simpler: a short return,
+  `EAGAIN`/`EWOULDBLOCK`, or any non-`EINTR` error all surface as `Send` →
+  false. The caller closes and reconnects on the next attempt; store-and-forward
+  replays the whole message on the fresh socket. Trade-off: under a peer that
+  always short-writes (rare on a blocking socket without `O_NONBLOCK`), the
+  message can churn through replay. In return: clean per-call latency upper
+  bound (≤ `SO_SNDTIMEO`), much smaller code surface, easier to port to a new
+  Stream backend.
+- **`SO_SNDTIMEO` set at `Open` (5 s, hard-coded).** Bounds the blocking
+  window of any single `send()`. A wedged peer can no longer make a
+  `SolidSyslog_Service` call hang indefinitely — the timeout fires as
+  `EAGAIN`, propagates as `Send` → false, and S&F handles the rest. The
+  5 s value is recorded as a candidate for a future port-time CMake
+  override (the same shape we'd use for `SOLIDSYSLOG_MAX_MESSAGE_SIZE` on
+  memory-constrained MCUs); for now it lives as an `enum` in the
+  implementation file.
+- **`EINTR` is the only retried errno.** Strictly a portability shim
+  against systems without `SA_RESTART`. Documented inline so it doesn't
+  get deleted as dead code in a future cleanup.
+- **`MSG_NOSIGNAL` already in place.** No SIGPIPE work needed for
+  POSIX/Linux. BSD/macOS would use `SO_NOSIGPIPE`, VxWorks 7 a per-thread
+  mask — out of scope until a concrete porting target appears.
+- **`getaddrinfo` NULL guard (item 1 in the original issue) was already
+  fixed** by an earlier refactor that removed the `BuildAddress` helper.
+  Existing tests `ReturnsFalseWhenGetAddrInfoFails` and
+  `DoesNotFreeAddrInfoWhenGetAddrInfoFails` document the safe path. No
+  code change for this item.
+
+### Deferred
+- **Port-time CMake override mechanism** for `SEND_TIMEOUT_SECONDS` and
+  `SOLIDSYSLOG_MAX_MESSAGE_SIZE`. Both are good candidates; neither has a
+  concrete user need yet. A future story can add the CMake plumbing
+  (`-D` cache variables → preprocessor defines → `enum` defaults guarded
+  by `#ifndef`).
+- **Symmetric tests for the BSD/macOS/VxWorks SIGPIPE matrix.** Not
+  testable without a VxWorks build; would slot under E13 cross-platform
+  CI if/when a VxWorks target is added.
+
+### Open questions for the blog source
+- **What's the right "fast fail vs internal retry" line for embedded
+  transports?** SendAll is correct for streams over reliable lossless
+  links; fast-fail-and-replay is correct when there's a backstop (S&F)
+  and you value latency predictability. The conventional advice is
+  "always SendAll on TCP" — but that advice doesn't account for systems
+  where the transport sits below an event loop with its own retry
+  semantics. SolidSyslog's S&F is exactly that. Worth a paragraph.
+
 ## 2026-04-25 — S07.07 sequenceId rollover and zero-avoidance per RFC 5424 §7.3.1
 
 ### Decisions

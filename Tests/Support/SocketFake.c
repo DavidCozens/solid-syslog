@@ -1,6 +1,7 @@
 #include "SocketFake.h"
 #include "SafeString.h"
 #include <arpa/inet.h>
+#include <errno.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <string.h>
@@ -31,13 +32,17 @@ enum
     SOCKETFAKE_MAX_SEND_CALLS = 8
 };
 
-static bool   sendFails;
-static int    sendFailOnCall;
-static int    sendCallCount;
-static char   sendBufCopy[SOCKETFAKE_MAX_SEND_CALLS][SOCKETFAKE_MAX_BUFFER_SIZE];
-static size_t sendLenCopy[SOCKETFAKE_MAX_SEND_CALLS];
-static int    sendFlagsCopy[SOCKETFAKE_MAX_SEND_CALLS];
-static int    lastSendFd;
+static bool    sendFails;
+static int     sendFailOnCall;
+static int     sendCallCount;
+static bool    sendReturnOverride;
+static ssize_t sendReturnValue;
+static bool    nextSendShouldFailWithErrno;
+static int     nextSendErrno;
+static char    sendBufCopy[SOCKETFAKE_MAX_SEND_CALLS][SOCKETFAKE_MAX_BUFFER_SIZE];
+static size_t  sendLenCopy[SOCKETFAKE_MAX_SEND_CALLS];
+static int     sendFlagsCopy[SOCKETFAKE_MAX_SEND_CALLS];
+static int     lastSendFd;
 
 static bool               connectFails;
 static int                connectCallCount;
@@ -45,9 +50,16 @@ static int                lastConnectFd;
 static struct sockaddr_in lastConnectAddr;
 static char               lastConnectAddrString[INET_ADDRSTRLEN];
 
+enum
+{
+    SOCKETFAKE_MAX_SETSOCKOPT_CALLS = 8
+};
+
 static int setSockOptCallCount;
 static int lastSetSockOptLevel;
 static int lastSetSockOptOptname;
+static int setSockOptLevels[SOCKETFAKE_MAX_SETSOCKOPT_CALLS];
+static int setSockOptOptnames[SOCKETFAKE_MAX_SETSOCKOPT_CALLS];
 
 static int closeCallCount;
 static int lastClosedFd;
@@ -71,17 +83,21 @@ static int                freeAddrInfoCallCount;
 
 void SocketFake_Reset(void)
 {
-    sendtoFails     = false;
-    sendtoCallCount = 0;
-    lastBufCopy[0]  = '\0';
-    lastLen         = 0;
-    lastFlags       = 0;
-    lastAddr        = (struct sockaddr_in) {0};
-    lastAddrLen     = 0;
-    lastSendtoFd    = -1;
-    sendFails       = false;
-    sendFailOnCall  = -1;
-    sendCallCount   = 0;
+    sendtoFails                 = false;
+    sendtoCallCount             = 0;
+    lastBufCopy[0]              = '\0';
+    lastLen                     = 0;
+    lastFlags                   = 0;
+    lastAddr                    = (struct sockaddr_in) {0};
+    lastAddrLen                 = 0;
+    lastSendtoFd                = -1;
+    sendFails                   = false;
+    sendFailOnCall              = -1;
+    sendCallCount               = 0;
+    sendReturnOverride          = false;
+    sendReturnValue             = 0;
+    nextSendShouldFailWithErrno = false;
+    nextSendErrno               = 0;
     for (int i = 0; i < SOCKETFAKE_MAX_SEND_CALLS; i++)
     {
         sendBufCopy[i][0] = '\0';
@@ -97,20 +113,25 @@ void SocketFake_Reset(void)
     setSockOptCallCount      = 0;
     lastSetSockOptLevel      = 0;
     lastSetSockOptOptname    = 0;
-    socketFails              = false;
-    socketCallCount          = 0;
-    socketFd                 = -1;
-    lastSocketDomain         = 0;
-    lastSocketType           = 0;
-    closeCallCount           = 0;
-    lastClosedFd             = -1;
-    recvCallCount            = 0;
-    recvReturn               = 0;
-    lastRecvFd               = -1;
-    lastRecvBuf              = NULL;
-    lastRecvLen              = 0;
-    lastRecvFlags            = 0;
-    lastAddrString[0]        = '\0';
+    for (int i = 0; i < SOCKETFAKE_MAX_SETSOCKOPT_CALLS; i++)
+    {
+        setSockOptLevels[i]   = 0;
+        setSockOptOptnames[i] = 0;
+    }
+    socketFails       = false;
+    socketCallCount   = 0;
+    socketFd          = -1;
+    lastSocketDomain  = 0;
+    lastSocketType    = 0;
+    closeCallCount    = 0;
+    lastClosedFd      = -1;
+    recvCallCount     = 0;
+    recvReturn        = 0;
+    lastRecvFd        = -1;
+    lastRecvBuf       = NULL;
+    lastRecvLen       = 0;
+    lastRecvFlags     = 0;
+    lastAddrString[0] = '\0';
 
     getAddrInfoFails            = false;
     getAddrInfoCallCount        = 0;
@@ -224,6 +245,18 @@ void SocketFake_FailSendOnCall(int callNumber)
     sendFailOnCall = callNumber;
 }
 
+void SocketFake_SetSendReturn(ssize_t value)
+{
+    sendReturnOverride = true;
+    sendReturnValue    = value;
+}
+
+void SocketFake_FailNextSendWithErrno(int errnoValue)
+{
+    nextSendShouldFailWithErrno = true;
+    nextSendErrno               = errnoValue;
+}
+
 /* send accessors */
 
 int SocketFake_SendCallCount(void)
@@ -308,6 +341,19 @@ int SocketFake_LastSetSockOptLevel(void)
 int SocketFake_LastSetSockOptOptname(void)
 {
     return lastSetSockOptOptname;
+}
+
+bool SocketFake_HasSetSockOpt(int level, int optname)
+{
+    int recorded = setSockOptCallCount < SOCKETFAKE_MAX_SETSOCKOPT_CALLS ? setSockOptCallCount : SOCKETFAKE_MAX_SETSOCKOPT_CALLS;
+    for (int i = 0; i < recorded; i++)
+    {
+        if (setSockOptLevels[i] == level && setSockOptOptnames[i] == optname)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 /* close accessors */
@@ -442,7 +488,21 @@ ssize_t send(int sockfd, const void* buf, size_t len, int flags)
     }
     bool failThisCall = sendFails || (sendFailOnCall == sendCallCount);
     sendCallCount++;
-    return failThisCall ? (ssize_t) -1 : (ssize_t) len;
+    if (nextSendShouldFailWithErrno)
+    {
+        errno                       = nextSendErrno;
+        nextSendShouldFailWithErrno = false;
+        return (ssize_t) -1;
+    }
+    if (failThisCall)
+    {
+        return (ssize_t) -1;
+    }
+    if (sendReturnOverride)
+    {
+        return sendReturnValue;
+    }
+    return (ssize_t) len;
 }
 
 // NOLINTNEXTLINE(readability-inconsistent-declaration-parameter-name) -- POSIX API; parameter names differ from glibc internal names
@@ -463,6 +523,11 @@ int setsockopt(int sockfd, int level, int optname, const void* optval, socklen_t
     (void) sockfd;
     (void) optval;
     (void) optlen;
+    if (setSockOptCallCount < SOCKETFAKE_MAX_SETSOCKOPT_CALLS)
+    {
+        setSockOptLevels[setSockOptCallCount]   = level;
+        setSockOptOptnames[setSockOptCallCount] = optname;
+    }
     setSockOptCallCount++;
     lastSetSockOptLevel   = level;
     lastSetSockOptOptname = optname;

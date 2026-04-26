@@ -54,7 +54,7 @@ Status key:
 | 3.5 | Session closure handling | Supported | On send failure the stream is closed; the next Send transparently reconnects (S3.4) |
 | 3.5 | Handle receiver-initiated close | Supported | Detected via send failure path — same reconnect-on-next-Send mechanism (S3.4) |
 | 3.5 | Address rotation without app restart | Supported | App bumps `endpointVersion`; sender Disconnects and reconnects on next Send (S3.4) |
-| — | Partial write handling (send returns short) | Not yet | Planned — [S12.8](https://github.com/DavidCozens/solid-syslog/issues/119) |
+| — | Partial write handling (send returns short) | Supported | A short return from `send()` is treated as failure: `Send` returns false, the caller closes and reconnects on the next attempt, store-and-forward replays the message on the fresh socket. `SO_SNDTIMEO` is set at socket open (5 s, hard-coded — see `Platform/Posix/Source/SolidSyslogPosixTcpStream.c`) so a wedged peer can't make a single `SolidSyslog_Service` call hang indefinitely. `EINTR` is the only retried errno (portability shim for kernels without `SA_RESTART`); `EAGAIN`/`EWOULDBLOCK` (timeout) and any other error propagate as failure. |
 
 ## RFC 5425 — TLS Transport Mapping for Syslog
 
@@ -74,5 +74,5 @@ Status key:
 |---|---|---|---|---|---|
 | RFC 5424 | 17 | 17 | 0 | 0 | 0 |
 | RFC 5426 | 6 | 3 | 1 | 0 | 2 |
-| RFC 6587 | 6 | 2 | 2 | 2 | 0 |
+| RFC 6587 | 8 | 7 | 0 | 0 | 1 |
 | RFC 5425 | 7 | 6 | 1 | 0 | 0 |
