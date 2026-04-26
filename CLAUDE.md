@@ -17,14 +17,15 @@ All changes to `main` must go via a pull request — direct pushes are blocked b
 **Merge strategy:** Squash merge only. This keeps a linear history on `main` and means the PR title
 becomes the single commit message — so the PR title must follow Conventional Commits format (see below).
 
-**Before raising a PR:**
-- All CI checks must pass: build-and-test, clang-build-and-test, sanitize, coverage, tidy, cppcheck, format, bdd, windows-build-and-test
+**Before raising a PR — run locally:**
+- build-and-test, clang-build-and-test, sanitize, coverage, tidy, cppcheck, format
+- Windows, BDD, and OpenSSL integration jobs are CI's responsibility — running them locally would slow development too much
 - Commits on the branch can be informal (work-in-progress messages are fine)
 - The PR title is what matters — it becomes the permanent commit message on `main`
 
 **Branch protection rules (configured on GitHub):**
 - Direct pushes to `main` are blocked
-- PRs require all status checks to pass before merging: build-and-test, clang-build-and-test, sanitize, coverage, tidy, cppcheck, format, bdd, windows-build-and-test
+- PRs require all status checks to pass before merging: build-and-test, openssl-integration, clang-build-and-test, sanitize, coverage, tidy, cppcheck, format, windows-build-and-test, bdd, bdd-windows
 - Squash merge only — other merge strategies are disabled
 - Branches are deleted automatically after merge
 
@@ -302,7 +303,10 @@ boundary that makes the code testable and portable to embedded targets.
 
 ### Public header audiences (Interface Segregation)
 
-Headers in `Core/Interface/` are split by audience — each user includes only what they need:
+Public headers are split by audience — each user includes only what they need. Most headers
+live under `Core/Interface/`; platform-specific helpers (the `SolidSyslogPosix*` and
+`SolidSyslogWindows*` rows below) live under `Platform/Posix/Interface/` and
+`Platform/Windows/Interface/` respectively.
 
 | Header | Audience | Provides |
 |---|---|---|
@@ -314,13 +318,21 @@ Headers in `Core/Interface/` are split by audience — each user includes only w
 | `SolidSyslogEndpoint.h` | System setup code that supplies destination host/port (and version on changes) | `SolidSyslogEndpoint`, `SolidSyslogEndpointFunction`, `SolidSyslogEndpointVersionFunction`, `SOLIDSYSLOG_MAX_HOST_SIZE` |
 | `SolidSyslogSender.h` | Any code holding a sender handle | `SolidSyslogSender_Send`, `SolidSyslogSender_Disconnect` |
 | `SolidSyslogSenderDefinition.h` | Sender implementors (extension point) | `SolidSyslogSender` vtable struct (`Send`, `Disconnect`) |
+| `SolidSyslogTransport.h` | Any code selecting a transport | `SolidSyslogTransport` enum (`UDP`, `TCP`) |
 | `SolidSyslogResolver.h` | Any code that needs to resolve a destination | `SolidSyslogResolver_Resolve(resolver, transport, host, port, *out)` |
+| `SolidSyslogResolverDefinition.h` | Resolver implementors (extension point) | `SolidSyslogResolver` vtable struct (`Resolve`) |
+| `SolidSyslogDatagram.h` | Sender implementors using datagram transport | `SolidSyslogDatagram_Open`, `_SendTo`, `_Close` |
+| `SolidSyslogDatagramDefinition.h` | Datagram implementors (extension point) | `SolidSyslogDatagram` vtable struct (`Open`, `SendTo`, `Close`) |
+| `SolidSyslogStream.h` | Sender implementors using stream transport | `SolidSyslogStream_Open`, `_Send`, `_Read`, `_Close`, `SolidSyslogSsize` |
+| `SolidSyslogStreamDefinition.h` | Stream implementors (extension point) | `SolidSyslogStream` vtable struct (`Open`, `Send`, `Read`, `Close`) |
 | `SolidSyslogUdpSender.h` | System setup code using UDP transport | `SolidSyslogUdpSenderConfig` (resolver, datagram, endpoint, endpointVersion), `SolidSyslogUdpSender_Create`, `_Destroy`, `SOLIDSYSLOG_UDP_DEFAULT_PORT` |
 | `SolidSyslogStreamSender.h` | System setup code using octet-framed transport (RFC 6587) over any Stream — `SolidSyslogPosixTcpStream` (TCP), `SolidSyslogTlsStream` (TLS; OpenSSL reference integration), or a caller-supplied Stream backend | `SolidSyslogStreamSenderConfig` (resolver, stream, endpoint, endpointVersion), `SolidSyslogStreamSender_Create`, `_Destroy` |
 | `SolidSyslogSwitchingSender.h` | System setup code composing multiple inner senders | `SolidSyslogSwitchingSenderConfig` (senders, senderCount, selector), `SolidSyslogSwitchingSenderSelector`, `SolidSyslogSwitchingSender_Create`, `_Destroy` |
+| `SolidSyslogBuffer.h` | Library internals consuming a buffer (Service algorithm) | `SolidSyslogBuffer_Write`, `_Read` |
 | `SolidSyslogBufferDefinition.h` | Buffer implementors (extension point) | `SolidSyslogBuffer` vtable struct |
 | `SolidSyslogNullBuffer.h` | System setup code (single-task, no buffering) | `SolidSyslogNullBuffer_Create`, `_Destroy` |
 | `SolidSyslogPosixMessageQueueBuffer.h` | System setup code using POSIX message queue buffer | `SolidSyslogPosixMessageQueueBuffer_Create`, `_Destroy` |
+| `SolidSyslogStore.h` | Library internals consuming a store (Service algorithm) | `SolidSyslogStore_Write`, `_ReadNextUnsent`, `_MarkSent`, `_HasUnsent`, `_IsHalted` |
 | `SolidSyslogStoreDefinition.h` | Store implementors (extension point) | `SolidSyslogStore` vtable struct |
 | `SolidSyslogNullStore.h` | System setup code (no store-and-forward) | `SolidSyslogNullStore_Create`, `_Destroy` |
 | `SolidSyslogFileDefinition.h` | File implementors (extension point) | `SolidSyslogFile` vtable struct |
