@@ -37,6 +37,8 @@ EXTERN_C_BEGIN
     /* send configuration */
     void SocketFake_SetSendFails(bool fails);
     void SocketFake_FailSendOnCall(int callNumber);
+    void SocketFake_SetSendReturn(ssize_t value);
+    void SocketFake_FailNextSendWithErrno(int errnoValue);
 
     /* send accessors */
     int         SocketFake_SendCallCount(void);
@@ -55,9 +57,10 @@ EXTERN_C_BEGIN
     const char* SocketFake_LastConnectAddrAsString(void);
 
     /* setsockopt accessors */
-    int SocketFake_SetSockOptCallCount(void);
-    int SocketFake_LastSetSockOptLevel(void);
-    int SocketFake_LastSetSockOptOptname(void);
+    int  SocketFake_SetSockOptCallCount(void);
+    int  SocketFake_LastSetSockOptLevel(void);
+    int  SocketFake_LastSetSockOptOptname(void);
+    bool SocketFake_HasSetSockOpt(int level, int optname);
 
     /* close accessors */
     int SocketFake_CloseCallCount(void);
