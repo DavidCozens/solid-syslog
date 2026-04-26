@@ -1,0 +1,25 @@
+#ifndef SOLIDSYSLOGWINDOWSFILE_H
+#define SOLIDSYSLOGWINDOWSFILE_H
+
+#include "SolidSyslogFile.h"
+
+#include <stdint.h>
+
+EXTERN_C_BEGIN
+
+    enum
+    {
+        SOLIDSYSLOG_WINDOWS_FILE_SIZE = sizeof(intptr_t) * 11
+    };
+
+    typedef struct
+    {
+        intptr_t slots[(SOLIDSYSLOG_WINDOWS_FILE_SIZE + sizeof(intptr_t) - 1) / sizeof(intptr_t)];
+    } SolidSyslogWindowsFileStorage;
+
+    struct SolidSyslogFile* SolidSyslogWindowsFile_Create(SolidSyslogWindowsFileStorage * storage);
+    void                    SolidSyslogWindowsFile_Destroy(struct SolidSyslogFile * file);
+
+EXTERN_C_END
+
+#endif /* SOLIDSYSLOGWINDOWSFILE_H */

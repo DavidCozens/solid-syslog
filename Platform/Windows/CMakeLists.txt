@@ -7,6 +7,7 @@ endif()
 if(HAVE_WINDOWS_PLATFORM)
     target_sources(${PROJECT_NAME} PRIVATE
         Source/SolidSyslogWindowsClock.c
+        Source/SolidSyslogWindowsFile.c
         Source/SolidSyslogWindowsHostname.c
         Source/SolidSyslogWindowsProcessId.c
     )

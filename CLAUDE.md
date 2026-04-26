@@ -343,6 +343,7 @@ live under `Core/Interface/`; platform-specific helpers (the `SolidSyslogPosix*`
 | `SolidSyslogCrc16Policy.h` | System setup code using CRC-16 integrity | `SolidSyslogCrc16Policy_Create`, `_Destroy` |
 | `SolidSyslogCrc16.h` | Any code needing CRC-16 computation | `SolidSyslogCrc16_Compute` |
 | `SolidSyslogPosixFile.h` | System setup code using POSIX file I/O | `SolidSyslogPosixFile_Create`, `_Destroy` |
+| `SolidSyslogWindowsFile.h` | System setup code using Windows file I/O (MSVC `<io.h>`) | `SolidSyslogWindowsFile_Create`, `_Destroy` |
 | `SolidSyslogPosixClock.h` | System setup code using POSIX clock | `SolidSyslogPosixClock_GetTimestamp` |
 | `SolidSyslogPosixHostname.h` | String callback implementor using POSIX hostname | `SolidSyslogPosixHostname_Get` (writes into `SolidSyslogFormatter*`) |
 | `SolidSyslogPosixProcessId.h` | String callback implementor using POSIX process ID | `SolidSyslogPosixProcessId_Get` (writes into `SolidSyslogFormatter*`) |

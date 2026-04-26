@@ -91,6 +91,7 @@ endif()
 if(HAVE_WINDOWS_PLATFORM)
     list(APPEND TEST_SOURCES
         SolidSyslogWindowsClockTest.cpp
+        SolidSyslogWindowsFileTest.cpp
         SolidSyslogWindowsHostnameTest.cpp
         SolidSyslogWindowsProcessIdTest.cpp
     )
