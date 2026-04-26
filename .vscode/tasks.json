@@ -7,9 +7,9 @@
         {
             "label": "build and test",
             "type": "shell",
-            "command": "if [ -z \"$BUILD_PRESET\" ]; then behave Bdd/features/; else cmake --build --preset $BUILD_PRESET && ctest --preset $BUILD_PRESET --verbose; fi",
+            "command": "if [ -z \"$BUILD_PRESET\" ]; then behave Bdd/features/; else cmake --build --preset $BUILD_PRESET --target SolidSyslogTests && ctest --preset $BUILD_PRESET --verbose --tests-regex '^SolidSyslogTests$'; fi",
             "windows": {
-                "command": "cmake --preset msvc-debug; if ($?) { cmake --build --preset msvc-debug }; if ($?) { ctest --preset msvc-debug --verbose }"
+                "command": "cmake --preset msvc-debug; if ($?) { cmake --build --preset msvc-debug --target SolidSyslogTests }; if ($?) { ctest --preset msvc-debug --verbose --tests-regex '^SolidSyslogTests$' }"
             },
             "group": {
                 "kind": "build",
