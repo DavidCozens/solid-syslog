@@ -591,45 +591,45 @@ jobs:
                 "tools": [
                   {
                     "id": "junit",
-                    "name": "Unit Tests (GCC)",
+                    "name": "build-linux-gcc",
                     "pattern": "**/junit-build-linux-gcc/cpputest_*.xml"
                   },
                   {
                     "id": "junit",
-                    "name": "Unit Tests (Clang)",
+                    "name": "build-linux-clang",
                     "pattern": "**/junit-build-linux-clang/cpputest_*.xml"
                   },
                   {
                     "id": "junit",
-                    "name": "Unit Tests (Sanitize)",
+                    "name": "sanitize-linux-gcc",
                     "pattern": "**/junit-sanitize-linux-gcc/cpputest_*.xml"
                   },
                   {
                     "id": "junit",
-                    "name": "Integration Tests (OpenSSL)",
+                    "name": "integration-linux-openssl",
                     "pattern": "**/junit-integration-linux-openssl/cpputest_*.xml"
                   },
                   {
                     "id": "junit",
-                    "name": "BDD Tests (Linux)",
+                    "name": "bdd-linux-syslog-ng",
                     "pattern": "**/junit-bdd-linux-syslog-ng/TESTS-*.xml"
                   },
                   {
                     "id": "junit",
-                    "name": "BDD Tests (Windows)",
+                    "name": "bdd-windows-otel",
                     "pattern": "**/junit-bdd-windows-otel/TESTS-*.xml"
                   },
                   {
                     "id": "junit",
-                    "name": "Unit Tests (MSVC)",
+                    "name": "build-windows-msvc",
                     "pattern": "**/junit-build-windows-msvc/cpputest_*.xml"
                   }
                 ]
               },
               "analysis": [
                 {
-                  "name": "clang-tidy",
-                  "id": "clang-tidy",
+                  "name": "analyze-tidy",
+                  "id": "analyze-tidy",
                   "tools": [
                     {
                       "id": "clang-tidy",
@@ -638,8 +638,8 @@ jobs:
                   ]
                 },
                 {
-                  "name": "cppcheck",
-                  "id": "cppcheck",
+                  "name": "analyze-cppcheck",
+                  "id": "analyze-cppcheck",
                   "tools": [
                     {
                       "id": "cppcheck",
