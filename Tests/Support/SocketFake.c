@@ -83,6 +83,9 @@ static int                freeAddrInfoCallCount;
 
 void SocketFake_Reset(void)
 {
+    /* Reset errno so a stale value from a prior test (notably EINTR set via
+     * FailNextSendWithErrno) cannot leak into the next test's retry loop. */
+    errno                       = 0;
     sendtoFails                 = false;
     sendtoCallCount             = 0;
     lastBufCopy[0]              = '\0';
@@ -496,6 +499,9 @@ ssize_t send(int sockfd, const void* buf, size_t len, int flags)
     }
     if (failThisCall)
     {
+        /* Set a non-retryable errno so the production EINTR-retry loop
+         * cannot wedge if errno happened to be EINTR from a prior test. */
+        errno = EIO;
         return (ssize_t) -1;
     }
     if (sendReturnOverride)
