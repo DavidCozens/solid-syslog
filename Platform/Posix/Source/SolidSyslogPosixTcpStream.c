@@ -16,19 +16,26 @@ enum
     SEND_TIMEOUT_SECONDS = 5
 };
 
-static bool             Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr);
-static bool             Send(struct SolidSyslogStream* self, const void* buffer, size_t size);
-static SolidSyslogSsize Read(struct SolidSyslogStream* self, void* buffer, size_t size);
-static void             Close(struct SolidSyslogStream* self);
-static void             EnableTcpNoDelay(int fd);
-static void             SetSendTimeout(int fd);
-static inline bool      IsFileDescriptorValid(int fd);
-
 struct SolidSyslogPosixTcpStream
 {
     struct SolidSyslogStream base;
     int                      fd;
 };
+
+static bool             Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr);
+static bool             Send(struct SolidSyslogStream* self, const void* buffer, size_t size);
+static SolidSyslogSsize Read(struct SolidSyslogStream* self, void* buffer, size_t size);
+static void             Close(struct SolidSyslogStream* self);
+
+static int         OpenAndConfigureSocket(void);
+static void        EnableTcpNoDelay(int fd);
+static void        SetSendTimeout(int fd);
+static inline bool IsFileDescriptorValid(int fd);
+static bool        ConnectOrCloseOnFailure(struct SolidSyslogPosixTcpStream* stream, const struct sockaddr_in* sin);
+static bool        Connect(int fd, const struct sockaddr_in* sin);
+static ssize_t     SendRetryingOnSignal(int fd, const void* buffer, size_t size);
+static bool        WasInterruptedBySignal(void);
+static bool        WroteAllBytes(ssize_t sent, size_t expected);
 
 SOLIDSYSLOG_STATIC_ASSERT(sizeof(struct SolidSyslogPosixTcpStream) <= SOLIDSYSLOG_POSIX_TCP_STREAM_SIZE,
                           "SOLIDSYSLOG_POSIX_TCP_STREAM_SIZE is too small for struct SolidSyslogPosixTcpStream");
@@ -59,26 +66,27 @@ void SolidSyslogPosixTcpStream_Destroy(struct SolidSyslogStream* stream)
 
 static bool Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr)
 {
-    struct SolidSyslogPosixTcpStream* stream = (struct SolidSyslogPosixTcpStream*) self;
-    const struct sockaddr_in*         sin    = SolidSyslogAddress_AsConstSockaddrIn(addr);
+    struct SolidSyslogPosixTcpStream* stream    = (struct SolidSyslogPosixTcpStream*) self;
+    const struct sockaddr_in*         sin       = SolidSyslogAddress_AsConstSockaddrIn(addr);
+    bool                              connected = false;
 
-    stream->fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (!IsFileDescriptorValid(stream->fd))
+    stream->fd = OpenAndConfigureSocket();
+    if (IsFileDescriptorValid(stream->fd))
     {
-        return false;
+        connected = ConnectOrCloseOnFailure(stream, sin);
     }
-    EnableTcpNoDelay(stream->fd);
-    SetSendTimeout(stream->fd);
-
-    bool connected = connect(stream->fd, (const struct sockaddr*) sin, sizeof(*sin)) == 0;
-
-    if (!connected)
-    {
-        close(stream->fd);
-        stream->fd = INVALID_FD;
-    }
-
     return connected;
+}
+
+static int OpenAndConfigureSocket(void)
+{
+    int fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (IsFileDescriptorValid(fd))
+    {
+        EnableTcpNoDelay(fd);
+        SetSendTimeout(fd);
+    }
+    return fd;
 }
 
 static void EnableTcpNoDelay(int fd)
@@ -99,18 +107,56 @@ static void SetSendTimeout(int fd)
     setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
 }
 
+static inline bool IsFileDescriptorValid(int fd)
+{
+    return (fd >= 0);
+}
+
+static bool ConnectOrCloseOnFailure(struct SolidSyslogPosixTcpStream* stream, const struct sockaddr_in* sin)
+{
+    bool connected = Connect(stream->fd, sin);
+    if (!connected)
+    {
+        close(stream->fd);
+        stream->fd = INVALID_FD;
+    }
+    return connected;
+}
+
+static bool Connect(int fd, const struct sockaddr_in* sin)
+{
+    return (connect(fd, (const struct sockaddr*) sin, sizeof(*sin)) == 0);
+}
+
 static bool Send(struct SolidSyslogStream* self, const void* buffer, size_t size)
 {
     struct SolidSyslogPosixTcpStream* stream = (struct SolidSyslogPosixTcpStream*) self;
-    ssize_t                           sent   = 0;
-    /* Retry only on EINTR — portability shim for kernels without SA_RESTART.
-     * Any other failure (including EAGAIN/EWOULDBLOCK from SO_SNDTIMEO) and
-     * any short return propagates as false; the caller closes and reconnects. */
+    ssize_t                           sent   = SendRetryingOnSignal(stream->fd, buffer, size);
+    return WroteAllBytes(sent, size);
+}
+
+/* Retry only on EINTR — portability shim for kernels without SA_RESTART.
+ * Any other failure (including EAGAIN/EWOULDBLOCK from SO_SNDTIMEO) and
+ * any short return propagate via WroteAllBytes; the caller closes and
+ * reconnects, store-and-forward replays the message on the fresh socket. */
+static ssize_t SendRetryingOnSignal(int fd, const void* buffer, size_t size)
+{
+    ssize_t sent = 0;
     do
     {
-        sent = send(stream->fd, buffer, size, MSG_NOSIGNAL);
-    } while (sent < 0 && errno == EINTR);
-    return sent >= 0 && (size_t) sent == size;
+        sent = send(fd, buffer, size, MSG_NOSIGNAL);
+    } while ((sent < 0) && WasInterruptedBySignal());
+    return sent;
+}
+
+static bool WasInterruptedBySignal(void)
+{
+    return (errno == EINTR);
+}
+
+static bool WroteAllBytes(ssize_t sent, size_t expected)
+{
+    return (sent >= 0) && ((size_t) sent == expected);
 }
 
 static SolidSyslogSsize Read(struct SolidSyslogStream* self, void* buffer, size_t size)
@@ -127,9 +173,4 @@ static void Close(struct SolidSyslogStream* self)
         close(stream->fd);
         stream->fd = INVALID_FD;
     }
-}
-
-static inline bool IsFileDescriptorValid(int fd)
-{
-    return fd >= 0;
 }
