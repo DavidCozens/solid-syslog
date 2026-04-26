@@ -1,5 +1,52 @@
 # Dev Log
 
+## 2026-04-26 — S13.16 WindowsFile — file abstraction using `<io.h>`
+
+### Decisions
+- **MSVC `<io.h>` underscore wrappers, not Win32 `CreateFile`/`ReadFile`.**
+  `<io.h>` keeps the same `int fd` model and `INVALID_FD = -1` sentinel
+  that `SolidSyslogPosixFile` uses, so the two impls read line-for-line
+  alongside each other. Win32 native (HANDLE, `INVALID_HANDLE_VALUE`,
+  overlapped I/O signature differences) would have produced a much
+  larger diff with no behavioural gain — the file abstraction is
+  blocking + sequential by design.
+- **`_O_BINARY` is mandatory.** Without it the MSVC CRT translates
+  `0x0A` → `0x0D 0x0A` on write and strips `0x0D` on read. That would
+  silently corrupt `SolidSyslogFileStore` data the moment a frame
+  contained either byte. Added a regression test
+  (`BinaryRoundTripPreservesNewlineBytes`) that writes a payload
+  containing `0x0A` and `0x0D` and asserts byte-for-byte round-trip.
+- **`_sopen_s` over `_open`.** Plain `_open` triggers MSVC C4996
+  (deprecation in favour of safe-CRT variants) and the project's
+  banned-API policy forbids re-introducing `_CRT_SECURE_NO_WARNINGS`.
+  `_sopen_s(&fd, path, oflag, _SH_DENYNO, pmode)` is the non-deprecated
+  equivalent; `_SH_DENYNO` matches POSIX `open()`'s default of no share
+  restriction. `_close`, `_read`, `_write`, `_lseeki64`, `_chsize_s`,
+  `_access`, `_unlink` do not trigger C4996 and are used directly.
+- **Tests hit the real filesystem.** Same approach as
+  `SolidSyslogPosixFileTest`. No UT_PTR_SET seam, no fake — just open,
+  write, read, seek, truncate, exists, delete against a path under
+  `GetTempPathA`. The MSVC POSIX-compat layer is what production uses
+  in anger, so exercising the real CRT is the truthful test.
+
+### Deferred
+- **`SolidSyslogFileStore` wiring on Windows** — needs a threaded
+  buffer to be useful end-to-end (single-task example would not
+  exercise S&F). Story for that lands once the Windows threaded buffer
+  is in place.
+- **`_chsize_s` / `_lseeki64` return-value checks.** `SolidSyslogPosixFile`
+  ignores the return values of `ftruncate` / `lseek` likewise; matching
+  the same risk profile keeps the impls symmetric. If a future story
+  adds error reporting to the `SolidSyslogFile` vtable both impls get
+  upgraded together.
+- **Cross-platform unification under a shared `SolidSyslogFile` impl.**
+  Considered briefly — both impls would need conditional includes and
+  the underscore-prefix divergence would litter the source. The
+  per-platform impls are cleaner.
+
+### Open questions
+- None.
+
 ## 2026-04-26 — S13.09 WinsockTcpStream — Windows TCP transport
 
 ### Decisions
