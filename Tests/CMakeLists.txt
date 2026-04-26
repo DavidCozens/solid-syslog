@@ -101,6 +101,7 @@ if(SOLIDSYSLOG_WINSOCK)
         WinsockFakeTest.cpp
         SolidSyslogWinsockResolverTest.cpp
         SolidSyslogWinsockDatagramTest.cpp
+        SolidSyslogWinsockTcpStreamTest.cpp
     )
 endif()
 

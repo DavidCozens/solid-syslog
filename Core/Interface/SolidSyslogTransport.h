@@ -1,6 +1,12 @@
 #ifndef SOLIDSYSLOGTRANSPORT_H
 #define SOLIDSYSLOGTRANSPORT_H
 
+enum
+{
+    SOLIDSYSLOG_UDP_DEFAULT_PORT = 514, /* RFC 5426 */
+    SOLIDSYSLOG_TCP_DEFAULT_PORT = 601  /* RFC 6587 §3.2 / IANA assignment for syslog over TCP */
+};
+
 enum SolidSyslogTransport
 {
     SOLIDSYSLOG_TRANSPORT_UDP,

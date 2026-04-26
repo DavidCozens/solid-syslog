@@ -6,8 +6,10 @@
 
 enum
 {
-    WINSOCKFAKE_MAX_BUFFER_SIZE   = 2048,
-    WINSOCKFAKE_MAX_HOSTNAME_SIZE = 256
+    WINSOCKFAKE_MAX_BUFFER_SIZE      = 2048,
+    WINSOCKFAKE_MAX_HOSTNAME_SIZE    = 256,
+    WINSOCKFAKE_MAX_SEND_CALLS       = 8,
+    WINSOCKFAKE_MAX_SETSOCKOPT_CALLS = 8
 };
 
 static bool               sendtoFails;
@@ -24,6 +26,34 @@ static int    socketCallCount;
 static SOCKET socketFd;
 static int    lastSocketDomain;
 static int    lastSocketType;
+
+static bool               connectFails;
+static int                connectCallCount;
+static SOCKET             lastConnectFd;
+static struct sockaddr_in lastConnectAddr;
+static char               lastConnectAddrString[INET_ADDRSTRLEN];
+
+static bool   sendFails;
+static bool   sendReturnOverride;
+static int    sendReturnValue;
+static int    sendCallCount;
+static char   sendBufCopy[WINSOCKFAKE_MAX_SEND_CALLS][WINSOCKFAKE_MAX_BUFFER_SIZE];
+static size_t sendLenCopy[WINSOCKFAKE_MAX_SEND_CALLS];
+static int    sendFlagsCopy[WINSOCKFAKE_MAX_SEND_CALLS];
+static SOCKET lastSendFd;
+
+static int         recvCallCount;
+static int         recvReturn;
+static SOCKET      lastRecvFd;
+static const void* lastRecvBuf;
+static size_t      lastRecvLen;
+static int         lastRecvFlags;
+
+static int setSockOptCallCount;
+static int lastSetSockOptLevel;
+static int lastSetSockOptOptname;
+static int setSockOptLevels[WINSOCKFAKE_MAX_SETSOCKOPT_CALLS];
+static int setSockOptOptnames[WINSOCKFAKE_MAX_SETSOCKOPT_CALLS];
 
 static int    closeCallCount;
 static SOCKET lastClosedFd;
@@ -54,6 +84,40 @@ void WinsockFake_Reset(void)
     socketFd         = INVALID_SOCKET;
     lastSocketDomain = 0;
     lastSocketType   = 0;
+
+    connectFails             = false;
+    connectCallCount         = 0;
+    lastConnectFd            = INVALID_SOCKET;
+    lastConnectAddr          = (struct sockaddr_in) {0};
+    lastConnectAddrString[0] = '\0';
+
+    sendFails          = false;
+    sendReturnOverride = false;
+    sendReturnValue    = 0;
+    sendCallCount      = 0;
+    for (int i = 0; i < WINSOCKFAKE_MAX_SEND_CALLS; i++)
+    {
+        sendBufCopy[i][0] = '\0';
+        sendLenCopy[i]    = 0;
+        sendFlagsCopy[i]  = 0;
+    }
+    lastSendFd = INVALID_SOCKET;
+
+    recvCallCount = 0;
+    recvReturn    = 0;
+    lastRecvFd    = INVALID_SOCKET;
+    lastRecvBuf   = NULL;
+    lastRecvLen   = 0;
+    lastRecvFlags = 0;
+
+    setSockOptCallCount   = 0;
+    lastSetSockOptLevel   = 0;
+    lastSetSockOptOptname = 0;
+    for (int i = 0; i < WINSOCKFAKE_MAX_SETSOCKOPT_CALLS; i++)
+    {
+        setSockOptLevels[i]   = 0;
+        setSockOptOptnames[i] = 0;
+    }
 
     closeCallCount = 0;
     lastClosedFd   = INVALID_SOCKET;
@@ -157,6 +221,152 @@ SOCKET WinsockFake_LastSendtoFd(void)
     return lastSendtoFd;
 }
 
+/* connect configuration */
+
+void WinsockFake_SetConnectFails(bool fails)
+{
+    connectFails = fails;
+}
+
+/* connect accessors */
+
+int WinsockFake_ConnectCallCount(void)
+{
+    return connectCallCount;
+}
+
+SOCKET WinsockFake_LastConnectFd(void)
+{
+    return lastConnectFd;
+}
+
+int WinsockFake_LastConnectPort(void)
+{
+    return ntohs(lastConnectAddr.sin_port);
+}
+
+const char* WinsockFake_LastConnectAddrAsString(void)
+{
+    inet_ntop(AF_INET, &lastConnectAddr.sin_addr, lastConnectAddrString, sizeof(lastConnectAddrString));
+    return lastConnectAddrString;
+}
+
+/* send configuration */
+
+void WinsockFake_SetSendFails(bool fails)
+{
+    sendFails = fails;
+}
+
+void WinsockFake_SetSendReturn(int value)
+{
+    sendReturnOverride = true;
+    sendReturnValue    = value;
+}
+
+/* send accessors */
+
+int WinsockFake_SendCallCount(void)
+{
+    return sendCallCount;
+}
+
+const char* WinsockFake_SendBufAsString(int callIndex)
+{
+    if (callIndex < 0 || callIndex >= WINSOCKFAKE_MAX_SEND_CALLS)
+    {
+        return "";
+    }
+    return sendBufCopy[callIndex];
+}
+
+size_t WinsockFake_SendLen(int callIndex)
+{
+    if (callIndex < 0 || callIndex >= WINSOCKFAKE_MAX_SEND_CALLS)
+    {
+        return 0;
+    }
+    return sendLenCopy[callIndex];
+}
+
+int WinsockFake_SendFlags(int callIndex)
+{
+    if (callIndex < 0 || callIndex >= WINSOCKFAKE_MAX_SEND_CALLS)
+    {
+        return 0;
+    }
+    return sendFlagsCopy[callIndex];
+}
+
+SOCKET WinsockFake_LastSendFd(void)
+{
+    return lastSendFd;
+}
+
+/* recv configuration */
+
+void WinsockFake_SetRecvReturn(int value)
+{
+    recvReturn = value;
+}
+
+/* recv accessors */
+
+int WinsockFake_RecvCallCount(void)
+{
+    return recvCallCount;
+}
+
+SOCKET WinsockFake_LastRecvFd(void)
+{
+    return lastRecvFd;
+}
+
+const void* WinsockFake_LastRecvBuf(void)
+{
+    return lastRecvBuf;
+}
+
+size_t WinsockFake_LastRecvLen(void)
+{
+    return lastRecvLen;
+}
+
+int WinsockFake_LastRecvFlags(void)
+{
+    return lastRecvFlags;
+}
+
+/* setsockopt accessors */
+
+int WinsockFake_SetSockOptCallCount(void)
+{
+    return setSockOptCallCount;
+}
+
+int WinsockFake_LastSetSockOptLevel(void)
+{
+    return lastSetSockOptLevel;
+}
+
+int WinsockFake_LastSetSockOptOptname(void)
+{
+    return lastSetSockOptOptname;
+}
+
+bool WinsockFake_HasSetSockOpt(int level, int optname)
+{
+    int recorded = setSockOptCallCount < WINSOCKFAKE_MAX_SETSOCKOPT_CALLS ? setSockOptCallCount : WINSOCKFAKE_MAX_SETSOCKOPT_CALLS;
+    for (int i = 0; i < recorded; i++)
+    {
+        if (setSockOptLevels[i] == level && setSockOptOptnames[i] == optname)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 /* closesocket accessors */
 
 int WinsockFake_CloseCallCount(void)
@@ -242,6 +452,67 @@ int WSAAPI WinsockFake_sendto(SOCKET s, const char* buf, int len, int flags, con
         lastAddr = *(const struct sockaddr_in*) to;
     }
     return sendtoFails ? SOCKET_ERROR : len;
+}
+
+int WSAAPI WinsockFake_connect(SOCKET s, const struct sockaddr* name, int namelen)
+{
+    (void) namelen;
+    connectCallCount++;
+    lastConnectFd = s;
+    if (name != NULL && namelen >= (int) sizeof(struct sockaddr_in))
+    {
+        lastConnectAddr = *(const struct sockaddr_in*) name;
+    }
+    return connectFails ? SOCKET_ERROR : 0;
+}
+
+int WSAAPI WinsockFake_send(SOCKET s, const char* buf, int len, int flags)
+{
+    lastSendFd = s;
+    if (sendCallCount < WINSOCKFAKE_MAX_SEND_CALLS && buf != NULL && len >= 0)
+    {
+        size_t copySize = (size_t) len < sizeof(sendBufCopy[0]) - 1 ? (size_t) len : sizeof(sendBufCopy[0]) - 1;
+        memcpy(sendBufCopy[sendCallCount], buf, copySize);
+        sendBufCopy[sendCallCount][copySize] = '\0';
+        sendLenCopy[sendCallCount]           = (size_t) len;
+        sendFlagsCopy[sendCallCount]         = flags;
+    }
+    sendCallCount++;
+    if (sendFails)
+    {
+        return SOCKET_ERROR;
+    }
+    if (sendReturnOverride)
+    {
+        return sendReturnValue;
+    }
+    return len;
+}
+
+int WSAAPI WinsockFake_recv(SOCKET s, char* buf, int len, int flags)
+{
+    recvCallCount++;
+    lastRecvFd    = s;
+    lastRecvBuf   = buf;
+    lastRecvLen   = (size_t) len;
+    lastRecvFlags = flags;
+    return recvReturn;
+}
+
+int WSAAPI WinsockFake_setsockopt(SOCKET s, int level, int optname, const char* optval, int optlen)
+{
+    (void) s;
+    (void) optval;
+    (void) optlen;
+    if (setSockOptCallCount < WINSOCKFAKE_MAX_SETSOCKOPT_CALLS)
+    {
+        setSockOptLevels[setSockOptCallCount]   = level;
+        setSockOptOptnames[setSockOptCallCount] = optname;
+    }
+    setSockOptCallCount++;
+    lastSetSockOptLevel   = level;
+    lastSetSockOptOptname = optname;
+    return 0;
 }
 
 int WSAAPI WinsockFake_closesocket(SOCKET s)

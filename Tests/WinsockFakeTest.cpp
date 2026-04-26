@@ -107,12 +107,121 @@ TEST(WinsockFake, FreeAddrInfoRecordsCall)
     LONGS_EQUAL(1, WinsockFake_FreeAddrInfoCallCount());
 }
 
+TEST(WinsockFake, ConnectRecordsCallAndAddress)
+{
+    SOCKET fd = WinsockFake_socket(AF_INET, SOCK_STREAM, 0);
+    WinsockFake_connect(fd, (const struct sockaddr*) &destination, sizeof(destination));
+    LONGS_EQUAL(1, WinsockFake_ConnectCallCount());
+    CHECK(WinsockFake_LastConnectFd() == fd);
+    LONGS_EQUAL(TEST_PORT, WinsockFake_LastConnectPort());
+    STRCMP_EQUAL(TEST_HOST, WinsockFake_LastConnectAddrAsString());
+}
+
+TEST(WinsockFake, ConnectReturnsZeroOnSuccess)
+{
+    int rc = WinsockFake_connect(INVALID_SOCKET, (const struct sockaddr*) &destination, sizeof(destination));
+    LONGS_EQUAL(0, rc);
+}
+
+TEST(WinsockFake, ConnectReturnsSocketErrorWhenFailing)
+{
+    WinsockFake_SetConnectFails(true);
+    int rc = WinsockFake_connect(INVALID_SOCKET, (const struct sockaddr*) &destination, sizeof(destination));
+    LONGS_EQUAL(SOCKET_ERROR, rc);
+}
+
+TEST(WinsockFake, SendRecordsBufferAndFlags)
+{
+    SOCKET fd = WinsockFake_socket(AF_INET, SOCK_STREAM, 0);
+    WinsockFake_send(fd, TEST_MESSAGE, TEST_MESSAGE_LEN, 0);
+    LONGS_EQUAL(1, WinsockFake_SendCallCount());
+    STRCMP_EQUAL(TEST_MESSAGE, WinsockFake_SendBufAsString(0));
+    LONGS_EQUAL(TEST_MESSAGE_LEN, (int) WinsockFake_SendLen(0));
+    LONGS_EQUAL(0, WinsockFake_SendFlags(0));
+    CHECK(WinsockFake_LastSendFd() == fd);
+}
+
+TEST(WinsockFake, SendReturnsLengthOnSuccess)
+{
+    int rc = WinsockFake_send(INVALID_SOCKET, TEST_MESSAGE, TEST_MESSAGE_LEN, 0);
+    LONGS_EQUAL(TEST_MESSAGE_LEN, rc);
+}
+
+TEST(WinsockFake, SendReturnsSocketErrorWhenFailing)
+{
+    WinsockFake_SetSendFails(true);
+    int rc = WinsockFake_send(INVALID_SOCKET, TEST_MESSAGE, TEST_MESSAGE_LEN, 0);
+    LONGS_EQUAL(SOCKET_ERROR, rc);
+}
+
+TEST(WinsockFake, SendReturnsConfiguredValueWhenOverridden)
+{
+    WinsockFake_SetSendReturn(3);
+    int rc = WinsockFake_send(INVALID_SOCKET, TEST_MESSAGE, TEST_MESSAGE_LEN, 0);
+    LONGS_EQUAL(3, rc);
+}
+
+TEST(WinsockFake, SendAccessorsReturnEmptyForOutOfRangeIndex)
+{
+    STRCMP_EQUAL("", WinsockFake_SendBufAsString(-1));
+    STRCMP_EQUAL("", WinsockFake_SendBufAsString(99));
+    LONGS_EQUAL(0, (int) WinsockFake_SendLen(-1));
+    LONGS_EQUAL(0, (int) WinsockFake_SendLen(99));
+    LONGS_EQUAL(0, WinsockFake_SendFlags(-1));
+    LONGS_EQUAL(0, WinsockFake_SendFlags(99));
+}
+
+TEST(WinsockFake, RecvRecordsCall)
+{
+    char   buf[16];
+    SOCKET fd = WinsockFake_socket(AF_INET, SOCK_STREAM, 0);
+    WinsockFake_recv(fd, buf, sizeof(buf), 0);
+    LONGS_EQUAL(1, WinsockFake_RecvCallCount());
+    CHECK(WinsockFake_LastRecvFd() == fd);
+    POINTERS_EQUAL(buf, WinsockFake_LastRecvBuf());
+    LONGS_EQUAL(sizeof(buf), WinsockFake_LastRecvLen());
+    LONGS_EQUAL(0, WinsockFake_LastRecvFlags());
+}
+
+TEST(WinsockFake, RecvReturnsConfiguredValue)
+{
+    char buf[16];
+    WinsockFake_SetRecvReturn(7);
+    int n = WinsockFake_recv(INVALID_SOCKET, buf, sizeof(buf), 0);
+    LONGS_EQUAL(7, n);
+}
+
+TEST(WinsockFake, SetSockOptRecordsLevelAndOptname)
+{
+    int enable = 1;
+    WinsockFake_setsockopt(INVALID_SOCKET, IPPROTO_TCP, TCP_NODELAY, (const char*) &enable, sizeof(enable));
+    LONGS_EQUAL(1, WinsockFake_SetSockOptCallCount());
+    LONGS_EQUAL(IPPROTO_TCP, WinsockFake_LastSetSockOptLevel());
+    LONGS_EQUAL(TCP_NODELAY, WinsockFake_LastSetSockOptOptname());
+}
+
+TEST(WinsockFake, HasSetSockOptFindsRecordedPair)
+{
+    int enable = 1;
+    WinsockFake_setsockopt(INVALID_SOCKET, IPPROTO_TCP, TCP_NODELAY, (const char*) &enable, sizeof(enable));
+    CHECK_TRUE(WinsockFake_HasSetSockOpt(IPPROTO_TCP, TCP_NODELAY));
+}
+
+TEST(WinsockFake, HasSetSockOptReturnsFalseForUnseenPair)
+{
+    CHECK_FALSE(WinsockFake_HasSetSockOpt(IPPROTO_TCP, TCP_NODELAY));
+}
+
 TEST(WinsockFake, ResetClearsCounters)
 {
     WinsockFake_socket(AF_INET, SOCK_DGRAM, 0);
     WinsockFake_Reset();
     LONGS_EQUAL(0, WinsockFake_SocketCallCount());
     LONGS_EQUAL(0, WinsockFake_SendtoCallCount());
+    LONGS_EQUAL(0, WinsockFake_ConnectCallCount());
+    LONGS_EQUAL(0, WinsockFake_SendCallCount());
+    LONGS_EQUAL(0, WinsockFake_RecvCallCount());
+    LONGS_EQUAL(0, WinsockFake_SetSockOptCallCount());
     LONGS_EQUAL(0, WinsockFake_CloseCallCount());
     LONGS_EQUAL(0, WinsockFake_GetAddrInfoCallCount());
     LONGS_EQUAL(0, WinsockFake_FreeAddrInfoCallCount());

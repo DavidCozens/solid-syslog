@@ -5,11 +5,7 @@
 #include "SolidSyslogEndpoint.h"
 #include "SolidSyslogResolver.h"
 #include "SolidSyslogSender.h"
-
-enum
-{
-    SOLIDSYSLOG_UDP_DEFAULT_PORT = 514 /* RFC 5426 */
-};
+#include "SolidSyslogTransport.h"
 
 EXTERN_C_BEGIN
 

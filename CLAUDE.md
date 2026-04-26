@@ -318,15 +318,15 @@ live under `Core/Interface/`; platform-specific helpers (the `SolidSyslogPosix*`
 | `SolidSyslogEndpoint.h` | System setup code that supplies destination host/port (and version on changes) | `SolidSyslogEndpoint`, `SolidSyslogEndpointFunction`, `SolidSyslogEndpointVersionFunction`, `SOLIDSYSLOG_MAX_HOST_SIZE` |
 | `SolidSyslogSender.h` | Any code holding a sender handle | `SolidSyslogSender_Send`, `SolidSyslogSender_Disconnect` |
 | `SolidSyslogSenderDefinition.h` | Sender implementors (extension point) | `SolidSyslogSender` vtable struct (`Send`, `Disconnect`) |
-| `SolidSyslogTransport.h` | Any code selecting a transport | `SolidSyslogTransport` enum (`UDP`, `TCP`) |
+| `SolidSyslogTransport.h` | Any code selecting a transport or needing default port constants | `SolidSyslogTransport` enum (`UDP`, `TCP`), `SOLIDSYSLOG_UDP_DEFAULT_PORT`, `SOLIDSYSLOG_TCP_DEFAULT_PORT` |
 | `SolidSyslogResolver.h` | Any code that needs to resolve a destination | `SolidSyslogResolver_Resolve(resolver, transport, host, port, *out)` |
 | `SolidSyslogResolverDefinition.h` | Resolver implementors (extension point) | `SolidSyslogResolver` vtable struct (`Resolve`) |
 | `SolidSyslogDatagram.h` | Sender implementors using datagram transport | `SolidSyslogDatagram_Open`, `_SendTo`, `_Close` |
 | `SolidSyslogDatagramDefinition.h` | Datagram implementors (extension point) | `SolidSyslogDatagram` vtable struct (`Open`, `SendTo`, `Close`) |
 | `SolidSyslogStream.h` | Sender implementors using stream transport | `SolidSyslogStream_Open`, `_Send`, `_Read`, `_Close`, `SolidSyslogSsize` |
 | `SolidSyslogStreamDefinition.h` | Stream implementors (extension point) | `SolidSyslogStream` vtable struct (`Open`, `Send`, `Read`, `Close`) |
-| `SolidSyslogUdpSender.h` | System setup code using UDP transport | `SolidSyslogUdpSenderConfig` (resolver, datagram, endpoint, endpointVersion), `SolidSyslogUdpSender_Create`, `_Destroy`, `SOLIDSYSLOG_UDP_DEFAULT_PORT` |
-| `SolidSyslogStreamSender.h` | System setup code using octet-framed transport (RFC 6587) over any Stream — `SolidSyslogPosixTcpStream` (TCP), `SolidSyslogTlsStream` (TLS; OpenSSL reference integration), or a caller-supplied Stream backend | `SolidSyslogStreamSenderConfig` (resolver, stream, endpoint, endpointVersion), `SolidSyslogStreamSender_Create`, `_Destroy` |
+| `SolidSyslogUdpSender.h` | System setup code using UDP transport | `SolidSyslogUdpSenderConfig` (resolver, datagram, endpoint, endpointVersion), `SolidSyslogUdpSender_Create`, `_Destroy` |
+| `SolidSyslogStreamSender.h` | System setup code using octet-framed transport (RFC 6587) over any Stream — `SolidSyslogPosixTcpStream` (POSIX TCP), `SolidSyslogWinsockTcpStream` (Windows TCP), `SolidSyslogTlsStream` (TLS; OpenSSL reference integration), or a caller-supplied Stream backend | `SolidSyslogStreamSenderConfig` (resolver, stream, endpoint, endpointVersion), `SolidSyslogStreamSender_Create`, `_Destroy` |
 | `SolidSyslogSwitchingSender.h` | System setup code composing multiple inner senders | `SolidSyslogSwitchingSenderConfig` (senders, senderCount, selector), `SolidSyslogSwitchingSenderSelector`, `SolidSyslogSwitchingSender_Create`, `_Destroy` |
 | `SolidSyslogBuffer.h` | Library internals consuming a buffer (Service algorithm) | `SolidSyslogBuffer_Write`, `_Read` |
 | `SolidSyslogBufferDefinition.h` | Buffer implementors (extension point) | `SolidSyslogBuffer` vtable struct |
