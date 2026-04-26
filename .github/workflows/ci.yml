@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  build-and-test:
+  build-linux-gcc:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -47,7 +47,7 @@ jobs:
         if: success() || failure()
         uses: actions/upload-artifact@v4
         with:
-          name: junit-gcc
+          name: junit-build-linux-gcc
           path: build/debug/cpputest_*.xml
           retention-days: 1
 
@@ -61,7 +61,7 @@ jobs:
           retention-days: 1
           compression-level: 0
 
-  openssl-integration:
+  integration-linux-openssl:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -98,11 +98,11 @@ jobs:
         if: success() || failure()
         uses: actions/upload-artifact@v4
         with:
-          name: junit-openssl-integration
+          name: junit-integration-linux-openssl
           path: build/debug/cpputest_*.xml
           retention-days: 1
 
-  clang-build-and-test:
+  build-linux-clang:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -136,11 +136,11 @@ jobs:
         if: success() || failure()
         uses: actions/upload-artifact@v4
         with:
-          name: junit-clang
+          name: junit-build-linux-clang
           path: build/clang-debug/cpputest_*.xml
           retention-days: 1
 
-  sanitize:
+  sanitize-linux-gcc:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -174,11 +174,11 @@ jobs:
         if: success() || failure()
         uses: actions/upload-artifact@v4
         with:
-          name: junit-sanitize
+          name: junit-sanitize-linux-gcc
           path: build/sanitize/cpputest_*.xml
           retention-days: 1
 
-  coverage:
+  coverage-linux-gcc:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -246,7 +246,7 @@ jobs:
           path: build/coverage/coverage_report/
 
   deploy-coverage-pages:
-    needs: coverage
+    needs: coverage-linux-gcc
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -261,7 +261,7 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
 
-  tidy:
+  analyze-tidy:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/davidcozens/cpputest:sha-18f19e1
@@ -289,7 +289,7 @@ jobs:
           path: build/tidy/clang-tidy-output.txt
           retention-days: 1
 
-  format:
+  analyze-format:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/davidcozens/cpputest:sha-18f19e1
@@ -307,7 +307,7 @@ jobs:
           find Core/Interface Core/Source Tests Example -name '*.c' -o -name '*.cpp' -o -name '*.h' \
             | xargs clang-format --dry-run --Werror
 
-  cppcheck:
+  analyze-cppcheck:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/davidcozens/cpputest:sha-18f19e1
@@ -347,7 +347,7 @@ jobs:
           path: build/cppcheck/cppcheck-report.xml
           retention-days: 1
 
-  windows-build-and-test:
+  build-windows-msvc:
     runs-on: windows-latest
     permissions:
       contents: read
@@ -387,7 +387,7 @@ jobs:
         if: success() || failure()
         uses: actions/upload-artifact@v4
         with:
-          name: junit-msvc
+          name: junit-build-windows-msvc
           path: build/msvc-debug/cpputest_*.xml
           retention-days: 1
 
@@ -399,8 +399,8 @@ jobs:
           retention-days: 1
           compression-level: 0
 
-  bdd-windows:
-    needs: windows-build-and-test
+  bdd-windows-otel:
+    needs: build-windows-msvc
     runs-on: windows-2025
     permissions:
       contents: read
@@ -489,7 +489,7 @@ jobs:
         if: success() || failure()
         uses: actions/upload-artifact@v4
         with:
-          name: junit-bdd-windows
+          name: junit-bdd-windows-otel
           path: Bdd/junit/TESTS-*.xml
           retention-days: 1
 
@@ -501,8 +501,8 @@ jobs:
           echo "--- otelcol.err ---"
           cat Bdd/output/otelcol.err || true
 
-  bdd:
-    needs: build-and-test
+  bdd-linux-syslog-ng:
+    needs: build-linux-gcc
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -539,7 +539,7 @@ jobs:
         if: success() || failure()
         uses: actions/upload-artifact@v4
         with:
-          name: junit-bdd
+          name: junit-bdd-linux-syslog-ng
           path: Bdd/junit/TESTS-*.xml
           retention-days: 1
 
@@ -547,9 +547,9 @@ jobs:
         if: failure()
         run: docker compose -f ci/docker-compose.bdd.yml logs --no-color
 
-  quality-summary:
+  summary:
     if: always() && github.event_name == 'pull_request'
-    needs: [build-and-test, clang-build-and-test, sanitize, coverage, tidy, cppcheck, format, bdd, windows-build-and-test, bdd-windows, openssl-integration]
+    needs: [build-linux-gcc, build-linux-clang, sanitize-linux-gcc, coverage-linux-gcc, analyze-tidy, analyze-cppcheck, analyze-format, bdd-linux-syslog-ng, build-windows-msvc, bdd-windows-otel, integration-linux-openssl]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -591,45 +591,45 @@ jobs:
                 "tools": [
                   {
                     "id": "junit",
-                    "name": "Unit Tests (GCC)",
-                    "pattern": "**/junit-gcc/cpputest_*.xml"
+                    "name": "build-linux-gcc",
+                    "pattern": "**/junit-build-linux-gcc/cpputest_*.xml"
                   },
                   {
                     "id": "junit",
-                    "name": "Unit Tests (Clang)",
-                    "pattern": "**/junit-clang/cpputest_*.xml"
+                    "name": "build-linux-clang",
+                    "pattern": "**/junit-build-linux-clang/cpputest_*.xml"
                   },
                   {
                     "id": "junit",
-                    "name": "Unit Tests (Sanitize)",
-                    "pattern": "**/junit-sanitize/cpputest_*.xml"
+                    "name": "sanitize-linux-gcc",
+                    "pattern": "**/junit-sanitize-linux-gcc/cpputest_*.xml"
                   },
                   {
                     "id": "junit",
-                    "name": "Integration Tests (OpenSSL)",
-                    "pattern": "**/junit-openssl-integration/cpputest_*.xml"
+                    "name": "integration-linux-openssl",
+                    "pattern": "**/junit-integration-linux-openssl/cpputest_*.xml"
                   },
                   {
                     "id": "junit",
-                    "name": "BDD Tests (Linux)",
-                    "pattern": "**/junit-bdd/TESTS-*.xml"
+                    "name": "bdd-linux-syslog-ng",
+                    "pattern": "**/junit-bdd-linux-syslog-ng/TESTS-*.xml"
                   },
                   {
                     "id": "junit",
-                    "name": "BDD Tests (Windows)",
-                    "pattern": "**/junit-bdd-windows/TESTS-*.xml"
+                    "name": "bdd-windows-otel",
+                    "pattern": "**/junit-bdd-windows-otel/TESTS-*.xml"
                   },
                   {
                     "id": "junit",
-                    "name": "Unit Tests (MSVC)",
-                    "pattern": "**/junit-msvc/cpputest_*.xml"
+                    "name": "build-windows-msvc",
+                    "pattern": "**/junit-build-windows-msvc/cpputest_*.xml"
                   }
                 ]
               },
               "analysis": [
                 {
-                  "name": "clang-tidy",
-                  "id": "clang-tidy",
+                  "name": "analyze-tidy",
+                  "id": "analyze-tidy",
                   "tools": [
                     {
                       "id": "clang-tidy",
@@ -638,8 +638,8 @@ jobs:
                   ]
                 },
                 {
-                  "name": "cppcheck",
-                  "id": "cppcheck",
+                  "name": "analyze-cppcheck",
+                  "id": "analyze-cppcheck",
                   "tools": [
                     {
                       "id": "cppcheck",

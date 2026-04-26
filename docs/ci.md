@@ -4,19 +4,23 @@ GitHub Actions runs all jobs in parallel on every push and pull request to `main
 
 ## Jobs
 
+Job names follow the pattern `<category>-<platform>-<toolchain-or-feature>` so additional
+compilers and BDD targets (e.g. an ARM cross-compile or FreeRTOS QEMU oracle) slot in
+without renaming what's already there.
+
 | Job | Preset | Notes |
 |---|---|---|
-| `build-and-test` | `debug` | Test results annotated on PR |
-| `clang-build-and-test` | `clang-debug` | Second compiler check using Clang 19 |
-| `sanitize` | `sanitize` | ASan + UBSan — test results annotated on PR |
-| `coverage` | `coverage` | Summary in Actions UI; HTML report deployed to GitHub Pages on merge to `main` |
-| `tidy` | `tidy` | clang-tidy — pass/fail with errors in job log |
-| `cppcheck` | `cppcheck` | cppcheck static analysis |
-| `format` | — | clang-format dry-run; fails if any file needs reformatting |
-| `windows-build-and-test` | `msvc-debug` | MSVC build on `windows-latest`; CppUTest via vcpkg; test results annotated on PR |
-| `openssl-integration` | `debug` | Runs the in-process TLS integration tests against libssl (no network oracle) |
-| `bdd` | — | End-to-end BDD test via Docker Compose (syslog-ng + Behave), Linux runner |
-| `bdd-windows` | — | Windows-eligible BDD scenarios driven against an OTel Collector oracle |
+| `build-linux-gcc` | `debug` | Test results annotated on PR |
+| `build-linux-clang` | `clang-debug` | Second compiler check using Clang 19 |
+| `build-windows-msvc` | `msvc-debug` | MSVC build on `windows-latest`; CppUTest via vcpkg; test results annotated on PR |
+| `sanitize-linux-gcc` | `sanitize` | ASan + UBSan — test results annotated on PR |
+| `coverage-linux-gcc` | `coverage` | Summary in Actions UI; HTML report deployed to GitHub Pages on merge to `main` |
+| `analyze-tidy` | `tidy` | clang-tidy — pass/fail with errors in job log |
+| `analyze-cppcheck` | `cppcheck` | cppcheck static analysis |
+| `analyze-format` | — | clang-format dry-run; fails if any file needs reformatting |
+| `integration-linux-openssl` | `debug` | Runs the in-process TLS integration tests against libssl (no network oracle) |
+| `bdd-linux-syslog-ng` | — | End-to-end BDD test via Docker Compose (syslog-ng + Behave), Linux runner |
+| `bdd-windows-otel` | — | Windows-eligible BDD scenarios driven against an OTel Collector oracle |
 
 ## Branch protection
 

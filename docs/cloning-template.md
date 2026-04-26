@@ -111,8 +111,9 @@ In the GitHub repository settings, under **Pages**:
 - Set **Source** to `GitHub Actions`
 
 Without this, the `deploy-coverage-pages` job will fail on every push to `main`.
-The seven CI check jobs (`build-and-test`, `clang-build-and-test`, `sanitize`, `coverage`,
-`tidy`, `cppcheck`, `format`) are independent of Pages and will pass regardless.
+The CI check jobs (`build-linux-gcc`, `build-linux-clang`, `sanitize-linux-gcc`,
+`coverage-linux-gcc`, `analyze-tidy`, `analyze-cppcheck`, `analyze-format`) are independent
+of Pages and will pass regardless.
 
 > **Note:** GitHub Pages deployment requires a public repository, or a paid GitHub plan
 > (Pro, Team, or Enterprise) for private repositories. On a free plan with a private repo,
@@ -145,7 +146,7 @@ gh api repos/OWNER/REPO/actions/permissions/workflow \
 
 In the GitHub repository settings, under **Branches** → **Add branch protection rule** for `main`:
 - Require a pull request before merging
-- Require all status checks to pass: `build-and-test`, `clang-build-and-test`, `sanitize`, `coverage`, `tidy`, `cppcheck`, `format`
+- Require all status checks to pass: `build-linux-gcc`, `build-linux-clang`, `build-windows-msvc`, `sanitize-linux-gcc`, `coverage-linux-gcc`, `analyze-tidy`, `analyze-cppcheck`, `analyze-format`, `integration-linux-openssl`, `bdd-linux-syslog-ng`, `bdd-windows-otel`
 - Require squash merge only
 - Enable automatic branch deletion after merge
 
@@ -158,7 +159,7 @@ gh api repos/OWNER/REPO/branches/main/protection \
 {
   "required_status_checks": {
     "strict": false,
-    "contexts": ["build-and-test", "clang-build-and-test", "sanitize", "coverage", "tidy", "cppcheck", "format"]
+    "contexts": ["build-linux-gcc", "build-linux-clang", "build-windows-msvc", "sanitize-linux-gcc", "coverage-linux-gcc", "analyze-tidy", "analyze-cppcheck", "analyze-format", "integration-linux-openssl", "bdd-linux-syslog-ng", "bdd-windows-otel"]
   },
   "enforce_admins": false,
   "required_pull_request_reviews": {
