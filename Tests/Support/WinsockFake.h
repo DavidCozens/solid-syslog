@@ -34,6 +34,42 @@ EXTERN_C_BEGIN
     int         WinsockFake_LastAddrLen(void);
     SOCKET      WinsockFake_LastSendtoFd(void);
 
+    /* connect configuration */
+    void WinsockFake_SetConnectFails(bool fails);
+
+    /* connect accessors */
+    int         WinsockFake_ConnectCallCount(void);
+    SOCKET      WinsockFake_LastConnectFd(void);
+    int         WinsockFake_LastConnectPort(void);
+    const char* WinsockFake_LastConnectAddrAsString(void);
+
+    /* send configuration */
+    void WinsockFake_SetSendFails(bool fails);
+    void WinsockFake_SetSendReturn(int value);
+
+    /* send accessors */
+    int         WinsockFake_SendCallCount(void);
+    const char* WinsockFake_SendBufAsString(int callIndex);
+    size_t      WinsockFake_SendLen(int callIndex);
+    int         WinsockFake_SendFlags(int callIndex);
+    SOCKET      WinsockFake_LastSendFd(void);
+
+    /* recv configuration */
+    void WinsockFake_SetRecvReturn(int value);
+
+    /* recv accessors */
+    int         WinsockFake_RecvCallCount(void);
+    SOCKET      WinsockFake_LastRecvFd(void);
+    const void* WinsockFake_LastRecvBuf(void);
+    size_t      WinsockFake_LastRecvLen(void);
+    int         WinsockFake_LastRecvFlags(void);
+
+    /* setsockopt accessors */
+    int  WinsockFake_SetSockOptCallCount(void);
+    int  WinsockFake_LastSetSockOptLevel(void);
+    int  WinsockFake_LastSetSockOptOptname(void);
+    bool WinsockFake_HasSetSockOpt(int level, int optname);
+
     /* closesocket accessors */
     int    WinsockFake_CloseCallCount(void);
     SOCKET WinsockFake_LastClosedFd(void);
@@ -52,6 +88,10 @@ EXTERN_C_BEGIN
     /* Fake Winsock functions — injected into production via UT_PTR_SET. */
     SOCKET WSAAPI WinsockFake_socket(int af, int type, int protocol);
     int WSAAPI    WinsockFake_sendto(SOCKET s, const char* buf, int len, int flags, const struct sockaddr* to, int tolen);
+    int WSAAPI    WinsockFake_connect(SOCKET s, const struct sockaddr* name, int namelen);
+    int WSAAPI    WinsockFake_send(SOCKET s, const char* buf, int len, int flags);
+    int WSAAPI    WinsockFake_recv(SOCKET s, char* buf, int len, int flags);
+    int WSAAPI    WinsockFake_setsockopt(SOCKET s, int level, int optname, const char* optval, int optlen);
     int WSAAPI    WinsockFake_closesocket(SOCKET s);
     int WSAAPI    WinsockFake_getaddrinfo(const char* node, const char* service, const struct addrinfo* hints, struct addrinfo** res);
     void WSAAPI   WinsockFake_freeaddrinfo(struct addrinfo * res);

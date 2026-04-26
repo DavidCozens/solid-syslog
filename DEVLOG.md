@@ -1,5 +1,67 @@
 # Dev Log
 
+## 2026-04-26 — S13.09 WinsockTcpStream — Windows TCP transport
+
+### Decisions
+- **Replicated `PosixTcpStream` → `WinsockTcpStream` rather than extracting more
+  common code.** The `SolidSyslogStream` vtable extracted in S13.08 is already
+  the platform seam; the deltas (POSIX `int fd` vs Winsock `SOCKET`, `ssize_t`
+  vs `int`, `struct timeval` vs `DWORD` ms for `SO_SNDTIMEO`, `MSG_NOSIGNAL`
+  vs `0`, EINTR retry vs none) are exactly the kind of platform-specific
+  noise the Stream abstraction was designed to keep out of `StreamSender`.
+  A 1:1 port keeps each impl small, readable, and free of `#ifdef`.
+- **Pruned the EINTR retry loop and `MSG_NOSIGNAL` flag.** Winsock `send()`
+  has no signal-interruption semantics — there is no equivalent of POSIX's
+  EINTR for blocking socket I/O — so `SendRetryingOnSignal` and the
+  `WasInterruptedBySignal` helper would have been dead code on Windows.
+  Likewise Winsock does not generate SIGPIPE, so `MSG_NOSIGNAL` becomes a
+  plain `0`. The shape of the contract remains identical to Posix: any
+  failure or short return surfaces as `Send` → false, the caller closes
+  and reconnects, and store-and-forward replays the message on the fresh
+  socket. `WSAETIMEDOUT` from `SO_SNDTIMEO` propagates via the same path —
+  no `WSAGetLastError()` is needed.
+- **Test seam namespaced as `WinsockTcpStream_*` instead of bare `Winsock_*`.**
+  `SolidSyslogWinsockDatagram` already exports `Winsock_socket` and
+  `Winsock_closesocket` as un-namespaced globals; defining them again in
+  `WinsockTcpStream.c` would have triggered MSVC LNK2005. Considered
+  renaming Datagram's seams to `WinsockDatagram_*` for symmetry — chose
+  not to drag that into this story; per-impl prefixed seams are
+  self-contained and the inconsistency is a small follow-up.
+- **`SO_SNDTIMEO` value lives in the impl as a `DWORD` ms enum
+  (`SEND_TIMEOUT_MILLISECONDS = 5000`)** matching the 5-second cap on
+  Posix. Recording as the same future port-time CMake override candidate
+  flagged in S12.08; no separate decision here.
+- **Consolidated `SOLIDSYSLOG_TCP_DEFAULT_PORT` and
+  `SOLIDSYSLOG_UDP_DEFAULT_PORT` into `Core/Interface/SolidSyslogTransport.h`
+  in a prep commit on the same branch.** Both are platform-agnostic
+  IANA/RFC facts (RFC 5426 §3.2 and RFC 6587 §3.2) and naturally pair
+  with the `SolidSyslogTransport` enum already in that header.
+  Previously TCP's lived on `Platform/Posix/Interface/SolidSyslogPosixTcpStream.h`,
+  which would have meant duplicating the constant when adding the Winsock
+  TCP stream. `SolidSyslogUdpSender.h` and `SolidSyslogPosixTcpStream.h`
+  now `#include "SolidSyslogTransport.h"` so existing callers continue
+  to see the constants transitively. `CLAUDE.md` public-headers table
+  and `docs/rfc-compliance.md` updated to point at the new home.
+
+### Deferred
+- **Example wiring (TCP variant of `Example/Windows/SolidSyslogWindowsExample.c`)
+  and BDD scenario** for Windows TCP delivery to syslog-ng. Both deferred to
+  S13.10 (#136), which is already scoped for end-to-end exercise via the
+  `windows-build-and-test` job. Today's S13.09 work delivers the unit-tested
+  building block.
+- **Renaming `WinsockDatagram`'s `Winsock_*` seam symbols to `WinsockDatagram_*`**
+  for cross-impl consistency with the new `WinsockTcpStream_*` prefix. Flagged
+  as a future tidy — no functional impact.
+- **Adding `SolidSyslogPosixTcpStream.h` / `SolidSyslogWinsockTcpStream.h`
+  (and the platform Datagram/Resolver headers) as their own rows** in the
+  CLAUDE.md public-headers table. Today's CLAUDE.md update only widened the
+  `SolidSyslogStreamSender.h` row to mention the new Winsock TCP option,
+  matching the existing pattern. A broader docs cleanup adding rows for all
+  platform impls is a separate housekeeping task.
+
+### Open questions
+- None.
+
 ## 2026-04-26 — S12.08 TcpSender error guards (socket(), partial write, SO_SNDTIMEO)
 
 ### Decisions
