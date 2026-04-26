@@ -18,14 +18,14 @@ All changes to `main` must go via a pull request — direct pushes are blocked b
 becomes the single commit message — so the PR title must follow Conventional Commits format (see below).
 
 **Before raising a PR — run locally:**
-- build-and-test, clang-build-and-test, sanitize, coverage, tidy, cppcheck, format
+- build-linux-gcc, build-linux-clang, sanitize-linux-gcc, coverage-linux-gcc, analyze-tidy, analyze-cppcheck, analyze-format
 - Windows, BDD, and OpenSSL integration jobs are CI's responsibility — running them locally would slow development too much
 - Commits on the branch can be informal (work-in-progress messages are fine)
 - The PR title is what matters — it becomes the permanent commit message on `main`
 
 **Branch protection rules (configured on GitHub):**
 - Direct pushes to `main` are blocked
-- PRs require all status checks to pass before merging: build-and-test, openssl-integration, clang-build-and-test, sanitize, coverage, tidy, cppcheck, format, windows-build-and-test, bdd, bdd-windows
+- PRs require all status checks to pass before merging: build-linux-gcc, build-linux-clang, build-windows-msvc, sanitize-linux-gcc, coverage-linux-gcc, analyze-tidy, analyze-cppcheck, analyze-format, integration-linux-openssl, bdd-linux-syslog-ng, bdd-windows-otel
 - Squash merge only — other merge strategies are disabled
 - Branches are deleted automatically after merge
 
