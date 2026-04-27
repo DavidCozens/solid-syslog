@@ -1,1 +1,160 @@
 # Changelog
+
+## 0.1.0 (2026-04-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* S3.6 rename TcpSender to StreamSender ([#166](https://github.com/DavidCozens/solid-syslog/issues/166))
+
+### Features
+
+* add clone initialisation script and restructure documentation ([#9](https://github.com/DavidCozens/solid-syslog/issues/9)) ([7731bd8](https://github.com/DavidCozens/solid-syslog/commit/7731bd8a5461b4b56ca75a5d1ff185c3798c502f))
+* generalise SD config from single pointer to array (S7.2) ([#73](https://github.com/DavidCozens/solid-syslog/issues/73)) ([4808be8](https://github.com/DavidCozens/solid-syslog/commit/4808be858fd05a26f0b3b1766779371a064dbfc1))
+* initialise SolidSyslog component ([57dd7c9](https://github.com/DavidCozens/solid-syslog/commit/57dd7c9666097763e5f4547939564457a93bc5ff))
+* origin structured data — software and swVersion (S7.3) ([#76](https://github.com/DavidCozens/solid-syslog/issues/76)) ([7f7834b](https://github.com/DavidCozens/solid-syslog/commit/7f7834b61750e8187e530346d78b0884829e875e))
+* S03.08 TLS hardening — cert validation, cipher pinning, lifecycle cleanup ([#183](https://github.com/DavidCozens/solid-syslog/issues/183)) ([1d0c16e](https://github.com/DavidCozens/solid-syslog/commit/1d0c16e81f351600f210fd3d77f434f1656bcd02))
+* S03.09 mutual TLS — client cert + key for SL4 non-repudiation ([#184](https://github.com/DavidCozens/solid-syslog/issues/184)) ([f6ae430](https://github.com/DavidCozens/solid-syslog/commit/f6ae430a4633425bae7749058b86b84bc3eb3cbf))
+* S03.12 multi-instance senders and streams ([#187](https://github.com/DavidCozens/solid-syslog/issues/187)) ([3cf9ac0](https://github.com/DavidCozens/solid-syslog/commit/3cf9ac08e5de2ee200ed7a565257aece4327cc2d))
+* S03.13 Example TLS backend composition via CMake ([#188](https://github.com/DavidCozens/solid-syslog/issues/188)) ([800ee8b](https://github.com/DavidCozens/solid-syslog/commit/800ee8b8147f3f15d650848091ca247a4ac603bc))
+* S07.04 escape RFC 5424 PARAM-VALUE specials ([#202](https://github.com/DavidCozens/solid-syslog/issues/202)) ([fde02aa](https://github.com/DavidCozens/solid-syslog/commit/fde02aad34af42aec54a36fd1c8e39069536032a))
+* S07.07 sequenceId rollover and zero-avoidance per RFC 5424 §7.3.1 ([#207](https://github.com/DavidCozens/solid-syslog/issues/207)) ([ba184b6](https://github.com/DavidCozens/solid-syslog/commit/ba184b63659c600839c9c03099dd0761fe87fb02))
+* S1.1 walking skeleton — RFC 5424 message validated field by field ([#30](https://github.com/DavidCozens/solid-syslog/issues/30)) ([3f0b318](https://github.com/DavidCozens/solid-syslog/commit/3f0b3182aac011457f22930c679f76d6ca11188d))
+* S1.2 PRIVAL encoding — facility and severity on the Log call ([#42](https://github.com/DavidCozens/solid-syslog/issues/42)) ([4fa7247](https://github.com/DavidCozens/solid-syslog/commit/4fa7247c2c7b4945a491a1d0f4dac38b28edcc64))
+* S1.3 Timestamp — raise-time capture via injected clock ([#44](https://github.com/DavidCozens/solid-syslog/issues/44)) ([d776503](https://github.com/DavidCozens/solid-syslog/commit/d7765031aadf036cd8317393db5c7d91fd4dae8b))
+* S1.4 Hostname, AppName, ProcId — injected via config function pointers ([#45](https://github.com/DavidCozens/solid-syslog/issues/45)) ([1f79a23](https://github.com/DavidCozens/solid-syslog/commit/1f79a23a70339302ed7aa82324d590e41b33b7a6))
+* S1.5 MessageId and Message — fields on SolidSyslogMessage ([#47](https://github.com/DavidCozens/solid-syslog/issues/47)) ([0d556ef](https://github.com/DavidCozens/solid-syslog/commit/0d556ef0b03d90589780e046767e52eaee2d85e3))
+* S12.08 TcpSender error guards (socket, partial write, SO_SNDTIMEO) ([#209](https://github.com/DavidCozens/solid-syslog/issues/209)) ([8607ca4](https://github.com/DavidCozens/solid-syslog/commit/8607ca487cea6524b1685b5ee707527b3484564d))
+* S12.09 PRINTUSASCII validation for RFC 5424 header fields ([#203](https://github.com/DavidCozens/solid-syslog/issues/203)) ([19de38e](https://github.com/DavidCozens/solid-syslog/commit/19de38e3efb4a0cd35b5db1d1708b5fb0ed4e26e))
+* S12.10 UTF-8 safety across the formatter API ([#205](https://github.com/DavidCozens/solid-syslog/issues/205)) ([d205055](https://github.com/DavidCozens/solid-syslog/commit/d205055a11f94904e078b8cd0374bfe94e1e57cc))
+* S12.11 honest error reporting for Resolver and Datagram vtables ([#144](https://github.com/DavidCozens/solid-syslog/issues/144)) ([0f027e8](https://github.com/DavidCozens/solid-syslog/commit/0f027e805d9051671fecd1427ef47ff4b06bd456))
+* S12.3 buffer overflow protection at FormatCharacter ([#114](https://github.com/DavidCozens/solid-syslog/issues/114)) ([232dd03](https://github.com/DavidCozens/solid-syslog/commit/232dd03948b3b57d45edbe6e35770f0bd0bcd513))
+* S13.09 SolidSyslogWinsockTcpStream — Windows TCP transport ([#213](https://github.com/DavidCozens/solid-syslog/issues/213)) ([f4120ca](https://github.com/DavidCozens/solid-syslog/commit/f4120cac4ecdfea17a7e86f0d9a54056a53f3eaa))
+* S13.13-15 Windows clock, hostname, and process-id helpers ([#150](https://github.com/DavidCozens/solid-syslog/issues/150)) ([7db9d7c](https://github.com/DavidCozens/solid-syslog/commit/7db9d7c1546f6446512c6f5d63c695d6e1d78b2e))
+* S13.16 SolidSyslogWindowsFile — file abstraction using &lt;io.h&gt; ([#215](https://github.com/DavidCozens/solid-syslog/issues/215)) ([3116fd6](https://github.com/DavidCozens/solid-syslog/commit/3116fd6d1fafb1fc4dccd7f5d3f805dd94a55d0b))
+* S13.4 Winsock UDP transport (resolver + datagram) ([#149](https://github.com/DavidCozens/solid-syslog/issues/149)) ([7ab5939](https://github.com/DavidCozens/solid-syslog/commit/7ab59395fa9a122f5383ada5bc22a8b98d8d2f64))
+* S13.5 promote prival and message_fields to Windows runner ([#158](https://github.com/DavidCozens/solid-syslog/issues/158)) ([4a3e6a3](https://github.com/DavidCozens/solid-syslog/commit/4a3e6a3359da99a563732cce9162756e7449e054))
+* S13.5 promote structured_data, origin and time_quality to Windows runner ([#159](https://github.com/DavidCozens/solid-syslog/issues/159)) ([52611d3](https://github.com/DavidCozens/solid-syslog/commit/52611d3a345a49491c3203b07ba05930afc708d7))
+* S13.5 promote timestamp and header_fields to Windows runner ([#157](https://github.com/DavidCozens/solid-syslog/issues/157)) ([2be0958](https://github.com/DavidCozens/solid-syslog/commit/2be0958810b6d1ffb8761b93baf9336f2136d61c))
+* S13.5 tag BDD features by capability for cross-platform runners ([#152](https://github.com/DavidCozens/solid-syslog/issues/152)) ([a248920](https://github.com/DavidCozens/solid-syslog/commit/a248920c74ef7bbf231624c6eabce03c7891bf38)), closes [#129](https://github.com/DavidCozens/solid-syslog/issues/129)
+* S13.5 walking-skeleton scenario green on Windows via OTel oracle ([#154](https://github.com/DavidCozens/solid-syslog/issues/154)) ([db5bc82](https://github.com/DavidCozens/solid-syslog/commit/db5bc82c264b2ad5d156948b726203739f8fa7af))
+* S13.5 Windows example executable ([#153](https://github.com/DavidCozens/solid-syslog/issues/153)) ([adfda3c](https://github.com/DavidCozens/solid-syslog/commit/adfda3c787791b3dd3db5d8f447781b4064068c1))
+* S15.1 TCP sender with RFC 6587 octet-counting framing ([#91](https://github.com/DavidCozens/solid-syslog/issues/91)) ([1d77d3d](https://github.com/DavidCozens/solid-syslog/commit/1d77d3d4740b0695c250f93ffac0846cf8457cc5))
+* S15.2 Connection failure detection and reconnection ([#93](https://github.com/DavidCozens/solid-syslog/issues/93)) ([07768dd](https://github.com/DavidCozens/solid-syslog/commit/07768dda4880582510f94268d65ec459dd6e1175))
+* S19.01 SBOM CycloneDX template + on-demand generation workflow ([#195](https://github.com/DavidCozens/solid-syslog/issues/195)) ([5a1f1e6](https://github.com/DavidCozens/solid-syslog/commit/5a1f1e6e0086c03f6d7f4ef38b007a8c65ad8781))
+* S19.02 SBOM signing and release-asset attachment ([#197](https://github.com/DavidCozens/solid-syslog/issues/197)) ([1725eee](https://github.com/DavidCozens/solid-syslog/commit/1725eee430a8f75be5f649caf1095693c189fb7a)), closes [#196](https://github.com/DavidCozens/solid-syslog/issues/196)
+* S2.1 walking skeleton — SolidSyslogUdpSender transmits a buffer ([#32](https://github.com/DavidCozens/solid-syslog/issues/32)) ([ebc2137](https://github.com/DavidCozens/solid-syslog/commit/ebc213729e0faeeb167f4968efb1401602abef9d))
+* S2.2 inject host and port into UdpSender via config function pointers ([#35](https://github.com/DavidCozens/solid-syslog/issues/35)) ([fd508ad](https://github.com/DavidCozens/solid-syslog/commit/fd508ad4d98e2c8ad97f916ba4157e4a4c4d53f8))
+* S2.3 CMake platform detection for PosixUdpSender ([#39](https://github.com/DavidCozens/solid-syslog/issues/39)) ([7c05c48](https://github.com/DavidCozens/solid-syslog/commit/7c05c487dd1aa7fe960df02828750adbd6d5f78c))
+* S2.4 BDD walking skeleton — Behave validates syslog-ng output ([#38](https://github.com/DavidCozens/solid-syslog/issues/38)) ([df1fb56](https://github.com/DavidCozens/solid-syslog/commit/df1fb56fd09f8d2c133b426fe342d395aa3171bd))
+* S20.1 SwitchingSender — selector-driven multi-transport switching ([#163](https://github.com/DavidCozens/solid-syslog/issues/163)) ([483c8fe](https://github.com/DavidCozens/solid-syslog/commit/483c8feedcd0ced50955a052af756113c93eb706))
+* S3.4 lazy initialisation and reconnection on UdpSender and TcpSender ([#161](https://github.com/DavidCozens/solid-syslog/issues/161)) ([8f04fb2](https://github.com/DavidCozens/solid-syslog/commit/8f04fb277b8b64be6052423f0ce408b3d19fa992))
+* S3.6 rename TcpSender to StreamSender ([#166](https://github.com/DavidCozens/solid-syslog/issues/166)) ([d1c04b3](https://github.com/DavidCozens/solid-syslog/commit/d1c04b3646379fe8ba3aad3b1360850c97a602b2))
+* S3.7 walking skeleton — SolidSyslogTlsStream (OpenSSL) + TLS BDD ([#170](https://github.com/DavidCozens/solid-syslog/issues/170)) ([e17694b](https://github.com/DavidCozens/solid-syslog/commit/e17694b500328963ffc2c2c47d3690698e8d3d32))
+* S4.1 buffer abstraction and NullBuffer ([#57](https://github.com/DavidCozens/solid-syslog/issues/57)) ([32237ce](https://github.com/DavidCozens/solid-syslog/commit/32237cee3ef4c1e84b65f2886076bb9724c0a88d))
+* S4.2 SolidSyslog_Service API and Buffer Read ([#58](https://github.com/DavidCozens/solid-syslog/issues/58)) ([5293a1d](https://github.com/DavidCozens/solid-syslog/commit/5293a1dcb5509caf0694ef7095fc93e097d9d867))
+* S4.3 PosixMqBuffer — POSIX message queue buffer ([#59](https://github.com/DavidCozens/solid-syslog/issues/59)) ([35228e5](https://github.com/DavidCozens/solid-syslog/commit/35228e5ba8ce5d817aad5798570251f77d62f07e))
+* S4.4 BDD — buffered message delivery through syslog-ng ([#62](https://github.com/DavidCozens/solid-syslog/issues/62)) ([7bb2254](https://github.com/DavidCozens/solid-syslog/commit/7bb22542e00839404b9d95319fbe821112d7c1bc))
+* S4.4 example restructure — shared code, threaded example, test harness ([#61](https://github.com/DavidCozens/solid-syslog/issues/61)) ([ed8b559](https://github.com/DavidCozens/solid-syslog/commit/ed8b559cfc954f47f268a55609d93524afdad8d9))
+* S5.2 Store abstraction, NullStore, and Service algorithm ([#84](https://github.com/DavidCozens/solid-syslog/issues/84)) ([621ada7](https://github.com/DavidCozens/solid-syslog/commit/621ada7b5d96ee068997e9573273973121df75a4))
+* S5.3 File-based store with sender outage BDD ([#98](https://github.com/DavidCozens/solid-syslog/issues/98)) ([51ac3e1](https://github.com/DavidCozens/solid-syslog/commit/51ac3e1c9cdaf53785302da63f8ad021092de5e2))
+* S5.4 Power cycle replay BDD scenario ([#100](https://github.com/DavidCozens/solid-syslog/issues/100)) ([072fc29](https://github.com/DavidCozens/solid-syslog/commit/072fc29aebe086122be88df73fe605bc3a814254))
+* S5.5 file rotation with discard policies ([#103](https://github.com/DavidCozens/solid-syslog/issues/103)) ([ecfce10](https://github.com/DavidCozens/solid-syslog/commit/ecfce10b99b39982162d08dfca3a67db25447472))
+* S5.6 file store corruption detection and recovery ([#106](https://github.com/DavidCozens/solid-syslog/issues/106)) ([5ea7e7a](https://github.com/DavidCozens/solid-syslog/commit/5ea7e7aa4ad4c6e6590c1020f676ef65b9da8c9f))
+* S5.7 halt callback on storage full ([#107](https://github.com/DavidCozens/solid-syslog/issues/107)) ([fc30831](https://github.com/DavidCozens/solid-syslog/commit/fc30831e3d462d6792069cc4b334aaf1dfa928ca))
+* S5.8 halt policy BDD scenarios and service halt state ([#109](https://github.com/DavidCozens/solid-syslog/issues/109)) ([019c3a1](https://github.com/DavidCozens/solid-syslog/commit/019c3a12e3ca5ddc18d7c2ac4d52dedcec11b1cf))
+* structured data with sequenceId (S7.1) ([#72](https://github.com/DavidCozens/solid-syslog/issues/72)) ([8b96405](https://github.com/DavidCozens/solid-syslog/commit/8b96405ccf0c6dc2936642b952ab22d26dbff547)), closes [#65](https://github.com/DavidCozens/solid-syslog/issues/65)
+
+
+### Bug Fixes
+
+* correct clone init script and CI for private repos ([#13](https://github.com/DavidCozens/solid-syslog/issues/13)) ([389e043](https://github.com/DavidCozens/solid-syslog/commit/389e043a0570bc9b20c553907a1fceabdacefef3))
+* S19.02 pass --repo to gh release upload in SBOM publish job ([#198](https://github.com/DavidCozens/solid-syslog/issues/198)) ([e4efa9e](https://github.com/DavidCozens/solid-syslog/commit/e4efa9e935aaa031488c2b41874a1f4b755a970f))
+* S5.5 FormatFilename buffer overflow on long pathPrefix ([#104](https://github.com/DavidCozens/solid-syslog/issues/104)) ([56a38e3](https://github.com/DavidCozens/solid-syslog/commit/56a38e38e549061ac0bdc4f03b1ed76a3dc4d822))
+* validate numeric CLI args for --max-files and --max-file-size ([#110](https://github.com/DavidCozens/solid-syslog/issues/110)) ([e3d7b90](https://github.com/DavidCozens/solid-syslog/commit/e3d7b90269fde0fa0837862a7bd5006b703b035c))
+
+
+### CI / Build
+
+* add missing needs dependencies and resilient artifact downloads ([#71](https://github.com/DavidCozens/solid-syslog/issues/71)) ([37e8718](https://github.com/DavidCozens/solid-syslog/commit/37e87181e9fee3d779d983793509c8cf40caf2b2))
+* enable vcpkg binary caching for Windows build ([#138](https://github.com/DavidCozens/solid-syslog/issues/138)) ([8895485](https://github.com/DavidCozens/solid-syslog/commit/889548592d339ce003f4cb023dbed8a0f253fd4f))
+* harden BDD infrastructure robustness ([#94](https://github.com/DavidCozens/solid-syslog/issues/94)) ([51d4c96](https://github.com/DavidCozens/solid-syslog/commit/51d4c966e02fc9fb9f48c9d1510ca61abc1f4ea0))
+* harden build tooling and add Clang, release-please, CLAUDE.md ([a7e3815](https://github.com/DavidCozens/solid-syslog/commit/a7e38154142f8281ce5a1a7304caa105e94b541a))
+* lock down GitHub Actions token permissions to least privilege ([#8](https://github.com/DavidCozens/solid-syslog/issues/8)) ([a079ff6](https://github.com/DavidCozens/solid-syslog/commit/a079ff602911ee1c31ead9edd9ae5a8bcb3500a0))
+* pin all GitHub Actions to SHA digests ([b02ad19](https://github.com/DavidCozens/solid-syslog/commit/b02ad19431b852ff14bbb4b7acddcba31e123680))
+* promote BDD to required status check ([#46](https://github.com/DavidCozens/solid-syslog/issues/46)) ([f184804](https://github.com/DavidCozens/solid-syslog/commit/f184804fabbfd590121e086ba738d066dc69ed2c))
+* rename jobs to &lt;category&gt;-&lt;platform&gt;-&lt;toolchain&gt; scheme ([#212](https://github.com/DavidCozens/solid-syslog/issues/212)) ([e209898](https://github.com/DavidCozens/solid-syslog/commit/e209898b8c06ca46fd092b6cbae5e61082dc5974))
+* replace EnricoMi with dorny/test-reporter for per-test visibility ([#36](https://github.com/DavidCozens/solid-syslog/issues/36)) ([8033a08](https://github.com/DavidCozens/solid-syslog/commit/8033a08e2227a5669787421720a71fba143b2510))
+* S13.1 Windows MSVC CI build ([#124](https://github.com/DavidCozens/solid-syslog/issues/124)) ([c32aff2](https://github.com/DavidCozens/solid-syslog/commit/c32aff2ddda36e02adaadbdb96a537d28bd8e422))
+* S13.5 bdd-windows job running walking-skeleton on windows-2025 ([#156](https://github.com/DavidCozens/solid-syslog/issues/156)) ([59a8ba0](https://github.com/DavidCozens/solid-syslog/commit/59a8ba0d3af553ae58ee79d9d7616f741c6eb737))
+* show CppUTest summary in default VS Code build task ([#37](https://github.com/DavidCozens/solid-syslog/issues/37)) ([0e2ebe9](https://github.com/DavidCozens/solid-syslog/commit/0e2ebe9d6b079459a6f6c46107e9e884e0ff75fe))
+* unified quality dashboard with Quality Monitor ([#63](https://github.com/DavidCozens/solid-syslog/issues/63)) ([fb8c0a1](https://github.com/DavidCozens/solid-syslog/commit/fb8c0a1d71ca036c0ebd3cee0249e2a85c889bab))
+
+
+### Refactoring
+
+* align function ordering and test style with conventions ([#49](https://github.com/DavidCozens/solid-syslog/issues/49)) ([b11ea91](https://github.com/DavidCozens/solid-syslog/commit/b11ea9199fd6b7ca4476b54b7cc4e3c9ec000d69))
+* change SolidSyslogClockFunction to pointer parameter ([#74](https://github.com/DavidCozens/solid-syslog/issues/74)) ([f66bec3](https://github.com/DavidCozens/solid-syslog/commit/f66bec3620a17371723b5769ad61a61981cf2d3d))
+* expand abbreviated names and correct test double taxonomy ([#85](https://github.com/DavidCozens/solid-syslog/issues/85)) ([bfc243d](https://github.com/DavidCozens/solid-syslog/commit/bfc243d883423852dcbe973d9678e13623ff0a7c))
+* reorganise platform-specific code under Platform/&lt;OS&gt;/ ([#143](https://github.com/DavidCozens/solid-syslog/issues/143)) ([94252f0](https://github.com/DavidCozens/solid-syslog/commit/94252f06faebd3d5ef58fa92455a2041bd6349a3))
+* replace strncpy with SafeString abstraction for MSVC SDL compliance ([#131](https://github.com/DavidCozens/solid-syslog/issues/131)) ([24cbfd2](https://github.com/DavidCozens/solid-syslog/commit/24cbfd241d0cd37d6f26c143c18e15c27189585e))
+* S12.2 extract Formatter — separate formatting from SolidSyslog lifecycle ([#113](https://github.com/DavidCozens/solid-syslog/issues/113)) ([fd6d88c](https://github.com/DavidCozens/solid-syslog/commit/fd6d88ccf6ce990d3e4c9b7f4cb4cbbea98298cc))
+* S13.11 introduce opaque SolidSyslogAddress type ([#145](https://github.com/DavidCozens/solid-syslog/issues/145)) ([17b76a7](https://github.com/DavidCozens/solid-syslog/commit/17b76a7441a79fd2bce44345e604d4ee90969570))
+* S13.2 C99 portability — portable static assert and document MSVC suppressions ([#130](https://github.com/DavidCozens/solid-syslog/issues/130)) ([a28cf61](https://github.com/DavidCozens/solid-syslog/commit/a28cf615feed3e7250de584143373af5f3830ff9)), closes [#125](https://github.com/DavidCozens/solid-syslog/issues/125)
+* S13.6 extract Resolver abstraction from UdpSender and TcpSender ([#137](https://github.com/DavidCozens/solid-syslog/issues/137)) ([8dd04f4](https://github.com/DavidCozens/solid-syslog/commit/8dd04f4ab2e08f78db94377a45fe030e23bb13fb))
+* S13.7 extract Datagram abstraction from UdpSender ([#139](https://github.com/DavidCozens/solid-syslog/issues/139)) ([5e8d93d](https://github.com/DavidCozens/solid-syslog/commit/5e8d93d1be093a5817572fb66b8474e9dfb23c8f))
+* S13.8 extract Stream abstraction from TcpSender ([#140](https://github.com/DavidCozens/solid-syslog/issues/140)) ([c65722b](https://github.com/DavidCozens/solid-syslog/commit/c65722be26f0ad763c71381603c7c7d13ec5cf55))
+* S19.02 swap source-tarball hash for content-tree hash ([#199](https://github.com/DavidCozens/solid-syslog/issues/199)) ([c4ac736](https://github.com/DavidCozens/solid-syslog/commit/c4ac736ab4adc90116f3dc9c27c2886e7f76fb6d))
+* S19.02 widen SBOM product scope to include build contract + licence ([#200](https://github.com/DavidCozens/solid-syslog/issues/200)) ([da6d1dd](https://github.com/DavidCozens/solid-syslog/commit/da6d1ddf9b1fe81ef831067a757841a6ccf2cf15))
+* S5.1 Sender.Send returns bool for send success/failure ([#83](https://github.com/DavidCozens/solid-syslog/issues/83)) ([355d169](https://github.com/DavidCozens/solid-syslog/commit/355d1697b48fae0e56526f6fd30b9a7196b82c90))
+* single-instance SolidSyslog with Null Object pattern (S12.1) ([#78](https://github.com/DavidCozens/solid-syslog/issues/78)) ([ee7c7b0](https://github.com/DavidCozens/solid-syslog/commit/ee7c7b0a9ecef44effad5b16873a4bed822a99b9))
+
+
+### Maintenance
+
+* add .claude to gitignore and document kanban conventions in SKILL.md ([6ef1687](https://github.com/DavidCozens/solid-syslog/commit/6ef16870f7bed3848f67f3d5fb356161f5f0737c))
+* assert FailNext* tests prove the first call actually fails ([#179](https://github.com/DavidCozens/solid-syslog/issues/179)) ([2c2c160](https://github.com/DavidCozens/solid-syslog/commit/2c2c160f54ed3acf908de36e13cc60ce594bf95c))
+* bump container image to sha-3faff14 ([#168](https://github.com/DavidCozens/solid-syslog/issues/168)) ([06c7803](https://github.com/DavidCozens/solid-syslog/commit/06c780303e93e4ff6cb8db63d9cb966edf147c26))
+* bump container images to sha-18f19e1 / sha-0385cea ([#167](https://github.com/DavidCozens/solid-syslog/issues/167)) ([d6e91d3](https://github.com/DavidCozens/solid-syslog/commit/d6e91d34c2d5b517a5c396078c522fdb21066bc4))
+* clean up code style and split SolidSyslog.h (ISP) ([#43](https://github.com/DavidCozens/solid-syslog/issues/43)) ([9b9a3df](https://github.com/DavidCozens/solid-syslog/commit/9b9a3df28b3115720bf188cc1c8670798efb02c5))
+* configure release-please to stay on 0.x until 1.0 is explicitly cut ([#191](https://github.com/DavidCozens/solid-syslog/issues/191)) ([4046320](https://github.com/DavidCozens/solid-syslog/commit/40463206623a3dbb591dab760d355cf60ee0ea56))
+* correct SOLIDSYSLOG_TCP_DEFAULT_PORT to 601 per RFC 6587 / IANA ([#178](https://github.com/DavidCozens/solid-syslog/issues/178)) ([1321c91](https://github.com/DavidCozens/solid-syslog/commit/1321c91b095e25704ab4fb59f0d1332c792fa210))
+* cover FileStore fallback when security policy integritySize exceeds max ([#177](https://github.com/DavidCozens/solid-syslog/issues/177)) ([4b1681a](https://github.com/DavidCozens/solid-syslog/commit/4b1681a8e21f081ee43ef0f629374f949986b1e0))
+* enforce line-ending + editor consistency across platforms ([#201](https://github.com/DavidCozens/solid-syslog/issues/201)) ([277d49e](https://github.com/DavidCozens/solid-syslog/commit/277d49e85cd8af23967e06ff43e6f1096ccb9a41))
+* **main:** release 1.0.0 ([#5](https://github.com/DavidCozens/solid-syslog/issues/5)) ([2694a18](https://github.com/DavidCozens/solid-syslog/commit/2694a187149552819d296fc4d025229d75f955b7))
+* **main:** release 1.1.0 ([#1](https://github.com/DavidCozens/solid-syslog/issues/1)) ([cf9c364](https://github.com/DavidCozens/solid-syslog/commit/cf9c364da113abff080adb999da7d8ea43e4f421))
+* merge template updates (Example, BDD skeleton, container bump) ([#41](https://github.com/DavidCozens/solid-syslog/issues/41)) ([8c43472](https://github.com/DavidCozens/solid-syslog/commit/8c4347297787b7a23961f8f174fe3487e30d49ad))
+* migrate container images from DockerHub to GHCR ([#14](https://github.com/DavidCozens/solid-syslog/issues/14)) ([7cb0206](https://github.com/DavidCozens/solid-syslog/commit/7cb0206ff4b0c2998729f5e566d4f06354e338a6))
+* migrate devcontainer to Docker Compose with separate Clang image ([#11](https://github.com/DavidCozens/solid-syslog/issues/11)) ([ecdf7c2](https://github.com/DavidCozens/solid-syslog/commit/ecdf7c27eb5ceaf12fd19cf854a8a079902ab7b8))
+* migrate devcontainer to Docker Compose with separate Clang image ([#7](https://github.com/DavidCozens/solid-syslog/issues/7)) ([dae7a99](https://github.com/DavidCozens/solid-syslog/commit/dae7a99f7d004cf2f3aefd6190a7c7af86f0ad1d))
+* pin release-please's first release to 0.1.0 ([#192](https://github.com/DavidCozens/solid-syslog/issues/192)) ([18d1917](https://github.com/DavidCozens/solid-syslog/commit/18d19171791a389e7c0cfdde7dc7731827e1a174))
+* relocate core library to Core/ and declare support tiers ([#180](https://github.com/DavidCozens/solid-syslog/issues/180)) ([730b9a9](https://github.com/DavidCozens/solid-syslog/commit/730b9a9d5962da46902796557be524642ad93ac7))
+* remove stale devcontainer on initialize to fix post-restart SSH bind mount failure ([#28](https://github.com/DavidCozens/solid-syslog/issues/28)) ([5686c87](https://github.com/DavidCozens/solid-syslog/commit/5686c87206d167abb83aab20f2d383eb4af5538d)), closes [#27](https://github.com/DavidCozens/solid-syslog/issues/27)
+* reset release versioning to 0.x ([#99](https://github.com/DavidCozens/solid-syslog/issues/99)) ([1a4f507](https://github.com/DavidCozens/solid-syslog/commit/1a4f507bd0e6eb3b567f983f468c2e571cde9094))
+* scope default VS Code build task to SolidSyslogTests ([#208](https://github.com/DavidCozens/solid-syslog/issues/208)) ([7f6c190](https://github.com/DavidCozens/solid-syslog/commit/7f6c190f9f607e19579771b3f48ceb2fde3b40cf))
+* sync tasks.json from template for Windows PowerShell compatibility ([#127](https://github.com/DavidCozens/solid-syslog/issues/127)) ([4af699d](https://github.com/DavidCozens/solid-syslog/commit/4af699d3de8806ccecbcb59e5156cff2fefc5fc5))
+
+
+### Documentation
+
+* add DEVLOG with GitHub project and epic issue setup ([bae8577](https://github.com/DavidCozens/solid-syslog/commit/bae85775a78c2132261d9fbe4319520818cb03f2))
+* add DEVLOG with GitHub project and epic issue setup ([4f52eb1](https://github.com/DavidCozens/solid-syslog/commit/4f52eb19b0341cb1caf47a94ea28b7fa4f38e81c))
+* add IEC 62443 and RFC compliance guides ([#122](https://github.com/DavidCozens/solid-syslog/issues/122)) ([281d87a](https://github.com/DavidCozens/solid-syslog/commit/281d87a99eb4c2c35f48677c88ecc105bdfe80af))
+* add prerequisites and platform support to cloning guide ([#17](https://github.com/DavidCozens/solid-syslog/issues/17)) ([22c1246](https://github.com/DavidCozens/solid-syslog/commit/22c1246a8038127b5ff29eff4e12be1c57192f71))
+* add summary to required-checks list in CLAUDE.md ([#216](https://github.com/DavidCozens/solid-syslog/issues/216)) ([91c07dd](https://github.com/DavidCozens/solid-syslog/commit/91c07dd7fe8ae5102ffbde0747a91ce5b11a8abd))
+* clarify TLS is a reference implementation, not a library capability ([#190](https://github.com/DavidCozens/solid-syslog/issues/190)) ([eb8d90d](https://github.com/DavidCozens/solid-syslog/commit/eb8d90da1b72ef3332625ca4f9072cdef053dafb))
+* codify issue/epic linking, project board, story numbering ([#176](https://github.com/DavidCozens/solid-syslog/issues/176)) ([34bdd23](https://github.com/DavidCozens/solid-syslog/commit/34bdd23c0aafbca623c260c03a84236d407bb342))
+* complete E0 walking skeleton — repository setup ([#14](https://github.com/DavidCozens/solid-syslog/issues/14)) ([8da7761](https://github.com/DavidCozens/solid-syslog/commit/8da77613a0cded4ac0574ca5f6bd2cca2d60f092))
+* document SolidSyslogTimestamp field ranges and UTC contract ([#151](https://github.com/DavidCozens/solid-syslog/issues/151)) ([592be2f](https://github.com/DavidCozens/solid-syslog/commit/592be2fe866639b2107a81d6c9bb9bdd45431922))
+* expand template-updates with full cloning instructions ([#10](https://github.com/DavidCozens/solid-syslog/issues/10)) ([41345bb](https://github.com/DavidCozens/solid-syslog/commit/41345bba24f055b13226b64e4f0e8a2a42fa3e5b))
+* fix consistency issues across CLAUDE.md, builds.md and CMakeLists ([#12](https://github.com/DavidCozens/solid-syslog/issues/12)) ([d21e45a](https://github.com/DavidCozens/solid-syslog/commit/d21e45ad504c2b2b61e759c8df4f54c2b559e27f))
+* improve cloning guide with Ctrl+Shift+B, TDD prompt and gh CLI options ([#16](https://github.com/DavidCozens/solid-syslog/issues/16)) ([4bbde34](https://github.com/DavidCozens/solid-syslog/commit/4bbde34f774e05af228b0c9eea73f3674f06704d))
+* refresh CI checks list and public header audience table ([#211](https://github.com/DavidCozens/solid-syslog/issues/211)) ([d0c865f](https://github.com/DavidCozens/solid-syslog/commit/d0c865fc490c86705358cb276eab0d36060cc88b))
+* retire S03.10 — cert rotation covered by Open-rebuilds-CTX ([#185](https://github.com/DavidCozens/solid-syslog/issues/185)) ([e2e349d](https://github.com/DavidCozens/solid-syslog/commit/e2e349d08d2d6833dbe027402eafdd9c660ef622))
+* S03.11 promote TLS to Available and sweep markdown drift ([#186](https://github.com/DavidCozens/solid-syslog/issues/186)) ([9391616](https://github.com/DavidCozens/solid-syslog/commit/93916165345839f2524e8e73aea380b338c203c8)), closes [#175](https://github.com/DavidCozens/solid-syslog/issues/175)
+* split template-updates into cloning and updating guides ([#15](https://github.com/DavidCozens/solid-syslog/issues/15)) ([dd5eb89](https://github.com/DavidCozens/solid-syslog/commit/dd5eb897a8b4601e4159c9a2e94f950e5c2c55d8))
+* update DEVLOG for E1 story decomposition ([#21](https://github.com/DavidCozens/solid-syslog/issues/21)) ([37d5bd5](https://github.com/DavidCozens/solid-syslog/commit/37d5bd5275e08c8dff002b388ff19a93e97169aa))
+* update DEVLOG for E2 story decomposition ([#26](https://github.com/DavidCozens/solid-syslog/issues/26)) ([25cec70](https://github.com/DavidCozens/solid-syslog/commit/25cec7031c5477bf77c54375136dc22ab8f5724e))
+* update DEVLOG with 13-day backfill and 2026-04-21 session ([#181](https://github.com/DavidCozens/solid-syslog/issues/181)) ([bbe8206](https://github.com/DavidCozens/solid-syslog/commit/bbe820617389bc6723bcd97bec0976b532610082))
+
+## Changelog
