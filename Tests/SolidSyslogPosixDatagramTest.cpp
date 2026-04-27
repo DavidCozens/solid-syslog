@@ -4,6 +4,7 @@
 #include "SolidSyslogUdpPayload.h"
 #include "SocketFake.h"
 #include <arpa/inet.h>
+#include <cerrno>
 #include <cstdint>
 #include <cstring>
 #include <netinet/in.h>
@@ -166,4 +167,70 @@ TEST(SolidSyslogPosixDatagram, CloseCalledWithSocketFd)
 TEST(SolidSyslogPosixDatagram, MaxPayloadFallsBackToIpv6SafePayload)
 {
     LONGS_EQUAL(SOLIDSYSLOG_UDP_IPV6_SAFE_PAYLOAD, SolidSyslogDatagram_MaxPayload(datagram));
+}
+
+TEST(SolidSyslogPosixDatagram, OpenDoesNotConnect)
+{
+    SolidSyslogDatagram_Open(datagram);
+    LONGS_EQUAL(0, SocketFake_ConnectCallCount());
+}
+
+TEST(SolidSyslogPosixDatagram, SendToConnectsOnFirstCall)
+{
+    SolidSyslogDatagram_Open(datagram);
+    SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr);
+    LONGS_EQUAL(1, SocketFake_ConnectCallCount());
+}
+
+TEST(SolidSyslogPosixDatagram, SendToConnectsOnceAcrossMultipleCalls)
+{
+    SolidSyslogDatagram_Open(datagram);
+    SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr);
+    SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr);
+    LONGS_EQUAL(1, SocketFake_ConnectCallCount());
+}
+
+TEST(SolidSyslogPosixDatagram, FirstSendEnablesPmtuDiscovery)
+{
+    SolidSyslogDatagram_Open(datagram);
+    SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr);
+    CHECK_TRUE(SocketFake_HasSetSockOpt(IPPROTO_IP, IP_MTU_DISCOVER));
+}
+
+TEST(SolidSyslogPosixDatagram, SendToReturnsOversizeOnEmsgsize)
+{
+    SolidSyslogDatagram_Open(datagram);
+    SocketFake_FailNextSendtoWithErrno(EMSGSIZE);
+    LONGS_EQUAL(SOLIDSYSLOG_DATAGRAM_OVERSIZE, SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr));
+}
+
+TEST(SolidSyslogPosixDatagram, MaxPayloadAfterConnectQueriesIpMtu)
+{
+    SolidSyslogDatagram_Open(datagram);
+    SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr);
+    SolidSyslogDatagram_MaxPayload(datagram);
+    LONGS_EQUAL(1, SocketFake_GetSockOptCallCount());
+}
+
+TEST(SolidSyslogPosixDatagram, MaxPayloadConvertsIpMtuViaFromMtu)
+{
+    SolidSyslogDatagram_Open(datagram);
+    SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr);
+    SocketFake_SetIpMtu(1500);
+    LONGS_EQUAL(1472, SolidSyslogDatagram_MaxPayload(datagram));
+}
+
+TEST(SolidSyslogPosixDatagram, MaxPayloadFallsBackWhenIpMtuLookupFails)
+{
+    SolidSyslogDatagram_Open(datagram);
+    SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr);
+    SocketFake_SetIpMtuLookupFails(true);
+    LONGS_EQUAL(SOLIDSYSLOG_UDP_IPV6_SAFE_PAYLOAD, SolidSyslogDatagram_MaxPayload(datagram));
+}
+
+TEST(SolidSyslogPosixDatagram, SendToReturnsFailedWhenConnectFails)
+{
+    SolidSyslogDatagram_Open(datagram);
+    SocketFake_SetConnectFails(true);
+    LONGS_EQUAL(SOLIDSYSLOG_DATAGRAM_FAILED, SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr));
 }
