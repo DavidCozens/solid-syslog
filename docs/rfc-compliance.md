@@ -23,10 +23,10 @@ Status key:
 | 6.2.5 | PROCID — max 128 chars, PRINTUSASCII | Supported | Truncated to 128. Non-PRINTUSASCII bytes substituted with `?` |
 | 6.2.6 | MSGID — max 32 chars, PRINTUSASCII | Supported | Truncated to 32. Non-PRINTUSASCII bytes substituted with `?` |
 | 6.3 | STRUCTURED-DATA — SD-ELEMENTs or NILVALUE | Supported | Extensible via `SolidSyslogStructuredData` vtable |
-| 6.3.3 | SD-PARAM value escaping (`]`, `\`, `"`) | Supported | `SolidSyslogFormatter_EscapedString` — RFC 3629 UTF-8 validated, ill-formed input substituted per-byte with U+FFFD (Unicode §3.9); `OriginSd` escapes software/swVersion. SD-NAME syntax validation planned — [E14](https://github.com/DavidCozens/solid-syslog/issues/64) |
+| 6.3.3 | SD-PARAM value escaping (`]`, `\`, `"`) | Partial | `SolidSyslogFormatter_EscapedString` — RFC 3629 UTF-8 validated, ill-formed input substituted per-byte with U+FFFD (Unicode §3.9); `OriginSd` escapes software/swVersion. SD-NAME syntax validation (PRINTUSASCII excluding `=`, SP, `]`, `"`) is not yet enforced — [E14](https://github.com/DavidCozens/solid-syslog/issues/64) |
 | 6.3.3 | timeQuality SD — tzKnown, isSynced, syncAccuracy | Supported | `SolidSyslogTimeQualitySd` |
-| 6.3.4 | origin SD — software, swVersion | Supported | `SolidSyslogOriginSd`. `ip` and `enterpriseId` not implemented |
-| 6.3.5 | meta SD — sequenceId | Supported | `SolidSyslogMetaSd`. Starts at 1, increments per message. `sysUpTime` and `language` not implemented |
+| 6.3.4 | origin SD — software, swVersion | Partial | `SolidSyslogOriginSd` covers `software` and `swVersion`. The §6.3.4 `ip` and `enterpriseId` parameters are not implemented |
+| 6.3.5 | meta SD — sequenceId | Partial | `SolidSyslogMetaSd` covers `sequenceId` — starts at 1, increments per message. The §6.3.5 `sysUpTime` and `language` parameters are not implemented |
 | 6.3.5, 7.3.1 | meta SD — sequenceId wraps at 2147483647 to 1 | Supported | `SolidSyslogAtomicCounter` wraps via CAS-loop in [1, 2³¹ - 1]; never returns 0; never above max. AtomicOps seam pluggable per platform — `StdAtomicOps` (C11) on POSIX/clang/gcc/modern MSVC; `WindowsAtomicOps` (`InterlockedCompareExchange`) on legacy MSVC. sequenceId is assigned at the point of message raise (application-layer originator), preserving end-to-end loss-detection across the internal buffer / store-and-forward / transport pipeline. Trade-off: under concurrent raise from multiple threads, a small reorder window may occur in transmitted IDs (adjacent IDs may invert, since buffer/transport scheduling between raise and wire is not under library control). All IDs remain unique and non-zero — SIEMs performing gap detection identify message loss correctly; SIEMs requiring strict monotonic ordering should sort by timestamp |
 | 6.4 | MSG — UTF-8 preferred | Supported | RFC 3629 UTF-8 validated at the formatter primitives (`SolidSyslogFormatter_BoundedString`), with ill-formed input substituted per-byte with U+FFFD (Unicode §3.9). MSG is prefixed with the §6.4 UTF-8 BOM (`%xEF.BB.BF`) unconditionally; if the caller's body already begins with a BOM it is stripped so the wire frame contains exactly one ([S12.13](https://github.com/DavidCozens/solid-syslog/issues/219)). Truncation preserves codepoint boundaries at both layers: the formatter clips at `SOLIDSYSLOG_MAX_MESSAGE_SIZE` without splitting a codepoint ([S12.10](https://github.com/DavidCozens/solid-syslog/issues/121)), and on UDP the sender walks back over any partial codepoint when the kernel reports `EMSGSIZE` for the path MTU ([S12.12](https://github.com/DavidCozens/solid-syslog/issues/210)). TCP/TLS streams fragment transparently at the transport layer and so do not need a path-MTU trim |
 | 8.1 | Message size — max 2048 recommended | Supported | Default `SOLIDSYSLOG_MAX_MESSAGE_SIZE` = 2048, matching the §8.1 SHOULD value. Per-target override via a CMake variable is planned in [E21 #217](https://github.com/DavidCozens/solid-syslog/issues/217) for memory-constrained MCUs |
@@ -72,7 +72,7 @@ Status key:
 
 | RFC | Total requirements | Supported | Partial | Planned | N/A |
 |---|---|---|---|---|---|
-| RFC 5424 | 17 | 17 | 0 | 0 | 0 |
+| RFC 5424 | 17 | 14 | 3 | 0 | 0 |
 | RFC 5426 | 6 | 4 | 0 | 0 | 2 |
 | RFC 6587 | 8 | 7 | 0 | 0 | 1 |
 | RFC 5425 | 7 | 7 | 0 | 0 | 0 |
