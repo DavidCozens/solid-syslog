@@ -1,5 +1,71 @@
 # Dev Log
 
+## 2026-04-28 — S12.12 PR #218 wrap-up: BOM follow-up, BDD diagnosis correction, CodeRabbit cleanup
+
+### Decisions
+- **Tagged `udp_mtu.feature` `@windows_wip` rather than chasing a Windows
+  fix in this PR.** The OTel collector's syslog receiver interprets
+  BOM-less UTF-8 as Latin-1 (RFC 5424 §6.4 requires a BOM the library
+  doesn't yet emit), and Windows loopback's ~65535-byte MTU never
+  triggers WSAEMSGSIZE for the message sizes we can produce inside
+  `SOLIDSYSLOG_MAX_MESSAGE_SIZE`. So the full-delivery scenario waits on
+  the BOM work; the oversize scenario is permanently POSIX-only by
+  virtue of loopback MTU. Both are documented in the feature header
+  with the BOM gap tracked as S12.13 (#219).
+- **The `store_capacity` BDD failures were a stale diagnosis, not a
+  fresh bug.** The first instinct (twice) was to edit the feature file
+  — bump `max-files 2 → 7 → 8` and add a "fills one file" step — on
+  the theory that PosixMessageQueueBuffer's `O_NONBLOCK` mq_send was
+  silently dropping a message under the post-bump 1500-byte payloads.
+  That theory walked the symptoms cleanly enough to be plausible, but
+  the actual cause was the MAX bump 512 → 2048 silently quadrupling the
+  production `MIN_MAX_FILE_SIZE` clamp. The feature file's
+  `max-file-size 520` clamps up to 2055 at runtime, so the same default
+  short messages now pack ~16 records per file instead of ~4 — total
+  capacity 32, no overflow with 10 sent, the discard policy never
+  engages.
+- **Compensate in the step layer, not the feature file.** Feature files
+  describe externally-visible behaviour and form the contract with the
+  PO; they shouldn't change as a side-effect of an internal constant
+  bump. Fix lives in `step_file_store_enabled_with_config`: size each
+  MSG to `SOLIDSYSLOG_MAX_MESSAGE_SIZE/5 - 50` bytes so ~4 records pack
+  per (clamped) file, restoring the original test design. The
+  `OLDEST`/`NEWEST` retention asymmetry that the prior session saw
+  (OLDEST keeps `maxFiles` records, NEWEST keeps `maxFiles − 1`) is
+  real but only visible when files hold one record each — at 4 records
+  per file the asymmetry collapses and both policies retain exactly 7
+  of 10 sent. The `1500-byte body + max-files=8` workaround was
+  swimming against that exact corner.
+- **`SOLIDSYSLOG_MAX_MESSAGE_SIZE` mirrored as a Python constant in
+  the steps module.** The store_capacity scenarios are now MAX-coupled
+  by design; mirroring the C constant at module scope makes the
+  dependency visible at the only place a future MAX bump needs to
+  update.
+- **README multi-instance limitation restored, narrowed to specific
+  senders.** CodeRabbit flagged the original wording as too narrow
+  (it had been worded as if only platform backends carried the
+  constraint). Restored a precise list — `SolidSyslogUdpSender`,
+  `SolidSyslogStreamSender`, `SolidSyslogSwitchingSender` — so
+  integrators get an actionable signal.
+- **`iec62443.md` SL1 row updated for connected-UDP error surfacing.**
+  S12.12 shifted UDP from blanket fire-and-forget to a connected-socket
+  model that surfaces local kernel failures (EMSGSIZE, ECONNREFUSED).
+  The "UDP is unreliable — messages may be lost silently" SL1
+  limitation is still accurate at the network-protocol level (mid-
+  transit drops remain silent), so the row keeps that caveat alongside
+  the new error-surface description.
+
+### Deferred
+
+- **`PosixMessageQueueBuffer` mq_send EAGAIN visibility** is still
+  worth doing as a follow-up — not because it caused the store_capacity
+  failures (it didn't), but because silent buffer drops are a real
+  observability gap for any future high-volume scenario. Tracked under
+  E12 #31.
+
+### Open questions
+- None.
+
 ## 2026-04-28 — S12.12 UDP path-MTU clipping (slices 6–7, story complete)
 
 ### Decisions
