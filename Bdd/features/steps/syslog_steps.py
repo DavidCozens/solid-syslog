@@ -132,6 +132,20 @@ def read_last_line(path):
 UTF8_BOM_CHAR = "\ufeff"
 
 
+def _repair_otel_latin1_msg(msg):
+    """The OpenTelemetry Collector's rfc5424 syslog receiver decodes MSG
+    bytes as Latin-1 even when the RFC 5424 \u00a76.4 UTF-8 BOM is present, so a
+    UTF-8 multi-byte sequence on the wire shows up in the JSONL as several
+    Latin-1 chars (each high byte becomes its own U+00xx). Roundtrip
+    Latin-1 \u2192 UTF-8 to recover the original codepoints; if the string
+    contains any char that isn't representable in Latin-1, OTel did
+    decode it correctly and the original is returned unchanged."""
+    try:
+        return msg.encode("latin-1").decode("utf-8")
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return msg
+
+
 def _strip_msg_bom(msg):
     """The library emits the RFC 5424 §6.4 UTF-8 BOM at the start of every MSG
     (S12.13 #219). It's a transport-layer prefix, not part of the body the
@@ -234,7 +248,7 @@ def parse_otel_jsonl_line(line):
         fields["MSGID"] = msg_id
     msg = _otel_attribute(attrs, "message")
     if msg is not None:
-        fields["MSG"] = _strip_msg_bom(msg)
+        fields["MSG"] = _strip_msg_bom(_repair_otel_latin1_msg(msg))
 
     sd = _otel_attribute(attrs, "structured_data")
     if isinstance(sd, dict):
