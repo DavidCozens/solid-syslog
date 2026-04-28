@@ -55,4 +55,9 @@ elseif(SOLIDSYSLOG_WINSOCK AND HAVE_WINDOWS_PLATFORM)
         ${CMAKE_CURRENT_SOURCE_DIR}/Windows
         ${CMAKE_CURRENT_SOURCE_DIR}/Common
     )
+    # Merge the activeCodePage="UTF-8" manifest fragment into the linker's
+    # auto-generated manifest so the MSVC CRT decodes argv as UTF-8 (S13.17 #221).
+    target_link_options(SolidSyslogWindowsExample PRIVATE
+        "/MANIFESTINPUT:${CMAKE_CURRENT_SOURCE_DIR}/Windows/SolidSyslogWindowsExample.manifest"
+    )
 endif()
