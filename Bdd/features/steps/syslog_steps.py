@@ -129,6 +129,19 @@ def read_last_line(path):
     return ""
 
 
+UTF8_BOM_CHAR = "\ufeff"
+
+
+def _strip_msg_bom(msg):
+    """The library emits the RFC 5424 §6.4 UTF-8 BOM at the start of every MSG
+    (S12.13 #219). It's a transport-layer prefix, not part of the body the
+    test author cares about, so strip it on the receive side so that
+    MSG-content assertions can compare the body bytes directly."""
+    if msg.startswith(UTF8_BOM_CHAR):
+        return msg[len(UTF8_BOM_CHAR):]
+    return msg
+
+
 def parse_syslog_ng_line(line):
     """Parse a syslog-ng key=value template line into a dict."""
     fields = {}
@@ -144,7 +157,7 @@ def parse_syslog_ng_line(line):
     # MSG may contain spaces — capture everything after "MSG="
     msg_match = re.search(r"MSG=(.*)", line)
     if msg_match:
-        fields["MSG"] = msg_match.group(1)
+        fields["MSG"] = _strip_msg_bom(msg_match.group(1))
 
     return fields
 
@@ -221,7 +234,7 @@ def parse_otel_jsonl_line(line):
         fields["MSGID"] = msg_id
     msg = _otel_attribute(attrs, "message")
     if msg is not None:
-        fields["MSG"] = msg
+        fields["MSG"] = _strip_msg_bom(msg)
 
     sd = _otel_attribute(attrs, "structured_data")
     if isinstance(sd, dict):
