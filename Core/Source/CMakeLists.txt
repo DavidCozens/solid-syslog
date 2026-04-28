@@ -29,11 +29,6 @@ if(SOLIDSYSLOG_POSIX OR SOLIDSYSLOG_WINSOCK)
         SolidSyslogResolver.c
         SolidSyslogDatagram.c
         SolidSyslogUdpSender.c
-    )
-endif()
-
-if(SOLIDSYSLOG_POSIX)
-    list(APPEND SOURCES
         SolidSyslogStreamSender.c
     )
 endif()

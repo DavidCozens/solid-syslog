@@ -86,6 +86,24 @@ TEST(ExampleWindowsCommandLine, MessageFlagSetsMsg)
     STRCMP_EQUAL("system started", options.msg);
 }
 
+TEST(ExampleWindowsCommandLine, DefaultTransportIsUdp)
+{
+    char  arg0[] = "test";
+    char* argv[] = {arg0, nullptr};
+    Parse(1, argv);
+    LONGS_EQUAL(SOLIDSYSLOG_TRANSPORT_UDP, options.transport);
+}
+
+TEST(ExampleWindowsCommandLine, TransportFlagSetsTcp)
+{
+    char  arg0[] = "test";
+    char  arg1[] = "--transport";
+    char  arg2[] = "tcp";
+    char* argv[] = {arg0, arg1, arg2, nullptr};
+    Parse(3, argv);
+    LONGS_EQUAL(SOLIDSYSLOG_TRANSPORT_TCP, options.transport);
+}
+
 TEST(ExampleWindowsCommandLine, AllFlagsTogether)
 {
     char  arg0[] = "test";

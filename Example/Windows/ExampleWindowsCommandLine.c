@@ -7,6 +7,7 @@ void ExampleWindowsCommandLine_Parse(int argc, char* argv[], struct WindowsExamp
 {
     options->facility  = SOLIDSYSLOG_FACILITY_LOCAL0;
     options->severity  = SOLIDSYSLOG_SEVERITY_INFO;
+    options->transport = SOLIDSYSLOG_TRANSPORT_UDP;
     options->messageId = NULL;
     options->msg       = NULL;
 
@@ -27,6 +28,10 @@ void ExampleWindowsCommandLine_Parse(int argc, char* argv[], struct WindowsExamp
         else if (((i + 1) < argc) && (strcmp(argv[i], "--message") == 0))
         {
             options->msg = argv[++i];
+        }
+        else if (((i + 1) < argc) && (strcmp(argv[i], "--transport") == 0))
+        {
+            options->transport = (strcmp(argv[++i], "tcp") == 0) ? SOLIDSYSLOG_TRANSPORT_TCP : SOLIDSYSLOG_TRANSPORT_UDP;
         }
     }
 }
