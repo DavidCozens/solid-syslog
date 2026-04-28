@@ -1,5 +1,6 @@
 #include "SocketFake.h"
 #include "SafeString.h"
+#include "SolidSyslog.h"
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netdb.h>
@@ -9,7 +10,7 @@
 
 enum
 {
-    SOCKETFAKE_MAX_BUFFER_SIZE = 2048
+    SOCKETFAKE_MAX_BUFFER_SIZE = SOLIDSYSLOG_MAX_MESSAGE_SIZE
 };
 
 static bool               sendtoFails;

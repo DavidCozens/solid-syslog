@@ -1,12 +1,13 @@
 #include "WinsockFake.h"
 #include "SafeString.h"
+#include "SolidSyslog.h"
 #include <string.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
 enum
 {
-    WINSOCKFAKE_MAX_BUFFER_SIZE      = 2048,
+    WINSOCKFAKE_MAX_BUFFER_SIZE      = SOLIDSYSLOG_MAX_MESSAGE_SIZE,
     WINSOCKFAKE_MAX_HOSTNAME_SIZE    = 256,
     WINSOCKFAKE_MAX_SEND_CALLS       = 8,
     WINSOCKFAKE_MAX_SETSOCKOPT_CALLS = 8
