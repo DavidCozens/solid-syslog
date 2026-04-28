@@ -24,8 +24,11 @@ file store-and-forward with CRC-16 integrity, and the full
 
 **Not yet production-ready**, and no API stability guarantee yet. Known gaps:
 
-- Public API may evolve — additional platform backends (RTOS, custom) are
-  still to land.
+- Public API may evolve — sender implementations currently use static
+  singleton state (`SolidSyslogUdpSender`, `SolidSyslogStreamSender`,
+  `SolidSyslogSwitchingSender`), so multiple concurrent instances per
+  process aren't yet supported. Additional platform backends (RTOS,
+  custom) are still to land.
 - At-rest integrity is CRC-16 only; HMAC + AES-at-rest are planned for SL4
   ([E17 #105](https://github.com/DavidCozens/solid-syslog/issues/105)).
 - TLS revocation (CRL / OCSP) is deferred to the OS trust store; the library

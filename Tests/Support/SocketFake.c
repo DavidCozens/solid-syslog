@@ -510,7 +510,15 @@ ssize_t sendto(int sockfd, const void* buf, size_t len, int flags, const struct 
         nextSendtoShouldFailWithErrno = false;
         return (ssize_t) -1;
     }
-    return sendtoFails ? (ssize_t) -1 : (ssize_t) len;
+    if (sendtoFails)
+    {
+        /* Set a deterministic errno so a stale value (notably EMSGSIZE
+         * left by a prior FailNextSendtoWithErrno call) cannot leak
+         * into the production code's error-classification logic. */
+        errno = EIO;
+        return (ssize_t) -1;
+    }
+    return (ssize_t) len;
 }
 
 // clang-format off
