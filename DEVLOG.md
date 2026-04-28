@@ -1,5 +1,77 @@
 # Dev Log
 
+## 2026-04-28 — S12.12 UDP path-MTU clipping (slices 6–7, story complete)
+
+### Decisions
+- **Winsock parallel as a mechanical mirror of slice 5.** WinsockDatagram
+  gained the same lazy-connect, `IP_MTU_DISCOVER`, EMSGSIZE-detection,
+  and `IP_MTU` lookup as PosixDatagram. The seam was already
+  established as bare `Winsock_*` symbols — extending it with
+  `Winsock_connect`, `Winsock_setsockopt`, `Winsock_getsockopt`
+  matched the existing pattern. No `WinsockTcpStream_*` namespace
+  needed because those names weren't already in use by another
+  Windows module.
+- **`<ws2tcpip.h>` for the IP_MTU_DISCOVER family on Windows.**
+  Windows scatters `IP_MTU` / `IP_MTU_DISCOVER` / `IP_PMTUDISC_DO`
+  across `<ws2ipdef.h>`, which `<ws2tcpip.h>` pulls in. Without it
+  the constants are undeclared. Win10+ exposes the same numeric
+  values as Linux for the PMTUD policy enum, so the production code
+  reads identically across platforms.
+- **WSAGetLastError() instead of errno.** Winsock's per-thread last-
+  error API is the equivalent of POSIX `errno`. Test fake gained
+  `WinsockFake_FailNextSendtoWithLastError(int)` paralleling
+  `SocketFake_FailNextSendtoWithErrno(int)`.
+- **Bumped `SOLIDSYSLOG_MAX_MESSAGE_SIZE` 512 → 2048 in slice 7.**
+  RFC 5424 §6.1 says receivers SHOULD support 2048 over UDP, and
+  real-world syslog deployments routinely use 4–8 KB. The 512
+  default was conservative for the original embedded target. The
+  bump also unblocks the BDD path-MTU trim scenarios — at the new
+  default a max-size message produces ~2 KB of wire bytes, which
+  comfortably exceeds the docker-bridge MTU's 1472-byte payload
+  limit and triggers a real EMSGSIZE on the wire. A future CMake
+  override (E21 #217) lets memory-constrained MCUs reduce it, with
+  the BDD scenarios gated on the configured size.
+- **Test fakes derived from `SOLIDSYSLOG_MAX_MESSAGE_SIZE` rather
+  than hand-tuned constants.** SenderFake / SocketFake / WinsockFake
+  buffer caps and FileFake's per-file storage all auto-adapt now,
+  along with FileStoreTest's TEST_BUF_SIZE and TEST_MAX_FILE_SIZE.
+  TEST_MAX_FILE_SIZE includes `SOLIDSYSLOG_MAX_INTEGRITY_SIZE` so
+  the tests stay correct under any integrity policy. The bump
+  surfaced exactly the hand-tuning that the user had warned about
+  while writing the original FileStore tests.
+- **BDD trim scenarios use prefix-equality as the boundary check.**
+  The oversize scenario asserts (a) received bytes < sent bytes and
+  (b) `sent.startswith(received)` on the Python string form. The
+  prefix property fails iff the trim left orphan continuation
+  bytes — so a single, simple assertion catches "trim happened" and
+  "trim ended on a codepoint boundary" together. Robust regardless
+  of exactly which codepoint the trim landed on.
+- **Filed E21: Port-Time Configurability (#217).** Captures the
+  tunables (`SOLIDSYSLOG_MAX_MESSAGE_SIZE`, `SEND_TIMEOUT_*`),
+  documentation needs, and the gating dependency from S12.12's BDD
+  scenarios. Decomposition deferred until prioritised.
+
+### Deferred
+- **Switch `sendto` to `send` after connect** in PosixDatagram /
+  WinsockDatagram. Slightly more idiomatic on a connected socket;
+  kept the diff minimal because both kernels treat connected
+  `sendto` with addr arg correctly. Easy follow-up.
+- **`SolidSyslogUtf8.h` to `uint8_t`.** Whole-codebase cleanup once
+  S12.12 lands; would also unlock dropping the `(char)` casts at
+  UdpPayload's call sites. MISRA Rule 10.1 motivation.
+- **Address-mismatch detection in the Datagram impls.** Currently
+  `connect`s once per Open lifetime regardless of subsequent
+  addresses passed to SendTo. Safe in practice (UdpSender controls
+  lifecycle) but could be enforced if the contract were ever
+  broadened.
+- **CMake configurability of `SOLIDSYSLOG_MAX_MESSAGE_SIZE`** —
+  tracked in E21 (#217). When that lands, the BDD trim scenarios
+  need gating on the configured size being ≥ ~1500 to actually
+  trigger EMSGSIZE on the docker-bridge test path.
+
+### Open questions
+- None.
+
 ## 2026-04-27 — S12.12 UDP path-MTU clipping (slices 1–5)
 
 ### Decisions
