@@ -2,22 +2,30 @@
 #include "ExampleAppName.h"
 #include "ExampleCommandLine.h"
 #include "ExampleInteractive.h"
+#include "ExampleTcpConfig.h"
 #include "ExampleUdpConfig.h"
 #include "SolidSyslog.h"
-#include "SolidSyslogGetAddrInfoResolver.h"
-#include "SolidSyslogPosixDatagram.h"
 #include "SolidSyslogAtomicCounter.h"
 #include "SolidSyslogConfig.h"
+#include "SolidSyslogGetAddrInfoResolver.h"
 #include "SolidSyslogMetaSd.h"
-#include "SolidSyslogOriginSd.h"
-#include "SolidSyslogStdAtomicOps.h"
-#include "SolidSyslogTimeQualitySd.h"
 #include "SolidSyslogNullBuffer.h"
 #include "SolidSyslogNullStore.h"
+#include "SolidSyslogOriginSd.h"
 #include "SolidSyslogPosixClock.h"
+#include "SolidSyslogPosixDatagram.h"
 #include "SolidSyslogPosixHostname.h"
 #include "SolidSyslogPosixProcessId.h"
+#include "SolidSyslogPosixTcpStream.h"
+#include "SolidSyslogStdAtomicOps.h"
+#include "SolidSyslogStreamSender.h"
+#include "SolidSyslogTimeQualitySd.h"
 #include "SolidSyslogUdpSender.h"
+
+#include <string.h>
+
+static SolidSyslogPosixTcpStreamStorage tcpStreamStorage;
+static SolidSyslogStreamSenderStorage   tcpSenderStorage;
 
 static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
 {
@@ -36,11 +44,34 @@ int SolidSyslogExample_Run(int argc, char* argv[])
         return 1;
     }
 
-    struct SolidSyslogResolver*       resolver  = SolidSyslogGetAddrInfoResolver_Create();
-    struct SolidSyslogDatagram*       datagram  = SolidSyslogPosixDatagram_Create();
-    struct SolidSyslogUdpSenderConfig udpConfig = {
-        .resolver = resolver, .datagram = datagram, .endpoint = ExampleUdpConfig_GetEndpoint, .endpointVersion = ExampleUdpConfig_GetEndpointVersion};
-    struct SolidSyslogSender*         sender      = SolidSyslogUdpSender_Create(&udpConfig);
+    struct SolidSyslogResolver* resolver = SolidSyslogGetAddrInfoResolver_Create();
+    struct SolidSyslogDatagram* datagram = NULL;
+    struct SolidSyslogStream*   stream   = NULL;
+    struct SolidSyslogSender*   sender   = NULL;
+    bool                        useTcp   = (options.transport != NULL) && (strcmp(options.transport, "tcp") == 0);
+
+    if (useTcp)
+    {
+        stream                                         = SolidSyslogPosixTcpStream_Create(&tcpStreamStorage);
+        struct SolidSyslogStreamSenderConfig tcpConfig = {
+            .resolver        = resolver,
+            .stream          = stream,
+            .endpoint        = ExampleTcpConfig_GetEndpoint,
+            .endpointVersion = ExampleTcpConfig_GetEndpointVersion,
+        };
+        sender = SolidSyslogStreamSender_Create(&tcpSenderStorage, &tcpConfig);
+    }
+    else
+    {
+        datagram                                    = SolidSyslogPosixDatagram_Create();
+        struct SolidSyslogUdpSenderConfig udpConfig = {
+            .resolver        = resolver,
+            .datagram        = datagram,
+            .endpoint        = ExampleUdpConfig_GetEndpoint,
+            .endpointVersion = ExampleUdpConfig_GetEndpointVersion,
+        };
+        sender = SolidSyslogUdpSender_Create(&udpConfig);
+    }
     struct SolidSyslogBuffer*         buffer      = SolidSyslogNullBuffer_Create(sender);
     struct SolidSyslogStore*          store       = SolidSyslogNullStore_Create();
     struct SolidSyslogAtomicCounter*  counter     = SolidSyslogAtomicCounter_Create(SolidSyslogStdAtomicOps_Create());
@@ -80,8 +111,16 @@ int SolidSyslogExample_Run(int argc, char* argv[])
     SolidSyslogStdAtomicOps_Destroy();
     SolidSyslogNullStore_Destroy();
     SolidSyslogNullBuffer_Destroy();
-    SolidSyslogUdpSender_Destroy();
-    SolidSyslogPosixDatagram_Destroy();
+    if (useTcp)
+    {
+        SolidSyslogStreamSender_Destroy(sender);
+        SolidSyslogPosixTcpStream_Destroy(stream);
+    }
+    else
+    {
+        SolidSyslogUdpSender_Destroy();
+        SolidSyslogPosixDatagram_Destroy();
+    }
     SolidSyslogGetAddrInfoResolver_Destroy();
 
     return 0;
