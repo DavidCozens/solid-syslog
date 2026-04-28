@@ -10,9 +10,13 @@
 # listens on the same port via both transports.
 
 receivers:
-  syslog:
+  # Each syslog receiver instance accepts exactly one of udp: or tcp:, so we
+  # spin two named instances and feed both into the same pipeline.
+  syslog/udp:
     udp:
       listen_address: "127.0.0.1:5514"
+    protocol: rfc5424
+  syslog/tcp:
     tcp:
       listen_address: "127.0.0.1:5514"
     protocol: rfc5424
@@ -30,5 +34,5 @@ service:
       level: warn
   pipelines:
     logs:
-      receivers: [syslog]
+      receivers: [syslog/udp, syslog/tcp]
       exporters: [file]
