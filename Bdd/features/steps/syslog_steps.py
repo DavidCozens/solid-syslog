@@ -609,6 +609,59 @@ def step_example_sends_multiple(context, count):
     run_example(context, expected_messages=count)
 
 
+@when("the example program sends a UTF-8 message that fits the path MTU")
+def step_example_sends_utf8_within_mtu(context):
+    # Comfortably under the typical 1472-byte path payload, with multi-byte
+    # UTF-8 mixed in. Tests the no-trim path: the message goes out whole.
+    msg = "Hello, " + ("é" * 100) + " - mixed " + ("€" * 50) + " - end"
+    context.sent_msg = msg
+    run_example(context, ["--message", msg])
+
+
+@when("the example program sends an oversize UTF-8 message")
+def step_example_sends_oversize_utf8(context):
+    # Build a message that overflows the path MTU. The ASCII prefix keeps
+    # the prefix-equality assertion robust; the long run of '€' (3 bytes
+    # each) ensures the trim point almost certainly lands mid-codepoint,
+    # exercising the walk-back to a clean codepoint boundary.
+    # ~1600 MSG bytes + ~80 RFC 5424 header = ~1680 wire bytes,
+    # well above the docker-bridge path MTU's 1472-byte payload limit.
+    msg = ("X" * 100) + ("€" * 500)
+    context.sent_msg = msg
+    run_example(context, ["--message", msg])
+
+
+@then("the received message is byte-identical to the sent message")
+def step_check_msg_byte_identical(context):
+    received = context.fields.get("MSG", "")
+    assert received == context.sent_msg, (
+        f"Expected {len(context.sent_msg.encode('utf-8'))} bytes byte-identical, "
+        f"got {len(received.encode('utf-8'))} bytes that differ"
+    )
+
+
+@then("the received message is shorter than the sent message")
+def step_check_msg_shorter(context):
+    received = context.fields.get("MSG", "")
+    sent_bytes = len(context.sent_msg.encode("utf-8"))
+    received_bytes = len(received.encode("utf-8"))
+    assert received_bytes < sent_bytes, (
+        f"Expected trim — sent {sent_bytes} bytes, received {received_bytes}"
+    )
+
+
+@then("the received message is a clean prefix of the sent message")
+def step_check_msg_clean_prefix(context):
+    received = context.fields.get("MSG", "")
+    assert context.sent_msg.startswith(received), (
+        "Received is not a clean prefix of sent — trim left orphan bytes "
+        "or modified content. "
+        f"Sent starts: {context.sent_msg[:60]!r}; "
+        f"received starts: {received[:60]!r}; "
+        f"received ends: {received[-40:]!r}"
+    )
+
+
 @then('syslog-ng receives a message with priority "{priority}"')
 def step_check_priority(context, priority):
     assert context.fields["PRIORITY"] == priority, (
