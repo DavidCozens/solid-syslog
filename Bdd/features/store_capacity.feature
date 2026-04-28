@@ -6,7 +6,7 @@ Feature: Store capacity limit and discard policy
 
   Scenario: Discard-oldest drops oldest messages when store overflows
     Given syslog-ng is running
-    And the file store is enabled with max-files 7 and max-file-size 2055 and discard-policy oldest
+    And the file store is enabled with max-files 8 and max-file-size 2055 and discard-policy oldest
     And each message is large enough to fill one store file
     And the threaded example is running with transport tcp and no structured data
     When the client sends a message
@@ -19,7 +19,7 @@ Feature: Store capacity limit and discard policy
 
   Scenario: Discard-newest preserves oldest messages when store overflows
     Given syslog-ng is running
-    And the file store is enabled with max-files 7 and max-file-size 2055 and discard-policy newest
+    And the file store is enabled with max-files 8 and max-file-size 2055 and discard-policy newest
     And each message is large enough to fill one store file
     And the threaded example is running with transport tcp and no structured data
     When the client sends a message
@@ -32,7 +32,7 @@ Feature: Store capacity limit and discard policy
 
   Scenario: Halt stops the application when store overflows
     Given syslog-ng is running
-    And the file store is enabled with max-files 7 and max-file-size 2055 and discard-policy halt
+    And the file store is enabled with max-files 8 and max-file-size 2055 and discard-policy halt
     And each message is large enough to fill one store file
     And the halt callback exits the process
     And the threaded example is running with transport tcp and no structured data
@@ -44,7 +44,7 @@ Feature: Store capacity limit and discard policy
 
   Scenario: Halt prevents further service after store overflows
     Given syslog-ng is running
-    And the file store is enabled with max-files 7 and max-file-size 2055 and discard-policy halt
+    And the file store is enabled with max-files 8 and max-file-size 2055 and discard-policy halt
     And each message is large enough to fill one store file
     And the threaded example is running with transport tcp and no structured data
     When the client sends a message
