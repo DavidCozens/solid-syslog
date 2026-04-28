@@ -618,6 +618,7 @@ TEST(SolidSyslog, MetaSdAndTimeQualitySdCoexistInSdArray)
 TEST(SolidSyslog, NullMessageOmitsMsgField)
 {
     Log();
+    CHECK_FALSE(SyslogMsgHasBom(lastMessage()));
     STRCMP_EQUAL("", SyslogMsg(lastMessage()).c_str());
 }
 
@@ -646,6 +647,7 @@ TEST(SolidSyslog, EmptyMessageOmitsMsgField)
 {
     message.msg = "";
     Log();
+    CHECK_FALSE(SyslogMsgHasBom(lastMessage()));
     STRCMP_EQUAL("", SyslogMsg(lastMessage()).c_str());
 }
 
