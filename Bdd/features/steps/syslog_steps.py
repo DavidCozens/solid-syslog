@@ -858,12 +858,16 @@ def step_check_sw_version(context, value):
 @then('the structured data contains language "{value}"')
 def step_check_language(context, value):
     sd = context.fields.get("STRUCTURED_DATA", "")
-    match = re.search(r'language="([^"]*)"', sd)
+    # SD-PARAM-VALUE escapes ", \ and ] with a backslash (RFC 5424 §6.3.3),
+    # so the matcher must accept escape sequences inside the value rather
+    # than terminating at the first inner quote.
+    match = re.search(r'language="((?:\\.|[^"])*)"', sd)
     assert match, (
         f"No language found in structured data: {sd}"
     )
-    assert match.group(1) == value, (
-        f"Expected language {value}, got {match.group(1)}"
+    actual = re.sub(r"\\(.)", r"\1", match.group(1))
+    assert actual == value, (
+        f"Expected language {value}, got {actual}"
     )
 
 
