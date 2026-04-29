@@ -98,6 +98,7 @@ if(HAVE_WINDOWS_PLATFORM)
         SolidSyslogWindowsFileTest.cpp
         SolidSyslogWindowsHostnameTest.cpp
         SolidSyslogWindowsProcessIdTest.cpp
+        SolidSyslogWindowsSysUpTimeTest.cpp
     )
 endif()
 
