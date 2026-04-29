@@ -3,14 +3,19 @@
 
 #include "ExternC.h"
 
+#include <stdint.h>
+
 EXTERN_C_BEGIN
 
     struct SolidSyslogAtomicCounter;
     struct SolidSyslogStructuredData;
 
+    typedef uint32_t (*SolidSyslogSysUpTimeFunction)(void); // NOLINT(modernize-redundant-void-arg) -- C idiom
+
     struct SolidSyslogMetaSdConfig
     {
         struct SolidSyslogAtomicCounter* counter;
+        SolidSyslogSysUpTimeFunction     getSysUpTime;
     };
 
     struct SolidSyslogStructuredData* SolidSyslogMetaSd_Create(const struct SolidSyslogMetaSdConfig* config);

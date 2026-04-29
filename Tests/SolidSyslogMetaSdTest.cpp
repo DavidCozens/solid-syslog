@@ -12,6 +12,11 @@ enum
     TEST_BUFFER_SIZE = 256
 };
 
+static uint32_t FakeSysUpTime()
+{
+    return 12345;
+}
+
 // clang-format off
 TEST_GROUP(SolidSyslogMetaSd)
 {
@@ -19,6 +24,7 @@ TEST_GROUP(SolidSyslogMetaSd)
     SolidSyslogAtomicCounter* counter;
     // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
     SolidSyslogStructuredData* sd;
+    SolidSyslogMetaSdConfig config;
     SolidSyslogFormatterStorage storage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(TEST_BUFFER_SIZE)];
     // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
     SolidSyslogFormatter* formatter;
@@ -27,7 +33,7 @@ TEST_GROUP(SolidSyslogMetaSd)
     {
         formatter = SolidSyslogFormatter_Create(storage, TEST_BUFFER_SIZE);
         counter = SolidSyslogAtomicCounter_Create(TestAtomicOps_Create());
-        SolidSyslogMetaSdConfig config{};
+        config = {};
         config.counter = counter;
         sd = SolidSyslogMetaSd_Create(&config);
     }
@@ -37,6 +43,12 @@ TEST_GROUP(SolidSyslogMetaSd)
         SolidSyslogMetaSd_Destroy();
         SolidSyslogAtomicCounter_Destroy();
         TestAtomicOps_Destroy();
+    }
+
+    void recreate()
+    {
+        SolidSyslogMetaSd_Destroy();
+        sd = SolidSyslogMetaSd_Create(&config);
     }
 
     void format() const
@@ -91,4 +103,12 @@ TEST(SolidSyslogMetaSd, FormatAdvancesFormatterLength)
 TEST(SolidSyslogMetaSd, DestroyDoesNotCrash)
 {
     // Covered by teardown — this test documents the intent
+}
+
+TEST(SolidSyslogMetaSd, FormatIncludesSysUpTimeWhenCallbackIsProvided)
+{
+    config.getSysUpTime = FakeSysUpTime;
+    recreate();
+    format();
+    STRCMP_EQUAL("[meta sequenceId=\"1\" sysUpTime=\"12345\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter));
 }
