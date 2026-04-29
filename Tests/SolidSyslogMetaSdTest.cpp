@@ -203,3 +203,20 @@ TEST(SolidSyslogMetaSd, FormatEscapesBracketInLanguage)
     format();
     CHECK_LANGUAGE("a\\]b");
 }
+
+TEST(SolidSyslogMetaSd, FormatWithAllThreeParamsEmitsAllThree)
+{
+    useSysUpTime(12345);
+    useLanguage("en-GB");
+    format();
+    STRCMP_EQUAL("[meta sequenceId=\"1\" sysUpTime=\"12345\" language=\"en-GB\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter));
+}
+
+TEST(SolidSyslogMetaSd, FormatWithoutCounterOmitsSequenceId)
+{
+    config.counter = nullptr;
+    useSysUpTime(12345);
+    useLanguage("en-GB");
+    format();
+    STRCMP_EQUAL("[meta sysUpTime=\"12345\" language=\"en-GB\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter));
+}
