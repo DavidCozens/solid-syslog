@@ -21,6 +21,7 @@ static uint32_t FakeSysUpTime_Get()
 }
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage) -- macros preserve __FILE__/__LINE__ in test failure output
+#define CHECK_SEQUENCEID(expected) STRCMP_EQUAL("[meta sequenceId=\"" expected "\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter))
 #define CHECK_SYSUPTIME(expected) STRCMP_EQUAL("[meta sequenceId=\"1\" sysUpTime=\"" expected "\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter))
 
 // NOLINTEND(cppcoreguidelines-macro-usage)
@@ -88,7 +89,7 @@ TEST(SolidSyslogMetaSd, CreateReturnsNonNull)
 TEST(SolidSyslogMetaSd, FirstFormatProducesSequenceId1)
 {
     format();
-    STRCMP_EQUAL("[meta sequenceId=\"1\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter));
+    CHECK_SEQUENCEID("1");
 }
 
 TEST(SolidSyslogMetaSd, SecondFormatProducesSequenceId2)
@@ -96,7 +97,7 @@ TEST(SolidSyslogMetaSd, SecondFormatProducesSequenceId2)
     format();
     resetFormatter();
     format();
-    STRCMP_EQUAL("[meta sequenceId=\"2\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter));
+    CHECK_SEQUENCEID("2");
 }
 
 TEST(SolidSyslogMetaSd, ThirdFormatProducesSequenceId3)
@@ -105,7 +106,7 @@ TEST(SolidSyslogMetaSd, ThirdFormatProducesSequenceId3)
     format();
     resetFormatter();
     format();
-    STRCMP_EQUAL("[meta sequenceId=\"3\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter));
+    CHECK_SEQUENCEID("3");
 }
 
 TEST(SolidSyslogMetaSd, FormatAdvancesFormatterLength)
