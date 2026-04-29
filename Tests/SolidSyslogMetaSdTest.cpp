@@ -220,3 +220,11 @@ TEST(SolidSyslogMetaSd, FormatWithoutCounterOmitsSequenceId)
     format();
     STRCMP_EQUAL("[meta sysUpTime=\"12345\" language=\"en-GB\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter));
 }
+
+TEST(SolidSyslogMetaSd, FormatWithNoConfiguredParamsEmitsBareMetaElement)
+{
+    config.counter = nullptr;
+    recreate();
+    format();
+    STRCMP_EQUAL("[meta]", SolidSyslogFormatter_AsFormattedBuffer(formatter));
+}
