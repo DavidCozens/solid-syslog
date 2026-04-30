@@ -3,17 +3,35 @@
 #include "SolidSyslogOriginSd.h"
 #include "SolidSyslogStructuredData.h"
 
+#include <array>
 #include <cstring>
+#include <initializer_list>
 #include <string>
 
 enum
 {
-    TEST_BUFFER_SIZE = 256
+    TEST_BUFFER_SIZE = 256,
+    MAX_FAKE_IPS     = 8
 };
+
+static std::array<const char*, MAX_FAKE_IPS> fakeIps;
+static size_t                                fakeIpCount;
+
+static size_t FakeIpCount()
+{
+    return fakeIpCount;
+}
+
+static void FakeIpAt(struct SolidSyslogFormatter* f, size_t index)
+{
+    SolidSyslogFormatter_EscapedString(f, fakeIps.at(index), 64); // ORIGIN_IP_MAX
+}
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage) -- macros preserve __FILE__/__LINE__ in test failure output
 #define CHECK_ENTERPRISE_ID(expected) \
     STRCMP_EQUAL("[origin software=\"TestSoftware\" swVersion=\"9.8.7\" enterpriseId=\"" expected "\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter))
+#define CHECK_IP(expected) \
+    STRCMP_EQUAL("[origin software=\"TestSoftware\" swVersion=\"9.8.7\" ip=\"" expected "\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter))
 
 // NOLINTEND(cppcoreguidelines-macro-usage)
 
@@ -58,6 +76,7 @@ TEST_GROUP(SolidSyslogOriginSd)
         config = {};
         config.software = "TestSoftware";
         config.swVersion = "9.8.7";
+        fakeIpCount = 0;
         sd = SolidSyslogOriginSd_Create(&config);
     }
 
@@ -79,6 +98,20 @@ TEST_GROUP(SolidSyslogOriginSd)
     {
         SolidSyslogOriginSd_Destroy();
         config.enterpriseId = enterpriseId;
+        sd = SolidSyslogOriginSd_Create(&config);
+    }
+
+    void useIps(std::initializer_list<const char*> ips)
+    {
+        SolidSyslogOriginSd_Destroy();
+        fakeIpCount = ips.size();
+        size_t i = 0;
+        for (const char* ip : ips)
+        {
+            fakeIps.at(i++) = ip;
+        }
+        config.getIpCount = FakeIpCount;
+        config.getIpAt = FakeIpAt;
         sd = SolidSyslogOriginSd_Create(&config);
     }
 
@@ -282,4 +315,78 @@ TEST(SolidSyslogOriginSd, WorstCaseFullyEscapedInputFitsPreFormattedStorage)
     resetFormatter();
     format();
     STRCMP_EQUAL(originSdWith(escapeEach(software), escapeEach(swVersion)).c_str(), SolidSyslogFormatter_AsFormattedBuffer(formatter));
+}
+
+TEST(SolidSyslogOriginSd, ZeroIpCountFromCallbackOmitsIpParams)
+{
+    useIps({});
+    resetFormatter();
+    format();
+    STRCMP_EQUAL("[origin software=\"TestSoftware\" swVersion=\"9.8.7\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter));
+}
+
+TEST(SolidSyslogOriginSd, FormatIncludesOneIpFromCallback)
+{
+    useIps({"192.0.2.1"});
+    resetFormatter();
+    format();
+    CHECK_IP("192.0.2.1");
+}
+
+TEST(SolidSyslogOriginSd, FormatIncludesDifferentIpFromCallback)
+{
+    useIps({"203.0.113.5"});
+    resetFormatter();
+    format();
+    CHECK_IP("203.0.113.5");
+}
+
+TEST(SolidSyslogOriginSd, FormatIncludesMultipleIpsFromCallback)
+{
+    useIps({"192.0.2.1", "192.0.2.2", "10.0.0.1"});
+    resetFormatter();
+    format();
+    STRCMP_EQUAL("[origin software=\"TestSoftware\" swVersion=\"9.8.7\" ip=\"192.0.2.1\" ip=\"192.0.2.2\" ip=\"10.0.0.1\"]",
+                 SolidSyslogFormatter_AsFormattedBuffer(formatter));
+}
+
+TEST(SolidSyslogOriginSd, IpAtMaxLength)
+{
+    const std::string maxIp    = repeated('a', 64); /* ORIGIN_IP_MAX */
+    const std::string expected = R"([origin software="TestSoftware" swVersion="9.8.7" ip=")" + maxIp + R"("])";
+
+    useIps({maxIp.c_str()});
+    resetFormatter();
+    format();
+    STRCMP_EQUAL(expected.c_str(), SolidSyslogFormatter_AsFormattedBuffer(formatter));
+}
+
+TEST(SolidSyslogOriginSd, IpContainingSpecialsIsEscaped)
+{
+    useIps({"a\"b\\c]d"});
+    resetFormatter();
+    format();
+    CHECK_IP("a\\\"b\\\\c\\]d");
+}
+
+TEST(SolidSyslogOriginSd, GetIpCountSetButGetIpAtNullOmitsIpParams)
+{
+    SolidSyslogOriginSd_Destroy();
+    config.getIpCount = FakeIpCount;
+    config.getIpAt    = nullptr;
+    sd                = SolidSyslogOriginSd_Create(&config);
+    resetFormatter();
+    format();
+    STRCMP_EQUAL("[origin software=\"TestSoftware\" swVersion=\"9.8.7\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter));
+}
+
+TEST(SolidSyslogOriginSd, GetIpAtSetButGetIpCountNullOmitsIpParams)
+{
+    SolidSyslogOriginSd_Destroy();
+    config.getIpCount = nullptr;
+    config.getIpAt    = FakeIpAt;
+    sd                = SolidSyslogOriginSd_Create(&config);
+    resetFormatter();
+    format();
+    STRCMP_EQUAL("[origin software=\"TestSoftware\" swVersion=\"9.8.7\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter));
 }
