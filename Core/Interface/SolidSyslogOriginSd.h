@@ -11,6 +11,7 @@ EXTERN_C_BEGIN
     {
         const char* software;
         const char* swVersion;
+        const char* enterpriseId;
     };
 
     struct SolidSyslogStructuredData* SolidSyslogOriginSd_Create(const struct SolidSyslogOriginSdConfig* config);

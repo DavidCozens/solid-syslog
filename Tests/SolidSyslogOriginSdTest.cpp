@@ -11,6 +11,12 @@ enum
     TEST_BUFFER_SIZE = 256
 };
 
+// NOLINTBEGIN(cppcoreguidelines-macro-usage) -- macros preserve __FILE__/__LINE__ in test failure output
+#define CHECK_ENTERPRISE_ID(expected) \
+    STRCMP_EQUAL("[origin software=\"TestSoftware\" swVersion=\"9.8.7\" enterpriseId=\"" expected "\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter))
+
+// NOLINTEND(cppcoreguidelines-macro-usage)
+
 namespace
 {
 std::string repeated(char c, size_t n)
@@ -66,6 +72,13 @@ TEST_GROUP(SolidSyslogOriginSd)
         SolidSyslogOriginSd_Destroy();
         config.software = software;
         config.swVersion = swVersion;
+        sd = SolidSyslogOriginSd_Create(&config);
+    }
+
+    void useEnterpriseId(const char* enterpriseId)
+    {
+        SolidSyslogOriginSd_Destroy();
+        config.enterpriseId = enterpriseId;
         sd = SolidSyslogOriginSd_Create(&config);
     }
 
@@ -212,6 +225,52 @@ TEST(SolidSyslogOriginSd, SwVersionContainingSpecialsIsEscaped)
     resetFormatter();
     format();
     STRCMP_EQUAL("[origin software=\"S\" swVersion=\"1\\\"2\\\\3\\]4\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter));
+}
+
+TEST(SolidSyslogOriginSd, FormatIncludesEnterpriseIdFromConfig)
+{
+    useEnterpriseId("1.3.6.1.4.1.12345");
+    resetFormatter();
+    format();
+    CHECK_ENTERPRISE_ID("1.3.6.1.4.1.12345");
+}
+
+TEST(SolidSyslogOriginSd, FormatIncludesDifferentEnterpriseIdFromConfig)
+{
+    useEnterpriseId("1.3.6.1.4.1.99999");
+    resetFormatter();
+    format();
+    CHECK_ENTERPRISE_ID("1.3.6.1.4.1.99999");
+}
+
+TEST(SolidSyslogOriginSd, EnterpriseIdAtMaxLength)
+{
+    const std::string maxId    = repeated('A', 64); /* ORIGIN_ENTERPRISE_ID_MAX */
+    const std::string expected = R"([origin software="TestSoftware" swVersion="9.8.7" enterpriseId=")" + maxId + R"("])";
+
+    useEnterpriseId(maxId.c_str());
+    resetFormatter();
+    format();
+    STRCMP_EQUAL(expected.c_str(), SolidSyslogFormatter_AsFormattedBuffer(formatter));
+}
+
+TEST(SolidSyslogOriginSd, EnterpriseIdTruncatedBeyondMaxLength)
+{
+    const std::string overlong = repeated('A', 64) + "X"; /* one past ORIGIN_ENTERPRISE_ID_MAX */
+    const std::string expected = R"([origin software="TestSoftware" swVersion="9.8.7" enterpriseId=")" + repeated('A', 64) + R"("])";
+
+    useEnterpriseId(overlong.c_str());
+    resetFormatter();
+    format();
+    STRCMP_EQUAL(expected.c_str(), SolidSyslogFormatter_AsFormattedBuffer(formatter));
+}
+
+TEST(SolidSyslogOriginSd, EnterpriseIdContainingSpecialsIsEscaped)
+{
+    useEnterpriseId("a\"b\\c]d");
+    resetFormatter();
+    format();
+    CHECK_ENTERPRISE_ID("a\\\"b\\\\c\\]d");
 }
 
 TEST(SolidSyslogOriginSd, WorstCaseFullyEscapedInputFitsPreFormattedStorage)
