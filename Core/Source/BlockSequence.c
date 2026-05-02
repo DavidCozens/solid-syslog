@@ -302,14 +302,14 @@ void BlockSequence_AdvanceToNextReadFile(struct BlockSequence* blockSequence)
     SwitchReadFile(blockSequence, NextSequence(blockSequence->readSequence));
 }
 
-bool BlockSequence_ReadingOlderFile(const struct BlockSequence* blockSequence)
+bool BlockSequence_IsReadingOlderFile(const struct BlockSequence* blockSequence)
 {
     return blockSequence->readSequence != blockSequence->writeSequence;
 }
 
 bool BlockSequence_HasUnsent(const struct BlockSequence* blockSequence)
 {
-    return BlockSequence_ReadingOlderFile(blockSequence) || (blockSequence->readCursor < blockSequence->writePosition);
+    return BlockSequence_IsReadingOlderFile(blockSequence) || (blockSequence->readCursor < blockSequence->writePosition);
 }
 
 bool BlockSequence_IsHalted(const struct BlockSequence* blockSequence)

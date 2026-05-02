@@ -54,7 +54,7 @@ struct SolidSyslogFile* BlockSequence_ReadFile(const struct BlockSequence* block
 size_t                  BlockSequence_ReadCursor(const struct BlockSequence* blockSequence);
 void                    BlockSequence_SetReadCursor(struct BlockSequence* blockSequence, size_t cursor);
 void                    BlockSequence_AdvanceToNextReadFile(struct BlockSequence* blockSequence);
-bool                    BlockSequence_ReadingOlderFile(const struct BlockSequence* blockSequence);
+bool                    BlockSequence_IsReadingOlderFile(const struct BlockSequence* blockSequence);
 
 bool   BlockSequence_HasUnsent(const struct BlockSequence* blockSequence);
 bool   BlockSequence_IsHalted(const struct BlockSequence* blockSequence);
