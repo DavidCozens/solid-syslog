@@ -7,11 +7,13 @@
 #include "SolidSyslogStoreDefinition.h"
 
 /* vtable — forward-declared because InitialiseVtable references them before their definitions */
-static bool Write(struct SolidSyslogStore* self, const void* data, size_t size);
-static bool ReadNextUnsent(struct SolidSyslogStore* self, void* data, size_t maxSize, size_t* bytesRead);
-static void MarkSent(struct SolidSyslogStore* self);
-static bool HasUnsent(struct SolidSyslogStore* self);
-static bool IsHalted(struct SolidSyslogStore* self);
+static bool   Write(struct SolidSyslogStore* self, const void* data, size_t size);
+static bool   ReadNextUnsent(struct SolidSyslogStore* self, void* data, size_t maxSize, size_t* bytesRead);
+static void   MarkSent(struct SolidSyslogStore* self);
+static bool   HasUnsent(struct SolidSyslogStore* self);
+static bool   IsHalted(struct SolidSyslogStore* self);
+static size_t GetTotalBytes(struct SolidSyslogStore* self);
+static size_t GetUsedBytes(struct SolidSyslogStore* self);
 
 /* ------------------------------------------------------------------
  * Instance
@@ -92,6 +94,8 @@ static inline void InitialiseVtable(struct SolidSyslogFileStore* fileStore)
     fileStore->base.MarkSent       = MarkSent;
     fileStore->base.HasUnsent      = HasUnsent;
     fileStore->base.IsHalted       = IsHalted;
+    fileStore->base.GetTotalBytes  = GetTotalBytes;
+    fileStore->base.GetUsedBytes   = GetUsedBytes;
 }
 
 static void ResumeFromExistingFile(struct SolidSyslogFileStore* fileStore)
@@ -174,6 +178,16 @@ static bool HasUnsent(struct SolidSyslogStore* self)
 static bool IsHalted(struct SolidSyslogStore* self)
 {
     return BlockSequence_IsHalted(&AsFileStore(self)->blockSequence);
+}
+
+static size_t GetTotalBytes(struct SolidSyslogStore* self)
+{
+    return BlockSequence_TotalBytes(&AsFileStore(self)->blockSequence);
+}
+
+static size_t GetUsedBytes(struct SolidSyslogStore* self)
+{
+    return BlockSequence_UsedBytes(&AsFileStore(self)->blockSequence);
 }
 
 /* ------------------------------------------------------------------

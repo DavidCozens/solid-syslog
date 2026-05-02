@@ -1599,3 +1599,138 @@ TEST(SolidSyslogFileStoreCorruptionRecovery, CorruptWriteFileRotatesOnNextWrite)
     CHECK_TRUE(SolidSyslogStore_Write(store, newMsg, sizeof(newMsg)));
     CHECK_TRUE(SolidSyslogFile_Exists(writeFile, "/tmp/test_store01.log"));
 }
+
+/* ------------------------------------------------------------------
+ * Capacity getters
+ * ----------------------------------------------------------------*/
+
+// clang-format off
+TEST_GROUP(SolidSyslogFileStoreCapacity)
+{
+    struct FileFakeStorage storage = {};
+    struct SolidSyslogFile* file = nullptr;
+    // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+    struct SolidSyslogStore* store = nullptr;
+
+    void setup() override
+    {
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+        file = FileFake_Create(&storage);
+    }
+
+    void teardown() override
+    {
+        if (store != nullptr) { SolidSyslogFileStore_Destroy(store); }
+        FileFake_Destroy();
+    }
+};
+
+// clang-format on
+
+/* Given maxFiles × maxFileSize configured,
+ * When GetTotalBytes is queried,
+ * Then it returns the product. */
+TEST(SolidSyslogFileStoreCapacity, GetTotalBytesReturnsMaxFilesTimesMaxFileSize)
+{
+    struct SolidSyslogFileStoreConfig config = MakeConfig(file);
+    store                                    = SolidSyslogFileStore_Create(&storeStorage, &config);
+    LONGS_EQUAL(TEST_MAX_FILES * TEST_MAX_FILE_SIZE, SolidSyslogStore_GetTotalBytes(store));
+}
+
+TEST(SolidSyslogFileStoreCapacity, GetTotalBytesScalesWithConfig)
+{
+    struct SolidSyslogFileStoreConfig config = MakeConfig(file);
+    config.maxFiles                          = 3;
+    config.maxFileSize                       = 10000;
+    store                                    = SolidSyslogFileStore_Create(&storeStorage, &config);
+    LONGS_EQUAL(3 * 10000, SolidSyslogStore_GetTotalBytes(store));
+}
+
+/* Given an empty store,
+ * When GetUsedBytes is queried,
+ * Then it returns 0. */
+TEST(SolidSyslogFileStoreCapacity, GetUsedBytesIsZeroOnEmptyStore)
+{
+    struct SolidSyslogFileStoreConfig config = MakeConfig(file);
+    store                                    = SolidSyslogFileStore_Create(&storeStorage, &config);
+    LONGS_EQUAL(0, SolidSyslogStore_GetUsedBytes(store));
+}
+
+/* Given an empty store,
+ * When records totalling X bytes are written,
+ * Then GetUsedBytes returns X (including record overhead). */
+TEST(SolidSyslogFileStoreCapacity, GetUsedBytesTracksOneWrite)
+{
+    struct SolidSyslogFileStoreConfig config = MakeConfig(file);
+    store                                    = SolidSyslogFileStore_Create(&storeStorage, &config);
+    SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
+    /* TEST_DATA_LEN data + TEST_RECORD_OVERHEAD (no integrity) */
+    LONGS_EQUAL(TEST_DATA_LEN + TEST_RECORD_OVERHEAD, SolidSyslogStore_GetUsedBytes(store));
+}
+
+TEST(SolidSyslogFileStoreCapacity, GetUsedBytesCountsClosedBlocksAtFullSize)
+{
+    /* Tight maxFileSize so a single max-msg record fills a block; second write
+     * rotates. Closed block contributes maxFileSize regardless of slack. */
+    struct SolidSyslogFileStoreConfig config = MakeConfig(file);
+    config.maxFileSize                       = SOLIDSYSLOG_MAX_MESSAGE_SIZE + TEST_RECORD_OVERHEAD;
+    config.maxFiles                          = 3;
+    store                                    = SolidSyslogFileStore_Create(&storeStorage, &config);
+
+    char maxMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    memset(maxMsg, 'A', sizeof(maxMsg));
+    SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)); /* block 0 fills */
+    SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)); /* rotates to block 1 */
+
+    size_t recordSize = sizeof(maxMsg) + TEST_RECORD_OVERHEAD;
+    LONGS_EQUAL(config.maxFileSize + recordSize, SolidSyslogStore_GetUsedBytes(store));
+}
+
+/* Given a full store with SOLIDSYSLOG_DISCARD_OLDEST,
+ * When the oldest block is discarded,
+ * Then GetUsedBytes drops by one block size. */
+TEST(SolidSyslogFileStoreCapacity, GetUsedBytesDropsOnDiscardOldest)
+{
+    struct SolidSyslogFileStoreConfig config = MakeConfig(file);
+    config.maxFileSize                       = SOLIDSYSLOG_MAX_MESSAGE_SIZE + TEST_RECORD_OVERHEAD;
+    config.maxFiles                          = 2;
+    config.discardPolicy                     = SOLIDSYSLOG_DISCARD_OLDEST;
+    store                                    = SolidSyslogFileStore_Create(&storeStorage, &config);
+
+    char maxMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    memset(maxMsg, 'A', sizeof(maxMsg));
+    SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)); /* block 0 full */
+    SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)); /* block 1 full, at maxFiles */
+
+    LONGS_EQUAL(2 * config.maxFileSize, SolidSyslogStore_GetUsedBytes(store));
+
+    SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN); /* rotates to block 2, discards block 0 */
+
+    /* 1 closed block (block 1) + active block holds one small record. */
+    LONGS_EQUAL(config.maxFileSize + TEST_DATA_LEN + TEST_RECORD_OVERHEAD, SolidSyslogStore_GetUsedBytes(store));
+}
+
+/* Given a store at capacity with SOLIDSYSLOG_HALT,
+ * When a Write fails for size,
+ * Then GetUsedBytes returns total even when the active block has slack. */
+TEST(SolidSyslogFileStoreCapacity, GetUsedBytesIsStickyAtTotalAfterSizeFailure)
+{
+    struct SolidSyslogFileStoreConfig config = MakeConfig(file);
+    /* maxFileSize larger than one max-msg record so the active block has slack. */
+    config.maxFileSize   = SOLIDSYSLOG_MAX_MESSAGE_SIZE + TEST_RECORD_OVERHEAD + 100;
+    config.maxFiles      = 2;
+    config.discardPolicy = SOLIDSYSLOG_HALT;
+    store                = SolidSyslogFileStore_Create(&storeStorage, &config);
+
+    char maxMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    memset(maxMsg, 'A', sizeof(maxMsg));
+    SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)); /* block 0: 100 bytes slack */
+    SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)); /* block 1: 100 bytes slack, at maxFiles */
+
+    /* The next write needs to rotate but can't (HALT, at maxFiles) — fails for size. */
+    CHECK_FALSE(SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)));
+
+    /* Sticky: GetUsedBytes returns total (2 * maxFileSize) even though the
+     * actual bytes stored leave 200 bytes of slack across the two blocks. */
+    LONGS_EQUAL(SolidSyslogStore_GetTotalBytes(store), SolidSyslogStore_GetUsedBytes(store));
+}

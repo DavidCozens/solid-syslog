@@ -29,6 +29,7 @@ struct BlockSequence
     enum SolidSyslogDiscardPolicy discardPolicy;
     SolidSyslogStoreFullCallback  onStoreFull;
     bool                          halted;
+    bool                          atCapacity;
     uint8_t                       oldestSequence;
     uint8_t                       readSequence;
     uint8_t                       writeSequence;
@@ -53,7 +54,9 @@ void                    BlockSequence_SetReadCursor(struct BlockSequence* blockS
 void                    BlockSequence_AdvanceToNextReadFile(struct BlockSequence* blockSequence);
 bool                    BlockSequence_ReadingOlderFile(const struct BlockSequence* blockSequence);
 
-bool BlockSequence_HasUnsent(const struct BlockSequence* blockSequence);
-bool BlockSequence_IsHalted(const struct BlockSequence* blockSequence);
+bool   BlockSequence_HasUnsent(const struct BlockSequence* blockSequence);
+bool   BlockSequence_IsHalted(const struct BlockSequence* blockSequence);
+size_t BlockSequence_TotalBytes(const struct BlockSequence* blockSequence);
+size_t BlockSequence_UsedBytes(const struct BlockSequence* blockSequence);
 
 #endif /* SOLIDSYSLOG_BLOCKSEQUENCE_H */

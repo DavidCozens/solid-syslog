@@ -68,6 +68,7 @@ void BlockSequence_Init(struct BlockSequence* blockSequence, const struct BlockS
     blockSequence->discardPolicy    = config->discardPolicy;
     blockSequence->onStoreFull      = config->onStoreFull;
     blockSequence->halted           = false;
+    blockSequence->atCapacity       = false;
     blockSequence->oldestSequence   = 0;
     blockSequence->readSequence     = 0;
     blockSequence->writeSequence    = 0;
@@ -185,6 +186,8 @@ static inline bool StoreIsFull(const struct BlockSequence* blockSequence)
 
 static inline void NotifyStoreFull(struct BlockSequence* blockSequence)
 {
+    blockSequence->atCapacity = true;
+
     if (blockSequence->discardPolicy == SOLIDSYSLOG_HALT)
     {
         blockSequence->halted = true;
@@ -311,4 +314,20 @@ bool BlockSequence_HasUnsent(const struct BlockSequence* blockSequence)
 bool BlockSequence_IsHalted(const struct BlockSequence* blockSequence)
 {
     return blockSequence->halted;
+}
+
+size_t BlockSequence_TotalBytes(const struct BlockSequence* blockSequence)
+{
+    return blockSequence->maxFiles * blockSequence->maxFileSize;
+}
+
+size_t BlockSequence_UsedBytes(const struct BlockSequence* blockSequence)
+{
+    if (blockSequence->atCapacity)
+    {
+        return BlockSequence_TotalBytes(blockSequence);
+    }
+
+    size_t closedBlocks = FileCount(blockSequence) - 1;
+    return (closedBlocks * blockSequence->maxFileSize) + blockSequence->writePosition;
 }
