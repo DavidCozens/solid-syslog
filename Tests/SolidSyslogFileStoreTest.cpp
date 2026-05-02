@@ -694,14 +694,17 @@ TEST_GROUP(SolidSyslogFileStoreRotation)
     }
 
     void CreateWithMaxFileSize(size_t maxFileSize, enum SolidSyslogDiscardPolicy policy = SOLIDSYSLOG_DISCARD_OLDEST,
-                               size_t maxFiles = 2)
+                               size_t maxFiles = 2,
+                               SolidSyslogStoreFullCallback onStoreFull = nullptr, void* storeFullContext = nullptr)
     {
         struct SolidSyslogFileStoreConfig config = DEFAULT_CONFIG;
-        config.readFile      = readFile;
-        config.writeFile     = writeFile;
-        config.maxFileSize   = maxFileSize;
-        config.maxFiles      = maxFiles;
-        config.discardPolicy = policy;
+        config.readFile          = readFile;
+        config.writeFile         = writeFile;
+        config.maxFileSize       = maxFileSize;
+        config.maxFiles          = maxFiles;
+        config.discardPolicy     = policy;
+        config.onStoreFull       = onStoreFull;
+        config.storeFullContext  = storeFullContext;
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
         store = SolidSyslogFileStore_Create(&storeStorage, &config);
     }
@@ -880,15 +883,7 @@ static void StoreFullCallback(void* context)
 TEST(SolidSyslogFileStoreRotation, HaltInvokesCallbackWhenStoreFull)
 {
     storeFullCallbackInvoked = false;
-
-    struct SolidSyslogFileStoreConfig config = DEFAULT_CONFIG;
-    config.readFile                          = readFile;
-    config.writeFile                         = writeFile;
-    config.maxFileSize                       = ONE_MAX_MSG_RECORD;
-    config.maxFiles                          = 2;
-    config.discardPolicy                     = SOLIDSYSLOG_HALT;
-    config.onStoreFull                       = StoreFullCallback;
-    store                                    = SolidSyslogFileStore_Create(&storeStorage, &config);
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_HALT, 2, StoreFullCallback);
 
     WriteMaxMsg(); /* file 00 */
     WriteMaxMsg(); /* file 01 — now at maxFiles=2 */
@@ -899,14 +894,7 @@ TEST(SolidSyslogFileStoreRotation, HaltInvokesCallbackWhenStoreFull)
 
 TEST(SolidSyslogFileStoreRotation, HaltWithNullCallbackDoesNotCrash)
 {
-    struct SolidSyslogFileStoreConfig config = DEFAULT_CONFIG;
-    config.readFile                          = readFile;
-    config.writeFile                         = writeFile;
-    config.maxFileSize                       = ONE_MAX_MSG_RECORD;
-    config.maxFiles                          = 2;
-    config.discardPolicy                     = SOLIDSYSLOG_HALT;
-    config.onStoreFull                       = nullptr;
-    store                                    = SolidSyslogFileStore_Create(&storeStorage, &config);
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_HALT);
 
     WriteMaxMsg(); /* file 00 */
     WriteMaxMsg(); /* file 01 — now at maxFiles=2 */
@@ -916,14 +904,7 @@ TEST(SolidSyslogFileStoreRotation, HaltWithNullCallbackDoesNotCrash)
 
 TEST(SolidSyslogFileStoreRotation, HaltSetsIsHaltedTrue)
 {
-    struct SolidSyslogFileStoreConfig config = DEFAULT_CONFIG;
-    config.readFile                          = readFile;
-    config.writeFile                         = writeFile;
-    config.maxFileSize                       = ONE_MAX_MSG_RECORD;
-    config.maxFiles                          = 2;
-    config.discardPolicy                     = SOLIDSYSLOG_HALT;
-    config.onStoreFull                       = nullptr;
-    store                                    = SolidSyslogFileStore_Create(&storeStorage, &config);
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_HALT);
 
     WriteMaxMsg(); /* file 00 */
     WriteMaxMsg(); /* file 01 — now at maxFiles=2 */
@@ -936,15 +917,7 @@ TEST(SolidSyslogFileStoreRotation, HaltSetsIsHaltedTrue)
 TEST(SolidSyslogFileStoreRotation, DiscardNewestDoesNotInvokeCallback)
 {
     storeFullCallbackInvoked = false;
-
-    struct SolidSyslogFileStoreConfig config = DEFAULT_CONFIG;
-    config.readFile                          = readFile;
-    config.writeFile                         = writeFile;
-    config.maxFileSize                       = ONE_MAX_MSG_RECORD;
-    config.maxFiles                          = 2;
-    config.discardPolicy                     = SOLIDSYSLOG_DISCARD_NEWEST;
-    config.onStoreFull                       = StoreFullCallback;
-    store                                    = SolidSyslogFileStore_Create(&storeStorage, &config);
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_DISCARD_NEWEST, 2, StoreFullCallback);
 
     WriteMaxMsg(); /* file 00 */
     WriteMaxMsg(); /* file 01 — now at maxFiles=2 */
@@ -968,15 +941,7 @@ TEST(SolidSyslogFileStoreRotation, OnStoreFullReceivesConfiguredContext)
     int sentinel             = 0;
     storeFullCallbackContext = nullptr;
 
-    struct SolidSyslogFileStoreConfig config = DEFAULT_CONFIG;
-    config.readFile                          = readFile;
-    config.writeFile                         = writeFile;
-    config.maxFileSize                       = ONE_MAX_MSG_RECORD;
-    config.maxFiles                          = 2;
-    config.discardPolicy                     = SOLIDSYSLOG_HALT;
-    config.onStoreFull                       = StoreFullCallbackCapturingContext;
-    config.storeFullContext                  = &sentinel;
-    store                                    = SolidSyslogFileStore_Create(&storeStorage, &config);
+    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_HALT, 2, StoreFullCallbackCapturingContext, &sentinel);
 
     WriteMaxMsg(); /* file 00 */
     WriteMaxMsg(); /* file 01 — at maxFiles */
