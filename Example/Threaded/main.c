@@ -140,7 +140,9 @@ static struct SolidSyslogStore* CreateStore(const struct ExampleOptions* options
         storeConfig.discardPolicy                            = MapDiscardPolicy(options->discardPolicy);
         storeConfig.securityPolicy                           = SolidSyslogCrc16Policy_Create();
         storeConfig.onStoreFull                              = OnStoreFull;
-        return SolidSyslogFileStore_Create(&storeConfig);
+
+        static SolidSyslogFileStoreStorage storeStorage;
+        return SolidSyslogFileStore_Create(&storeStorage, &storeConfig);
     }
 
     return SolidSyslogNullStore_Create();
@@ -157,13 +159,13 @@ static void DestroySender(void)
     SolidSyslogGetAddrInfoResolver_Destroy();
 }
 
-static void DestroyStore(const struct ExampleOptions* options)
+static void DestroyStore(const struct ExampleOptions* options, struct SolidSyslogStore* store)
 {
     bool useFile = (strcmp(options->store, "file") == 0);
 
     if (useFile)
     {
-        SolidSyslogFileStore_Destroy();
+        SolidSyslogFileStore_Destroy(store);
         SolidSyslogCrc16Policy_Destroy();
         SolidSyslogPosixFile_Destroy(storeWriteFile);
         SolidSyslogPosixFile_Destroy(storeReadFile);
@@ -246,7 +248,7 @@ int main(int argc, char* argv[])
     SolidSyslogMetaSd_Destroy();
     SolidSyslogAtomicCounter_Destroy();
     SolidSyslogStdAtomicOps_Destroy();
-    DestroyStore(&options);
+    DestroyStore(&options, store);
     SolidSyslogPosixMessageQueueBuffer_Destroy();
     DestroySender();
 
