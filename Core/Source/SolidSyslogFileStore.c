@@ -33,8 +33,9 @@ static const struct SolidSyslogFileStore DEFAULT_INSTANCE = {0};
 
 static inline struct SolidSyslogFileStore*      AsFileStore(struct SolidSyslogStore* store);
 static inline struct SolidSyslogSecurityPolicy* ResolveSecurityPolicy(struct SolidSyslogSecurityPolicy* configured);
-static inline void                              InitialiseVtable(struct SolidSyslogFileStore* fileStore);
-static void                                     ResumeFromExistingFile(struct SolidSyslogFileStore* fileStore);
+static inline struct BlockSequenceConfig BuildBlockSequenceConfig(const struct SolidSyslogFileStoreConfig* config, const struct RecordStore* recordStore);
+static inline void                       InitialiseVtable(struct SolidSyslogFileStore* fileStore);
+static void                              ResumeFromExistingFile(struct SolidSyslogFileStore* fileStore);
 
 /* ------------------------------------------------------------------
  * Create
@@ -46,20 +47,9 @@ struct SolidSyslogStore* SolidSyslogFileStore_Create(SolidSyslogFileStoreStorage
     struct SolidSyslogFileStore* fileStore = (struct SolidSyslogFileStore*) storage;
     *fileStore                             = DEFAULT_INSTANCE;
 
-    struct SolidSyslogSecurityPolicy* securityPolicy = ResolveSecurityPolicy(config->securityPolicy);
-    RecordStore_Init(&fileStore->recordStore, securityPolicy);
+    RecordStore_Init(&fileStore->recordStore, ResolveSecurityPolicy(config->securityPolicy));
 
-    size_t                     minFileSize = RecordStore_RecordSize(&fileStore->recordStore, SOLIDSYSLOG_MAX_MESSAGE_SIZE);
-    struct BlockSequenceConfig blockConfig = {
-        .readFile         = config->readFile,
-        .writeFile        = config->writeFile,
-        .pathPrefix       = config->pathPrefix,
-        .maxFileSize      = (config->maxFileSize < minFileSize) ? minFileSize : config->maxFileSize,
-        .maxFiles         = config->maxFiles,
-        .discardPolicy    = config->discardPolicy,
-        .onStoreFull      = config->onStoreFull,
-        .storeFullContext = config->storeFullContext,
-    };
+    struct BlockSequenceConfig blockConfig = BuildBlockSequenceConfig(config, &fileStore->recordStore);
     BlockSequence_Init(&fileStore->blockSequence, &blockConfig);
 
     InitialiseVtable(fileStore);
@@ -88,6 +78,24 @@ static inline struct SolidSyslogSecurityPolicy* ResolveSecurityPolicy(struct Sol
     }
 
     return resolved;
+}
+
+static inline struct BlockSequenceConfig BuildBlockSequenceConfig(const struct SolidSyslogFileStoreConfig* config, const struct RecordStore* recordStore)
+{
+    size_t minFileSize = RecordStore_RecordSize(recordStore, SOLIDSYSLOG_MAX_MESSAGE_SIZE);
+    size_t maxFileSize = (config->maxFileSize < minFileSize) ? minFileSize : config->maxFileSize;
+
+    struct BlockSequenceConfig blockConfig = {
+        .readFile         = config->readFile,
+        .writeFile        = config->writeFile,
+        .pathPrefix       = config->pathPrefix,
+        .maxFileSize      = maxFileSize,
+        .maxFiles         = config->maxFiles,
+        .discardPolicy    = config->discardPolicy,
+        .onStoreFull      = config->onStoreFull,
+        .storeFullContext = config->storeFullContext,
+    };
+    return blockConfig;
 }
 
 static inline void InitialiseVtable(struct SolidSyslogFileStore* fileStore)
