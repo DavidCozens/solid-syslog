@@ -80,12 +80,14 @@ static inline struct SolidSyslogFileStore* AsFileStore(struct SolidSyslogStore* 
 
 static inline struct SolidSyslogSecurityPolicy* ResolveSecurityPolicy(struct SolidSyslogSecurityPolicy* configured)
 {
-    if ((configured == NULL) || (configured->integritySize > SOLIDSYSLOG_MAX_INTEGRITY_SIZE))
+    struct SolidSyslogSecurityPolicy* resolved = configured;
+
+    if ((resolved == NULL) || (resolved->integritySize > SOLIDSYSLOG_MAX_INTEGRITY_SIZE))
     {
-        return SolidSyslogNullSecurityPolicy_Create();
+        resolved = SolidSyslogNullSecurityPolicy_Create();
     }
 
-    return configured;
+    return resolved;
 }
 
 static inline void InitialiseVtable(struct SolidSyslogFileStore* fileStore)

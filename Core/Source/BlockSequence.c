@@ -87,18 +87,18 @@ bool BlockSequence_Open(struct BlockSequence* blockSequence)
     SolidSyslogFormatterStorage writeNameStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(MAX_PATH_SIZE)];
     const char*                 writeName = FormatFilename(blockSequence, writeNameStorage, blockSequence->writeSequence);
 
-    if (!SolidSyslogFile_Open(blockSequence->writeFile, writeName))
+    bool opened = SolidSyslogFile_Open(blockSequence->writeFile, writeName);
+
+    if (opened)
     {
-        return false;
+        SolidSyslogFormatterStorage readNameStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(MAX_PATH_SIZE)];
+        const char*                 readName = FormatFilename(blockSequence, readNameStorage, blockSequence->readSequence);
+        SolidSyslogFile_Open(blockSequence->readFile, readName);
+
+        blockSequence->writePosition = SolidSyslogFile_Size(blockSequence->writeFile);
     }
 
-    SolidSyslogFormatterStorage readNameStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(MAX_PATH_SIZE)];
-    const char*                 readName = FormatFilename(blockSequence, readNameStorage, blockSequence->readSequence);
-    SolidSyslogFile_Open(blockSequence->readFile, readName);
-
-    blockSequence->writePosition = SolidSyslogFile_Size(blockSequence->writeFile);
-
-    return true;
+    return opened;
 }
 
 static void ScanForExistingFiles(struct BlockSequence* blockSequence)
