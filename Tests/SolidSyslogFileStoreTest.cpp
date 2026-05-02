@@ -1939,11 +1939,40 @@ TEST(SolidSyslogFileStoreCapacityThreshold, AtFullCapacityWithHaltThresholdFires
     thresholdReturnValue = 2 * (MAX_MSG_RECORD + SLACK);
     store                = SolidSyslogFileStore_Create(&storeStorage, &config);
 
-    SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)); /* block 0 partially full */
-    SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)); /* rotate; block 1 partially full */
+    SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg));              /* block 0 partially full */
+    SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg));              /* rotate; block 1 partially full */
     CHECK_FALSE(SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg))); /* HALT: fails, sticky engages */
 
     CHECK_TRUE(thresholdFireOrder > 0);
     CHECK_TRUE(storeFullFireOrder > 0);
     CHECK_TRUE(thresholdFireOrder < storeFullFireOrder);
+}
+
+/* Given a failed Write has already engaged the sticky 100% bit,
+ * When subsequent Writes also fail for size,
+ * Then onThresholdCrossed does not fire again. */
+TEST(SolidSyslogFileStoreCapacityThreshold, StickyHundredPercentDoesNotRefireThreshold)
+{
+    static const size_t MAX_MSG_RECORD = SOLIDSYSLOG_MAX_MESSAGE_SIZE + TEST_RECORD_OVERHEAD;
+    static const size_t SLACK          = 100;
+
+    char maxMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    memset(maxMsg, 'A', sizeof(maxMsg));
+
+    struct SolidSyslogFileStoreConfig config = MakeConfig(file);
+    config.maxFileSize                       = MAX_MSG_RECORD + SLACK;
+    config.maxFiles                          = 2;
+    config.discardPolicy                     = SOLIDSYSLOG_HALT;
+    config.getCapacityThreshold              = ReturnsConfiguredThreshold;
+    config.onThresholdCrossed                = CountThresholdCrossings;
+    thresholdReturnValue                     = 2 * (MAX_MSG_RECORD + SLACK);
+    store                                    = SolidSyslogFileStore_Create(&storeStorage, &config);
+
+    SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)); /* fills block 0 partially */
+    SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)); /* fills block 1 partially */
+    SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)); /* fails, sticky engages — fires once */
+    SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)); /* fails again — must not refire */
+    SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)); /* fails again — must not refire */
+
+    LONGS_EQUAL(1, thresholdCallbackCount);
 }
