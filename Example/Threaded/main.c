@@ -160,7 +160,7 @@ static void DestroySender(void)
     SolidSyslogGetAddrInfoResolver_Destroy();
 }
 
-static void DestroyStore(const struct ExampleOptions* options, struct SolidSyslogStore* store)
+static void DestroyStore(struct SolidSyslogStore* store, const struct ExampleOptions* options)
 {
     bool useFile = (strcmp(options->store, "file") == 0);
 
@@ -249,7 +249,7 @@ int main(int argc, char* argv[])
     SolidSyslogMetaSd_Destroy();
     SolidSyslogAtomicCounter_Destroy();
     SolidSyslogStdAtomicOps_Destroy();
-    DestroyStore(&options, store);
+    DestroyStore(store, &options);
     SolidSyslogPosixMessageQueueBuffer_Destroy();
     DestroySender();
 
