@@ -15,6 +15,12 @@ enum
     SENT_FLAG_SENT     = 0x00
 };
 
+/* Each record in the buffer is laid out as
+ *   [ magic | length | message | integrity | sentFlag ]
+ * Field-address helpers chain outward from the record's base so the
+ * field offsets are stated in one place each. The same chaining shapes
+ * the file-offset helpers below. */
+
 static inline uint8_t* MagicAddress(struct RecordStore* recordStore)
 {
     return recordStore->buffer;
@@ -22,17 +28,22 @@ static inline uint8_t* MagicAddress(struct RecordStore* recordStore)
 
 static inline uint8_t* LengthAddress(struct RecordStore* recordStore)
 {
-    return recordStore->buffer + MAGIC_SIZE;
+    return MagicAddress(recordStore) + MAGIC_SIZE;
 }
 
 static inline uint8_t* MessageAddress(struct RecordStore* recordStore)
 {
-    return recordStore->buffer + MAGIC_SIZE + RECORD_LENGTH_SIZE;
+    return LengthAddress(recordStore) + RECORD_LENGTH_SIZE;
 }
 
 static inline uint8_t* IntegrityChecksumAddress(struct RecordStore* recordStore, size_t dataSize)
 {
-    return recordStore->buffer + MAGIC_SIZE + RECORD_LENGTH_SIZE + dataSize;
+    return MessageAddress(recordStore) + dataSize;
+}
+
+static inline uint8_t* SentFlagAddress(struct RecordStore* recordStore, size_t dataSize)
+{
+    return IntegrityChecksumAddress(recordStore, dataSize) + recordStore->securityPolicy->integritySize;
 }
 
 static inline uint8_t* IntegrityRegionAddress(struct RecordStore* recordStore)
@@ -45,19 +56,14 @@ static inline uint16_t IntegrityRegionSize(size_t dataSize)
     return (uint16_t) (MAGIC_SIZE + RECORD_LENGTH_SIZE + dataSize);
 }
 
-static inline uint8_t* SentFlagAddress(struct RecordStore* recordStore, size_t dataSize)
+static inline size_t IntegrityChecksumFileOffset(size_t recordStart, uint16_t dataLength)
 {
-    return recordStore->buffer + MAGIC_SIZE + RECORD_LENGTH_SIZE + dataSize + recordStore->securityPolicy->integritySize;
+    return recordStart + MAGIC_SIZE + RECORD_LENGTH_SIZE + dataLength;
 }
 
 static inline size_t SentFlagFileOffset(const struct RecordStore* recordStore, size_t recordStart, uint16_t dataLength)
 {
-    return recordStart + MAGIC_SIZE + RECORD_LENGTH_SIZE + dataLength + recordStore->securityPolicy->integritySize;
-}
-
-static inline size_t IntegrityChecksumFileOffset(size_t recordStart, uint16_t dataLength)
-{
-    return recordStart + MAGIC_SIZE + RECORD_LENGTH_SIZE + dataLength;
+    return IntegrityChecksumFileOffset(recordStart, dataLength) + recordStore->securityPolicy->integritySize;
 }
 
 void RecordStore_Init(struct RecordStore* recordStore, struct SolidSyslogSecurityPolicy* securityPolicy)
@@ -120,7 +126,6 @@ bool RecordStore_Read(struct RecordStore* recordStore, struct SolidSyslogFile* f
     return read;
 }
 
-static inline bool ReadFromFile(struct SolidSyslogFile* file, void* buf, size_t count);
 static inline bool ReadRecordHeader(struct RecordStore* recordStore, struct SolidSyslogFile* file, size_t offset);
 static inline bool ValidateHeader(struct RecordStore* recordStore, uint16_t* length);
 static inline bool ReadRecordBody(struct RecordStore* recordStore, struct SolidSyslogFile* file, size_t offset, uint16_t length);
@@ -133,15 +138,10 @@ static bool ReadAndValidateRecord(struct RecordStore* recordStore, struct SolidS
            ReadIntegrityChecksum(recordStore, file, offset, *length) && VerifyIntegrity(recordStore, *length);
 }
 
-static inline bool ReadFromFile(struct SolidSyslogFile* file, void* buf, size_t count)
-{
-    return SolidSyslogFile_Read(file, buf, count);
-}
-
 static inline bool ReadRecordHeader(struct RecordStore* recordStore, struct SolidSyslogFile* file, size_t offset)
 {
     SolidSyslogFile_SeekTo(file, offset);
-    return ReadFromFile(file, IntegrityRegionAddress(recordStore), MAGIC_SIZE + RECORD_LENGTH_SIZE);
+    return SolidSyslogFile_Read(file, IntegrityRegionAddress(recordStore), MAGIC_SIZE + RECORD_LENGTH_SIZE);
 }
 
 static inline bool IsMagicValid(struct RecordStore* recordStore)
@@ -179,13 +179,13 @@ static inline bool ValidateHeader(struct RecordStore* recordStore, uint16_t* len
 static inline bool ReadRecordBody(struct RecordStore* recordStore, struct SolidSyslogFile* file, size_t offset, uint16_t length)
 {
     SolidSyslogFile_SeekTo(file, offset + MAGIC_SIZE + RECORD_LENGTH_SIZE);
-    return ReadFromFile(file, MessageAddress(recordStore), length);
+    return SolidSyslogFile_Read(file, MessageAddress(recordStore), length);
 }
 
 static inline bool ReadIntegrityChecksum(struct RecordStore* recordStore, struct SolidSyslogFile* file, size_t recordStart, uint16_t dataLength)
 {
     SolidSyslogFile_SeekTo(file, IntegrityChecksumFileOffset(recordStart, dataLength));
-    return ReadFromFile(file, IntegrityChecksumAddress(recordStore, dataLength), recordStore->securityPolicy->integritySize);
+    return SolidSyslogFile_Read(file, IntegrityChecksumAddress(recordStore, dataLength), recordStore->securityPolicy->integritySize);
 }
 
 static inline bool VerifyIntegrity(struct RecordStore* recordStore, uint16_t length)
