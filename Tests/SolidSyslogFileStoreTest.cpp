@@ -1977,6 +1977,24 @@ TEST(SolidSyslogFileStoreCapacityThreshold, StickyHundredPercentDoesNotRefireThr
     LONGS_EQUAL(1, thresholdCallbackCount);
 }
 
+/* Given current usage well below threshold,
+ * When getCapacityThreshold starts returning a value the current usage already exceeds,
+ * Then onThresholdCrossed fires on the next Write. */
+TEST(SolidSyslogFileStoreCapacityThreshold, FiresWhenThresholdDropsBelowCurrentUsage)
+{
+    static const size_t HIGH_THRESHOLD = 1000000;
+    static const size_t LOW_THRESHOLD  = 1;
+
+    CreateWithThreshold(HIGH_THRESHOLD);
+    SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
+    LONGS_EQUAL(0, thresholdCallbackCount); /* still well below threshold */
+
+    thresholdReturnValue = LOW_THRESHOLD; /* threshold drops below current usage */
+    SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
+
+    LONGS_EQUAL(1, thresholdCallbackCount);
+}
+
 /* Given persisted store contents already at-or-above threshold,
  * When the integrator calls SolidSyslogFileStore_Create,
  * Then onThresholdCrossed fires once during Create. */
