@@ -36,6 +36,7 @@ set(TEST_SOURCES
     StreamFake.c
     TestAssert.cpp
     SolidSyslogFileStoreTest.cpp
+    SolidSyslogBlockDeviceTest.cpp
     main.cpp
 )
 
