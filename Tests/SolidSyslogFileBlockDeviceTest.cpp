@@ -1,0 +1,166 @@
+#include "CppUTest/TestHarness.h"
+#include "FileFake.h"
+#include "SolidSyslogBlockDevice.h"
+#include "SolidSyslogFileBlockDevice.h"
+
+static const char* const TEST_PATH_PREFIX = "/tmp/blockdev_";
+
+// clang-format off
+TEST_GROUP(SolidSyslogFileBlockDevice)
+{
+    struct FileFakeStorage              readStorage  = {};
+    struct FileFakeStorage              writeStorage = {};
+    struct SolidSyslogFile*             readFile     = nullptr;
+    struct SolidSyslogFile*             writeFile    = nullptr;
+    SolidSyslogFileBlockDeviceStorage   deviceStorage = {};
+    struct SolidSyslogBlockDevice*      device       = nullptr;
+
+    void setup() override
+    {
+        readFile  = FileFake_Create(&readStorage);
+        writeFile = FileFake_Create(&writeStorage);
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+        device = SolidSyslogFileBlockDevice_Create(&deviceStorage, readFile, writeFile, TEST_PATH_PREFIX);
+    }
+
+    void teardown() override
+    {
+        if (device != nullptr)
+        {
+            SolidSyslogFileBlockDevice_Destroy(device);
+        }
+        FileFake_Destroy();
+    }
+};
+
+// clang-format on
+
+TEST(SolidSyslogFileBlockDevice, CreateReturnsNonNull)
+{
+    CHECK_TRUE(device != nullptr);
+}
+
+TEST(SolidSyslogFileBlockDevice, ExistsReturnsFalseOnFreshSlate)
+{
+    CHECK_FALSE(SolidSyslogBlockDevice_Exists(device, 0));
+}
+
+TEST(SolidSyslogFileBlockDevice, AcquireMakesBlockExist)
+{
+    CHECK_TRUE(SolidSyslogBlockDevice_Acquire(device, 0));
+    CHECK_TRUE(SolidSyslogBlockDevice_Exists(device, 0));
+}
+
+TEST(SolidSyslogFileBlockDevice, AcquireFreshBlockHasZeroSize)
+{
+    SolidSyslogBlockDevice_Acquire(device, 0);
+    LONGS_EQUAL(0, SolidSyslogBlockDevice_Size(device, 0));
+}
+
+TEST(SolidSyslogFileBlockDevice, AppendIncreasesBlockSize)
+{
+    SolidSyslogBlockDevice_Acquire(device, 0);
+    CHECK_TRUE(SolidSyslogBlockDevice_Append(device, 0, "abc", 3));
+    LONGS_EQUAL(3, SolidSyslogBlockDevice_Size(device, 0));
+}
+
+TEST(SolidSyslogFileBlockDevice, ReadReturnsAppendedBytes)
+{
+    SolidSyslogBlockDevice_Acquire(device, 0);
+    SolidSyslogBlockDevice_Append(device, 0, "abc", 3);
+
+    char buf[4] = {};
+    CHECK_TRUE(SolidSyslogBlockDevice_Read(device, 0, 0, buf, 3));
+    MEMCMP_EQUAL("abc", buf, 3);
+}
+
+TEST(SolidSyslogFileBlockDevice, AppendsAccumulateAtEnd)
+{
+    SolidSyslogBlockDevice_Acquire(device, 0);
+    SolidSyslogBlockDevice_Append(device, 0, "abc", 3);
+    SolidSyslogBlockDevice_Append(device, 0, "de", 2);
+
+    LONGS_EQUAL(5, SolidSyslogBlockDevice_Size(device, 0));
+    char buf[6] = {};
+    SolidSyslogBlockDevice_Read(device, 0, 0, buf, 5);
+    MEMCMP_EQUAL("abcde", buf, 5);
+}
+
+TEST(SolidSyslogFileBlockDevice, ReadAtOffsetReturnsBytesFromOffset)
+{
+    SolidSyslogBlockDevice_Acquire(device, 0);
+    SolidSyslogBlockDevice_Append(device, 0, "abcde", 5);
+
+    char buf[3] = {};
+    SolidSyslogBlockDevice_Read(device, 0, 2, buf, 2);
+    MEMCMP_EQUAL("cd", buf, 2);
+}
+
+TEST(SolidSyslogFileBlockDevice, WriteAtMutatesByteInPlace)
+{
+    SolidSyslogBlockDevice_Acquire(device, 0);
+    SolidSyslogBlockDevice_Append(device, 0, "abcde", 5);
+
+    CHECK_TRUE(SolidSyslogBlockDevice_WriteAt(device, 0, 1, "X", 1));
+
+    char buf[6] = {};
+    SolidSyslogBlockDevice_Read(device, 0, 0, buf, 5);
+    MEMCMP_EQUAL("aXcde", buf, 5);
+    LONGS_EQUAL(5, SolidSyslogBlockDevice_Size(device, 0));
+}
+
+TEST(SolidSyslogFileBlockDevice, AcquireSecondBlockPreservesFirstBlockContent)
+{
+    SolidSyslogBlockDevice_Acquire(device, 0);
+    SolidSyslogBlockDevice_Append(device, 0, "first", 5);
+    SolidSyslogBlockDevice_Acquire(device, 1);
+
+    LONGS_EQUAL(0, SolidSyslogBlockDevice_Size(device, 1));
+    LONGS_EQUAL(5, SolidSyslogBlockDevice_Size(device, 0));
+    char buf[6] = {};
+    SolidSyslogBlockDevice_Read(device, 0, 0, buf, 5);
+    MEMCMP_EQUAL("first", buf, 5);
+}
+
+TEST(SolidSyslogFileBlockDevice, DisposeMakesBlockNotExist)
+{
+    SolidSyslogBlockDevice_Acquire(device, 0);
+    CHECK_TRUE(SolidSyslogBlockDevice_Dispose(device, 0));
+    CHECK_FALSE(SolidSyslogBlockDevice_Exists(device, 0));
+}
+
+TEST(SolidSyslogFileBlockDevice, DisposeLeavesOtherBlocksUntouched)
+{
+    SolidSyslogBlockDevice_Acquire(device, 0);
+    SolidSyslogBlockDevice_Acquire(device, 1);
+    SolidSyslogBlockDevice_Append(device, 1, "keep", 4);
+
+    SolidSyslogBlockDevice_Dispose(device, 0);
+
+    CHECK_TRUE(SolidSyslogBlockDevice_Exists(device, 1));
+    LONGS_EQUAL(4, SolidSyslogBlockDevice_Size(device, 1));
+}
+
+TEST(SolidSyslogFileBlockDevice, BlockFilenameZeroPadsSequenceToTwoDigits)
+{
+    SolidSyslogBlockDevice_Acquire(device, 7);
+    CHECK_TRUE(SolidSyslogFile_Exists(writeFile, "/tmp/blockdev_07.log"));
+}
+
+TEST(SolidSyslogFileBlockDevice, BlockFilenameWithTwoDigitIndex)
+{
+    SolidSyslogBlockDevice_Acquire(device, 42);
+    CHECK_TRUE(SolidSyslogFile_Exists(writeFile, "/tmp/blockdev_42.log"));
+}
+
+TEST(SolidSyslogFileBlockDevice, DestroyClosesOpenFileHandles)
+{
+    SolidSyslogBlockDevice_Acquire(device, 0);
+    SolidSyslogBlockDevice_Read(device, 0, 0, nullptr, 0);
+
+    SolidSyslogFileBlockDevice_Destroy(device);
+    device = nullptr;
+
+    CHECK_FALSE(SolidSyslogFile_IsOpen(readFile));
+    CHECK_FALSE(SolidSyslogFile_IsOpen(writeFile));
+}
