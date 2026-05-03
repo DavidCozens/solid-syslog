@@ -291,6 +291,14 @@ static bool AdvancePastSentRecord(struct RecordStore* recordStore, struct SolidS
     return advanced;
 }
 
+/* `flag` defaults to SENT_FLAG_SENT and the Read result is intentionally
+ * ignored: a sent-flag we cannot read is treated as already-sent so the
+ * scan keeps walking the file. The alternative — stop scanning, refuse
+ * to advance — would jam the logger on one bad byte and skip every record
+ * that follows in the same file. The single skipped record surfaces
+ * downstream as a sequenceId gap (RFC 5424 §6.3.1), which the receiver
+ * can detect; an integrator-supplied error reporter will surface
+ * persistent media errors directly when that path lands. */
 static inline bool IsRecordSent(const struct RecordStore* recordStore, struct SolidSyslogBlockDevice* blockDevice, size_t blockIndex, size_t recordStart,
                                 uint16_t length)
 {

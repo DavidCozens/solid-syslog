@@ -137,16 +137,31 @@ void FileFake_Destroy(void)
 
 void FileFake_FailNextOpen(struct SolidSyslogFile* file)
 {
+    if (file == NULL)
+    {
+        TestAssert_Fail("FileFake_FailNextOpen called with null file");
+        return;
+    }
     AsFake(file)->failNextOpen = true;
 }
 
 void FileFake_FailNextWrite(struct SolidSyslogFile* file)
 {
+    if (file == NULL)
+    {
+        TestAssert_Fail("FileFake_FailNextWrite called with null file");
+        return;
+    }
     AsFake(file)->failNextWrite = true;
 }
 
 void FileFake_FailNextRead(struct SolidSyslogFile* file)
 {
+    if (file == NULL)
+    {
+        TestAssert_Fail("FileFake_FailNextRead called with null file");
+        return;
+    }
     AsFake(file)->failNextRead = true;
 }
 

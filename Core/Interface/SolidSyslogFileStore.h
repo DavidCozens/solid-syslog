@@ -32,6 +32,8 @@ EXTERN_C_BEGIN
 
     struct SolidSyslogFileStoreConfig
     {
+        /* Required. Caller-owned: must outlive the FileStore. SolidSyslogFileStore_Destroy
+         * does NOT destroy the block device — that is the integrator's responsibility. */
         struct SolidSyslogBlockDevice*    blockDevice;
         size_t                            maxFileSize;
         size_t                            maxFiles;
