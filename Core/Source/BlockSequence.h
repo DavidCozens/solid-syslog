@@ -12,8 +12,8 @@ struct SolidSyslogBlockDevice;
 struct BlockSequenceConfig
 {
     struct SolidSyslogBlockDevice*    blockDevice;
-    size_t                            maxFileSize;
-    size_t                            maxFiles;
+    size_t                            maxBlockSize;
+    size_t                            maxBlocks;
     enum SolidSyslogDiscardPolicy     discardPolicy;
     SolidSyslogStoreFullCallback      onStoreFull;
     void*                             storeFullContext;
@@ -25,8 +25,8 @@ struct BlockSequenceConfig
 struct BlockSequence
 {
     struct SolidSyslogBlockDevice*    blockDevice;
-    size_t                            maxFileSize;
-    size_t                            maxFiles;
+    size_t                            maxBlockSize;
+    size_t                            maxBlocks;
     enum SolidSyslogDiscardPolicy     discardPolicy;
     SolidSyslogStoreFullCallback      onStoreFull;
     void*                             storeFullContext;

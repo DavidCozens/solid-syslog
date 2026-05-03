@@ -5,7 +5,7 @@ Feature: Capacity threshold alert
 
   Scenario: Threshold callback fires when usage crosses configured threshold
     Given syslog-ng is running
-    And the file store is enabled with max-files 2 and max-file-size 520 and discard-policy oldest
+    And the file store is enabled with max-blocks 2 and max-block-size 520 and discard-policy oldest
     And the capacity threshold callback is enabled at 200 bytes
     And the threaded example is running with transport tcp and no structured data
     When the syslog server stops accepting TCP connections
@@ -14,7 +14,7 @@ Feature: Capacity threshold alert
 
   Scenario: Threshold callback does not fire while usage stays below threshold
     Given syslog-ng is running
-    And the file store is enabled with max-files 2 and max-file-size 520 and discard-policy oldest
+    And the file store is enabled with max-blocks 2 and max-block-size 520 and discard-policy oldest
     And the capacity threshold callback is enabled at 5000 bytes
     And the threaded example is running with transport tcp and no structured data
     When the client sends a message

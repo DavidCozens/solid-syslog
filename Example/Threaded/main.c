@@ -160,8 +160,8 @@ static struct SolidSyslogStore* CreateStore(const struct ExampleOptions* options
         capacityThreshold                                    = options->capacityThreshold;
         static struct SolidSyslogFileStoreConfig storeConfig = {0};
         storeConfig.blockDevice                              = storeBlockDevice;
-        storeConfig.maxFileSize                              = options->maxFileSize;
-        storeConfig.maxFiles                                 = options->maxFiles;
+        storeConfig.maxBlockSize                             = options->maxBlockSize;
+        storeConfig.maxBlocks                                = options->maxBlocks;
         storeConfig.discardPolicy                            = MapDiscardPolicy(options->discardPolicy);
         storeConfig.securityPolicy                           = SolidSyslogCrc16Policy_Create();
         storeConfig.onStoreFull                              = OnStoreFull;

@@ -7,7 +7,7 @@ Feature: Block lifecycle
 
   Scenario: Block files are not disposed when capacity is not exhausted
     Given syslog-ng is running
-    And the file store is enabled with max-files 4 and max-file-size 5000 and discard-policy oldest
+    And the file store is enabled with max-blocks 4 and max-block-size 5000 and discard-policy oldest
     And the threaded example is running with transport tcp and no structured data
     And the set of existing block files is recorded
     When the client sends 2 messages

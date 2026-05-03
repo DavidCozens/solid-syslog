@@ -19,18 +19,18 @@ enum
     SENTINEL      = 'Z',
     /* Mirrors the private RECORD_OVERHEAD in SolidSyslogFileStore.c:
      * MAGIC_SIZE(2) + RECORD_LENGTH_SIZE(2) + SENT_FLAG_SIZE(1). */
-    TEST_RECORD_OVERHEAD  = 5,
-    TEST_RECORDS_PER_FILE = 2,
-    /* Sized to fit TEST_RECORDS_PER_FILE worst-case records — the worst
+    TEST_RECORD_OVERHEAD   = 5,
+    TEST_RECORDS_PER_BLOCK = 2,
+    /* Sized to fit TEST_RECORDS_PER_BLOCK worst-case records — the worst
      * case being max-size data plus max-integrity bytes. Auto-adapts
      * when SOLIDSYSLOG_MAX_MESSAGE_SIZE or the integrity policy bound
      * are tuned. */
-    TEST_MAX_FILE_SIZE = TEST_RECORDS_PER_FILE * (SOLIDSYSLOG_MAX_MESSAGE_SIZE + TEST_RECORD_OVERHEAD + SOLIDSYSLOG_MAX_INTEGRITY_SIZE),
-    TEST_MAX_FILES     = 2
+    TEST_MAX_BLOCK_SIZE = TEST_RECORDS_PER_BLOCK * (SOLIDSYSLOG_MAX_MESSAGE_SIZE + TEST_RECORD_OVERHEAD + SOLIDSYSLOG_MAX_INTEGRITY_SIZE),
+    TEST_MAX_BLOCKS     = 2
 };
 
 static const struct SolidSyslogFileStoreConfig DEFAULT_CONFIG = {
-    nullptr, TEST_MAX_FILE_SIZE, TEST_MAX_FILES, SOLIDSYSLOG_DISCARD_OLDEST, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, TEST_MAX_BLOCK_SIZE, TEST_MAX_BLOCKS, SOLIDSYSLOG_DISCARD_OLDEST, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
 };
 
 /* Single backing slab reused across tests — tests run serially and Destroy
@@ -464,18 +464,18 @@ TEST_GROUP_BASE(SolidSyslogFileStoreConfig, BlockDeviceTestBase)
         teardownBlockDeviceFakes();
     }
 
-    void CreateWithMaxFiles(size_t maxFiles)
+    void CreateWithMaxBlocks(size_t maxBlocks)
     {
         struct SolidSyslogFileStoreConfig config = MakeConfig(device);
-        config.maxFiles = maxFiles;
+        config.maxBlocks = maxBlocks;
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
         store = SolidSyslogFileStore_Create(&storeStorage, &config);
     }
 
-    void CreateWithMaxFileSize(size_t maxFileSize)
+    void CreateWithMaxBlockSize(size_t maxBlockSize)
     {
         struct SolidSyslogFileStoreConfig config = MakeConfig(device);
-        config.maxFileSize = maxFileSize;
+        config.maxBlockSize = maxBlockSize;
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
         store = SolidSyslogFileStore_Create(&storeStorage, &config);
     }
@@ -504,31 +504,31 @@ TEST_GROUP_BASE(SolidSyslogFileStoreConfig, BlockDeviceTestBase)
 
 TEST(SolidSyslogFileStoreConfig, MaxFilesZeroClampedToMinimum)
 {
-    CreateWithMaxFiles(0);
+    CreateWithMaxBlocks(0);
     VerifyWriteAndReadBack();
 }
 
 TEST(SolidSyslogFileStoreConfig, MaxFilesOneClampedToMinimum)
 {
-    CreateWithMaxFiles(1);
+    CreateWithMaxBlocks(1);
     VerifyWriteAndReadBack();
 }
 
 TEST(SolidSyslogFileStoreConfig, MaxFilesHundredClampedToMaximum)
 {
-    CreateWithMaxFiles(100);
+    CreateWithMaxBlocks(100);
     VerifyWriteAndReadBack();
 }
 
 TEST(SolidSyslogFileStoreConfig, MaxFileSizeZeroClampedToMinimum)
 {
-    CreateWithMaxFileSize(0);
+    CreateWithMaxBlockSize(0);
     VerifyWriteAndReadBack();
 }
 
 TEST(SolidSyslogFileStoreConfig, MaxFileSizeOneClampedToMinimum)
 {
-    CreateWithMaxFileSize(1);
+    CreateWithMaxBlockSize(1);
     VerifyWriteAndReadBack();
 }
 
@@ -695,14 +695,14 @@ TEST_GROUP_BASE(SolidSyslogFileStoreRotation, BlockDeviceTestBase)
         teardownBlockDeviceFakes();
     }
 
-    void CreateWithMaxFileSize(size_t maxFileSize, enum SolidSyslogDiscardPolicy policy = SOLIDSYSLOG_DISCARD_OLDEST,
-                               size_t maxFiles = 2,
+    void CreateWithMaxBlockSize(size_t maxBlockSize, enum SolidSyslogDiscardPolicy policy = SOLIDSYSLOG_DISCARD_OLDEST,
+                               size_t maxBlocks = 2,
                                SolidSyslogStoreFullCallback onStoreFull = nullptr, void* storeFullContext = nullptr)
     {
         struct SolidSyslogFileStoreConfig config = DEFAULT_CONFIG;
         config.blockDevice       = device;
-        config.maxFileSize       = maxFileSize;
-        config.maxFiles          = maxFiles;
+        config.maxBlockSize       = maxBlockSize;
+        config.maxBlocks          = maxBlocks;
         config.discardPolicy     = policy;
         config.onStoreFull       = onStoreFull;
         config.storeFullContext  = storeFullContext;
@@ -720,7 +720,7 @@ TEST_GROUP_BASE(SolidSyslogFileStoreRotation, BlockDeviceTestBase)
 
 TEST(SolidSyslogFileStoreRotation, WriteRotatesToNewFileWhenFull)
 {
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
     WriteMaxMsg();
     WriteMaxMsg();
     CHECK_TRUE(SolidSyslogFile_Exists(file, "/tmp/test_store01.log"));
@@ -728,7 +728,7 @@ TEST(SolidSyslogFileStoreRotation, WriteRotatesToNewFileWhenFull)
 
 TEST(SolidSyslogFileStoreRotation, WriteDoesNotRotateWhenFileHasSpace)
 {
-    CreateWithMaxFileSize(2 * ONE_MAX_MSG_RECORD);
+    CreateWithMaxBlockSize(2 * ONE_MAX_MSG_RECORD);
     WriteMaxMsg();
     WriteMaxMsg();
     CHECK_FALSE(SolidSyslogFile_Exists(file, "/tmp/test_store01.log"));
@@ -736,7 +736,7 @@ TEST(SolidSyslogFileStoreRotation, WriteDoesNotRotateWhenFileHasSpace)
 
 TEST(SolidSyslogFileStoreRotation, HasUnsentReturnsTrueAfterRotation)
 {
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
     WriteMaxMsg();
     WriteMaxMsg();
     CHECK_TRUE(SolidSyslogStore_HasUnsent(store));
@@ -744,7 +744,7 @@ TEST(SolidSyslogFileStoreRotation, HasUnsentReturnsTrueAfterRotation)
 
 TEST(SolidSyslogFileStoreRotation, ReadReturnsFirstFileAfterRotation)
 {
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
 
     char firstMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
     memset(firstMsg, 'B', sizeof(firstMsg));
@@ -762,7 +762,7 @@ TEST(SolidSyslogFileStoreRotation, ReadReturnsFirstFileAfterRotation)
 
 TEST(SolidSyslogFileStoreRotation, MarkSentAdvancesReadToSecondFile)
 {
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
 
     char firstMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
     memset(firstMsg, 'B', sizeof(firstMsg));
@@ -784,7 +784,7 @@ TEST(SolidSyslogFileStoreRotation, MarkSentAdvancesReadToSecondFile)
 
 TEST(SolidSyslogFileStoreRotation, FullDrainAcrossTwoFilesHasUnsentFalse)
 {
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
     WriteMaxMsg();
     WriteMaxMsg();
 
@@ -802,9 +802,9 @@ TEST(SolidSyslogFileStoreRotation, FullDrainAcrossTwoFilesHasUnsentFalse)
 
 TEST(SolidSyslogFileStoreRotation, DiscardOldestDeletesOldestFileWhenAtMaxFiles)
 {
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
     WriteMaxMsg(); /* file 00 */
-    WriteMaxMsg(); /* file 01 — now at maxFiles=2 */
+    WriteMaxMsg(); /* file 01 — now at maxBlocks=2 */
     WriteMaxMsg(); /* file 02 — must discard 00 */
 
     CHECK_FALSE(SolidSyslogFile_Exists(file, "/tmp/test_store00.log"));
@@ -813,7 +813,7 @@ TEST(SolidSyslogFileStoreRotation, DiscardOldestDeletesOldestFileWhenAtMaxFiles)
 
 TEST(SolidSyslogFileStoreRotation, DiscardOldestSurvivingDataIsReadable)
 {
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
 
     char firstMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
     memset(firstMsg, 'B', sizeof(firstMsg));
@@ -835,7 +835,7 @@ TEST(SolidSyslogFileStoreRotation, DiscardOldestSurvivingDataIsReadable)
 
 TEST(SolidSyslogFileStoreRotation, DiscardOldestDrainYieldsOnlySurvivingRecords)
 {
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
 
     char firstMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
     memset(firstMsg, 'B', sizeof(firstMsg));
@@ -866,9 +866,9 @@ TEST(SolidSyslogFileStoreRotation, DiscardOldestDrainYieldsOnlySurvivingRecords)
 
 TEST(SolidSyslogFileStoreRotation, DiscardNewestReturnsFalseWhenAtMaxFiles)
 {
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_DISCARD_NEWEST);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_DISCARD_NEWEST);
     WriteMaxMsg(); /* file 00 */
-    WriteMaxMsg(); /* file 01 — now at maxFiles=2 */
+    WriteMaxMsg(); /* file 01 — now at maxBlocks=2 */
 
     CHECK_FALSE(SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)));
 }
@@ -884,10 +884,10 @@ static void StoreFullCallback(void* context)
 TEST(SolidSyslogFileStoreRotation, HaltInvokesCallbackWhenStoreFull)
 {
     storeFullCallbackInvoked = false;
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_HALT, 2, StoreFullCallback);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_HALT, 2, StoreFullCallback);
 
     WriteMaxMsg(); /* file 00 */
-    WriteMaxMsg(); /* file 01 — now at maxFiles=2 */
+    WriteMaxMsg(); /* file 01 — now at maxBlocks=2 */
 
     CHECK_FALSE(SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)));
     CHECK_TRUE(storeFullCallbackInvoked);
@@ -895,20 +895,20 @@ TEST(SolidSyslogFileStoreRotation, HaltInvokesCallbackWhenStoreFull)
 
 TEST(SolidSyslogFileStoreRotation, HaltWithNullCallbackDoesNotCrash)
 {
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_HALT);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_HALT);
 
     WriteMaxMsg(); /* file 00 */
-    WriteMaxMsg(); /* file 01 — now at maxFiles=2 */
+    WriteMaxMsg(); /* file 01 — now at maxBlocks=2 */
 
     CHECK_FALSE(SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)));
 }
 
 TEST(SolidSyslogFileStoreRotation, HaltSetsIsHaltedTrue)
 {
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_HALT);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_HALT);
 
     WriteMaxMsg(); /* file 00 */
-    WriteMaxMsg(); /* file 01 — now at maxFiles=2 */
+    WriteMaxMsg(); /* file 01 — now at maxBlocks=2 */
 
     CHECK_FALSE(SolidSyslogStore_IsHalted(store));
     SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)); /* triggers halt */
@@ -918,10 +918,10 @@ TEST(SolidSyslogFileStoreRotation, HaltSetsIsHaltedTrue)
 TEST(SolidSyslogFileStoreRotation, DiscardNewestDoesNotInvokeCallback)
 {
     storeFullCallbackInvoked = false;
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_DISCARD_NEWEST, 2, StoreFullCallback);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_DISCARD_NEWEST, 2, StoreFullCallback);
 
     WriteMaxMsg(); /* file 00 */
-    WriteMaxMsg(); /* file 01 — now at maxFiles=2 */
+    WriteMaxMsg(); /* file 01 — now at maxBlocks=2 */
 
     CHECK_FALSE(SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)));
     CHECK_FALSE(storeFullCallbackInvoked);
@@ -938,10 +938,10 @@ static void CountStoreFullInvocations(void* context)
 TEST(SolidSyslogFileStoreRotation, HaltOnStoreFullFiresOncePerRisingEdge)
 {
     storeFullCallbackCount = 0;
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_HALT, 2, CountStoreFullInvocations);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_HALT, 2, CountStoreFullInvocations);
 
     WriteMaxMsg(); /* file 00 */
-    WriteMaxMsg(); /* file 01 — now at maxFiles=2 */
+    WriteMaxMsg(); /* file 01 — now at maxBlocks=2 */
 
     /* Three consecutive failed Writes — callback must fire on the first only. */
     CHECK_FALSE(SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)));
@@ -966,10 +966,10 @@ TEST(SolidSyslogFileStoreRotation, OnStoreFullReceivesConfiguredContext)
     int sentinel             = 0;
     storeFullCallbackContext = nullptr;
 
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_HALT, 2, StoreFullCallbackCapturingContext, &sentinel);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_HALT, 2, StoreFullCallbackCapturingContext, &sentinel);
 
     WriteMaxMsg(); /* file 00 */
-    WriteMaxMsg(); /* file 01 — at maxFiles */
+    WriteMaxMsg(); /* file 01 — at maxBlocks */
 
     SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)); /* triggers halt callback */
 
@@ -978,18 +978,18 @@ TEST(SolidSyslogFileStoreRotation, OnStoreFullReceivesConfiguredContext)
 
 TEST(SolidSyslogFileStoreRotation, ResumeHasUnsentWhenMultipleFilesExist)
 {
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
     WriteMaxMsg(); /* file 00 */
     WriteMaxMsg(); /* file 01 */
     SolidSyslogFileStore_Destroy(store);
 
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
     CHECK_TRUE(SolidSyslogStore_HasUnsent(store));
 }
 
 TEST(SolidSyslogFileStoreRotation, ResumeDrainsAcrossFilesInOrder)
 {
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
 
     char firstMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
     memset(firstMsg, 'B', sizeof(firstMsg));
@@ -998,7 +998,7 @@ TEST(SolidSyslogFileStoreRotation, ResumeDrainsAcrossFilesInOrder)
     WriteMaxMsg(); /* file 01 — 'A' */
     SolidSyslogFileStore_Destroy(store);
 
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
 
     char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE] = {};
     size_t bytesRead                         = 0;
@@ -1017,11 +1017,11 @@ TEST(SolidSyslogFileStoreRotation, ResumeDrainsAcrossFilesInOrder)
 
 TEST(SolidSyslogFileStoreRotation, ResumeContinuesWritingToCorrectFile)
 {
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
     WriteMaxMsg(); /* file 00 */
     SolidSyslogFileStore_Destroy(store);
 
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
     WriteMaxMsg(); /* should rotate to file 01, not overwrite 00 */
 
     CHECK_TRUE(SolidSyslogFile_Exists(file, "/tmp/test_store00.log"));
@@ -1030,12 +1030,12 @@ TEST(SolidSyslogFileStoreRotation, ResumeContinuesWritingToCorrectFile)
 
 TEST(SolidSyslogFileStoreRotation, ResumeWithMultipleFilesCanWriteNewMessage)
 {
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
     WriteMaxMsg(); /* file 00 */
     WriteMaxMsg(); /* file 01 */
     SolidSyslogFileStore_Destroy(store);
 
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
 
     char newMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
     memset(newMsg, 'N', sizeof(newMsg));
@@ -1049,13 +1049,13 @@ TEST(SolidSyslogFileStoreRotation, ResumeWriteAppendsToPartiallyFilledWriteFile)
 {
     static const size_t TWO_MAX_MSG_RECORDS = 2 * ONE_MAX_MSG_RECORD;
 
-    CreateWithMaxFileSize(TWO_MAX_MSG_RECORDS);
+    CreateWithMaxBlockSize(TWO_MAX_MSG_RECORDS);
     WriteMaxMsg(); /* file 00, record 1 */
     WriteMaxMsg(); /* file 00, record 2 — file 00 full */
     WriteMaxMsg(); /* file 01, record 1 — file 01 partially filled */
     SolidSyslogFileStore_Destroy(store);
 
-    CreateWithMaxFileSize(TWO_MAX_MSG_RECORDS);
+    CreateWithMaxBlockSize(TWO_MAX_MSG_RECORDS);
 
     /* Write should append to file 01, not rotate */
     CHECK_TRUE(SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)));
@@ -1068,7 +1068,7 @@ TEST(SolidSyslogFileStoreRotation, SequenceWrapsFrom99To00)
     SolidSyslogFile_Open(file, "/tmp/test_store99.log");
     SolidSyslogFile_Close(file);
 
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
     WriteMaxMsg(); /* fills file 99 */
     WriteMaxMsg(); /* should wrap to file 00 */
 
@@ -1077,7 +1077,7 @@ TEST(SolidSyslogFileStoreRotation, SequenceWrapsFrom99To00)
 
 TEST(SolidSyslogFileStoreRotation, WriteAfterDrainRotatesToNextFile)
 {
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
     WriteMaxMsg();
 
     char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
@@ -1097,7 +1097,7 @@ TEST(SolidSyslogFileStoreRotation, MixedMessageSizesDrainCorrectlyAcrossFiles)
 {
     static const size_t SHORT_LEN = 7;
 
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
 
     char shortMsg[SHORT_LEN];
     memset(shortMsg, 'S', SHORT_LEN);
@@ -1124,9 +1124,9 @@ TEST(SolidSyslogFileStoreRotation, MixedMessageSizesDrainCorrectlyAcrossFiles)
 
 TEST(SolidSyslogFileStoreRotation, ContinuousDiscardWithoutReadingSurvivorsCorrect)
 {
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
 
-    /* Write 5 messages across 5 files — maxFiles=2 means 3 are discarded */
+    /* Write 5 messages across 5 files — maxBlocks=2 means 3 are discarded */
     char msgs[5][SOLIDSYSLOG_MAX_MESSAGE_SIZE];
     for (int i = 0; i < 5; i++)
     {
@@ -1164,7 +1164,7 @@ TEST(SolidSyslogFileStoreRotation, MaxFilesAtUpperLimit)
         MAX_FILES = 99
     };
 
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_DISCARD_OLDEST, MAX_FILES);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_DISCARD_OLDEST, MAX_FILES);
 
     /* Fill all 99 files */
     for (int i = 0; i < MAX_FILES; i++)
@@ -1188,7 +1188,7 @@ TEST(SolidSyslogFileStoreRotation, MultipleRecordsPerFileDrainAcrossRotation)
 {
     static const size_t TWO_MAX_MSG_RECORDS = 2 * ONE_MAX_MSG_RECORD;
 
-    CreateWithMaxFileSize(TWO_MAX_MSG_RECORDS);
+    CreateWithMaxBlockSize(TWO_MAX_MSG_RECORDS);
 
     char msg0[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
     memset(msg0, 'X', sizeof(msg0));
@@ -1530,13 +1530,13 @@ TEST_GROUP_BASE(SolidSyslogFileStoreCorruptionRecovery, BlockDeviceTestBase)
         teardownBlockDeviceFakes();
     }
 
-    // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- maxFileSize and maxFiles have distinct semantics
-    void CreateWithMaxFileSize(size_t maxFileSize, size_t maxFiles = 2)
+    // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- maxBlockSize and maxBlocks have distinct semantics
+    void CreateWithMaxBlockSize(size_t maxBlockSize, size_t maxBlocks = 2)
     {
         struct SolidSyslogFileStoreConfig config = DEFAULT_CONFIG;
         config.blockDevice     = device;
-        config.maxFileSize     = maxFileSize;
-        config.maxFiles        = maxFiles;
+        config.maxBlockSize     = maxBlockSize;
+        config.maxBlocks        = maxBlocks;
         config.securityPolicy  = policy;
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
         store = SolidSyslogFileStore_Create(&storeStorage, &config);
@@ -1561,7 +1561,7 @@ TEST_GROUP_BASE(SolidSyslogFileStoreCorruptionRecovery, BlockDeviceTestBase)
 
 TEST(SolidSyslogFileStoreCorruptionRecovery, ReadSkipsCorruptOlderFileToNextFile)
 {
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
 
     char firstMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
     memset(firstMsg, 'B', sizeof(firstMsg));
@@ -1572,7 +1572,7 @@ TEST(SolidSyslogFileStoreCorruptionRecovery, ReadSkipsCorruptOlderFileToNextFile
 
     CorruptFirstRecordBody("/tmp/test_store00.log");
 
-    CreateWithMaxFileSize(ONE_MAX_MSG_RECORD);
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
 
     char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE] = {};
     size_t bytesRead                         = 0;
@@ -1587,13 +1587,13 @@ TEST(SolidSyslogFileStoreCorruptionRecovery, CorruptWriteFileRotatesOnNextWrite)
      * so rotation on the second write proves corruption forced it */
     static const size_t TWO_MAX_MSG_RECORDS = 2 * ONE_MAX_MSG_RECORD;
 
-    CreateWithMaxFileSize(TWO_MAX_MSG_RECORDS);
+    CreateWithMaxBlockSize(TWO_MAX_MSG_RECORDS);
     WriteMaxMsg(); /* file 00 — partially filled */
     SolidSyslogFileStore_Destroy(store);
 
     CorruptFirstRecordBody("/tmp/test_store00.log");
 
-    CreateWithMaxFileSize(TWO_MAX_MSG_RECORDS);
+    CreateWithMaxBlockSize(TWO_MAX_MSG_RECORDS);
 
     /* File 00 has space but is corrupt — write should rotate to file 01 */
     char newMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
@@ -1633,13 +1633,13 @@ TEST_GROUP_BASE(SolidSyslogFileStoreCapacity, BlockDeviceTestBase)
         store = SolidSyslogFileStore_Create(&storeStorage, &config);
     }
 
-    // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- maxFileSize is a byte size, maxFiles is a count; distinct semantics
-    void CreateWithCapacity(size_t maxFileSize, size_t maxFiles,
+    // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- maxBlockSize is a byte size, maxBlocks is a count; distinct semantics
+    void CreateWithCapacity(size_t maxBlockSize, size_t maxBlocks,
                             enum SolidSyslogDiscardPolicy policy = SOLIDSYSLOG_DISCARD_OLDEST)
     {
         struct SolidSyslogFileStoreConfig config = MakeConfig(device);
-        config.maxFileSize   = maxFileSize;
-        config.maxFiles      = maxFiles;
+        config.maxBlockSize   = maxBlockSize;
+        config.maxBlocks      = maxBlocks;
         config.discardPolicy = policy;
         store                = SolidSyslogFileStore_Create(&storeStorage, &config);
     }
@@ -1652,13 +1652,13 @@ TEST_GROUP_BASE(SolidSyslogFileStoreCapacity, BlockDeviceTestBase)
 
 // clang-format on
 
-/* Given maxFiles × maxFileSize configured,
+/* Given maxBlocks × maxBlockSize configured,
  * When GetTotalBytes is queried,
  * Then it returns the product. */
 TEST(SolidSyslogFileStoreCapacity, GetTotalBytesReturnsMaxFilesTimesMaxFileSize)
 {
     CreateDefault();
-    LONGS_EQUAL(TEST_MAX_FILES * TEST_MAX_FILE_SIZE, SolidSyslogStore_GetTotalBytes(store));
+    LONGS_EQUAL(TEST_MAX_BLOCKS * TEST_MAX_BLOCK_SIZE, SolidSyslogStore_GetTotalBytes(store));
 }
 
 TEST(SolidSyslogFileStoreCapacity, GetTotalBytesScalesWithConfig)
@@ -1688,8 +1688,8 @@ TEST(SolidSyslogFileStoreCapacity, GetUsedBytesTracksOneWrite)
 
 TEST(SolidSyslogFileStoreCapacity, GetUsedBytesCountsClosedBlocksAtFullSize)
 {
-    /* Tight maxFileSize so a single max-msg record fills a block; second write
-     * rotates. Closed block contributes maxFileSize regardless of slack. */
+    /* Tight maxBlockSize so a single max-msg record fills a block; second write
+     * rotates. Closed block contributes maxBlockSize regardless of slack. */
     CreateWithCapacity(ONE_MAX_MSG_RECORD, 3);
     WriteMaxMsg(); /* block 0 fills */
     WriteMaxMsg(); /* rotates to block 1 */
@@ -1704,7 +1704,7 @@ TEST(SolidSyslogFileStoreCapacity, GetUsedBytesDropsOnDiscardOldest)
 {
     CreateWithCapacity(ONE_MAX_MSG_RECORD, 2);
     WriteMaxMsg(); /* block 0 full */
-    WriteMaxMsg(); /* block 1 full, at maxFiles */
+    WriteMaxMsg(); /* block 1 full, at maxBlocks */
 
     LONGS_EQUAL(2 * ONE_MAX_MSG_RECORD, SolidSyslogStore_GetUsedBytes(store));
 
@@ -1719,13 +1719,13 @@ TEST(SolidSyslogFileStoreCapacity, GetUsedBytesDropsOnDiscardOldest)
  * Then GetUsedBytes returns total even when the active block has slack. */
 TEST(SolidSyslogFileStoreCapacity, GetUsedBytesIsStickyAtTotalAfterSizeFailure)
 {
-    /* maxFileSize larger than one max-msg record so the active block has slack. */
+    /* maxBlockSize larger than one max-msg record so the active block has slack. */
     static const size_t SLACK = 100;
     CreateWithCapacity(ONE_MAX_MSG_RECORD + SLACK, 2, SOLIDSYSLOG_HALT);
     WriteMaxMsg(); /* block 0: SLACK bytes slack */
-    WriteMaxMsg(); /* block 1: SLACK bytes slack, at maxFiles */
+    WriteMaxMsg(); /* block 1: SLACK bytes slack, at maxBlocks */
 
-    /* The next write needs to rotate but can't (HALT, at maxFiles) — fails for size. */
+    /* The next write needs to rotate but can't (HALT, at maxBlocks) — fails for size. */
     CHECK_FALSE(SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)));
 
     /* Sticky: GetUsedBytes returns total even though the active blocks have slack. */
@@ -1816,8 +1816,8 @@ TEST(SolidSyslogFileStoreCapacityThreshold, ReArmsAfterFallingEdgeOnDiscardOldes
     memset(maxMsg, 'A', sizeof(maxMsg));
 
     struct SolidSyslogFileStoreConfig config = MakeConfig(device);
-    config.maxFileSize                       = TWO_RECORDS;
-    config.maxFiles                          = 2;
+    config.maxBlockSize                      = TWO_RECORDS;
+    config.maxBlocks                         = 2;
     config.discardPolicy                     = SOLIDSYSLOG_DISCARD_OLDEST;
     config.getCapacityThreshold              = ReturnsConfiguredThreshold;
     config.onThresholdCrossed                = CountThresholdCrossings;
@@ -1928,8 +1928,8 @@ TEST(SolidSyslogFileStoreCapacityThreshold, AtFullCapacityWithHaltThresholdFires
     storeFullFireOrder = 0;
 
     struct SolidSyslogFileStoreConfig config = MakeConfig(device);
-    config.maxFileSize                       = MAX_MSG_RECORD + SLACK;
-    config.maxFiles                          = 2;
+    config.maxBlockSize                      = MAX_MSG_RECORD + SLACK;
+    config.maxBlocks                         = 2;
     config.discardPolicy                     = SOLIDSYSLOG_HALT;
     config.onStoreFull                       = RecordStoreFullFireOrder;
     config.getCapacityThreshold              = ReturnsConfiguredThreshold;
@@ -1959,8 +1959,8 @@ TEST(SolidSyslogFileStoreCapacityThreshold, StickyHundredPercentDoesNotRefireThr
     memset(maxMsg, 'A', sizeof(maxMsg));
 
     struct SolidSyslogFileStoreConfig config = MakeConfig(device);
-    config.maxFileSize                       = MAX_MSG_RECORD + SLACK;
-    config.maxFiles                          = 2;
+    config.maxBlockSize                      = MAX_MSG_RECORD + SLACK;
+    config.maxBlocks                         = 2;
     config.discardPolicy                     = SOLIDSYSLOG_HALT;
     config.getCapacityThreshold              = ReturnsConfiguredThreshold;
     config.onThresholdCrossed                = CountThresholdCrossings;

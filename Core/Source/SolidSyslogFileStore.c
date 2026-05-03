@@ -83,13 +83,13 @@ static inline struct SolidSyslogSecurityPolicy* ResolveSecurityPolicy(struct Sol
 
 static inline struct BlockSequenceConfig BuildBlockSequenceConfig(const struct SolidSyslogFileStoreConfig* config, const struct RecordStore* recordStore)
 {
-    size_t minFileSize = RecordStore_RecordSize(recordStore, SOLIDSYSLOG_MAX_MESSAGE_SIZE);
-    size_t maxFileSize = (config->maxFileSize < minFileSize) ? minFileSize : config->maxFileSize;
+    size_t minBlockSize = RecordStore_RecordSize(recordStore, SOLIDSYSLOG_MAX_MESSAGE_SIZE);
+    size_t maxBlockSize = (config->maxBlockSize < minBlockSize) ? minBlockSize : config->maxBlockSize;
 
     struct BlockSequenceConfig blockConfig = {
         .blockDevice          = config->blockDevice,
-        .maxFileSize          = maxFileSize,
-        .maxFiles             = config->maxFiles,
+        .maxBlockSize         = maxBlockSize,
+        .maxBlocks            = config->maxBlocks,
         .discardPolicy        = config->discardPolicy,
         .onStoreFull          = config->onStoreFull,
         .storeFullContext     = config->storeFullContext,

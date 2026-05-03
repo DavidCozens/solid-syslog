@@ -66,12 +66,12 @@ TEST_GROUP(SolidSyslogFileStorePosix)
     }
 
     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- test helper mirrors rotation test group signature
-    void CreateStore(size_t maxFileSize = ONE_MAX_MSG_RECORD, size_t maxFiles = 2)
+    void CreateStore(size_t maxBlockSize = ONE_MAX_MSG_RECORD, size_t maxBlocks = 2)
     {
         struct SolidSyslogFileStoreConfig config = {};
         config.blockDevice   = device;
-        config.maxFileSize   = maxFileSize;
-        config.maxFiles      = maxFiles;
+        config.maxBlockSize  = maxBlockSize;
+        config.maxBlocks     = maxBlocks;
         config.discardPolicy = SOLIDSYSLOG_DISCARD_OLDEST;
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
         store = SolidSyslogFileStore_Create(&storeStorage, &config);

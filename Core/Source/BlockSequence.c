@@ -4,8 +4,8 @@
 
 enum
 {
-    MIN_MAX_FILES    = 2,
-    MAX_MAX_FILES    = 99,
+    MIN_MAX_BLOCKS   = 2,
+    MAX_MAX_BLOCKS   = 99,
     SEQUENCE_MODULUS = 100
 };
 
@@ -40,8 +40,8 @@ static inline size_t ClampToRange(size_t value, size_t min, size_t max)
 void BlockSequence_Init(struct BlockSequence* blockSequence, const struct BlockSequenceConfig* config)
 {
     blockSequence->blockDevice          = config->blockDevice;
-    blockSequence->maxFileSize          = config->maxFileSize;
-    blockSequence->maxFiles             = ClampToRange(config->maxFiles, MIN_MAX_FILES, MAX_MAX_FILES);
+    blockSequence->maxBlockSize         = config->maxBlockSize;
+    blockSequence->maxBlocks            = ClampToRange(config->maxBlocks, MIN_MAX_BLOCKS, MAX_MAX_BLOCKS);
     blockSequence->discardPolicy        = config->discardPolicy;
     blockSequence->onStoreFull          = config->onStoreFull;
     blockSequence->storeFullContext     = config->storeFullContext;
@@ -140,7 +140,7 @@ static bool ScanForExistingBlocks(struct BlockSequence* blockSequence)
                 newest = CircularPrev(newest);
             }
         }
-        /* else: every block is present — maxFiles is clamped to MAX_SEQUENCE - 1
+        /* else: every block is present — maxBlocks is clamped to MAX_SEQUENCE - 1
          * so this cannot arise from the library's own rotation. Treat the run as
          * [0, MAX_SEQUENCE - 1] (defaults above). */
 
@@ -190,12 +190,12 @@ bool BlockSequence_PrepareForWrite(struct BlockSequence* blockSequence, size_t r
 
 static inline bool BlockIsFull(const struct BlockSequence* blockSequence, size_t recordSize)
 {
-    return (blockSequence->writeBlockCorrupt) || ((blockSequence->writePosition + recordSize) > blockSequence->maxFileSize);
+    return (blockSequence->writeBlockCorrupt) || ((blockSequence->writePosition + recordSize) > blockSequence->maxBlockSize);
 }
 
 static inline bool StoreIsFull(const struct BlockSequence* blockSequence)
 {
-    return (BlockCount(blockSequence) >= blockSequence->maxFiles) && (blockSequence->discardPolicy != SOLIDSYSLOG_DISCARD_OLDEST);
+    return (BlockCount(blockSequence) >= blockSequence->maxBlocks) && (blockSequence->discardPolicy != SOLIDSYSLOG_DISCARD_OLDEST);
 }
 
 static inline void NotifyStoreFull(struct BlockSequence* blockSequence)
@@ -223,7 +223,7 @@ static bool RotateToNextBlock(struct BlockSequence* blockSequence)
 
     bool readBlockChanged = false;
 
-    if (BlockCount(blockSequence) > blockSequence->maxFiles)
+    if (BlockCount(blockSequence) > blockSequence->maxBlocks)
     {
         readBlockChanged = DiscardOldestBlock(blockSequence);
     }
@@ -347,7 +347,7 @@ bool BlockSequence_IsHalted(const struct BlockSequence* blockSequence)
 
 size_t BlockSequence_TotalBytes(const struct BlockSequence* blockSequence)
 {
-    return blockSequence->maxFiles * blockSequence->maxFileSize;
+    return blockSequence->maxBlocks * blockSequence->maxBlockSize;
 }
 
 size_t BlockSequence_UsedBytes(const struct BlockSequence* blockSequence)
@@ -361,7 +361,7 @@ size_t BlockSequence_UsedBytes(const struct BlockSequence* blockSequence)
     else
     {
         size_t closedBlocks = BlockCount(blockSequence) - 1;
-        used                = (closedBlocks * blockSequence->maxFileSize) + blockSequence->writePosition;
+        used                = (closedBlocks * blockSequence->maxBlockSize) + blockSequence->writePosition;
     }
 
     return used;

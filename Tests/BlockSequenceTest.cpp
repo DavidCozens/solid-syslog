@@ -102,8 +102,8 @@ TEST_GROUP(BlockSequenceScan)
 
         struct BlockSequenceConfig config = {};
         config.blockDevice                = &fakeDevice.base;
-        config.maxFileSize                = 1000;
-        config.maxFiles                   = 99;
+        config.maxBlockSize                = 1000;
+        config.maxBlocks                   = 99;
         config.discardPolicy              = SOLIDSYSLOG_DISCARD_OLDEST;
         BlockSequence_Init(&sequence, &config);
     }
