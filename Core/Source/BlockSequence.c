@@ -171,17 +171,18 @@ static bool        RotateToNextBlock(struct BlockSequence* blockSequence);
 
 bool BlockSequence_PrepareForWrite(struct BlockSequence* blockSequence, size_t recordSize, bool* readBlockChanged)
 {
+    bool blockFull      = BlockIsFull(blockSequence, recordSize);
     bool spaceAvailable = true;
     *readBlockChanged   = false;
 
-    if (BlockIsFull(blockSequence, recordSize) && StoreIsFull(blockSequence))
+    if (blockFull && StoreIsFull(blockSequence))
     {
         blockSequence->atCapacity = true;      /* sticky 100% — fixes UsedBytes at total */
         NotifyThresholdCrossed(blockSequence); /* threshold first per S05.09 ordering */
         NotifyStoreFull(blockSequence);
         spaceAvailable = false;
     }
-    else if (BlockIsFull(blockSequence, recordSize))
+    else if (blockFull)
     {
         *readBlockChanged = RotateToNextBlock(blockSequence);
     }
@@ -275,15 +276,15 @@ void BlockSequence_NoteRecordWritten(struct BlockSequence* blockSequence, size_t
 }
 
 static inline bool ThresholdEnabled(const struct BlockSequence* blockSequence);
+static inline bool IsAboveThreshold(const struct BlockSequence* blockSequence, size_t threshold);
 
 static inline void NotifyThresholdCrossed(struct BlockSequence* blockSequence)
 {
     if (ThresholdEnabled(blockSequence))
     {
         size_t threshold = blockSequence->getCapacityThreshold(blockSequence->thresholdContext);
-        size_t used      = BlockSequence_UsedBytes(blockSequence);
 
-        if ((threshold == 0) || (used < threshold))
+        if (!IsAboveThreshold(blockSequence, threshold))
         {
             blockSequence->thresholdCrossed = false;
         }
@@ -298,6 +299,11 @@ static inline void NotifyThresholdCrossed(struct BlockSequence* blockSequence)
 static inline bool ThresholdEnabled(const struct BlockSequence* blockSequence)
 {
     return (blockSequence->onThresholdCrossed != NULL) && (blockSequence->getCapacityThreshold != NULL);
+}
+
+static inline bool IsAboveThreshold(const struct BlockSequence* blockSequence, size_t threshold)
+{
+    return (threshold != 0) && (BlockSequence_UsedBytes(blockSequence) >= threshold);
 }
 
 void BlockSequence_MarkWriteBlockCorrupt(struct BlockSequence* blockSequence)

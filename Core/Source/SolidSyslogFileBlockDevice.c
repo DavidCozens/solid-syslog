@@ -141,10 +141,15 @@ static bool Acquire(struct SolidSyslogBlockDevice* self, size_t blockIndex)
     return ready;
 }
 
+static inline bool IsHandleAlreadyOpenOnBlock(const struct OpenHandle* handle, bool underlyingFileIsOpen, size_t blockIndex)
+{
+    return handle->isOpen && underlyingFileIsOpen && (handle->blockIndex == blockIndex);
+}
+
 static bool EnsureHandleOpenOnBlock(struct OpenHandle* handle, const struct SolidSyslogFileBlockDevice* device, size_t blockIndex)
 {
     bool underlyingFileIsOpen = SolidSyslogFile_IsOpen(handle->file);
-    bool ready                = handle->isOpen && underlyingFileIsOpen && (handle->blockIndex == blockIndex);
+    bool ready                = IsHandleAlreadyOpenOnBlock(handle, underlyingFileIsOpen, blockIndex);
 
     if (!ready)
     {

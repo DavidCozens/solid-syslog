@@ -5,6 +5,20 @@
 
 static const char* const TEST_PATH_PREFIX = "/tmp/blockdev_";
 
+/* Reads `length` bytes from (blockIndex, offset) and asserts they equal `expected`.
+ * Mirrors the CHECK_PRIVAL family in SolidSyslogTest.cpp — names the intent so
+ * tests read as "block N at offset O contains 'foo'" rather than buf+memcmp boilerplate.
+ * Macro (not function) so test failures report the caller's __FILE__/__LINE__. */
+// NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while) -- macro preserves caller location in test failure output
+#define CHECK_BLOCK_CONTAINS(blockIndex, offset, expected, length)                                   \
+    do                                                                                               \
+    {                                                                                                \
+        char checkBuf[(length) + 1] = {};                                                            \
+        CHECK_TRUE(SolidSyslogBlockDevice_Read(device, (blockIndex), (offset), checkBuf, (length))); \
+        MEMCMP_EQUAL((expected), checkBuf, (length));                                                \
+    } while (0)
+// NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
+
 // clang-format off
 TEST_GROUP(SolidSyslogFileBlockDevice)
 {
@@ -69,9 +83,7 @@ TEST(SolidSyslogFileBlockDevice, ReadReturnsAppendedBytes)
     SolidSyslogBlockDevice_Acquire(device, 0);
     SolidSyslogBlockDevice_Append(device, 0, "abc", 3);
 
-    char buf[4] = {};
-    CHECK_TRUE(SolidSyslogBlockDevice_Read(device, 0, 0, buf, 3));
-    MEMCMP_EQUAL("abc", buf, 3);
+    CHECK_BLOCK_CONTAINS(0, 0, "abc", 3);
 }
 
 TEST(SolidSyslogFileBlockDevice, AppendsAccumulateAtEnd)
@@ -81,9 +93,7 @@ TEST(SolidSyslogFileBlockDevice, AppendsAccumulateAtEnd)
     SolidSyslogBlockDevice_Append(device, 0, "de", 2);
 
     LONGS_EQUAL(5, SolidSyslogBlockDevice_Size(device, 0));
-    char buf[6] = {};
-    SolidSyslogBlockDevice_Read(device, 0, 0, buf, 5);
-    MEMCMP_EQUAL("abcde", buf, 5);
+    CHECK_BLOCK_CONTAINS(0, 0, "abcde", 5);
 }
 
 TEST(SolidSyslogFileBlockDevice, ReadAtOffsetReturnsBytesFromOffset)
@@ -91,9 +101,7 @@ TEST(SolidSyslogFileBlockDevice, ReadAtOffsetReturnsBytesFromOffset)
     SolidSyslogBlockDevice_Acquire(device, 0);
     SolidSyslogBlockDevice_Append(device, 0, "abcde", 5);
 
-    char buf[3] = {};
-    SolidSyslogBlockDevice_Read(device, 0, 2, buf, 2);
-    MEMCMP_EQUAL("cd", buf, 2);
+    CHECK_BLOCK_CONTAINS(0, 2, "cd", 2);
 }
 
 TEST(SolidSyslogFileBlockDevice, WriteAtMutatesByteInPlace)
@@ -103,9 +111,7 @@ TEST(SolidSyslogFileBlockDevice, WriteAtMutatesByteInPlace)
 
     CHECK_TRUE(SolidSyslogBlockDevice_WriteAt(device, 0, 1, "X", 1));
 
-    char buf[6] = {};
-    SolidSyslogBlockDevice_Read(device, 0, 0, buf, 5);
-    MEMCMP_EQUAL("aXcde", buf, 5);
+    CHECK_BLOCK_CONTAINS(0, 0, "aXcde", 5);
     LONGS_EQUAL(5, SolidSyslogBlockDevice_Size(device, 0));
 }
 
@@ -117,9 +123,7 @@ TEST(SolidSyslogFileBlockDevice, AcquireSecondBlockPreservesFirstBlockContent)
 
     LONGS_EQUAL(0, SolidSyslogBlockDevice_Size(device, 1));
     LONGS_EQUAL(5, SolidSyslogBlockDevice_Size(device, 0));
-    char buf[6] = {};
-    SolidSyslogBlockDevice_Read(device, 0, 0, buf, 5);
-    MEMCMP_EQUAL("first", buf, 5);
+    CHECK_BLOCK_CONTAINS(0, 0, "first", 5);
 }
 
 TEST(SolidSyslogFileBlockDevice, DisposeMakesBlockNotExist)
@@ -171,9 +175,7 @@ TEST(SolidSyslogFileBlockDevice, OverlargeBlockIndexLeavesValidBlockUntouched)
     SolidSyslogBlockDevice_Acquire(device, 256); /* would alias to block 0 if not guarded */
 
     LONGS_EQUAL(4, SolidSyslogBlockDevice_Size(device, 0));
-    char buf[5] = {};
-    SolidSyslogBlockDevice_Read(device, 0, 0, buf, 4);
-    MEMCMP_EQUAL("real", buf, 4);
+    CHECK_BLOCK_CONTAINS(0, 0, "real", 4);
 }
 
 TEST(SolidSyslogFileBlockDevice, ExistsReturnsFalseForOverlargeBlockIndex)
