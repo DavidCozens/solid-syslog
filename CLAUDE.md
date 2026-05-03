@@ -338,10 +338,10 @@ live under `Core/Interface/`; platform-specific helpers (the `SolidSyslogPosix*`
 | `SolidSyslogNullStore.h` | System setup code (no store-and-forward) | `SolidSyslogNullStore_Create`, `_Destroy` |
 | `SolidSyslogFileDefinition.h` | File implementors (extension point) | `SolidSyslogFile` vtable struct |
 | `SolidSyslogFile.h` | Any code using the file abstraction | `SolidSyslogFile_Open`, `_Close`, `_IsOpen`, `_Read`, `_Write`, `_SeekTo`, `_Size`, `_Truncate` |
-| `SolidSyslogBlockDevice.h` | Library internals consuming a block device (BlockSequence inside FileStore) and integrator code addressing blocks directly | `SolidSyslogBlockDevice_Acquire`, `_Dispose`, `_Exists`, `_Read`, `_Append`, `_WriteAt`, `_Size` (block-indexed I/O; Acquire makes a block ready for fresh writes, Dispose releases it) |
+| `SolidSyslogBlockDevice.h` | Library internals consuming a block device (BlockSequence inside BlockStore) and integrator code addressing blocks directly | `SolidSyslogBlockDevice_Acquire`, `_Dispose`, `_Exists`, `_Read`, `_Append`, `_WriteAt`, `_Size` (block-indexed I/O; Acquire makes a block ready for fresh writes, Dispose releases it) |
 | `SolidSyslogBlockDeviceDefinition.h` | BlockDevice implementors (extension point) | `SolidSyslogBlockDevice` vtable struct (`Acquire`, `Dispose`, `Exists`, `Read`, `Append`, `WriteAt`, `Size`) |
 | `SolidSyslogFileBlockDevice.h` | System setup code wiring a file-backed block device | `SolidSyslogFileBlockDeviceStorage`, `SOLIDSYSLOG_FILEBLOCKDEVICE_STORAGE_SIZE`, `SolidSyslogFileBlockDevice_Create(storage, readFile, writeFile, pathPrefix)` (sequence-numbered filenames `<prefix><NN>.log`, two cached file handles), `_Destroy(device)` |
-| `SolidSyslogFileStore.h` | System setup code using file-based store | `SolidSyslogFileStoreStorage`, `SOLIDSYSLOG_FILESTORE_STORAGE_SIZE`, `SolidSyslogFileStoreConfig` (with `blockDevice`, `storeFullContext`, `getCapacityThreshold`, `onThresholdCrossed`, `thresholdContext`), `SolidSyslogFileStore_Create(storage, config)`, `_Destroy(store)`, `SolidSyslogDiscardPolicy` (`SOLIDSYSLOG_DISCARD_OLDEST` / `_NEWEST` / `_HALT`), `SolidSyslogStoreFullCallback(void* context)`, `SolidSyslogStoreThresholdFunction(void* context)` (returns threshold in bytes; 0 disables; queried each Write), `SolidSyslogStoreThresholdCallback(void* context)` (edge-triggered; NullBuffer recursion gotcha — see header) |
+| `SolidSyslogBlockStore.h` | System setup code using a BlockDevice-backed store | `SolidSyslogBlockStoreStorage`, `SOLIDSYSLOG_BLOCKSTORE_STORAGE_SIZE`, `SolidSyslogBlockStoreConfig` (with `blockDevice`, `storeFullContext`, `getCapacityThreshold`, `onThresholdCrossed`, `thresholdContext`), `SolidSyslogBlockStore_Create(storage, config)`, `_Destroy(store)`, `SolidSyslogDiscardPolicy` (`SOLIDSYSLOG_DISCARD_OLDEST` / `_NEWEST` / `_HALT`), `SolidSyslogStoreFullCallback(void* context)`, `SolidSyslogStoreThresholdFunction(void* context)` (returns threshold in bytes; 0 disables; queried each Write), `SolidSyslogStoreThresholdCallback(void* context)` (edge-triggered; NullBuffer recursion gotcha — see header) |
 | `SolidSyslogSecurityPolicyDefinition.h` | SecurityPolicy implementors (extension point) | `SolidSyslogSecurityPolicy` vtable struct, `SOLIDSYSLOG_MAX_INTEGRITY_SIZE` |
 | `SolidSyslogNullSecurityPolicy.h` | System setup code (no integrity checking) | `SolidSyslogNullSecurityPolicy_Create`, `_Destroy` |
 | `SolidSyslogCrc16Policy.h` | System setup code using CRC-16 integrity | `SolidSyslogCrc16Policy_Create`, `_Destroy` |
@@ -433,7 +433,7 @@ code should follow them; reviewers should call out drift.
   setup/teardown, lift the boilerplate into a `TEST_BASE` and derive each group
   via `TEST_GROUP_BASE`. Test bodies still reference fixture members by their
   bare names — they're inherited. See `BlockDeviceTestBase` in
-  `SolidSyslogFileStoreTest.cpp`.
+  `SolidSyslogBlockStoreTest.cpp`.
 - **`CHECK_*` macros for repeated assertion shapes.** When the same buf+memcmp
   or several-line assertion repeats across tests, wrap it in a macro that
   *names* the intent. The macro must be a macro (not a function) so test
@@ -476,7 +476,7 @@ next touched.
 - Mirrors the `SolidSyslogFormatterStorage` pattern. The public header exposes an opaque storage
   type and a `SOLIDSYSLOG_<TYPE>_STORAGE_SIZE` macro; `_Create` takes a pointer to caller-allocated
   storage of that size. No `malloc` anywhere in the library.
-- Internal sub-components (e.g. RecordStore and BlockSequence inside FileStore) nest inside the
+- Internal sub-components (e.g. RecordStore and BlockSequence inside BlockStore) nest inside the
   parent's storage blob. Their types stay in `Core/Source/` and never appear in public headers,
   so integrator and example code physically cannot reach them.
 

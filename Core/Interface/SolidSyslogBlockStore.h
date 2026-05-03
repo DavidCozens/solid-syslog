@@ -1,5 +1,5 @@
-#ifndef SOLIDSYSLOGFILESTORE_H
-#define SOLIDSYSLOGFILESTORE_H
+#ifndef SOLIDSYSLOGBLOCKSTORE_H
+#define SOLIDSYSLOGBLOCKSTORE_H
 
 #include "SolidSyslog.h"
 #include "SolidSyslogSecurityPolicyDefinition.h"
@@ -30,9 +30,9 @@ EXTERN_C_BEGIN
      * or use SolidSyslogPosixMessageQueueBuffer (which returns immediately). */
     typedef void (*SolidSyslogStoreThresholdCallback)(void* context);
 
-    struct SolidSyslogFileStoreConfig
+    struct SolidSyslogBlockStoreConfig
     {
-        /* Required. Caller-owned: must outlive the FileStore. SolidSyslogFileStore_Destroy
+        /* Required. Caller-owned: must outlive the BlockStore. SolidSyslogBlockStore_Destroy
          * does NOT destroy the block device — that is the integrator's responsibility. */
         struct SolidSyslogBlockDevice*    blockDevice;
         size_t                            maxBlockSize;
@@ -48,17 +48,17 @@ EXTERN_C_BEGIN
 
     enum
     {
-        SOLIDSYSLOG_FILESTORE_STORAGE_SIZE = (sizeof(intptr_t) * 32) + SOLIDSYSLOG_MAX_MESSAGE_SIZE + SOLIDSYSLOG_MAX_INTEGRITY_SIZE + 16
+        SOLIDSYSLOG_BLOCKSTORE_STORAGE_SIZE = (sizeof(intptr_t) * 32) + SOLIDSYSLOG_MAX_MESSAGE_SIZE + SOLIDSYSLOG_MAX_INTEGRITY_SIZE + 16
     };
 
     typedef struct
     {
-        intptr_t slots[(SOLIDSYSLOG_FILESTORE_STORAGE_SIZE + sizeof(intptr_t) - 1) / sizeof(intptr_t)];
-    } SolidSyslogFileStoreStorage;
+        intptr_t slots[(SOLIDSYSLOG_BLOCKSTORE_STORAGE_SIZE + sizeof(intptr_t) - 1) / sizeof(intptr_t)];
+    } SolidSyslogBlockStoreStorage;
 
-    struct SolidSyslogStore* SolidSyslogFileStore_Create(SolidSyslogFileStoreStorage * storage, const struct SolidSyslogFileStoreConfig* config);
-    void                     SolidSyslogFileStore_Destroy(struct SolidSyslogStore * store);
+    struct SolidSyslogStore* SolidSyslogBlockStore_Create(SolidSyslogBlockStoreStorage * storage, const struct SolidSyslogBlockStoreConfig* config);
+    void                     SolidSyslogBlockStore_Destroy(struct SolidSyslogStore * store);
 
 EXTERN_C_END
 
-#endif /* SOLIDSYSLOGFILESTORE_H */
+#endif /* SOLIDSYSLOGBLOCKSTORE_H */

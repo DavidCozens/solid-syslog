@@ -15,7 +15,7 @@
 #include "SolidSyslogConfig.h"
 #include "SolidSyslogCrc16Policy.h"
 #include "SolidSyslogFileBlockDevice.h"
-#include "SolidSyslogFileStore.h"
+#include "SolidSyslogBlockStore.h"
 #include "SolidSyslogMetaSd.h"
 #include "SolidSyslogOriginSd.h"
 #include "SolidSyslogTimeQualitySd.h"
@@ -157,20 +157,20 @@ static struct SolidSyslogStore* CreateStore(const struct ExampleOptions* options
         storeBlockDevice = SolidSyslogFileBlockDevice_Create(&blockDeviceStorage, storeReadFile, storeWriteFile, STORE_PATH_PREFIX);
 
         static size_t capacityThreshold;
-        capacityThreshold                                    = options->capacityThreshold;
-        static struct SolidSyslogFileStoreConfig storeConfig = {0};
-        storeConfig.blockDevice                              = storeBlockDevice;
-        storeConfig.maxBlockSize                             = options->maxBlockSize;
-        storeConfig.maxBlocks                                = options->maxBlocks;
-        storeConfig.discardPolicy                            = MapDiscardPolicy(options->discardPolicy);
-        storeConfig.securityPolicy                           = SolidSyslogCrc16Policy_Create();
-        storeConfig.onStoreFull                              = OnStoreFull;
-        storeConfig.getCapacityThreshold                     = GetCapacityThreshold;
-        storeConfig.onThresholdCrossed                       = OnThresholdCrossed;
-        storeConfig.thresholdContext                         = &capacityThreshold;
+        capacityThreshold                                     = options->capacityThreshold;
+        static struct SolidSyslogBlockStoreConfig storeConfig = {0};
+        storeConfig.blockDevice                               = storeBlockDevice;
+        storeConfig.maxBlockSize                              = options->maxBlockSize;
+        storeConfig.maxBlocks                                 = options->maxBlocks;
+        storeConfig.discardPolicy                             = MapDiscardPolicy(options->discardPolicy);
+        storeConfig.securityPolicy                            = SolidSyslogCrc16Policy_Create();
+        storeConfig.onStoreFull                               = OnStoreFull;
+        storeConfig.getCapacityThreshold                      = GetCapacityThreshold;
+        storeConfig.onThresholdCrossed                        = OnThresholdCrossed;
+        storeConfig.thresholdContext                          = &capacityThreshold;
 
-        static SolidSyslogFileStoreStorage storeStorage;
-        return SolidSyslogFileStore_Create(&storeStorage, &storeConfig);
+        static SolidSyslogBlockStoreStorage storeStorage;
+        return SolidSyslogBlockStore_Create(&storeStorage, &storeConfig);
     }
 
     return SolidSyslogNullStore_Create();
@@ -193,7 +193,7 @@ static void DestroyStore(struct SolidSyslogStore* store, const struct ExampleOpt
 
     if (useFile)
     {
-        SolidSyslogFileStore_Destroy(store);
+        SolidSyslogBlockStore_Destroy(store);
         SolidSyslogFileBlockDevice_Destroy(storeBlockDevice);
         SolidSyslogCrc16Policy_Destroy();
         SolidSyslogPosixFile_Destroy(storeWriteFile);

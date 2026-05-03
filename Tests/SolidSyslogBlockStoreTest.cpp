@@ -1,5 +1,5 @@
 #include "CppUTest/TestHarness.h"
-#include "SolidSyslogFileStore.h"
+#include "SolidSyslogBlockStore.h"
 #include "SolidSyslogBlockDevice.h"
 #include "SolidSyslogCrc16Policy.h"
 #include "SolidSyslogFileBlockDevice.h"
@@ -17,7 +17,7 @@ enum
 {
     TEST_BUF_SIZE = SOLIDSYSLOG_MAX_MESSAGE_SIZE,
     SENTINEL      = 'Z',
-    /* Mirrors the private RECORD_OVERHEAD in SolidSyslogFileStore.c:
+    /* Mirrors the private RECORD_OVERHEAD in SolidSyslogBlockStore.c:
      * MAGIC_SIZE(2) + RECORD_LENGTH_SIZE(2) + SENT_FLAG_SIZE(1). */
     TEST_RECORD_OVERHEAD   = 5,
     TEST_RECORDS_PER_BLOCK = 2,
@@ -29,22 +29,22 @@ enum
     TEST_MAX_BLOCKS     = 2
 };
 
-static const struct SolidSyslogFileStoreConfig DEFAULT_CONFIG = {
+static const struct SolidSyslogBlockStoreConfig DEFAULT_CONFIG = {
     nullptr, TEST_MAX_BLOCK_SIZE, TEST_MAX_BLOCKS, SOLIDSYSLOG_DISCARD_OLDEST, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
 };
 
 /* Single backing slab reused across tests — tests run serially and Destroy
  * resets the store, so one storage instance is sufficient. */
-static SolidSyslogFileStoreStorage storeStorage = {};
+static SolidSyslogBlockStoreStorage storeStorage = {};
 
-static struct SolidSyslogFileStoreConfig MakeConfig(struct SolidSyslogBlockDevice* device)
+static struct SolidSyslogBlockStoreConfig MakeConfig(struct SolidSyslogBlockDevice* device)
 {
-    struct SolidSyslogFileStoreConfig config = DEFAULT_CONFIG;
-    config.blockDevice                       = device;
+    struct SolidSyslogBlockStoreConfig config = DEFAULT_CONFIG;
+    config.blockDevice                        = device;
     return config;
 }
 
-/* Shared fixture — every FileStore test group needs two FileFakes (read + write
+/* Shared fixture — every BlockStore test group needs two FileFakes (read + write
  * sides of the BlockDevice), the BlockDevice itself, and a teardown that closes
  * them in the right order. TEST_BASE / TEST_GROUP_BASE lifts that boilerplate
  * out of every group. Test bodies still reference `file`, `readFile`, `device`
@@ -83,54 +83,54 @@ TEST_BASE(BlockDeviceTestBase)
  * ----------------------------------------------------------------*/
 
 // clang-format off
-TEST_GROUP_BASE(SolidSyslogFileStore, BlockDeviceTestBase)
+TEST_GROUP_BASE(SolidSyslogBlockStore, BlockDeviceTestBase)
 {
     struct SolidSyslogStore* store = nullptr;
 
     void setup() override
     {
         setupBlockDeviceFakes();
-        struct SolidSyslogFileStoreConfig config = MakeConfig(device);
+        struct SolidSyslogBlockStoreConfig config = MakeConfig(device);
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        store = SolidSyslogFileStore_Create(&storeStorage, &config);
+        store = SolidSyslogBlockStore_Create(&storeStorage, &config);
     }
 
     void teardown() override
     {
-        SolidSyslogFileStore_Destroy(store);
+        SolidSyslogBlockStore_Destroy(store);
         teardownBlockDeviceFakes();
     }
 };
 
 // clang-format on
 
-TEST(SolidSyslogFileStore, CreateReturnsNonNull)
+TEST(SolidSyslogBlockStore, CreateReturnsNonNull)
 {
     CHECK_TRUE(store != nullptr);
 }
 
-TEST(SolidSyslogFileStore, CreatesFileWithSequence00)
+TEST(SolidSyslogBlockStore, CreatesFileWithSequence00)
 {
     CHECK_TRUE(SolidSyslogFile_Exists(file, "/tmp/test_store00.log"));
 }
 
-TEST(SolidSyslogFileStore, HasUnsentReturnsFalseOnEmpty)
+TEST(SolidSyslogBlockStore, HasUnsentReturnsFalseOnEmpty)
 {
     CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
 }
 
-TEST(SolidSyslogFileStore, WriteReturnsTrue)
+TEST(SolidSyslogBlockStore, WriteReturnsTrue)
 {
     CHECK_TRUE(SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN));
 }
 
-TEST(SolidSyslogFileStore, HasUnsentReturnsTrueAfterWrite)
+TEST(SolidSyslogBlockStore, HasUnsentReturnsTrueAfterWrite)
 {
     SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
     CHECK_TRUE(SolidSyslogStore_HasUnsent(store));
 }
 
-TEST(SolidSyslogFileStore, ReadNextUnsentReturnsTrueAfterWrite)
+TEST(SolidSyslogBlockStore, ReadNextUnsentReturnsTrueAfterWrite)
 {
     SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
     char   buf[TEST_BUF_SIZE];
@@ -138,7 +138,7 @@ TEST(SolidSyslogFileStore, ReadNextUnsentReturnsTrueAfterWrite)
     CHECK_TRUE(SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead));
 }
 
-TEST(SolidSyslogFileStore, ReadNextUnsentReturnsWrittenData)
+TEST(SolidSyslogBlockStore, ReadNextUnsentReturnsWrittenData)
 {
     SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
     char   buf[TEST_BUF_SIZE] = {};
@@ -147,7 +147,7 @@ TEST(SolidSyslogFileStore, ReadNextUnsentReturnsWrittenData)
     MEMCMP_EQUAL(TEST_DATA, buf, TEST_DATA_LEN);
 }
 
-TEST(SolidSyslogFileStore, ReadNextUnsentReturnsByteCount)
+TEST(SolidSyslogBlockStore, ReadNextUnsentReturnsByteCount)
 {
     SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
     char   buf[TEST_BUF_SIZE];
@@ -156,14 +156,14 @@ TEST(SolidSyslogFileStore, ReadNextUnsentReturnsByteCount)
     LONGS_EQUAL(TEST_DATA_LEN, bytesRead);
 }
 
-TEST(SolidSyslogFileStore, ReadNextUnsentReturnsFalseOnEmpty)
+TEST(SolidSyslogBlockStore, ReadNextUnsentReturnsFalseOnEmpty)
 {
     char   buf[TEST_BUF_SIZE];
     size_t bytesRead = 0;
     CHECK_FALSE(SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead));
 }
 
-TEST(SolidSyslogFileStore, ReadNextUnsentSetsZeroBytesOnEmpty)
+TEST(SolidSyslogBlockStore, ReadNextUnsentSetsZeroBytesOnEmpty)
 {
     char   buf[TEST_BUF_SIZE];
     size_t bytesRead = 99;
@@ -171,7 +171,7 @@ TEST(SolidSyslogFileStore, ReadNextUnsentSetsZeroBytesOnEmpty)
     LONGS_EQUAL(0, bytesRead);
 }
 
-TEST(SolidSyslogFileStore, ReadDoesNotWriteBeyondDataLength)
+TEST(SolidSyslogBlockStore, ReadDoesNotWriteBeyondDataLength)
 {
     char buf[TEST_BUF_SIZE];
     memset(buf, SENTINEL, sizeof(buf));
@@ -184,7 +184,7 @@ TEST(SolidSyslogFileStore, ReadDoesNotWriteBeyondDataLength)
     BYTES_EQUAL(SENTINEL, buf[TEST_DATA_LEN]);
 }
 
-TEST(SolidSyslogFileStore, ReadTruncatesWhenBufferTooSmall)
+TEST(SolidSyslogBlockStore, ReadTruncatesWhenBufferTooSmall)
 {
     const char* longMessage = "hello world";
 
@@ -203,7 +203,7 @@ TEST(SolidSyslogFileStore, ReadTruncatesWhenBufferTooSmall)
     MEMCMP_EQUAL("hello", buf, SMALL_BUF_SIZE);
 }
 
-TEST(SolidSyslogFileStore, MarkSentThenHasUnsentReturnsFalse)
+TEST(SolidSyslogBlockStore, MarkSentThenHasUnsentReturnsFalse)
 {
     SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
     char   buf[TEST_BUF_SIZE];
@@ -213,12 +213,12 @@ TEST(SolidSyslogFileStore, MarkSentThenHasUnsentReturnsFalse)
     CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
 }
 
-TEST(SolidSyslogFileStore, MarkSentWithoutReadDoesNotCrash)
+TEST(SolidSyslogBlockStore, MarkSentWithoutReadDoesNotCrash)
 {
     SolidSyslogStore_MarkSent(store);
 }
 
-TEST(SolidSyslogFileStore, HasUnsentFalseAfterAllSent)
+TEST(SolidSyslogBlockStore, HasUnsentFalseAfterAllSent)
 {
     SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
     char   buf[TEST_BUF_SIZE];
@@ -229,7 +229,7 @@ TEST(SolidSyslogFileStore, HasUnsentFalseAfterAllSent)
     CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
 }
 
-TEST(SolidSyslogFileStore, WriteAfterDrainWorks)
+TEST(SolidSyslogBlockStore, WriteAfterDrainWorks)
 {
     SolidSyslogStore_Write(store, "first", strlen("first"));
     char   buf[TEST_BUF_SIZE] = {};
@@ -244,7 +244,7 @@ TEST(SolidSyslogFileStore, WriteAfterDrainWorks)
     MEMCMP_EQUAL("second", buf, strlen("second"));
 }
 
-TEST(SolidSyslogFileStore, TwoWritesFirstReadReturnsFirst)
+TEST(SolidSyslogBlockStore, TwoWritesFirstReadReturnsFirst)
 {
     SolidSyslogStore_Write(store, "first", strlen("first"));
     SolidSyslogStore_Write(store, "second", strlen("second"));
@@ -254,7 +254,7 @@ TEST(SolidSyslogFileStore, TwoWritesFirstReadReturnsFirst)
     MEMCMP_EQUAL("first", buf, strlen("first"));
 }
 
-TEST(SolidSyslogFileStore, AfterMarkFirstReadReturnsSecond)
+TEST(SolidSyslogBlockStore, AfterMarkFirstReadReturnsSecond)
 {
     SolidSyslogStore_Write(store, "first", strlen("first"));
     SolidSyslogStore_Write(store, "second", strlen("second"));
@@ -270,7 +270,7 @@ TEST(SolidSyslogFileStore, AfterMarkFirstReadReturnsSecond)
     LONGS_EQUAL(strlen("second"), bytesRead);
 }
 
-TEST(SolidSyslogFileStore, FiveWritesDrainAllInOrder)
+TEST(SolidSyslogBlockStore, FiveWritesDrainAllInOrder)
 {
     const char* messages[] = {"msg0", "msg1", "msg2", "msg3", "msg4"};
 
@@ -301,7 +301,7 @@ TEST(SolidSyslogFileStore, FiveWritesDrainAllInOrder)
  * ----------------------------------------------------------------*/
 
 // clang-format off
-TEST_GROUP_BASE(SolidSyslogFileStoreResume, BlockDeviceTestBase)
+TEST_GROUP_BASE(SolidSyslogBlockStoreResume, BlockDeviceTestBase)
 {
     struct SolidSyslogStore* store = nullptr;
 
@@ -312,22 +312,22 @@ TEST_GROUP_BASE(SolidSyslogFileStoreResume, BlockDeviceTestBase)
 
     void teardown() override
     {
-        SolidSyslogFileStore_Destroy(store);
+        SolidSyslogBlockStore_Destroy(store);
         teardownBlockDeviceFakes();
     }
 
     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- total and markedSent have distinct semantics
     void WritePreviousSession(int total, int markedSent)
     {
-        struct SolidSyslogFileStoreConfig config = MakeConfig(device);
+        struct SolidSyslogBlockStoreConfig config = MakeConfig(device);
         // cppcheck-suppress unreadVariable -- used by WriteMessages/DrainMessages; cppcheck does not model CppUTest macros
-        store = SolidSyslogFileStore_Create(&storeStorage, &config);
+        store = SolidSyslogBlockStore_Create(&storeStorage, &config);
         WriteMessages(total);
         DrainMessages(markedSent);
-        SolidSyslogFileStore_Destroy(store);
+        SolidSyslogBlockStore_Destroy(store);
 
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        store = SolidSyslogFileStore_Create(&storeStorage, &config);
+        store = SolidSyslogBlockStore_Create(&storeStorage, &config);
     }
 
     void WriteMessages(int count) const
@@ -355,13 +355,13 @@ TEST_GROUP_BASE(SolidSyslogFileStoreResume, BlockDeviceTestBase)
 
 // clang-format on
 
-TEST(SolidSyslogFileStoreResume, HasUnsentAfterResume)
+TEST(SolidSyslogBlockStoreResume, HasUnsentAfterResume)
 {
     WritePreviousSession(3, 1);
     CHECK_TRUE(SolidSyslogStore_HasUnsent(store));
 }
 
-TEST(SolidSyslogFileStoreResume, ReadReturnsFirstUnsent)
+TEST(SolidSyslogBlockStoreResume, ReadReturnsFirstUnsent)
 {
     WritePreviousSession(3, 1);
     char   buf[TEST_BUF_SIZE] = {};
@@ -370,7 +370,7 @@ TEST(SolidSyslogFileStoreResume, ReadReturnsFirstUnsent)
     MEMCMP_EQUAL("msg1", buf, strlen("msg1"));
 }
 
-TEST(SolidSyslogFileStoreResume, DrainsRemainingUnsent)
+TEST(SolidSyslogBlockStoreResume, DrainsRemainingUnsent)
 {
     WritePreviousSession(3, 1);
     char   buf[TEST_BUF_SIZE] = {};
@@ -388,19 +388,19 @@ TEST(SolidSyslogFileStoreResume, DrainsRemainingUnsent)
     CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
 }
 
-TEST(SolidSyslogFileStoreResume, AllSentReturnsNoUnsent)
+TEST(SolidSyslogBlockStoreResume, AllSentReturnsNoUnsent)
 {
     WritePreviousSession(3, 3);
     CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
 }
 
-TEST(SolidSyslogFileStoreResume, EmptyFileReturnsNoUnsent)
+TEST(SolidSyslogBlockStoreResume, EmptyFileReturnsNoUnsent)
 {
     WritePreviousSession(0, 0);
     CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
 }
 
-TEST(SolidSyslogFileStoreResume, CanWriteNewMessagesAfterResume)
+TEST(SolidSyslogBlockStoreResume, CanWriteNewMessagesAfterResume)
 {
     WritePreviousSession(2, 1);
     char   buf[TEST_BUF_SIZE] = {};
@@ -421,7 +421,7 @@ TEST(SolidSyslogFileStoreResume, CanWriteNewMessagesAfterResume)
  * ----------------------------------------------------------------*/
 
 // clang-format off
-TEST_GROUP_BASE(SolidSyslogFileStoreDestroy, BlockDeviceTestBase)
+TEST_GROUP_BASE(SolidSyslogBlockStoreDestroy, BlockDeviceTestBase)
 {
     void setup() override
     {
@@ -436,12 +436,12 @@ TEST_GROUP_BASE(SolidSyslogFileStoreDestroy, BlockDeviceTestBase)
 
 // clang-format on
 
-TEST(SolidSyslogFileStoreDestroy, DoubleDestroyDoesNotCrash)
+TEST(SolidSyslogBlockStoreDestroy, DoubleDestroyDoesNotCrash)
 {
-    struct SolidSyslogFileStoreConfig config = MakeConfig(device);
-    struct SolidSyslogStore*          store  = SolidSyslogFileStore_Create(&storeStorage, &config);
-    SolidSyslogFileStore_Destroy(store);
-    SolidSyslogFileStore_Destroy(store);
+    struct SolidSyslogBlockStoreConfig config = MakeConfig(device);
+    struct SolidSyslogStore*           store  = SolidSyslogBlockStore_Create(&storeStorage, &config);
+    SolidSyslogBlockStore_Destroy(store);
+    SolidSyslogBlockStore_Destroy(store);
 }
 
 /* ------------------------------------------------------------------
@@ -449,7 +449,7 @@ TEST(SolidSyslogFileStoreDestroy, DoubleDestroyDoesNotCrash)
  * ----------------------------------------------------------------*/
 
 // clang-format off
-TEST_GROUP_BASE(SolidSyslogFileStoreConfig, BlockDeviceTestBase)
+TEST_GROUP_BASE(SolidSyslogBlockStoreConfig, BlockDeviceTestBase)
 {
     struct SolidSyslogStore*   store   = nullptr;
 
@@ -460,24 +460,24 @@ TEST_GROUP_BASE(SolidSyslogFileStoreConfig, BlockDeviceTestBase)
 
     void teardown() override
     {
-        SolidSyslogFileStore_Destroy(store);
+        SolidSyslogBlockStore_Destroy(store);
         teardownBlockDeviceFakes();
     }
 
     void CreateWithMaxBlocks(size_t maxBlocks)
     {
-        struct SolidSyslogFileStoreConfig config = MakeConfig(device);
+        struct SolidSyslogBlockStoreConfig config = MakeConfig(device);
         config.maxBlocks = maxBlocks;
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        store = SolidSyslogFileStore_Create(&storeStorage, &config);
+        store = SolidSyslogBlockStore_Create(&storeStorage, &config);
     }
 
     void CreateWithMaxBlockSize(size_t maxBlockSize)
     {
-        struct SolidSyslogFileStoreConfig config = MakeConfig(device);
+        struct SolidSyslogBlockStoreConfig config = MakeConfig(device);
         config.maxBlockSize = maxBlockSize;
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        store = SolidSyslogFileStore_Create(&storeStorage, &config);
+        store = SolidSyslogBlockStore_Create(&storeStorage, &config);
     }
 
     void CreateWithPathPrefix(const char* prefix)
@@ -485,9 +485,9 @@ TEST_GROUP_BASE(SolidSyslogFileStoreConfig, BlockDeviceTestBase)
         SolidSyslogFileBlockDevice_Destroy(device);
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
         device = SolidSyslogFileBlockDevice_Create(&deviceStorage, readFile, file, prefix);
-        struct SolidSyslogFileStoreConfig config = MakeConfig(device);
+        struct SolidSyslogBlockStoreConfig config = MakeConfig(device);
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        store = SolidSyslogFileStore_Create(&storeStorage, &config);
+        store = SolidSyslogBlockStore_Create(&storeStorage, &config);
     }
 
     void VerifyWriteAndReadBack() const
@@ -502,37 +502,37 @@ TEST_GROUP_BASE(SolidSyslogFileStoreConfig, BlockDeviceTestBase)
 
 // clang-format on
 
-TEST(SolidSyslogFileStoreConfig, MaxFilesZeroClampedToMinimum)
+TEST(SolidSyslogBlockStoreConfig, MaxFilesZeroClampedToMinimum)
 {
     CreateWithMaxBlocks(0);
     VerifyWriteAndReadBack();
 }
 
-TEST(SolidSyslogFileStoreConfig, MaxFilesOneClampedToMinimum)
+TEST(SolidSyslogBlockStoreConfig, MaxFilesOneClampedToMinimum)
 {
     CreateWithMaxBlocks(1);
     VerifyWriteAndReadBack();
 }
 
-TEST(SolidSyslogFileStoreConfig, MaxFilesHundredClampedToMaximum)
+TEST(SolidSyslogBlockStoreConfig, MaxFilesHundredClampedToMaximum)
 {
     CreateWithMaxBlocks(100);
     VerifyWriteAndReadBack();
 }
 
-TEST(SolidSyslogFileStoreConfig, MaxFileSizeZeroClampedToMinimum)
+TEST(SolidSyslogBlockStoreConfig, MaxFileSizeZeroClampedToMinimum)
 {
     CreateWithMaxBlockSize(0);
     VerifyWriteAndReadBack();
 }
 
-TEST(SolidSyslogFileStoreConfig, MaxFileSizeOneClampedToMinimum)
+TEST(SolidSyslogBlockStoreConfig, MaxFileSizeOneClampedToMinimum)
 {
     CreateWithMaxBlockSize(1);
     VerifyWriteAndReadBack();
 }
 
-TEST(SolidSyslogFileStoreConfig, FilenameExactlyAtMaxPath)
+TEST(SolidSyslogBlockStoreConfig, FilenameExactlyAtMaxPath)
 {
     /* MAX_PATH_SIZE=128, suffix "00.log"=6, null=1, so max prefix=121 chars */
     char prefix[122];
@@ -548,7 +548,7 @@ TEST(SolidSyslogFileStoreConfig, FilenameExactlyAtMaxPath)
     CHECK_TRUE(SolidSyslogFile_Exists(file, expected));
 }
 
-TEST(SolidSyslogFileStoreConfig, FilenameTruncatedWhenPrefixTooLong)
+TEST(SolidSyslogBlockStoreConfig, FilenameTruncatedWhenPrefixTooLong)
 {
     /* MAX_PATH_SIZE=128. A 127-char prefix leaves 1 byte for digits and
        suffix. FormatFilename must not write past the buffer — prior to
@@ -562,24 +562,24 @@ TEST(SolidSyslogFileStoreConfig, FilenameTruncatedWhenPrefixTooLong)
     VerifyWriteAndReadBack();
 }
 
-TEST(SolidSyslogFileStoreConfig, NullSecurityPolicyDefaultsToNoOp)
+TEST(SolidSyslogBlockStoreConfig, NullSecurityPolicyDefaultsToNoOp)
 {
-    struct SolidSyslogFileStoreConfig config = MakeConfig(device);
-    config.securityPolicy                    = nullptr;
-    store                                    = SolidSyslogFileStore_Create(&storeStorage, &config);
+    struct SolidSyslogBlockStoreConfig config = MakeConfig(device);
+    config.securityPolicy                     = nullptr;
+    store                                     = SolidSyslogBlockStore_Create(&storeStorage, &config);
     VerifyWriteAndReadBack();
 }
 
-TEST(SolidSyslogFileStoreConfig, OversizedSecurityPolicyLeavesNoIntegrityGap)
+TEST(SolidSyslogBlockStoreConfig, OversizedSecurityPolicyLeavesNoIntegrityGap)
 {
     struct SolidSyslogSecurityPolicy oversizedPolicy = {
         SOLIDSYSLOG_MAX_INTEGRITY_SIZE + 1,
         nullptr,
         nullptr,
     };
-    struct SolidSyslogFileStoreConfig config = MakeConfig(device);
-    config.securityPolicy                    = &oversizedPolicy;
-    store                                    = SolidSyslogFileStore_Create(&storeStorage, &config);
+    struct SolidSyslogBlockStoreConfig config = MakeConfig(device);
+    config.securityPolicy                     = &oversizedPolicy;
+    store                                     = SolidSyslogBlockStore_Create(&storeStorage, &config);
 
     const char   body[]  = "HELLO WORLD";
     const size_t bodyLen = sizeof(body) - 1;
@@ -596,7 +596,7 @@ TEST(SolidSyslogFileStoreConfig, OversizedSecurityPolicyLeavesNoIntegrityGap)
  * ----------------------------------------------------------------*/
 
 // clang-format off
-TEST_GROUP_BASE(SolidSyslogFileStoreErrors, BlockDeviceTestBase)
+TEST_GROUP_BASE(SolidSyslogBlockStoreErrors, BlockDeviceTestBase)
 {
     // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
     struct SolidSyslogStore*   store   = nullptr;
@@ -608,43 +608,43 @@ TEST_GROUP_BASE(SolidSyslogFileStoreErrors, BlockDeviceTestBase)
 
     void teardown() override
     {
-        SolidSyslogFileStore_Destroy(store);
+        SolidSyslogBlockStore_Destroy(store);
         teardownBlockDeviceFakes();
     }
 };
 
 // clang-format on
 
-TEST(SolidSyslogFileStoreErrors, OpenFailureStillReturnsNonNull)
+TEST(SolidSyslogBlockStoreErrors, OpenFailureStillReturnsNonNull)
 {
-    struct SolidSyslogFileStoreConfig config = MakeConfig(device);
+    struct SolidSyslogBlockStoreConfig config = MakeConfig(device);
     FileFake_FailNextOpen(file);
-    store = SolidSyslogFileStore_Create(&storeStorage, &config);
+    store = SolidSyslogBlockStore_Create(&storeStorage, &config);
     CHECK_TRUE(store != nullptr);
 }
 
-TEST(SolidSyslogFileStoreErrors, TransientOpenFailureRecoversOnNextWrite)
+TEST(SolidSyslogBlockStoreErrors, TransientOpenFailureRecoversOnNextWrite)
 {
     /* BlockDevice opens lazily — a one-shot Open failure during Create heals
      * on the next operation that needs the file. */
-    struct SolidSyslogFileStoreConfig config = MakeConfig(device);
+    struct SolidSyslogBlockStoreConfig config = MakeConfig(device);
     FileFake_FailNextOpen(file);
-    store = SolidSyslogFileStore_Create(&storeStorage, &config);
+    store = SolidSyslogBlockStore_Create(&storeStorage, &config);
     CHECK_TRUE(SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN));
 }
 
-TEST(SolidSyslogFileStoreErrors, WriteReturnsFalseOnWriteFailure)
+TEST(SolidSyslogBlockStoreErrors, WriteReturnsFalseOnWriteFailure)
 {
-    struct SolidSyslogFileStoreConfig config = MakeConfig(device);
-    store                                    = SolidSyslogFileStore_Create(&storeStorage, &config);
+    struct SolidSyslogBlockStoreConfig config = MakeConfig(device);
+    store                                     = SolidSyslogBlockStore_Create(&storeStorage, &config);
     FileFake_FailNextWrite(file);
     CHECK_FALSE(SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN));
 }
 
-TEST(SolidSyslogFileStoreErrors, ReadReturnsFalseOnReadFailure)
+TEST(SolidSyslogBlockStoreErrors, ReadReturnsFalseOnReadFailure)
 {
-    struct SolidSyslogFileStoreConfig config = MakeConfig(device);
-    store                                    = SolidSyslogFileStore_Create(&storeStorage, &config);
+    struct SolidSyslogBlockStoreConfig config = MakeConfig(device);
+    store                                     = SolidSyslogBlockStore_Create(&storeStorage, &config);
     SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
     FileFake_FailNextRead(readFile);
 
@@ -654,10 +654,10 @@ TEST(SolidSyslogFileStoreErrors, ReadReturnsFalseOnReadFailure)
     LONGS_EQUAL(0, bytesRead);
 }
 
-TEST(SolidSyslogFileStoreErrors, MarkSentDoesNotAdvanceWhenWriteFails)
+TEST(SolidSyslogBlockStoreErrors, MarkSentDoesNotAdvanceWhenWriteFails)
 {
-    struct SolidSyslogFileStoreConfig config = MakeConfig(device);
-    store                                    = SolidSyslogFileStore_Create(&storeStorage, &config);
+    struct SolidSyslogBlockStoreConfig config = MakeConfig(device);
+    store                                     = SolidSyslogBlockStore_Create(&storeStorage, &config);
     SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
 
     char   buf[TEST_BUF_SIZE];
@@ -675,7 +675,7 @@ TEST(SolidSyslogFileStoreErrors, MarkSentDoesNotAdvanceWhenWriteFails)
  * ----------------------------------------------------------------*/
 
 // clang-format off
-TEST_GROUP_BASE(SolidSyslogFileStoreRotation, BlockDeviceTestBase)
+TEST_GROUP_BASE(SolidSyslogBlockStoreRotation, BlockDeviceTestBase)
 {
     static const size_t RECORD_OVERHEAD    = 5; /* 2 (magic) + 2 (length) + 1 (sent flag) */
     static const size_t ONE_MAX_MSG_RECORD = SOLIDSYSLOG_MAX_MESSAGE_SIZE + RECORD_OVERHEAD;
@@ -691,7 +691,7 @@ TEST_GROUP_BASE(SolidSyslogFileStoreRotation, BlockDeviceTestBase)
 
     void teardown() override
     {
-        SolidSyslogFileStore_Destroy(store);
+        SolidSyslogBlockStore_Destroy(store);
         teardownBlockDeviceFakes();
     }
 
@@ -699,7 +699,7 @@ TEST_GROUP_BASE(SolidSyslogFileStoreRotation, BlockDeviceTestBase)
                                size_t maxBlocks = 2,
                                SolidSyslogStoreFullCallback onStoreFull = nullptr, void* storeFullContext = nullptr)
     {
-        struct SolidSyslogFileStoreConfig config = DEFAULT_CONFIG;
+        struct SolidSyslogBlockStoreConfig config = DEFAULT_CONFIG;
         config.blockDevice       = device;
         config.maxBlockSize       = maxBlockSize;
         config.maxBlocks          = maxBlocks;
@@ -707,7 +707,7 @@ TEST_GROUP_BASE(SolidSyslogFileStoreRotation, BlockDeviceTestBase)
         config.onStoreFull       = onStoreFull;
         config.storeFullContext  = storeFullContext;
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        store = SolidSyslogFileStore_Create(&storeStorage, &config);
+        store = SolidSyslogBlockStore_Create(&storeStorage, &config);
     }
 
     void WriteMaxMsg()
@@ -718,7 +718,7 @@ TEST_GROUP_BASE(SolidSyslogFileStoreRotation, BlockDeviceTestBase)
 
 // clang-format on
 
-TEST(SolidSyslogFileStoreRotation, WriteRotatesToNewFileWhenFull)
+TEST(SolidSyslogBlockStoreRotation, WriteRotatesToNewFileWhenFull)
 {
     CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
     WriteMaxMsg();
@@ -726,7 +726,7 @@ TEST(SolidSyslogFileStoreRotation, WriteRotatesToNewFileWhenFull)
     CHECK_TRUE(SolidSyslogFile_Exists(file, "/tmp/test_store01.log"));
 }
 
-TEST(SolidSyslogFileStoreRotation, WriteDoesNotRotateWhenFileHasSpace)
+TEST(SolidSyslogBlockStoreRotation, WriteDoesNotRotateWhenFileHasSpace)
 {
     CreateWithMaxBlockSize(2 * ONE_MAX_MSG_RECORD);
     WriteMaxMsg();
@@ -734,7 +734,7 @@ TEST(SolidSyslogFileStoreRotation, WriteDoesNotRotateWhenFileHasSpace)
     CHECK_FALSE(SolidSyslogFile_Exists(file, "/tmp/test_store01.log"));
 }
 
-TEST(SolidSyslogFileStoreRotation, HasUnsentReturnsTrueAfterRotation)
+TEST(SolidSyslogBlockStoreRotation, HasUnsentReturnsTrueAfterRotation)
 {
     CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
     WriteMaxMsg();
@@ -742,7 +742,7 @@ TEST(SolidSyslogFileStoreRotation, HasUnsentReturnsTrueAfterRotation)
     CHECK_TRUE(SolidSyslogStore_HasUnsent(store));
 }
 
-TEST(SolidSyslogFileStoreRotation, ReadReturnsFirstFileAfterRotation)
+TEST(SolidSyslogBlockStoreRotation, ReadReturnsFirstFileAfterRotation)
 {
     CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
 
@@ -760,7 +760,7 @@ TEST(SolidSyslogFileStoreRotation, ReadReturnsFirstFileAfterRotation)
     BYTES_EQUAL('B', buf[0]);
 }
 
-TEST(SolidSyslogFileStoreRotation, MarkSentAdvancesReadToSecondFile)
+TEST(SolidSyslogBlockStoreRotation, MarkSentAdvancesReadToSecondFile)
 {
     CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
 
@@ -782,7 +782,7 @@ TEST(SolidSyslogFileStoreRotation, MarkSentAdvancesReadToSecondFile)
     BYTES_EQUAL('A', buf[0]);
 }
 
-TEST(SolidSyslogFileStoreRotation, FullDrainAcrossTwoFilesHasUnsentFalse)
+TEST(SolidSyslogBlockStoreRotation, FullDrainAcrossTwoFilesHasUnsentFalse)
 {
     CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
     WriteMaxMsg();
@@ -800,7 +800,7 @@ TEST(SolidSyslogFileStoreRotation, FullDrainAcrossTwoFilesHasUnsentFalse)
     CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
 }
 
-TEST(SolidSyslogFileStoreRotation, DiscardOldestDeletesOldestFileWhenAtMaxFiles)
+TEST(SolidSyslogBlockStoreRotation, DiscardOldestDeletesOldestFileWhenAtMaxFiles)
 {
     CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
     WriteMaxMsg(); /* file 00 */
@@ -811,7 +811,7 @@ TEST(SolidSyslogFileStoreRotation, DiscardOldestDeletesOldestFileWhenAtMaxFiles)
     CHECK_TRUE(SolidSyslogFile_Exists(file, "/tmp/test_store02.log"));
 }
 
-TEST(SolidSyslogFileStoreRotation, DiscardOldestSurvivingDataIsReadable)
+TEST(SolidSyslogBlockStoreRotation, DiscardOldestSurvivingDataIsReadable)
 {
     CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
 
@@ -833,7 +833,7 @@ TEST(SolidSyslogFileStoreRotation, DiscardOldestSurvivingDataIsReadable)
     BYTES_EQUAL('C', buf[0]);
 }
 
-TEST(SolidSyslogFileStoreRotation, DiscardOldestDrainYieldsOnlySurvivingRecords)
+TEST(SolidSyslogBlockStoreRotation, DiscardOldestDrainYieldsOnlySurvivingRecords)
 {
     CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
 
@@ -864,7 +864,7 @@ TEST(SolidSyslogFileStoreRotation, DiscardOldestDrainYieldsOnlySurvivingRecords)
     CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
 }
 
-TEST(SolidSyslogFileStoreRotation, DiscardNewestReturnsFalseWhenAtMaxFiles)
+TEST(SolidSyslogBlockStoreRotation, DiscardNewestReturnsFalseWhenAtMaxFiles)
 {
     CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_DISCARD_NEWEST);
     WriteMaxMsg(); /* file 00 */
@@ -881,7 +881,7 @@ static void StoreFullCallback(void* context)
     storeFullCallbackInvoked = true;
 }
 
-TEST(SolidSyslogFileStoreRotation, HaltInvokesCallbackWhenStoreFull)
+TEST(SolidSyslogBlockStoreRotation, HaltInvokesCallbackWhenStoreFull)
 {
     storeFullCallbackInvoked = false;
     CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_HALT, 2, StoreFullCallback);
@@ -893,7 +893,7 @@ TEST(SolidSyslogFileStoreRotation, HaltInvokesCallbackWhenStoreFull)
     CHECK_TRUE(storeFullCallbackInvoked);
 }
 
-TEST(SolidSyslogFileStoreRotation, HaltWithNullCallbackDoesNotCrash)
+TEST(SolidSyslogBlockStoreRotation, HaltWithNullCallbackDoesNotCrash)
 {
     CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_HALT);
 
@@ -903,7 +903,7 @@ TEST(SolidSyslogFileStoreRotation, HaltWithNullCallbackDoesNotCrash)
     CHECK_FALSE(SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)));
 }
 
-TEST(SolidSyslogFileStoreRotation, HaltSetsIsHaltedTrue)
+TEST(SolidSyslogBlockStoreRotation, HaltSetsIsHaltedTrue)
 {
     CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_HALT);
 
@@ -915,7 +915,7 @@ TEST(SolidSyslogFileStoreRotation, HaltSetsIsHaltedTrue)
     CHECK_TRUE(SolidSyslogStore_IsHalted(store));
 }
 
-TEST(SolidSyslogFileStoreRotation, DiscardNewestDoesNotInvokeCallback)
+TEST(SolidSyslogBlockStoreRotation, DiscardNewestDoesNotInvokeCallback)
 {
     storeFullCallbackInvoked = false;
     CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_DISCARD_NEWEST, 2, StoreFullCallback);
@@ -935,7 +935,7 @@ static void CountStoreFullInvocations(void* context)
     storeFullCallbackCount++;
 }
 
-TEST(SolidSyslogFileStoreRotation, HaltOnStoreFullFiresOncePerRisingEdge)
+TEST(SolidSyslogBlockStoreRotation, HaltOnStoreFullFiresOncePerRisingEdge)
 {
     storeFullCallbackCount = 0;
     CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD, SOLIDSYSLOG_HALT, 2, CountStoreFullInvocations);
@@ -961,7 +961,7 @@ static void StoreFullCallbackCapturingContext(void* context)
 /* Given the integrator wires storeFullContext at config time,
  * When onStoreFull fires,
  * Then the callback receives the configured context pointer unchanged. */
-TEST(SolidSyslogFileStoreRotation, OnStoreFullReceivesConfiguredContext)
+TEST(SolidSyslogBlockStoreRotation, OnStoreFullReceivesConfiguredContext)
 {
     int sentinel             = 0;
     storeFullCallbackContext = nullptr;
@@ -976,18 +976,18 @@ TEST(SolidSyslogFileStoreRotation, OnStoreFullReceivesConfiguredContext)
     POINTERS_EQUAL(&sentinel, storeFullCallbackContext);
 }
 
-TEST(SolidSyslogFileStoreRotation, ResumeHasUnsentWhenMultipleFilesExist)
+TEST(SolidSyslogBlockStoreRotation, ResumeHasUnsentWhenMultipleFilesExist)
 {
     CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
     WriteMaxMsg(); /* file 00 */
     WriteMaxMsg(); /* file 01 */
-    SolidSyslogFileStore_Destroy(store);
+    SolidSyslogBlockStore_Destroy(store);
 
     CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
     CHECK_TRUE(SolidSyslogStore_HasUnsent(store));
 }
 
-TEST(SolidSyslogFileStoreRotation, ResumeDrainsAcrossFilesInOrder)
+TEST(SolidSyslogBlockStoreRotation, ResumeDrainsAcrossFilesInOrder)
 {
     CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
 
@@ -996,7 +996,7 @@ TEST(SolidSyslogFileStoreRotation, ResumeDrainsAcrossFilesInOrder)
     SolidSyslogStore_Write(store, firstMsg, sizeof(firstMsg)); /* file 00 */
 
     WriteMaxMsg(); /* file 01 — 'A' */
-    SolidSyslogFileStore_Destroy(store);
+    SolidSyslogBlockStore_Destroy(store);
 
     CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
 
@@ -1015,11 +1015,11 @@ TEST(SolidSyslogFileStoreRotation, ResumeDrainsAcrossFilesInOrder)
     CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
 }
 
-TEST(SolidSyslogFileStoreRotation, ResumeContinuesWritingToCorrectFile)
+TEST(SolidSyslogBlockStoreRotation, ResumeContinuesWritingToCorrectFile)
 {
     CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
     WriteMaxMsg(); /* file 00 */
-    SolidSyslogFileStore_Destroy(store);
+    SolidSyslogBlockStore_Destroy(store);
 
     CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
     WriteMaxMsg(); /* should rotate to file 01, not overwrite 00 */
@@ -1028,12 +1028,12 @@ TEST(SolidSyslogFileStoreRotation, ResumeContinuesWritingToCorrectFile)
     CHECK_TRUE(SolidSyslogFile_Exists(file, "/tmp/test_store01.log"));
 }
 
-TEST(SolidSyslogFileStoreRotation, ResumeWithMultipleFilesCanWriteNewMessage)
+TEST(SolidSyslogBlockStoreRotation, ResumeWithMultipleFilesCanWriteNewMessage)
 {
     CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
     WriteMaxMsg(); /* file 00 */
     WriteMaxMsg(); /* file 01 */
-    SolidSyslogFileStore_Destroy(store);
+    SolidSyslogBlockStore_Destroy(store);
 
     CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
 
@@ -1045,7 +1045,7 @@ TEST(SolidSyslogFileStoreRotation, ResumeWithMultipleFilesCanWriteNewMessage)
     CHECK_TRUE(SolidSyslogFile_Exists(file, "/tmp/test_store02.log"));
 }
 
-TEST(SolidSyslogFileStoreRotation, ResumeWriteAppendsToPartiallyFilledWriteFile)
+TEST(SolidSyslogBlockStoreRotation, ResumeWriteAppendsToPartiallyFilledWriteFile)
 {
     static const size_t TWO_MAX_MSG_RECORDS = 2 * ONE_MAX_MSG_RECORD;
 
@@ -1053,7 +1053,7 @@ TEST(SolidSyslogFileStoreRotation, ResumeWriteAppendsToPartiallyFilledWriteFile)
     WriteMaxMsg(); /* file 00, record 1 */
     WriteMaxMsg(); /* file 00, record 2 — file 00 full */
     WriteMaxMsg(); /* file 01, record 1 — file 01 partially filled */
-    SolidSyslogFileStore_Destroy(store);
+    SolidSyslogBlockStore_Destroy(store);
 
     CreateWithMaxBlockSize(TWO_MAX_MSG_RECORDS);
 
@@ -1062,7 +1062,7 @@ TEST(SolidSyslogFileStoreRotation, ResumeWriteAppendsToPartiallyFilledWriteFile)
     CHECK_FALSE(SolidSyslogFile_Exists(file, "/tmp/test_store02.log"));
 }
 
-TEST(SolidSyslogFileStoreRotation, SequenceWrapsFrom99To00)
+TEST(SolidSyslogBlockStoreRotation, SequenceWrapsFrom99To00)
 {
     /* Pre-seed file 99 so the scan finds it as the write file */
     SolidSyslogFile_Open(file, "/tmp/test_store99.log");
@@ -1075,7 +1075,7 @@ TEST(SolidSyslogFileStoreRotation, SequenceWrapsFrom99To00)
     CHECK_TRUE(SolidSyslogFile_Exists(file, "/tmp/test_store00.log"));
 }
 
-TEST(SolidSyslogFileStoreRotation, WriteAfterDrainRotatesToNextFile)
+TEST(SolidSyslogBlockStoreRotation, WriteAfterDrainRotatesToNextFile)
 {
     CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
     WriteMaxMsg();
@@ -1093,7 +1093,7 @@ TEST(SolidSyslogFileStoreRotation, WriteAfterDrainRotatesToNextFile)
     CHECK_TRUE(SolidSyslogFile_Exists(file, "/tmp/test_store01.log"));
 }
 
-TEST(SolidSyslogFileStoreRotation, MixedMessageSizesDrainCorrectlyAcrossFiles)
+TEST(SolidSyslogBlockStoreRotation, MixedMessageSizesDrainCorrectlyAcrossFiles)
 {
     static const size_t SHORT_LEN = 7;
 
@@ -1122,7 +1122,7 @@ TEST(SolidSyslogFileStoreRotation, MixedMessageSizesDrainCorrectlyAcrossFiles)
     CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
 }
 
-TEST(SolidSyslogFileStoreRotation, ContinuousDiscardWithoutReadingSurvivorsCorrect)
+TEST(SolidSyslogBlockStoreRotation, ContinuousDiscardWithoutReadingSurvivorsCorrect)
 {
     CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
 
@@ -1157,7 +1157,7 @@ TEST(SolidSyslogFileStoreRotation, ContinuousDiscardWithoutReadingSurvivorsCorre
     CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
 }
 
-TEST(SolidSyslogFileStoreRotation, MaxFilesAtUpperLimit)
+TEST(SolidSyslogBlockStoreRotation, MaxFilesAtUpperLimit)
 {
     enum
     {
@@ -1184,7 +1184,7 @@ TEST(SolidSyslogFileStoreRotation, MaxFilesAtUpperLimit)
     CHECK_TRUE(SolidSyslogFile_Exists(file, "/tmp/test_store99.log"));
 }
 
-TEST(SolidSyslogFileStoreRotation, MultipleRecordsPerFileDrainAcrossRotation)
+TEST(SolidSyslogBlockStoreRotation, MultipleRecordsPerFileDrainAcrossRotation)
 {
     static const size_t TWO_MAX_MSG_RECORDS = 2 * ONE_MAX_MSG_RECORD;
 
@@ -1262,7 +1262,7 @@ static struct SolidSyslogSecurityPolicy spyPolicy = {
 };
 
 // clang-format off
-TEST_GROUP_BASE(SolidSyslogFileStoreIntegrity, BlockDeviceTestBase)
+TEST_GROUP_BASE(SolidSyslogBlockStoreIntegrity, BlockDeviceTestBase)
 {
     struct SolidSyslogStore* store = nullptr;
 
@@ -1276,29 +1276,29 @@ TEST_GROUP_BASE(SolidSyslogFileStoreIntegrity, BlockDeviceTestBase)
         verifyIntegrityLength   = 0;
         memset(verifyIntegrityData, 0, sizeof(verifyIntegrityData));
 
-        struct SolidSyslogFileStoreConfig config = DEFAULT_CONFIG;
+        struct SolidSyslogBlockStoreConfig config = DEFAULT_CONFIG;
         config.blockDevice    = device;
         config.securityPolicy = &spyPolicy;
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        store = SolidSyslogFileStore_Create(&storeStorage, &config);
+        store = SolidSyslogBlockStore_Create(&storeStorage, &config);
     }
 
     void teardown() override
     {
-        SolidSyslogFileStore_Destroy(store);
+        SolidSyslogBlockStore_Destroy(store);
         teardownBlockDeviceFakes();
     }
 };
 
 // clang-format on
 
-TEST(SolidSyslogFileStoreIntegrity, WriteCallsComputeIntegrity)
+TEST(SolidSyslogBlockStoreIntegrity, WriteCallsComputeIntegrity)
 {
     SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
     CHECK_TRUE(computeIntegrityCalled);
 }
 
-TEST(SolidSyslogFileStoreIntegrity, ComputeIntegrityReceivesIntegrityRegion)
+TEST(SolidSyslogBlockStoreIntegrity, ComputeIntegrityReceivesIntegrityRegion)
 {
     enum
     {
@@ -1318,7 +1318,7 @@ TEST(SolidSyslogFileStoreIntegrity, ComputeIntegrityReceivesIntegrityRegion)
     MEMCMP_EQUAL(TEST_DATA, computeIntegrityData + MAGIC_SIZE + LENGTH_SIZE, TEST_DATA_LEN);
 }
 
-TEST(SolidSyslogFileStoreIntegrity, ReadCallsVerifyIntegrity)
+TEST(SolidSyslogBlockStoreIntegrity, ReadCallsVerifyIntegrity)
 {
     SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
     char   buf[TEST_BUF_SIZE];
@@ -1327,7 +1327,7 @@ TEST(SolidSyslogFileStoreIntegrity, ReadCallsVerifyIntegrity)
     CHECK_TRUE(verifyIntegrityCalled);
 }
 
-TEST(SolidSyslogFileStoreIntegrity, VerifyIntegrityReceivesIntegrityRegion)
+TEST(SolidSyslogBlockStoreIntegrity, VerifyIntegrityReceivesIntegrityRegion)
 {
     enum
     {
@@ -1355,7 +1355,7 @@ TEST(SolidSyslogFileStoreIntegrity, VerifyIntegrityReceivesIntegrityRegion)
  * ----------------------------------------------------------------*/
 
 // clang-format off
-TEST_GROUP_BASE(SolidSyslogFileStoreCorruption, BlockDeviceTestBase)
+TEST_GROUP_BASE(SolidSyslogBlockStoreCorruption, BlockDeviceTestBase)
 {
     struct SolidSyslogStore* store = nullptr;
 
@@ -1366,7 +1366,7 @@ TEST_GROUP_BASE(SolidSyslogFileStoreCorruption, BlockDeviceTestBase)
 
     void teardown() override
     {
-        SolidSyslogFileStore_Destroy(store);
+        SolidSyslogBlockStore_Destroy(store);
         teardownBlockDeviceFakes();
     }
 
@@ -1379,15 +1379,15 @@ TEST_GROUP_BASE(SolidSyslogFileStoreCorruption, BlockDeviceTestBase)
 
     void CreateStore()
     {
-        struct SolidSyslogFileStoreConfig config = MakeConfig(device);
+        struct SolidSyslogBlockStoreConfig config = MakeConfig(device);
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        store = SolidSyslogFileStore_Create(&storeStorage, &config);
+        store = SolidSyslogBlockStore_Create(&storeStorage, &config);
     }
 };
 
 // clang-format on
 
-TEST(SolidSyslogFileStoreCorruption, TruncatedMagicHasNoUnsent)
+TEST(SolidSyslogBlockStoreCorruption, TruncatedMagicHasNoUnsent)
 {
     uint8_t oneByte = 0xA5;
     WriteRawBytes("/tmp/test_store00.log", &oneByte, 1);
@@ -1395,7 +1395,7 @@ TEST(SolidSyslogFileStoreCorruption, TruncatedMagicHasNoUnsent)
     CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
 }
 
-TEST(SolidSyslogFileStoreCorruption, BadMagicHasNoUnsent)
+TEST(SolidSyslogBlockStoreCorruption, BadMagicHasNoUnsent)
 {
     uint8_t badMagic[] = {0x00, 0x00, 0x05, 0x00, 'h', 'e', 'l', 'l', 'o', 0xFF};
     WriteRawBytes("/tmp/test_store00.log", badMagic, sizeof(badMagic));
@@ -1403,7 +1403,7 @@ TEST(SolidSyslogFileStoreCorruption, BadMagicHasNoUnsent)
     CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
 }
 
-TEST(SolidSyslogFileStoreCorruption, TruncatedLengthHasNoUnsent)
+TEST(SolidSyslogBlockStoreCorruption, TruncatedLengthHasNoUnsent)
 {
     uint8_t truncatedHeader[] = {0xA5, 0x5A, 0x05};
     WriteRawBytes("/tmp/test_store00.log", truncatedHeader, sizeof(truncatedHeader));
@@ -1411,7 +1411,7 @@ TEST(SolidSyslogFileStoreCorruption, TruncatedLengthHasNoUnsent)
     CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
 }
 
-TEST(SolidSyslogFileStoreCorruption, TruncatedBodyHasNoUnsent)
+TEST(SolidSyslogBlockStoreCorruption, TruncatedBodyHasNoUnsent)
 {
     /* valid magic + length=5, but only 2 bytes of body, no integrity or sent flag */
     uint8_t truncatedBody[] = {0xA5, 0x5A, 0x05, 0x00, 'h', 'e'};
@@ -1420,14 +1420,14 @@ TEST(SolidSyslogFileStoreCorruption, TruncatedBodyHasNoUnsent)
     CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
 }
 
-TEST(SolidSyslogFileStoreCorruption, ValidRecordBeforeCorruptionIsReadable)
+TEST(SolidSyslogBlockStoreCorruption, ValidRecordBeforeCorruptionIsReadable)
 {
-    struct SolidSyslogFileStoreConfig config = MakeConfig(device);
-    config.securityPolicy                    = SolidSyslogCrc16Policy_Create();
-    store                                    = SolidSyslogFileStore_Create(&storeStorage, &config);
+    struct SolidSyslogBlockStoreConfig config = MakeConfig(device);
+    config.securityPolicy                     = SolidSyslogCrc16Policy_Create();
+    store                                     = SolidSyslogBlockStore_Create(&storeStorage, &config);
     SolidSyslogStore_Write(store, "first", 5);
     SolidSyslogStore_Write(store, "second", 6);
-    SolidSyslogFileStore_Destroy(store);
+    SolidSyslogBlockStore_Destroy(store);
 
     /* Corrupt the second record's body */
     enum
@@ -1447,7 +1447,7 @@ TEST(SolidSyslogFileStoreCorruption, ValidRecordBeforeCorruptionIsReadable)
     SolidSyslogFile_Close(file);
 
     /* Re-open: first record is valid, second is corrupt */
-    store                     = SolidSyslogFileStore_Create(&storeStorage, &config);
+    store                     = SolidSyslogBlockStore_Create(&storeStorage, &config);
     char   buf[TEST_BUF_SIZE] = {};
     size_t bytesRead          = 0;
 
@@ -1456,13 +1456,13 @@ TEST(SolidSyslogFileStoreCorruption, ValidRecordBeforeCorruptionIsReadable)
     MEMCMP_EQUAL("first", buf, 5);
 }
 
-TEST(SolidSyslogFileStoreCorruption, IntegrityFailureReadReturnsFalse)
+TEST(SolidSyslogBlockStoreCorruption, IntegrityFailureReadReturnsFalse)
 {
-    struct SolidSyslogFileStoreConfig config = MakeConfig(device);
-    config.securityPolicy                    = SolidSyslogCrc16Policy_Create();
-    store                                    = SolidSyslogFileStore_Create(&storeStorage, &config);
+    struct SolidSyslogBlockStoreConfig config = MakeConfig(device);
+    config.securityPolicy                     = SolidSyslogCrc16Policy_Create();
+    store                                     = SolidSyslogBlockStore_Create(&storeStorage, &config);
     SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
-    SolidSyslogFileStore_Destroy(store);
+    SolidSyslogBlockStore_Destroy(store);
 
     /* Corrupt one byte of the body in the stored record */
     SolidSyslogFile_Open(file, "/tmp/test_store00.log");
@@ -1471,24 +1471,24 @@ TEST(SolidSyslogFileStoreCorruption, IntegrityFailureReadReturnsFalse)
     SolidSyslogFile_Write(file, &corrupt, 1);
     SolidSyslogFile_Close(file);
 
-    store = SolidSyslogFileStore_Create(&storeStorage, &config);
+    store = SolidSyslogBlockStore_Create(&storeStorage, &config);
     char   buf[TEST_BUF_SIZE];
     size_t bytesRead = 0;
     CHECK_FALSE(SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead));
 }
 
-TEST(SolidSyslogFileStoreCorruption, InvalidLengthReadReturnsFalse)
+TEST(SolidSyslogBlockStoreCorruption, InvalidLengthReadReturnsFalse)
 {
     /* Write many records to make the file large enough that a bogus length
      * doesn't hit EOF — the length check must reject it explicitly */
-    struct SolidSyslogFileStoreConfig config = MakeConfig(device);
-    store                                    = SolidSyslogFileStore_Create(&storeStorage, &config);
+    struct SolidSyslogBlockStoreConfig config = MakeConfig(device);
+    store                                     = SolidSyslogBlockStore_Create(&storeStorage, &config);
 
     char largeMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
     memset(largeMsg, 'X', sizeof(largeMsg));
     SolidSyslogStore_Write(store, largeMsg, sizeof(largeMsg));
     SolidSyslogStore_Write(store, largeMsg, sizeof(largeMsg));
-    SolidSyslogFileStore_Destroy(store);
+    SolidSyslogBlockStore_Destroy(store);
 
     /* Overwrite the length field of the first record (bytes 2-3) */
     SolidSyslogFile_Open(file, "/tmp/test_store00.log");
@@ -1497,7 +1497,7 @@ TEST(SolidSyslogFileStoreCorruption, InvalidLengthReadReturnsFalse)
     SolidSyslogFile_Write(file, &badLength, 2);
     SolidSyslogFile_Close(file);
 
-    store = SolidSyslogFileStore_Create(&storeStorage, &config);
+    store = SolidSyslogBlockStore_Create(&storeStorage, &config);
     char   buf[TEST_BUF_SIZE];
     size_t bytesRead = 0;
     CHECK_FALSE(SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead));
@@ -1508,7 +1508,7 @@ TEST(SolidSyslogFileStoreCorruption, InvalidLengthReadReturnsFalse)
  * ----------------------------------------------------------------*/
 
 // clang-format off
-TEST_GROUP_BASE(SolidSyslogFileStoreCorruptionRecovery, BlockDeviceTestBase)
+TEST_GROUP_BASE(SolidSyslogBlockStoreCorruptionRecovery, BlockDeviceTestBase)
 {
     static const size_t RECORD_OVERHEAD    = 7; /* 2 (magic) + 2 (length) + 2 (crc) + 1 (sent) */
     static const size_t ONE_MAX_MSG_RECORD = SOLIDSYSLOG_MAX_MESSAGE_SIZE + RECORD_OVERHEAD;
@@ -1526,20 +1526,20 @@ TEST_GROUP_BASE(SolidSyslogFileStoreCorruptionRecovery, BlockDeviceTestBase)
 
     void teardown() override
     {
-        SolidSyslogFileStore_Destroy(store);
+        SolidSyslogBlockStore_Destroy(store);
         teardownBlockDeviceFakes();
     }
 
     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- maxBlockSize and maxBlocks have distinct semantics
     void CreateWithMaxBlockSize(size_t maxBlockSize, size_t maxBlocks = 2)
     {
-        struct SolidSyslogFileStoreConfig config = DEFAULT_CONFIG;
+        struct SolidSyslogBlockStoreConfig config = DEFAULT_CONFIG;
         config.blockDevice     = device;
         config.maxBlockSize     = maxBlockSize;
         config.maxBlocks        = maxBlocks;
         config.securityPolicy  = policy;
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        store = SolidSyslogFileStore_Create(&storeStorage, &config);
+        store = SolidSyslogBlockStore_Create(&storeStorage, &config);
     }
 
     void WriteMaxMsg()
@@ -1559,7 +1559,7 @@ TEST_GROUP_BASE(SolidSyslogFileStoreCorruptionRecovery, BlockDeviceTestBase)
 
 // clang-format on
 
-TEST(SolidSyslogFileStoreCorruptionRecovery, ReadSkipsCorruptOlderFileToNextFile)
+TEST(SolidSyslogBlockStoreCorruptionRecovery, ReadSkipsCorruptOlderFileToNextFile)
 {
     CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
 
@@ -1568,7 +1568,7 @@ TEST(SolidSyslogFileStoreCorruptionRecovery, ReadSkipsCorruptOlderFileToNextFile
     SolidSyslogStore_Write(store, firstMsg, sizeof(firstMsg)); /* file 00 */
 
     WriteMaxMsg(); /* file 01 */
-    SolidSyslogFileStore_Destroy(store);
+    SolidSyslogBlockStore_Destroy(store);
 
     CorruptFirstRecordBody("/tmp/test_store00.log");
 
@@ -1581,7 +1581,7 @@ TEST(SolidSyslogFileStoreCorruptionRecovery, ReadSkipsCorruptOlderFileToNextFile
     BYTES_EQUAL('A', buf[0]);
 }
 
-TEST(SolidSyslogFileStoreCorruptionRecovery, CorruptWriteFileRotatesOnNextWrite)
+TEST(SolidSyslogBlockStoreCorruptionRecovery, CorruptWriteFileRotatesOnNextWrite)
 {
     /* Use a file size that fits two records — the first write leaves space,
      * so rotation on the second write proves corruption forced it */
@@ -1589,7 +1589,7 @@ TEST(SolidSyslogFileStoreCorruptionRecovery, CorruptWriteFileRotatesOnNextWrite)
 
     CreateWithMaxBlockSize(TWO_MAX_MSG_RECORDS);
     WriteMaxMsg(); /* file 00 — partially filled */
-    SolidSyslogFileStore_Destroy(store);
+    SolidSyslogBlockStore_Destroy(store);
 
     CorruptFirstRecordBody("/tmp/test_store00.log");
 
@@ -1607,7 +1607,7 @@ TEST(SolidSyslogFileStoreCorruptionRecovery, CorruptWriteFileRotatesOnNextWrite)
  * ----------------------------------------------------------------*/
 
 // clang-format off
-TEST_GROUP_BASE(SolidSyslogFileStoreCapacity, BlockDeviceTestBase)
+TEST_GROUP_BASE(SolidSyslogBlockStoreCapacity, BlockDeviceTestBase)
 {
     static const size_t ONE_MAX_MSG_RECORD = SOLIDSYSLOG_MAX_MESSAGE_SIZE + TEST_RECORD_OVERHEAD;
 
@@ -1623,25 +1623,25 @@ TEST_GROUP_BASE(SolidSyslogFileStoreCapacity, BlockDeviceTestBase)
 
     void teardown() override
     {
-        if (store != nullptr) { SolidSyslogFileStore_Destroy(store); }
+        if (store != nullptr) { SolidSyslogBlockStore_Destroy(store); }
         teardownBlockDeviceFakes();
     }
 
     void CreateDefault()
     {
-        struct SolidSyslogFileStoreConfig config = MakeConfig(device);
-        store = SolidSyslogFileStore_Create(&storeStorage, &config);
+        struct SolidSyslogBlockStoreConfig config = MakeConfig(device);
+        store = SolidSyslogBlockStore_Create(&storeStorage, &config);
     }
 
     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- maxBlockSize is a byte size, maxBlocks is a count; distinct semantics
     void CreateWithCapacity(size_t maxBlockSize, size_t maxBlocks,
                             enum SolidSyslogDiscardPolicy policy = SOLIDSYSLOG_DISCARD_OLDEST)
     {
-        struct SolidSyslogFileStoreConfig config = MakeConfig(device);
+        struct SolidSyslogBlockStoreConfig config = MakeConfig(device);
         config.maxBlockSize   = maxBlockSize;
         config.maxBlocks      = maxBlocks;
         config.discardPolicy = policy;
-        store                = SolidSyslogFileStore_Create(&storeStorage, &config);
+        store                = SolidSyslogBlockStore_Create(&storeStorage, &config);
     }
 
     void WriteMaxMsg()
@@ -1655,13 +1655,13 @@ TEST_GROUP_BASE(SolidSyslogFileStoreCapacity, BlockDeviceTestBase)
 /* Given maxBlocks × maxBlockSize configured,
  * When GetTotalBytes is queried,
  * Then it returns the product. */
-TEST(SolidSyslogFileStoreCapacity, GetTotalBytesReturnsMaxFilesTimesMaxFileSize)
+TEST(SolidSyslogBlockStoreCapacity, GetTotalBytesReturnsMaxFilesTimesMaxFileSize)
 {
     CreateDefault();
     LONGS_EQUAL(TEST_MAX_BLOCKS * TEST_MAX_BLOCK_SIZE, SolidSyslogStore_GetTotalBytes(store));
 }
 
-TEST(SolidSyslogFileStoreCapacity, GetTotalBytesScalesWithConfig)
+TEST(SolidSyslogBlockStoreCapacity, GetTotalBytesScalesWithConfig)
 {
     CreateWithCapacity(10000, 3);
     LONGS_EQUAL(3 * 10000, SolidSyslogStore_GetTotalBytes(store));
@@ -1670,7 +1670,7 @@ TEST(SolidSyslogFileStoreCapacity, GetTotalBytesScalesWithConfig)
 /* Given an empty store,
  * When GetUsedBytes is queried,
  * Then it returns 0. */
-TEST(SolidSyslogFileStoreCapacity, GetUsedBytesIsZeroOnEmptyStore)
+TEST(SolidSyslogBlockStoreCapacity, GetUsedBytesIsZeroOnEmptyStore)
 {
     CreateDefault();
     LONGS_EQUAL(0, SolidSyslogStore_GetUsedBytes(store));
@@ -1679,14 +1679,14 @@ TEST(SolidSyslogFileStoreCapacity, GetUsedBytesIsZeroOnEmptyStore)
 /* Given an empty store,
  * When records totalling X bytes are written,
  * Then GetUsedBytes returns X (including record overhead). */
-TEST(SolidSyslogFileStoreCapacity, GetUsedBytesTracksOneWrite)
+TEST(SolidSyslogBlockStoreCapacity, GetUsedBytesTracksOneWrite)
 {
     CreateDefault();
     SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
     LONGS_EQUAL(TEST_DATA_LEN + TEST_RECORD_OVERHEAD, SolidSyslogStore_GetUsedBytes(store));
 }
 
-TEST(SolidSyslogFileStoreCapacity, GetUsedBytesCountsClosedBlocksAtFullSize)
+TEST(SolidSyslogBlockStoreCapacity, GetUsedBytesCountsClosedBlocksAtFullSize)
 {
     /* Tight maxBlockSize so a single max-msg record fills a block; second write
      * rotates. Closed block contributes maxBlockSize regardless of slack. */
@@ -1700,7 +1700,7 @@ TEST(SolidSyslogFileStoreCapacity, GetUsedBytesCountsClosedBlocksAtFullSize)
 /* Given a full store with SOLIDSYSLOG_DISCARD_OLDEST,
  * When the oldest block is discarded,
  * Then GetUsedBytes drops by one block size. */
-TEST(SolidSyslogFileStoreCapacity, GetUsedBytesDropsOnDiscardOldest)
+TEST(SolidSyslogBlockStoreCapacity, GetUsedBytesDropsOnDiscardOldest)
 {
     CreateWithCapacity(ONE_MAX_MSG_RECORD, 2);
     WriteMaxMsg(); /* block 0 full */
@@ -1717,7 +1717,7 @@ TEST(SolidSyslogFileStoreCapacity, GetUsedBytesDropsOnDiscardOldest)
 /* Given a store at capacity with SOLIDSYSLOG_HALT,
  * When a Write fails for size,
  * Then GetUsedBytes returns total even when the active block has slack. */
-TEST(SolidSyslogFileStoreCapacity, GetUsedBytesIsStickyAtTotalAfterSizeFailure)
+TEST(SolidSyslogBlockStoreCapacity, GetUsedBytesIsStickyAtTotalAfterSizeFailure)
 {
     /* maxBlockSize larger than one max-msg record so the active block has slack. */
     static const size_t SLACK = 100;
@@ -1752,7 +1752,7 @@ static void CountThresholdCrossings(void* context)
 }
 
 // clang-format off
-TEST_GROUP_BASE(SolidSyslogFileStoreCapacityThreshold, BlockDeviceTestBase)
+TEST_GROUP_BASE(SolidSyslogBlockStoreCapacityThreshold, BlockDeviceTestBase)
 {
     // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
     struct SolidSyslogStore* store = nullptr;
@@ -1766,17 +1766,17 @@ TEST_GROUP_BASE(SolidSyslogFileStoreCapacityThreshold, BlockDeviceTestBase)
 
     void teardown() override
     {
-        if (store != nullptr) { SolidSyslogFileStore_Destroy(store); }
+        if (store != nullptr) { SolidSyslogBlockStore_Destroy(store); }
         teardownBlockDeviceFakes();
     }
 
     void CreateWithThreshold(size_t threshold)
     {
-        struct SolidSyslogFileStoreConfig config = MakeConfig(device);
+        struct SolidSyslogBlockStoreConfig config = MakeConfig(device);
         config.getCapacityThreshold              = ReturnsConfiguredThreshold;
         config.onThresholdCrossed                = CountThresholdCrossings;
         thresholdReturnValue                     = threshold;
-        store                                    = SolidSyslogFileStore_Create(&storeStorage, &config);
+        store                                    = SolidSyslogBlockStore_Create(&storeStorage, &config);
     }
 };
 
@@ -1785,7 +1785,7 @@ TEST_GROUP_BASE(SolidSyslogFileStoreCapacityThreshold, BlockDeviceTestBase)
 /* Given a threshold below the size of a single record's overhead,
  * When a write makes used-bytes cross the threshold,
  * Then onThresholdCrossed fires. */
-TEST(SolidSyslogFileStoreCapacityThreshold, FiresOnRisingEdgeCrossing)
+TEST(SolidSyslogBlockStoreCapacityThreshold, FiresOnRisingEdgeCrossing)
 {
     CreateWithThreshold(TEST_DATA_LEN);
     SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
@@ -1795,7 +1795,7 @@ TEST(SolidSyslogFileStoreCapacityThreshold, FiresOnRisingEdgeCrossing)
 /* Given usage already above threshold,
  * When subsequent writes keep usage above threshold,
  * Then onThresholdCrossed fires only on the rising edge. */
-TEST(SolidSyslogFileStoreCapacityThreshold, FiresOnceWhileUsageStaysAbove)
+TEST(SolidSyslogBlockStoreCapacityThreshold, FiresOnceWhileUsageStaysAbove)
 {
     CreateWithThreshold(TEST_DATA_LEN);
     SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN); /* crosses */
@@ -1807,7 +1807,7 @@ TEST(SolidSyslogFileStoreCapacityThreshold, FiresOnceWhileUsageStaysAbove)
 /* Given DISCARD_OLDEST and a threshold sitting in the last block,
  * When writes cross the threshold, a discard drops usage below it, then writes cross again,
  * Then onThresholdCrossed fires twice. */
-TEST(SolidSyslogFileStoreCapacityThreshold, ReArmsAfterFallingEdgeOnDiscardOldest)
+TEST(SolidSyslogBlockStoreCapacityThreshold, ReArmsAfterFallingEdgeOnDiscardOldest)
 {
     static const size_t MAX_MSG_RECORD = SOLIDSYSLOG_MAX_MESSAGE_SIZE + TEST_RECORD_OVERHEAD;
     static const size_t TWO_RECORDS    = 2 * MAX_MSG_RECORD;
@@ -1815,15 +1815,15 @@ TEST(SolidSyslogFileStoreCapacityThreshold, ReArmsAfterFallingEdgeOnDiscardOldes
     char maxMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
     memset(maxMsg, 'A', sizeof(maxMsg));
 
-    struct SolidSyslogFileStoreConfig config = MakeConfig(device);
-    config.maxBlockSize                      = TWO_RECORDS;
-    config.maxBlocks                         = 2;
-    config.discardPolicy                     = SOLIDSYSLOG_DISCARD_OLDEST;
-    config.getCapacityThreshold              = ReturnsConfiguredThreshold;
-    config.onThresholdCrossed                = CountThresholdCrossings;
+    struct SolidSyslogBlockStoreConfig config = MakeConfig(device);
+    config.maxBlockSize                       = TWO_RECORDS;
+    config.maxBlocks                          = 2;
+    config.discardPolicy                      = SOLIDSYSLOG_DISCARD_OLDEST;
+    config.getCapacityThreshold               = ReturnsConfiguredThreshold;
+    config.onThresholdCrossed                 = CountThresholdCrossings;
     /* Threshold sits between 3 and 4 records: 4-records crosses, 3-records is below. */
     thresholdReturnValue = (3 * MAX_MSG_RECORD) + 1;
-    store                = SolidSyslogFileStore_Create(&storeStorage, &config);
+    store                = SolidSyslogBlockStore_Create(&storeStorage, &config);
 
     SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)); /* block 0: 1 record */
     SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)); /* block 0: 2 records (full) */
@@ -1838,7 +1838,7 @@ TEST(SolidSyslogFileStoreCapacityThreshold, ReArmsAfterFallingEdgeOnDiscardOldes
 /* Given getCapacityThreshold returns 0,
  * When usage rises arbitrarily,
  * Then onThresholdCrossed never fires. */
-TEST(SolidSyslogFileStoreCapacityThreshold, DoesNotFireWhenThresholdIsZero)
+TEST(SolidSyslogBlockStoreCapacityThreshold, DoesNotFireWhenThresholdIsZero)
 {
     CreateWithThreshold(0);
     SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
@@ -1849,12 +1849,12 @@ TEST(SolidSyslogFileStoreCapacityThreshold, DoesNotFireWhenThresholdIsZero)
 /* Given getCapacityThreshold is NULL but onThresholdCrossed is configured,
  * When usage rises arbitrarily,
  * Then onThresholdCrossed never fires (and the library does not deref a NULL function). */
-TEST(SolidSyslogFileStoreCapacityThreshold, DoesNotFireWhenThresholdFunctionIsNull)
+TEST(SolidSyslogBlockStoreCapacityThreshold, DoesNotFireWhenThresholdFunctionIsNull)
 {
-    struct SolidSyslogFileStoreConfig config = MakeConfig(device);
-    config.getCapacityThreshold              = nullptr;
-    config.onThresholdCrossed                = CountThresholdCrossings;
-    store                                    = SolidSyslogFileStore_Create(&storeStorage, &config);
+    struct SolidSyslogBlockStoreConfig config = MakeConfig(device);
+    config.getCapacityThreshold               = nullptr;
+    config.onThresholdCrossed                 = CountThresholdCrossings;
+    store                                     = SolidSyslogBlockStore_Create(&storeStorage, &config);
 
     SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
 
@@ -1878,17 +1878,17 @@ static void CaptureThresholdCallbackContext(void* context)
 /* Given thresholdContext wired at config time,
  * When getCapacityThreshold and onThresholdCrossed are invoked,
  * Then both receive the configured context. */
-TEST(SolidSyslogFileStoreCapacityThreshold, ContextIsPassedToBothCallbacks)
+TEST(SolidSyslogBlockStoreCapacityThreshold, ContextIsPassedToBothCallbacks)
 {
-    int sentinel                             = 0;
-    capturedThresholdFunctionContext         = nullptr;
-    capturedThresholdCallbackContext         = nullptr;
-    struct SolidSyslogFileStoreConfig config = MakeConfig(device);
-    config.getCapacityThreshold              = CaptureThresholdFunctionContext;
-    config.onThresholdCrossed                = CaptureThresholdCallbackContext;
-    config.thresholdContext                  = &sentinel;
-    thresholdReturnValue                     = TEST_DATA_LEN;
-    store                                    = SolidSyslogFileStore_Create(&storeStorage, &config);
+    int sentinel                              = 0;
+    capturedThresholdFunctionContext          = nullptr;
+    capturedThresholdCallbackContext          = nullptr;
+    struct SolidSyslogBlockStoreConfig config = MakeConfig(device);
+    config.getCapacityThreshold               = CaptureThresholdFunctionContext;
+    config.onThresholdCrossed                 = CaptureThresholdCallbackContext;
+    config.thresholdContext                   = &sentinel;
+    thresholdReturnValue                      = TEST_DATA_LEN;
+    store                                     = SolidSyslogBlockStore_Create(&storeStorage, &config);
 
     SolidSyslogStore_Write(store, TEST_DATA, TEST_DATA_LEN);
 
@@ -1915,7 +1915,7 @@ static void RecordStoreFullFireOrder(void* context)
 /* Given threshold = 100% (total bytes) and SOLIDSYSLOG_HALT,
  * When a Write fails for size and engages the sticky 100% bit,
  * Then onThresholdCrossed fires before onStoreFull on that same Write. */
-TEST(SolidSyslogFileStoreCapacityThreshold, AtFullCapacityWithHaltThresholdFiresBeforeStoreFull)
+TEST(SolidSyslogBlockStoreCapacityThreshold, AtFullCapacityWithHaltThresholdFiresBeforeStoreFull)
 {
     static const size_t MAX_MSG_RECORD = SOLIDSYSLOG_MAX_MESSAGE_SIZE + TEST_RECORD_OVERHEAD;
     static const size_t SLACK          = 100;
@@ -1927,16 +1927,16 @@ TEST(SolidSyslogFileStoreCapacityThreshold, AtFullCapacityWithHaltThresholdFires
     thresholdFireOrder = 0;
     storeFullFireOrder = 0;
 
-    struct SolidSyslogFileStoreConfig config = MakeConfig(device);
-    config.maxBlockSize                      = MAX_MSG_RECORD + SLACK;
-    config.maxBlocks                         = 2;
-    config.discardPolicy                     = SOLIDSYSLOG_HALT;
-    config.onStoreFull                       = RecordStoreFullFireOrder;
-    config.getCapacityThreshold              = ReturnsConfiguredThreshold;
-    config.onThresholdCrossed                = RecordThresholdFireOrder;
+    struct SolidSyslogBlockStoreConfig config = MakeConfig(device);
+    config.maxBlockSize                       = MAX_MSG_RECORD + SLACK;
+    config.maxBlocks                          = 2;
+    config.discardPolicy                      = SOLIDSYSLOG_HALT;
+    config.onStoreFull                        = RecordStoreFullFireOrder;
+    config.getCapacityThreshold               = ReturnsConfiguredThreshold;
+    config.onThresholdCrossed                 = RecordThresholdFireOrder;
     /* Threshold = total: only the sticky-100% engagement on a failed Write reaches it. */
     thresholdReturnValue = 2 * (MAX_MSG_RECORD + SLACK);
-    store                = SolidSyslogFileStore_Create(&storeStorage, &config);
+    store                = SolidSyslogBlockStore_Create(&storeStorage, &config);
 
     SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg));              /* block 0 partially full */
     SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg));              /* rotate; block 1 partially full */
@@ -1950,7 +1950,7 @@ TEST(SolidSyslogFileStoreCapacityThreshold, AtFullCapacityWithHaltThresholdFires
 /* Given a failed Write has already engaged the sticky 100% bit,
  * When subsequent Writes also fail for size,
  * Then onThresholdCrossed does not fire again. */
-TEST(SolidSyslogFileStoreCapacityThreshold, StickyHundredPercentDoesNotRefireThreshold)
+TEST(SolidSyslogBlockStoreCapacityThreshold, StickyHundredPercentDoesNotRefireThreshold)
 {
     static const size_t MAX_MSG_RECORD = SOLIDSYSLOG_MAX_MESSAGE_SIZE + TEST_RECORD_OVERHEAD;
     static const size_t SLACK          = 100;
@@ -1958,14 +1958,14 @@ TEST(SolidSyslogFileStoreCapacityThreshold, StickyHundredPercentDoesNotRefireThr
     char maxMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
     memset(maxMsg, 'A', sizeof(maxMsg));
 
-    struct SolidSyslogFileStoreConfig config = MakeConfig(device);
-    config.maxBlockSize                      = MAX_MSG_RECORD + SLACK;
-    config.maxBlocks                         = 2;
-    config.discardPolicy                     = SOLIDSYSLOG_HALT;
-    config.getCapacityThreshold              = ReturnsConfiguredThreshold;
-    config.onThresholdCrossed                = CountThresholdCrossings;
-    thresholdReturnValue                     = 2 * (MAX_MSG_RECORD + SLACK);
-    store                                    = SolidSyslogFileStore_Create(&storeStorage, &config);
+    struct SolidSyslogBlockStoreConfig config = MakeConfig(device);
+    config.maxBlockSize                       = MAX_MSG_RECORD + SLACK;
+    config.maxBlocks                          = 2;
+    config.discardPolicy                      = SOLIDSYSLOG_HALT;
+    config.getCapacityThreshold               = ReturnsConfiguredThreshold;
+    config.onThresholdCrossed                 = CountThresholdCrossings;
+    thresholdReturnValue                      = 2 * (MAX_MSG_RECORD + SLACK);
+    store                                     = SolidSyslogBlockStore_Create(&storeStorage, &config);
 
     SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)); /* fills block 0 partially */
     SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)); /* fills block 1 partially */
@@ -1979,7 +1979,7 @@ TEST(SolidSyslogFileStoreCapacityThreshold, StickyHundredPercentDoesNotRefireThr
 /* Given current usage well below threshold,
  * When getCapacityThreshold starts returning a value the current usage already exceeds,
  * Then onThresholdCrossed fires on the next Write. */
-TEST(SolidSyslogFileStoreCapacityThreshold, FiresWhenThresholdDropsBelowCurrentUsage)
+TEST(SolidSyslogBlockStoreCapacityThreshold, FiresWhenThresholdDropsBelowCurrentUsage)
 {
     static const size_t HIGH_THRESHOLD = 1000000;
     static const size_t LOW_THRESHOLD  = 1;
@@ -1995,15 +1995,15 @@ TEST(SolidSyslogFileStoreCapacityThreshold, FiresWhenThresholdDropsBelowCurrentU
 }
 
 /* Given persisted store contents already at-or-above threshold,
- * When the integrator calls SolidSyslogFileStore_Create,
+ * When the integrator calls SolidSyslogBlockStore_Create,
  * Then onThresholdCrossed fires once during Create. */
-TEST(SolidSyslogFileStoreCapacityThreshold, FiresOnCreateWhenResumedUsageAboveThreshold)
+TEST(SolidSyslogBlockStoreCapacityThreshold, FiresOnCreateWhenResumedUsageAboveThreshold)
 {
     {
-        struct SolidSyslogFileStoreConfig preConfig = MakeConfig(device);
-        struct SolidSyslogStore*          preStore  = SolidSyslogFileStore_Create(&storeStorage, &preConfig);
+        struct SolidSyslogBlockStoreConfig preConfig = MakeConfig(device);
+        struct SolidSyslogStore*           preStore  = SolidSyslogBlockStore_Create(&storeStorage, &preConfig);
         SolidSyslogStore_Write(preStore, TEST_DATA, TEST_DATA_LEN);
-        SolidSyslogFileStore_Destroy(preStore);
+        SolidSyslogBlockStore_Destroy(preStore);
     }
 
     /* setup() reset thresholdCallbackCount to 0 — any fire here is from this Create. */

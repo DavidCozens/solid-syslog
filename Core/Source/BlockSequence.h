@@ -1,7 +1,7 @@
 #ifndef SOLIDSYSLOG_BLOCKSEQUENCE_H
 #define SOLIDSYSLOG_BLOCKSEQUENCE_H
 
-#include "SolidSyslogFileStore.h"
+#include "SolidSyslogBlockStore.h"
 
 #include <stdbool.h>
 #include <stddef.h>

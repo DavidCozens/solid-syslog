@@ -1,7 +1,7 @@
 #include "CppUTest/TestHarness.h"
 #include "SolidSyslogBlockDevice.h"
 #include "SolidSyslogFileBlockDevice.h"
-#include "SolidSyslogFileStore.h"
+#include "SolidSyslogBlockStore.h"
 #include "SolidSyslogPosixFile.h"
 #include "SolidSyslog.h"
 
@@ -11,7 +11,7 @@
 
 static const char* const TEST_PATH_PREFIX = "/tmp/test_posix_store";
 
-static SolidSyslogFileStoreStorage storeStorage = {};
+static SolidSyslogBlockStoreStorage storeStorage = {};
 
 static void CleanStoreFiles()
 {
@@ -33,7 +33,7 @@ static void CleanStoreFiles()
  * or cursor state surviving across rotate/discard cycles. */
 
 // clang-format off
-TEST_GROUP(SolidSyslogFileStorePosix)
+TEST_GROUP(SolidSyslogBlockStorePosix)
 {
     static const size_t RECORD_OVERHEAD    = 5; /* 2 (magic) + 2 (length) + 1 (sent flag) */
     static const size_t ONE_MAX_MSG_RECORD = SOLIDSYSLOG_MAX_MESSAGE_SIZE + RECORD_OVERHEAD;
@@ -58,7 +58,7 @@ TEST_GROUP(SolidSyslogFileStorePosix)
 
     void teardown() override
     {
-        SolidSyslogFileStore_Destroy(store);
+        SolidSyslogBlockStore_Destroy(store);
         SolidSyslogFileBlockDevice_Destroy(device);
         SolidSyslogPosixFile_Destroy(writeFile);
         SolidSyslogPosixFile_Destroy(readFile);
@@ -68,13 +68,13 @@ TEST_GROUP(SolidSyslogFileStorePosix)
     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- test helper mirrors rotation test group signature
     void CreateStore(size_t maxBlockSize = ONE_MAX_MSG_RECORD, size_t maxBlocks = 2)
     {
-        struct SolidSyslogFileStoreConfig config = {};
+        struct SolidSyslogBlockStoreConfig config = {};
         config.blockDevice   = device;
         config.maxBlockSize  = maxBlockSize;
         config.maxBlocks     = maxBlocks;
         config.discardPolicy = SOLIDSYSLOG_DISCARD_OLDEST;
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        store = SolidSyslogFileStore_Create(&storeStorage, &config);
+        store = SolidSyslogBlockStore_Create(&storeStorage, &config);
     }
 
     void WriteMaxMsg()
@@ -85,7 +85,7 @@ TEST_GROUP(SolidSyslogFileStorePosix)
 
 // clang-format on
 
-TEST(SolidSyslogFileStorePosix, DiscardOldestDrainYieldsOnlySurvivingRecords)
+TEST(SolidSyslogBlockStorePosix, DiscardOldestDrainYieldsOnlySurvivingRecords)
 {
     CreateStore();
 
@@ -116,7 +116,7 @@ TEST(SolidSyslogFileStorePosix, DiscardOldestDrainYieldsOnlySurvivingRecords)
     CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
 }
 
-TEST(SolidSyslogFileStorePosix, DiscardOldestWhenReadIsPartwayThroughOldestFile)
+TEST(SolidSyslogBlockStorePosix, DiscardOldestWhenReadIsPartwayThroughOldestFile)
 {
     static const size_t TWO_MAX_MSG_RECORDS = 2 * ONE_MAX_MSG_RECORD;
     CreateStore(TWO_MAX_MSG_RECORDS);

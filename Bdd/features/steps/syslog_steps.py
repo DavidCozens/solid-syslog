@@ -39,7 +39,7 @@ SYSLOG_NG_UDP_ONLY_CONF = "Bdd/syslog-ng/syslog-ng-udp-only.conf"
 # Mirrors SOLIDSYSLOG_MAX_MESSAGE_SIZE from Core/Interface/SolidSyslog.h. Bump
 # the two together. The store_capacity scenarios depend on it because production
 # clamps max-block-size up to MAX + RECORD_OVERHEAD + integritySize at runtime,
-# so the block size used by the file store is MAX-coupled even when the feature
+# so the block size used by the block store is MAX-coupled even when the feature
 # file specifies a smaller value.
 SOLIDSYSLOG_MAX_MESSAGE_SIZE = 2048
 
@@ -492,15 +492,15 @@ def step_threaded_running_with_transport_no_sd(context, transport):
     start_threaded_example(context, cmd)
 
 
-@given("the file store is enabled")
-def step_file_store_enabled(context):
+@given("the block store is enabled")
+def step_block_store_enabled(context):
     context.store_type = "file"
     if os.path.exists(STORE_FILE_PATH):
         os.remove(STORE_FILE_PATH)
 
 
-@given("the file store is enabled with max-blocks {max_blocks:d} and max-block-size {max_block_size:d} and discard-policy {policy}")
-def step_file_store_enabled_with_config(context, max_blocks, max_block_size, policy):
+@given("the block store is enabled with max-blocks {max_blocks:d} and max-block-size {max_block_size:d} and discard-policy {policy}")
+def step_block_store_enabled_with_config(context, max_blocks, max_block_size, policy):
     context.store_type = "file"
     context.store_max_blocks = max_blocks
     context.store_max_block_size = max_block_size

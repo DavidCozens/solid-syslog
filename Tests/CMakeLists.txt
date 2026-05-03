@@ -35,7 +35,7 @@ set(TEST_SOURCES
     StreamFakeTest.cpp
     StreamFake.c
     TestAssert.cpp
-    SolidSyslogFileStoreTest.cpp
+    SolidSyslogBlockStoreTest.cpp
     SolidSyslogBlockDeviceTest.cpp
     SolidSyslogFileBlockDeviceTest.cpp
     BlockSequenceTest.cpp
@@ -76,7 +76,7 @@ if(SOLIDSYSLOG_POSIX)
         SolidSyslogUdpSenderTest.cpp
         SolidSyslogStreamSenderTest.cpp
         SolidSyslogPosixFileTest.cpp
-        SolidSyslogFileStorePosixTest.cpp
+        SolidSyslogBlockStorePosixTest.cpp
         SolidSyslogGetAddrInfoResolverTest.cpp
         SolidSyslogPosixDatagramTest.cpp
         SolidSyslogPosixTcpStreamTest.cpp
