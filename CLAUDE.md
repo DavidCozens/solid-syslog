@@ -399,6 +399,56 @@ Names should be self-documenting — prefer clarity over brevity.
 
 ---
 
+## Design Patterns
+
+These patterns are re-affirmed each time we do a code-hygiene pass. New
+code should follow them; reviewers should call out drift.
+
+### Production code (Tier 1, `Core/Source/`)
+
+- **Single return per function.** MISRA-leaning. If the natural shape has an
+  early return, restructure with a result local and an `if` wrapper. See
+  `BlockSequence.c::ScanForExistingBlocks` for the pattern.
+- **Intent-naming static-inline predicates.** When a composite condition is
+  inlined into an `if` or a `return`, extract a `static inline bool IsXxx(...)`
+  helper. The helper's *name* is the documentation. Examples:
+  `IsAboveThreshold`, `IsHandleAlreadyOpenOnBlock`, `IsValidBlockIndex`,
+  `BlockIsFull`, `StoreIsFull`. The cost (one extra named function) is the
+  benefit (the reader doesn't have to decode the boolean).
+- **One thing at one level of abstraction.** Functions read top-down.
+  `_Create` first, `_Destroy` second, public functions in API order, helpers
+  defined immediately beneath their first caller. See **Function Ordering**
+  below.
+- **Bracket compound boolean conditions when mixing `||` with arithmetic /
+  comparison operators.** Plain `&&` between bool-typed operands needs no extra
+  parens — readability wins over MISRA pedantry there.
+- **No null-pointer checks where the type's null object exists.** Use
+  `SolidSyslogNullSecurityPolicy`, `SolidSyslogNullStore`, `SolidSyslogNullBuffer`
+  rather than `if (policy != NULL) policy->Compute(...)`.
+
+### Test code
+
+- **TEST_BASE / TEST_GROUP_BASE for shared fixture.** When multiple TEST_GROUPs
+  in one file declare the same storage / file / device variables and the same
+  setup/teardown, lift the boilerplate into a `TEST_BASE` and derive each group
+  via `TEST_GROUP_BASE`. Test bodies still reference fixture members by their
+  bare names — they're inherited. See `BlockDeviceTestBase` in
+  `SolidSyslogFileStoreTest.cpp`.
+- **`CHECK_*` macros for repeated assertion shapes.** When the same buf+memcmp
+  or several-line assertion repeats across tests, wrap it in a macro that
+  *names* the intent. The macro must be a macro (not a function) so test
+  failures report the caller's `__FILE__`/`__LINE__`. Wrap with
+  `// NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)`
+  and use `do { ... } while (0)` for safe single-statement use. Examples:
+  `CHECK_PRIVAL` in `SolidSyslogTest.cpp`, `CHECK_BLOCK_CONTAINS` in
+  `SolidSyslogFileBlockDeviceTest.cpp`.
+- **DRY the setup, DRY the asserts, keep the test body small.** Each `TEST(...)`
+  body should read as a sentence: arrange → act → assert. If three lines of
+  setup repeat in five tests, the setup belongs in `setup()` or a TEST_GROUP
+  helper; if the same assertion shape repeats, make a `CHECK_*` macro.
+
+---
+
 ## Callback Conventions
 
 The library is migrating away from singleton instances toward integrator-injected storage and
