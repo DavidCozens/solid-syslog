@@ -1,4 +1,5 @@
 #include <set>
+#include <vector>
 
 #include "CppUTest/TestHarness.h"
 
@@ -11,10 +12,26 @@ extern "C"
 
 namespace
 {
+enum class CallType
+{
+    Acquire,
+    Dispose,
+    Exists
+};
+
+struct DeviceCall
+{
+    // cppcheck-suppress unusedStructMember -- read by DisposePrecedesAcquire / loop assertions; cppcheck does not model std::vector element access
+    CallType type;
+    // cppcheck-suppress unusedStructMember -- read by DisposePrecedesAcquire; cppcheck does not model std::vector element access
+    size_t blockIndex;
+};
+
 struct ScanFake
 {
     struct SolidSyslogBlockDevice base;
     std::set<size_t>*             existing;
+    std::vector<DeviceCall>*      calls; /* optional — tests that don't care leave nullptr */
 };
 
 inline ScanFake& ToFake(struct SolidSyslogBlockDevice* self)
@@ -23,22 +40,34 @@ inline ScanFake& ToFake(struct SolidSyslogBlockDevice* self)
     return *reinterpret_cast<ScanFake*>(self);
 }
 
+inline void RecordCall(ScanFake& fake, CallType type, size_t blockIndex)
+{
+    if (fake.calls != nullptr)
+    {
+        fake.calls->push_back({type, blockIndex});
+    }
+}
+
 bool FakeExists(struct SolidSyslogBlockDevice* self, size_t blockIndex)
 {
-    return ToFake(self).existing->count(blockIndex) > 0;
+    ScanFake& fake = ToFake(self);
+    RecordCall(fake, CallType::Exists, blockIndex);
+    return fake.existing->count(blockIndex) > 0;
 }
 
 bool FakeAcquire(struct SolidSyslogBlockDevice* self, size_t blockIndex)
 {
-    (void) self;
-    (void) blockIndex;
+    ScanFake& fake = ToFake(self);
+    RecordCall(fake, CallType::Acquire, blockIndex);
+    fake.existing->insert(blockIndex);
     return true;
 }
 
 bool FakeDispose(struct SolidSyslogBlockDevice* self, size_t blockIndex)
 {
-    (void) self;
-    (void) blockIndex;
+    ScanFake& fake = ToFake(self);
+    RecordCall(fake, CallType::Dispose, blockIndex);
+    fake.existing->erase(blockIndex);
     return true;
 }
 
@@ -153,4 +182,93 @@ TEST(BlockSequenceScan, ResumesWrappedSingleBlockAtBoundary)
     CHECK_TRUE(BlockSequence_Open(&sequence));
     LONGS_EQUAL(99, BlockSequence_ReadSequence(&sequence));
     LONGS_EQUAL(0, BlockSequence_WriteSequence(&sequence));
+}
+
+namespace
+{
+enum
+{
+    ROTATION_BLOCK_SIZE = 100
+};
+} // namespace
+
+// clang-format off
+TEST_GROUP(BlockSequenceRotation)
+{
+    ScanFake fakeDevice = {};
+    std::set<size_t> existing;
+    std::vector<DeviceCall> calls;
+    struct BlockSequence sequence = {};
+
+    void setup() override
+    {
+        fakeDevice.base.Acquire = FakeAcquire;
+        fakeDevice.base.Dispose = FakeDispose;
+        fakeDevice.base.Exists  = FakeExists;
+        fakeDevice.base.Read    = FakeRead;
+        fakeDevice.base.Append  = FakeAppend;
+        fakeDevice.base.WriteAt = FakeWriteAt;
+        fakeDevice.base.Size    = FakeSize;
+        fakeDevice.existing     = &existing;
+        // cppcheck-suppress unreadVariable -- read indirectly via Fake* functions; cppcheck does not model the function-pointer indirection
+        fakeDevice.calls        = &calls;
+
+        struct BlockSequenceConfig config = {};
+        config.blockDevice                = &fakeDevice.base;
+        config.maxBlockSize               = ROTATION_BLOCK_SIZE;
+        config.maxBlocks                  = 99;
+        config.discardPolicy              = SOLIDSYSLOG_DISCARD_OLDEST;
+        BlockSequence_Init(&sequence, &config);
+
+        BlockSequence_Open(&sequence); /* cold start: Acquire(0) */
+        calls.clear();
+    }
+
+    [[nodiscard]] bool DisposePrecedesAcquire(size_t blockIndex) const
+    {
+        ssize_t disposeAt = -1;
+        ssize_t acquireAt = -1;
+        for (size_t i = 0; i < calls.size(); i++)
+        {
+            if ((calls[i].blockIndex == blockIndex) && (calls[i].type == CallType::Dispose))
+            {
+                disposeAt = (ssize_t) i;
+            }
+            if ((calls[i].blockIndex == blockIndex) && (calls[i].type == CallType::Acquire))
+            {
+                acquireAt = (ssize_t) i;
+            }
+        }
+        return (disposeAt >= 0) && (acquireAt >= 0) && (disposeAt < acquireAt);
+    }
+
+    void ForceRotation()
+    {
+        bool readBlockChanged = false;
+        BlockSequence_PrepareForWrite(&sequence, ROTATION_BLOCK_SIZE + 1, &readBlockChanged);
+    }
+};
+
+// clang-format on
+
+TEST(BlockSequenceRotation, RotationDisposesStaleBlockBeforeAcquiring)
+{
+    existing.insert(1); /* simulate stale content left from a previous run */
+
+    ForceRotation();
+
+    CHECK_TRUE(DisposePrecedesAcquire(1));
+}
+
+TEST(BlockSequenceRotation, RotationSkipsDisposeWhenTargetBlockEmpty)
+{
+    /* Baseline: target block isn't on disk; no Dispose call should be emitted.
+     * Pins the cost optimisation that distinguishes flash drivers' "verify-and-use"
+     * fast path from "erase-and-use". */
+    ForceRotation();
+
+    for (const auto& call : calls)
+    {
+        CHECK_FALSE(call.type == CallType::Dispose);
+    }
 }

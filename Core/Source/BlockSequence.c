@@ -237,11 +237,12 @@ static void ResetReadToOldest(struct BlockSequence* blockSequence);
 
 static inline void AdvanceWriteToNewBlock(struct BlockSequence* blockSequence, uint8_t nextSequence);
 static inline bool ExceedsMaxBlocks(const struct BlockSequence* blockSequence);
+static inline bool AcquireEmptyBlock(struct SolidSyslogBlockDevice* device, size_t blockIndex);
 
 static bool RotateToNextBlock(struct BlockSequence* blockSequence, bool* readBlockChanged)
 {
     uint8_t nextSequence = NextSequence(blockSequence->writeSequence);
-    bool    acquired     = SolidSyslogBlockDevice_Acquire(blockSequence->blockDevice, nextSequence);
+    bool    acquired     = AcquireEmptyBlock(blockSequence->blockDevice, nextSequence);
 
     *readBlockChanged = false;
 
@@ -256,6 +257,20 @@ static bool RotateToNextBlock(struct BlockSequence* blockSequence, bool* readBlo
     }
 
     return acquired;
+}
+
+/* Dispose-then-Acquire enforces the BlockDevice contract that an Acquired block
+ * starts empty. Stale content can be left by a crash mid-Append on a previous
+ * run, or by a Dispose that succeeded after our state had already advanced
+ * past it. Flash drivers depend on this — Acquire = erase, and writing into
+ * a non-erased block corrupts data on most flash families. */
+static inline bool AcquireEmptyBlock(struct SolidSyslogBlockDevice* device, size_t blockIndex)
+{
+    if (SolidSyslogBlockDevice_Exists(device, blockIndex))
+    {
+        SolidSyslogBlockDevice_Dispose(device, blockIndex);
+    }
+    return SolidSyslogBlockDevice_Acquire(device, blockIndex);
 }
 
 static inline void AdvanceWriteToNewBlock(struct BlockSequence* blockSequence, uint8_t nextSequence)
