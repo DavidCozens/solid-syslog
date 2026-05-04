@@ -1,6 +1,8 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <cstddef>
+#include <utility>
 
 #include "CppUTest/TestHarness.h"
 #include "SolidSyslogBlockStore.h"
