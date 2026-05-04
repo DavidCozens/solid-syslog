@@ -1,9 +1,11 @@
 #include <openssl/err.h>
-#include <unistd.h>
+#include <atomic>
 #include <cstdio>
-#include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <filesystem>
+#include <fstream>
+#include <string>
 
 #include "BioPairStream.h"
 #include "SolidSyslogAddress.h"
@@ -26,9 +28,9 @@ TEST_GROUP(TlsStreamIntegration)
     struct SolidSyslogStream*         tlsStream      = nullptr;
     SolidSyslogAddressStorage         addrStorage    = {};
     struct SolidSyslogAddress*        addr           = nullptr;
-    char                              caPath[64]     = {};
-    char                              clientCertPath[64] = {};
-    char                              clientKeyPath[64]  = {};
+    char                              caPath[256]     = {};
+    char                              clientCertPath[256] = {};
+    char                              clientKeyPath[256]  = {};
 
     void setup() override
     {
@@ -43,20 +45,22 @@ TEST_GROUP(TlsStreamIntegration)
         if (cert.cert != nullptr)         { TlsTestCert_Destroy(&cert); }
         if (clientCert.cert != nullptr)   { TlsTestCert_Destroy(&clientCert); }
         if (clientCa.cert != nullptr)     { TlsTestCert_Destroy(&clientCa); }
-        if (caPath[0] != '\0')            { unlink(caPath); }
-        if (clientCertPath[0] != '\0')    { unlink(clientCertPath); }
-        if (clientKeyPath[0] != '\0')     { unlink(clientKeyPath); }
+        if (caPath[0] != '\0')            { (void) std::remove(caPath); }
+        if (clientCertPath[0] != '\0')    { (void) std::remove(clientCertPath); }
+        if (clientKeyPath[0] != '\0')     { (void) std::remove(clientKeyPath); }
     }
 
     template <std::size_t N>
     static void makeTempFile(char (&out)[N])
     {
-        static constexpr const char TEMPLATE[] = "/tmp/solidsyslog_mtls_XXXXXX";
-        static_assert(sizeof(TEMPLATE) <= N, "buffer too small for mkstemp template");
-        std::memcpy(out, TEMPLATE, sizeof(TEMPLATE));
-        int fd = mkstemp(out);
-        CHECK_TRUE(fd >= 0);
-        if (fd >= 0) { close(fd); }
+        namespace fs = std::filesystem;
+        static std::atomic<unsigned> counter{0};
+        const std::string path = (fs::temp_directory_path() /
+                                  ("solidsyslog_mtls_" + std::to_string(counter++) + ".tmp")).string();
+        CHECK_TRUE(path.size() + 1 <= N);
+        std::memcpy(out, path.c_str(), path.size() + 1);
+        std::ofstream touch(out, std::ios::binary | std::ios::trunc);
+        CHECK_TRUE(touch.is_open());
     }
 
     void buildScenario(const struct TlsTestCertConfig& certConfig,

@@ -4,7 +4,10 @@
 #include "ExampleInteractive.h"
 #include "ExampleIps.h"
 #include "ExampleLanguage.h"
+#include "ExampleMtlsConfig.h"
 #include "ExampleServiceThread.h"
+#include "ExampleTlsConfig.h"
+#include "ExampleTlsSender.h"
 #include "ExampleWindowsCommandLine.h"
 #include "SolidSyslog.h"
 #include "SolidSyslogAtomicCounter.h"
@@ -17,7 +20,6 @@
 #include "SolidSyslogOriginSd.h"
 #include "SolidSyslogTimeQualitySd.h"
 #include "SolidSyslogStreamSender.h"
-#include "SolidSyslogTransport.h"
 #include "SolidSyslogUdpSender.h"
 #include "SolidSyslogWindowsAtomicOps.h"
 #include "SolidSyslogWindowsClock.h"
@@ -33,6 +35,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <winsock2.h>
 // windows.h must follow winsock2.h to avoid winsock1/2 declaration conflicts
 #include <windows.h>
@@ -87,6 +91,21 @@ static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
     timeQuality->syncAccuracyMicroseconds = SOLIDSYSLOG_SYNC_ACCURACY_OMIT;
 }
 
+/* MSVC's getenv triggers C4996; getenv_s is the strict-mode equivalent.
+   Static buffer is single-thread-safe (called once from _Run before threads
+   start) and large enough for any reasonable hostname. Returns the buffer
+   when the env var is set and non-empty, NULL otherwise. */
+static const char* GetEnvVar(char* buffer, size_t bufferSize, const char* name)
+{
+    size_t  requiredSize = 0;
+    errno_t err          = getenv_s(&requiredSize, buffer, bufferSize, name);
+    if ((err != 0) || (requiredSize == 0))
+    {
+        return NULL;
+    }
+    return buffer;
+}
+
 int SolidSyslogWindowsExample_Run(int argc, char* argv[])
 {
     WSADATA wsaData;
@@ -97,6 +116,14 @@ int SolidSyslogWindowsExample_Run(int argc, char* argv[])
 
     ExampleAppName_Set(argv[0]);
 
+    /* BDD harness can override the TLS/mTLS host (defaults to "syslog-ng",
+       the Linux compose service name). Same env-var contract as the Threaded
+       example so behave can target either oracle. */
+    static char tlsHostBuffer[256];
+    static char mtlsHostBuffer[256];
+    ExampleTlsConfig_SetHost(GetEnvVar(tlsHostBuffer, sizeof tlsHostBuffer, "SOLIDSYSLOG_BDD_TLS_HOST"));
+    ExampleMtlsConfig_SetHost(GetEnvVar(mtlsHostBuffer, sizeof mtlsHostBuffer, "SOLIDSYSLOG_BDD_MTLS_HOST"));
+
     struct WindowsExampleOptions options;
     ExampleWindowsCommandLine_Parse(argc, argv, &options);
 
@@ -105,7 +132,15 @@ int SolidSyslogWindowsExample_Run(int argc, char* argv[])
     struct SolidSyslogStream*   stream   = NULL;
     struct SolidSyslogSender*   sender   = NULL;
 
-    if (options.transport == SOLIDSYSLOG_TRANSPORT_TCP)
+    bool useTcp  = (strcmp(options.transport, "tcp") == 0);
+    bool useTls  = (strcmp(options.transport, "tls") == 0);
+    bool useMtls = (strcmp(options.transport, "mtls") == 0);
+
+    if (useTls || useMtls)
+    {
+        sender = ExampleTlsSender_Create(resolver, useMtls);
+    }
+    else if (useTcp)
     {
         stream                                         = SolidSyslogWinsockTcpStream_Create(&tcpStreamStorage);
         struct SolidSyslogStreamSenderConfig tcpConfig = {
@@ -179,7 +214,11 @@ int SolidSyslogWindowsExample_Run(int argc, char* argv[])
     SolidSyslogNullStore_Destroy();
     SolidSyslogCircularBuffer_Destroy(buffer);
     SolidSyslogWindowsMutex_Destroy(mutex);
-    if (options.transport == SOLIDSYSLOG_TRANSPORT_TCP)
+    if (useTls || useMtls)
+    {
+        ExampleTlsSender_Destroy();
+    }
+    else if (useTcp)
     {
         SolidSyslogStreamSender_Destroy(sender);
         SolidSyslogWinsockTcpStream_Destroy(stream);

@@ -1,5 +1,207 @@
 # Dev Log
 
+## 2026-05-04 — S13.19 slice 3: cross-platform TLS+mTLS BDD via OTel TLS receivers
+
+### Decisions
+
+- **Windows BDD oracle gains TLS (6514) and mTLS (6515) syslog
+  receivers.** otelcol-contrib's syslog receiver supports a `tcp.tls`
+  block — the same `cert_file`/`key_file` (and `client_ca_file` for
+  mTLS) that syslog-ng uses on Linux is what otelcol consumes.
+  Reusing the existing `Bdd/syslog-ng/tls/{ca,server}.{pem,key}`
+  fixtures means a single set of test certs drives both runners and
+  there's no Docker-on-Windows or Linux-sidecar complication.
+- **Per-transport file exporters mirror the syslog-ng layout.** Linux
+  has `received.log` (catch-all) + `received_<transport>.log`
+  (per-transport pin). The OTel config now does the same with
+  `received.jsonl` + `received_<tls|mtls>.jsonl`. UDP and TCP stay
+  multiplexed on the catch-all `received.jsonl` because they share
+  port 5514 — the SwitchingSender scenarios that need separate
+  per-transport pins for udp/tcp are still `@buffered` Linux-only,
+  so no Windows-side per-transport split is needed for them today.
+- **`PER_TRANSPORT_LOG` replaced with `per_transport_log(context, t)`
+  function.** Returns `received_<X>.log` on Linux, `received_<X>.jsonl`
+  on Windows OTel — same semantic, oracle-format-aware path. Two
+  internal dicts (`PER_TRANSPORT_LOG_SYSLOG_NG`,
+  `PER_TRANSPORT_LOG_OTEL`) keep each runner's path table local.
+- **Env-var host override on `ExampleTlsConfig` and
+  `ExampleMtlsConfig`.** Defaults stay `"syslog-ng"` so Linux behaves
+  unchanged when env vars are absent. Windows BDD's `before_all` sets
+  `SOLIDSYSLOG_BDD_TLS_HOST=127.0.0.1` and `SOLIDSYSLOG_BDD_MTLS_HOST=127.0.0.1`
+  via `setdefault` so the Windows OTel oracle (bound to 127.0.0.1)
+  is reachable. Server cert SAN already includes 127.0.0.1 + localhost
+  so the handshake completes against either host name.
+- **`getenv_s` on MSVC, `getenv` on POSIX — split per platform main.c.**
+  MSVC's `getenv` triggers C4996 under `/W4 /WX` (the project
+  deliberately doesn't suppress that warning). The platform-specific
+  env-var read lives in each example's main.c
+  (`Example/Threaded/main.c` uses `getenv` directly,
+  `Example/Windows/SolidSyslogWindowsExample.c` wraps `getenv_s` in a
+  small static helper) and both call the same Common
+  `ExampleTlsConfig_SetHost(...)` / `_SetMtlsHost(...)` setters. Common
+  code stays clean of platform `#ifdef`s.
+- **`@buffered` dropped from `tls_transport.feature` AND
+  `mtls_transport.feature`.** Both reframed from "the threaded example"
+  to "the buffered example" — the same reframe S13.18 did for
+  `tcp_transport.feature` and `buffered.feature`. The Windows runner's
+  existing `not @buffered` filter automatically picks them up. mTLS
+  feature description updated to call out the cross-platform oracle
+  path (Linux syslog-ng vs Windows otelcol-contrib).
+- **CI port-wait extended to TCP 6514+6515.** The previous step polled
+  UDP 5514 only — sufficient when the only Windows-side receivers were
+  UDP+TCP on 5514. With TLS/mTLS on 6514/6515 added, the wait now
+  asserts all three are bound before BDD runs, avoiding a flaky race
+  where a TLS scenario could fire before the receiver is up.
+- **`docs/bdd.md` `@buffered` description updated.** The TLS/mTLS
+  capabilities are no longer Linux-only, so the tag's meaning narrows
+  to "file-backed block store, switching sender, or syslog-ng reload".
+
+### Deferred
+
+- **SwitchingSender across UDP/TCP/TLS/mTLS on the Windows example.**
+  The Windows example still picks one sender at startup. Slice 2
+  flagged this as out of scope, and slice 3 doesn't need it — the
+  cross-platform TLS/mTLS scenarios use a single fixed transport per
+  scenario. Remains a follow-up, tracked under the example-commonality
+  follow-up flagged in S13.18.
+- **Per-transport pin for udp/tcp on Windows.** OTel UDP and TCP
+  receivers both feed `received.jsonl`, so a Windows-side
+  "syslog-ng receives N over udp" wouldn't disambiguate. Not needed
+  for the in-scope features (which only use the per-transport step
+  for TLS/mTLS). The `switching_transport.feature` keeps `@buffered`
+  for now and stays Linux-only.
+
+### Open questions
+
+- None for slice 3. The end-to-end Windows TLS handshake is validated
+  by CI behave runs; local smoke tests confirmed the OTel collector
+  binds 5514/6514/6515 and accepts the agreed cert chain.
+
+## 2026-05-04 — S13.19 slice 2: ExampleTlsSender hoisted, Windows TLS/mTLS arms
+
+### Decisions
+
+- **Hoisted `ExampleTlsSender.h`, `_OpenSsl_*.c`, `_Unavailable.c` from
+  `Example/Threaded/` to `Example/Common/`.** The only platform-specific
+  thing in the existing `ExampleTlsSender_OpenSsl.c` was the underlying
+  TCP stream type (`SolidSyslogPosixTcpStream`) — the rest of the
+  factory (mTLS branch, TLS stream + StreamSender wiring, mTLS-vs-TLS
+  config dispatch) is identical across platforms. Splitting the
+  underlying stream into a per-platform backend file
+  (`_OpenSsl_PosixTcp.c` and `_OpenSsl_WinsockTcp.c`, picked by CMake)
+  keeps both example binaries aligned and matches the user's
+  example-commonality preference.
+- **Backend selected by CMake, not by `#ifdef`.** `Example/CMakeLists.txt`
+  now appends `Common/ExampleTlsSender_OpenSsl_PosixTcp.c` for the
+  Threaded (POSIX) example and `Common/ExampleTlsSender_OpenSsl_WinsockTcp.c`
+  for the Windows example when `SOLIDSYSLOG_OPENSSL=ON`, falling back to
+  `Common/ExampleTlsSender_Unavailable.c` otherwise. Mirrors how the
+  rest of the project handles platform variance.
+- **Windows example `--transport` switched from
+  `enum SolidSyslogTransport` to `const char*`.** The library enum is
+  a UDP-vs-TCP socket-type discriminator for the Resolver — it has no
+  TLS value and shouldn't grow one (TLS rides on a TCP underlying
+  stream, the resolver still asks for TCP). The Linux `ExampleOptions`
+  already uses a string for the same reason. The string carries
+  `"udp" | "tcp" | "tls" | "mtls"`; sender wiring switches on
+  `strcmp` matching.
+- **Three arms in the if/else chain, not a SwitchingSender.** Slice 2
+  picks one sender at startup. The Linux Threaded example uses a
+  `SolidSyslogSwitchingSender` over UDP+TCP+TLS so the
+  `ExampleInteractive` "transport <name>" command can switch at runtime,
+  but that's a separate hoist S13.18 deferred (factory shape mismatch).
+  Today the Windows example remains startup-fixed and the `mtls` /
+  `tls` arms reuse the same `ExampleTlsSender_Create(resolver, mtls)`
+  factory the Threaded example calls.
+- **`SolidSyslogTransport.h` removed from
+  `Example/Windows/ExampleWindowsCommandLine.h` and
+  `SolidSyslogWindowsExample.c`.** No longer needed since the example
+  no longer routes through that enum, and dropping it preserves the
+  IWYU gate.
+
+### Deferred
+
+- **Hoisting the per-platform `CreateSender` / `DestroySender` factories
+  to `Example/Common`.** S13.18 already flagged this — Threaded composes
+  via `SwitchingSender` (UDP+TCP+TLS+mTLS), Windows picks one. The
+  shapes have diverged enough that any "hoist" is really "widen Windows
+  to use SwitchingSender" first. Out of slice 2 scope.
+- **Live TLS smoke test against `openssl s_server` on Windows.** Slice 2
+  shipped CMake + linker + factory wiring; live handshake testing lands
+  in slice 3 against the BDD oracle. The MSVC binary builds clean,
+  starts under each `--transport` value without crashing, and the
+  Linux Threaded TLS + mTLS BDD scenarios remain green — proves the
+  refactor didn't regress the existing pipeline.
+
+### Open questions
+
+- **Windows mTLS host string.** `ExampleMtlsConfig_GetHost()` returns
+  `"syslog-ng"` (the Linux compose service name). On the Windows BDD
+  runner the oracle will be on `127.0.0.1`. Slice 3 needs to either
+  branch by env var (`MTLS_HOST=...`) or have separate
+  `ExampleMtlsConfig_*Linux*.c` / `*Windows*.c` files. Will sort during
+  slice 3 when the otel mTLS receiver wiring lands.
+
+## 2026-05-04 — S13.19 slice 1: OpenSslIntegrationTests on MSVC
+
+### Decisions
+
+- **Sliced S13.19 into three.** Slice 1 (this PR) — prove the existing
+  `Platform/OpenSsl/SolidSyslogTlsStream` is byte-for-byte portable to
+  MSVC + vcpkg OpenSSL by lighting up the same `OpenSslIntegrationTests`
+  binary the Linux job runs. No example or BDD changes. Slice 2 will
+  hoist `ExampleTlsSender` to `Example/Common` (per the
+  example-commonality memory) and add `--transport tls`/`mtls` arms to
+  the Windows example. Slice 3 extends `Bdd/otel/config.yaml` with
+  `syslog/tls` and `syslog/mtls` receivers and drops `@buffered` from
+  the two TLS feature files. mTLS in scope across all three slices.
+- **`std::filesystem::temp_directory_path()` + `std::ofstream` instead of
+  `mkstemp` + `fopen`.** `SolidSyslogTlsStreamIntegrationTest.cpp` was the
+  only Linux-only file in the test tree — `mkstemp`/`unlink` are POSIX,
+  `/tmp/...` doesn't exist on Windows. C++17 `<filesystem>` is the
+  portable replacement, and `std::ofstream` avoids MSVC's C4996 on
+  `fopen` (the project deliberately doesn't suppress C4996 — see
+  `_CRT_SECURE_NO_WARNINGS` ban in CLAUDE.md). Path buffers bumped from
+  64 to 256 to comfortably hold a Windows temp path
+  (`%LOCALAPPDATA%\Temp\...` is ~50–60 chars before the filename).
+- **Vendored `applink.c` linked into `OpenSslIntegrationTests` on
+  MSVC.** OpenSSL on Windows requires `applink.c` to be compiled into
+  the application whenever the application passes `FILE*` across
+  runtime-library boundaries (e.g. `PEM_write_*`). Without it, the test
+  prints `OPENSSL_Uplink: no OPENSSL_Applink` and aborts. vcpkg's
+  `find_package(OpenSSL)` exposes the path via `OPENSSL_APPLINK_SOURCE`,
+  so the CMake guard is `if(MSVC AND OPENSSL_APPLINK_SOURCE)`. The
+  vendored file trips `/W4 /WX` (C4152 fn-ptr cast, C4996 on `fopen` /
+  `_open`); per-source `set_source_files_properties(... COMPILE_OPTIONS
+  "/wd4152;/wd4996")` keeps the suppressions scoped to that one file
+  instead of weakening the project-wide flags.
+- **`vcpkg install openssl` added to `build-windows-msvc` AND a new
+  `integration-windows-openssl` job.** `build-windows-msvc` previously
+  configured with `SOLIDSYSLOG_OPENSSL=OFF` (no OpenSSL on the runner),
+  so `Platform/OpenSsl/SolidSyslogTlsStream.c` and the OpenSslFake-backed
+  unit tests didn't exercise on MSVC at all. Adding `openssl` to the
+  install line lights both up. The new `integration-windows-openssl`
+  job mirrors `integration-linux-openssl` shape — separate runner, own
+  `vcpkg install`, real libssl, JUnit upload, surfaced through the
+  `summary` required-check.
+- **Two `vcpkg install` lines, not a manifest file.** Matches the
+  existing `build-windows-msvc` style. Symmetric and simple — the
+  binary cache (`x-gha,readwrite`) still kicks in across runs.
+
+### Deferred
+
+- **Branch protection update.** The new `integration-windows-openssl`
+  check needs to be added to the required-checks list on GitHub branch
+  protection settings — the workflow change alone doesn't update it.
+  Flagged for the user to do post-merge (or pre-merge if blocking the
+  squash).
+- **Slice 2 (Windows example TLS) and Slice 3 (BDD TLS oracle).** As
+  agreed in the slicing plan; tracked on issue #245.
+
+### Open questions
+
+- None for slice 1.
+
 ## 2026-05-04 — S13.18 Windows BDD on the portable ring buffer
 
 ### Decisions
