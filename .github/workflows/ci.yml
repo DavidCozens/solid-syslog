@@ -102,6 +102,57 @@ jobs:
           path: build/debug/cpputest_*.xml
           retention-days: 1
 
+  integration-windows-openssl:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+      checks: write
+    env:
+      VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Enable vcpkg binary cache
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+      - name: Install CppUTest and OpenSSL
+        run: |
+          vcpkg install cpputest openssl
+          echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
+
+      - name: Configure
+        run: cmake --preset msvc-debug
+
+      - name: Build integration tests
+        run: cmake --build --preset msvc-debug --target OpenSslIntegrationTests
+
+      - name: Run integration tests
+        shell: pwsh
+        run: |
+          Set-Location build/msvc-debug/Tests/OpenSslIntegration/Debug
+          ./OpenSslIntegrationTests.exe -v -ojunit -k OpenSslIntegrationTests
+
+      - name: Test Report
+        uses: dorny/test-reporter@v3
+        if: success() || failure()
+        with:
+          name: Test Results (OpenSSL Integration Windows)
+          path: build/msvc-debug/Tests/OpenSslIntegration/Debug/cpputest_*.xml
+          reporter: java-junit
+
+      - name: Upload JUnit XML
+        if: success() || failure()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: junit-integration-windows-openssl
+          path: build/msvc-debug/Tests/OpenSslIntegration/Debug/cpputest_*.xml
+          retention-days: 1
+
   build-linux-clang:
     runs-on: ubuntu-latest
     permissions:
@@ -392,9 +443,9 @@ jobs:
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
 
-      - name: Install CppUTest
+      - name: Install CppUTest and OpenSSL
         run: |
-          vcpkg install cpputest
+          vcpkg install cpputest openssl
           echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
 
       - name: Configure
@@ -577,7 +628,7 @@ jobs:
 
   summary:
     if: always() && github.event_name == 'pull_request'
-    needs: [build-linux-gcc, build-linux-clang, sanitize-linux-gcc, coverage-linux-gcc, analyze-tidy, analyze-cppcheck, analyze-format, analyze-iwyu, bdd-linux-syslog-ng, build-windows-msvc, bdd-windows-otel, integration-linux-openssl]
+    needs: [build-linux-gcc, build-linux-clang, sanitize-linux-gcc, coverage-linux-gcc, analyze-tidy, analyze-cppcheck, analyze-format, analyze-iwyu, bdd-linux-syslog-ng, build-windows-msvc, bdd-windows-otel, integration-linux-openssl, integration-windows-openssl]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -644,6 +695,11 @@ jobs:
                     "id": "junit",
                     "name": "integration-linux-openssl",
                     "pattern": "**/junit-integration-linux-openssl/cpputest_*.xml"
+                  },
+                  {
+                    "id": "junit",
+                    "name": "integration-windows-openssl",
+                    "pattern": "**/junit-integration-windows-openssl/cpputest_*.xml"
                   },
                   {
                     "id": "junit",

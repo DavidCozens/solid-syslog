@@ -1,5 +1,65 @@
 # Dev Log
 
+## 2026-05-04 — S13.19 slice 1: OpenSslIntegrationTests on MSVC
+
+### Decisions
+
+- **Sliced S13.19 into three.** Slice 1 (this PR) — prove the existing
+  `Platform/OpenSsl/SolidSyslogTlsStream` is byte-for-byte portable to
+  MSVC + vcpkg OpenSSL by lighting up the same `OpenSslIntegrationTests`
+  binary the Linux job runs. No example or BDD changes. Slice 2 will
+  hoist `ExampleTlsSender` to `Example/Common` (per the
+  example-commonality memory) and add `--transport tls`/`mtls` arms to
+  the Windows example. Slice 3 extends `Bdd/otel/config.yaml` with
+  `syslog/tls` and `syslog/mtls` receivers and drops `@buffered` from
+  the two TLS feature files. mTLS in scope across all three slices.
+- **`std::filesystem::temp_directory_path()` + `std::ofstream` instead of
+  `mkstemp` + `fopen`.** `SolidSyslogTlsStreamIntegrationTest.cpp` was the
+  only Linux-only file in the test tree — `mkstemp`/`unlink` are POSIX,
+  `/tmp/...` doesn't exist on Windows. C++17 `<filesystem>` is the
+  portable replacement, and `std::ofstream` avoids MSVC's C4996 on
+  `fopen` (the project deliberately doesn't suppress C4996 — see
+  `_CRT_SECURE_NO_WARNINGS` ban in CLAUDE.md). Path buffers bumped from
+  64 to 256 to comfortably hold a Windows temp path
+  (`%LOCALAPPDATA%\Temp\...` is ~50–60 chars before the filename).
+- **Vendored `applink.c` linked into `OpenSslIntegrationTests` on
+  MSVC.** OpenSSL on Windows requires `applink.c` to be compiled into
+  the application whenever the application passes `FILE*` across
+  runtime-library boundaries (e.g. `PEM_write_*`). Without it, the test
+  prints `OPENSSL_Uplink: no OPENSSL_Applink` and aborts. vcpkg's
+  `find_package(OpenSSL)` exposes the path via `OPENSSL_APPLINK_SOURCE`,
+  so the CMake guard is `if(MSVC AND OPENSSL_APPLINK_SOURCE)`. The
+  vendored file trips `/W4 /WX` (C4152 fn-ptr cast, C4996 on `fopen` /
+  `_open`); per-source `set_source_files_properties(... COMPILE_OPTIONS
+  "/wd4152;/wd4996")` keeps the suppressions scoped to that one file
+  instead of weakening the project-wide flags.
+- **`vcpkg install openssl` added to `build-windows-msvc` AND a new
+  `integration-windows-openssl` job.** `build-windows-msvc` previously
+  configured with `SOLIDSYSLOG_OPENSSL=OFF` (no OpenSSL on the runner),
+  so `Platform/OpenSsl/SolidSyslogTlsStream.c` and the OpenSslFake-backed
+  unit tests didn't exercise on MSVC at all. Adding `openssl` to the
+  install line lights both up. The new `integration-windows-openssl`
+  job mirrors `integration-linux-openssl` shape — separate runner, own
+  `vcpkg install`, real libssl, JUnit upload, surfaced through the
+  `summary` required-check.
+- **Two `vcpkg install` lines, not a manifest file.** Matches the
+  existing `build-windows-msvc` style. Symmetric and simple — the
+  binary cache (`x-gha,readwrite`) still kicks in across runs.
+
+### Deferred
+
+- **Branch protection update.** The new `integration-windows-openssl`
+  check needs to be added to the required-checks list on GitHub branch
+  protection settings — the workflow change alone doesn't update it.
+  Flagged for the user to do post-merge (or pre-merge if blocking the
+  squash).
+- **Slice 2 (Windows example TLS) and Slice 3 (BDD TLS oracle).** As
+  agreed in the slicing plan; tracked on issue #245.
+
+### Open questions
+
+- None for slice 1.
+
 ## 2026-05-04 — S13.18 Windows BDD on the portable ring buffer
 
 ### Decisions
