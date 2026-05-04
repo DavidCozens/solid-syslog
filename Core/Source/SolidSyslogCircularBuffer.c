@@ -25,8 +25,7 @@ struct SolidSyslogCircularBuffer
     uint8_t                  storage[];
 };
 
-SOLIDSYSLOG_STATIC_ASSERT(sizeof(struct SolidSyslogCircularBuffer)
-                              == SOLIDSYSLOG_CIRCULARBUFFER_OVERHEAD * sizeof(SolidSyslogCircularBufferStorage),
+SOLIDSYSLOG_STATIC_ASSERT(sizeof(struct SolidSyslogCircularBuffer) == SOLIDSYSLOG_CIRCULARBUFFER_OVERHEAD * sizeof(SolidSyslogCircularBufferStorage),
                           "SOLIDSYSLOG_CIRCULARBUFFER_OVERHEAD does not match struct layout");
 
 static bool Read(struct SolidSyslogBuffer* self, void* data, size_t maxSize, size_t* bytesRead);
@@ -103,7 +102,7 @@ static inline void ConsumeWrapMarker(struct SolidSyslogCircularBuffer* circular)
 
 static inline void LoadRecord(struct SolidSyslogCircularBuffer* circular, void* data, size_t* bytesRead)
 {
-    uint16_t header;
+    uint16_t header = 0;
     memcpy(&header, &circular->storage[circular->head], HEADER_BYTES);
     size_t recordSize = header;
     memcpy(data, &circular->storage[circular->head + HEADER_BYTES], recordSize);

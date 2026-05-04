@@ -33,6 +33,11 @@ TEST_GROUP(SolidSyslogCircularBuffer)
         SolidSyslogCircularBuffer_Destroy(buffer);
         SolidSyslogNullMutex_Destroy();
     }
+
+    bool Read()
+    {
+        return SolidSyslogBuffer_Read(buffer, readData, sizeof(readData), &readSize);
+    }
 };
 
 // clang-format on
@@ -108,6 +113,7 @@ TEST(SolidSyslogCircularBuffer, WrapsAroundEndOfStorage)
         CYCLES       = 400,
         PAYLOAD_SIZE = 10
     };
+
     char payload[PAYLOAD_SIZE];
     memset(payload, 'X', PAYLOAD_SIZE);
 
@@ -170,6 +176,11 @@ TEST_GROUP(SolidSyslogCircularBufferMutex)
     {
         SolidSyslogCircularBuffer_Destroy(buffer);
         MutexFake_Destroy();
+    }
+
+    bool Read()
+    {
+        return SolidSyslogBuffer_Read(buffer, readData, sizeof(readData), &readSize);
     }
 };
 
