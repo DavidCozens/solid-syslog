@@ -348,46 +348,20 @@ def wait_for_messages(context, expected_messages):
 
 
 def run_example(context, extra_args=None, binary=None, expected_messages=1):
-    """Run the single-task example as a one-shot: write all stdin upfront,
-    wait for clean exit, then assert the oracle saw the messages.
+    """Run the example via the prompt protocol — works for both NullBuffer
+    (synchronous send, Linux SingleTask) and CircularBuffer + service thread
+    (asynchronous, Windows buffered example post-S13.18).
 
-    Portable across Linux and Windows — no select.select on a pipe fd (which
-    Windows doesn't support). Single-task example only: every Log call is
-    synchronous (NullBuffer + Datagram), so "quit" cannot arrive before the
-    UDP packets have left the socket.
+    The pre-S13.18 implementation wrote `send N\\nquit\\n` upfront via
+    process.communicate() and relied on NullBuffer's synchronous Send to
+    guarantee delivery before exit. That assumption broke on Windows once
+    SolidSyslogExample.exe became buffered — `quit` could land before the
+    service thread had drained, losing the UDP packet. The prompt protocol
+    coordinates around it: wait for the oracle to confirm receipt before
+    sending `quit`.
     """
     binary = binary or context.example_binary
-    assert os.path.exists(binary), (
-        f"Example binary not found at {binary} — build with cmake first"
-    )
-
-    # Windows CreateProcess needs an absolute path (or one resolvable via PATH);
-    # forward-slash relative paths from a bash-launched behave fail otherwise.
-    cmd = [os.path.abspath(binary)]
-    if extra_args:
-        cmd.extend(extra_args)
-
-    process = subprocess.Popen(
-        cmd,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
-    context.example_pid = process.pid
-
-    try:
-        process.communicate(input=f"send {expected_messages}\nquit\n", timeout=15)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        process.wait()
-        raise
-
-    assert process.returncode == 0, (
-        f"Example binary failed with exit code {process.returncode}"
-    )
-
-    wait_for_messages(context, expected_messages)
+    _run_with_prompt_protocol(context, binary, "Example", extra_args, expected_messages)
 
 
 def _run_with_prompt_protocol(context, binary, label, extra_args, expected_messages):
