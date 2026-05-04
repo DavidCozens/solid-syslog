@@ -390,16 +390,19 @@ def run_example(context, extra_args=None, binary=None, expected_messages=1):
     wait_for_messages(context, expected_messages)
 
 
-def run_threaded_example(context, extra_args=None, expected_messages=1):
-    """Run the threaded example using the prompt-based protocol so that the
-    service thread has time to drain the buffer between "send N" and "quit".
+def _run_with_prompt_protocol(context, binary, label, extra_args, expected_messages):
+    """Run a binary that speaks the SolidSyslog> prompt protocol.
+
+    Shared body for run_threaded_example (Linux pthread binary) and
+    run_buffered_example (cross-platform — Linux pthread or Windows Win32
+    threaded). The protocol is: wait initial prompt, send "send N", wait
+    next prompt, wait until oracle has confirmed N messages, then "quit".
     """
-    binary = THREADED_BINARY
     assert os.path.exists(binary), (
-        f"Threaded binary not found at {binary} — build with cmake first"
+        f"{label} binary not found at {binary} — build with cmake first"
     )
 
-    cmd = [os.path.join(".", binary)]
+    cmd = [os.path.abspath(binary)]
     if extra_args:
         cmd.extend(extra_args)
 
@@ -421,7 +424,7 @@ def run_threaded_example(context, extra_args=None, expected_messages=1):
         process.stdin.flush()
         process.wait(timeout=10)
         assert process.returncode == 0, (
-            f"Threaded example failed with exit code {process.returncode}"
+            f"{label} failed with exit code {process.returncode}"
         )
     finally:
         # Don't let an intermediate exception leak the helper into later
@@ -429,6 +432,31 @@ def run_threaded_example(context, extra_args=None, expected_messages=1):
         if process.poll() is None:
             process.kill()
             process.wait(timeout=5)
+
+
+def run_threaded_example(context, extra_args=None, expected_messages=1):
+    """Run the Linux pthread-driven Threaded example via the prompt protocol.
+    Used for features that are pthread-specific (file store, switching,
+    syslog-ng reload), which stay Linux-only and keep "the threaded example"
+    prose in their .feature files.
+    """
+    _run_with_prompt_protocol(
+        context, THREADED_BINARY, "Threaded example", extra_args, expected_messages
+    )
+
+
+def run_buffered_example(context, extra_args=None, expected_messages=1):
+    """Run the buffered example via the prompt protocol — cross-platform.
+
+    Linux runner (syslog-ng oracle): the pthread-driven Threaded example.
+    Windows runner (OTel oracle): the Win32-thread-driven example wired by
+    S13.18 — context.example_binary already points at it. Lets the same
+    .feature scenario exercise the buffering path on both runners.
+    """
+    binary = THREADED_BINARY if context.oracle_format == "syslog-ng" else context.example_binary
+    _run_with_prompt_protocol(
+        context, binary, "Buffered example", extra_args, expected_messages
+    )
 
 
 def syslog_ng_reload():
@@ -697,6 +725,21 @@ def step_threaded_sends_with_transport(context, transport):
 @when("the threaded example sends {count:d} syslog messages")
 def step_threaded_sends_multiple(context, count):
     run_threaded_example(context, expected_messages=count)
+
+
+@when("the buffered example sends a syslog message")
+def step_buffered_sends_message(context):
+    run_buffered_example(context)
+
+
+@when("the buffered example sends a syslog message with transport {transport}")
+def step_buffered_sends_with_transport(context, transport):
+    run_buffered_example(context, ["--transport", transport])
+
+
+@when("the buffered example sends {count:d} syslog messages")
+def step_buffered_sends_multiple(context, count):
+    run_buffered_example(context, expected_messages=count)
 
 
 @when("the example program sends a message with facility {facility:d} and severity {severity:d}")
