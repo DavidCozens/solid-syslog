@@ -63,7 +63,7 @@ struct FileFake
     bool                   failNextDelete;
 };
 
-SOLIDSYSLOG_STATIC_ASSERT(sizeof(struct FileFake) == sizeof(struct FileFakeStorage), "FileFakeStorage size does not match struct FileFake");
+SOLIDSYSLOG_STATIC_ASSERT(sizeof(struct FileFake) <= sizeof(struct FileFakeStorage), "FileFakeStorage is too small for struct FileFake");
 
 /* shared in-memory filesystem */
 static struct FileEntry filesystem[FILEFAKE_MAX_FILES];

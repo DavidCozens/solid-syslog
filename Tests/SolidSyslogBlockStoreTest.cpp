@@ -1323,7 +1323,7 @@ TEST(SolidSyslogBlockStoreRotation, RotationRetriesAfterTransientAcquireFailure)
     WriteMaxMsg(); /* file 00 */
 
     FileFake_FailNextOpen(file);
-    SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg)); /* fails — Acquire on file 01 rejected */
+    CHECK_FALSE(SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg))); /* fails — Acquire on file 01 rejected */
 
     CHECK_TRUE(SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg))); /* retry succeeds */
     CHECK_TRUE(SolidSyslogFile_Exists(file, "/tmp/test_store01.log"));
@@ -1334,14 +1334,15 @@ TEST(SolidSyslogBlockStoreRotation, DiscardRetriesAfterTransientDisposeFailure)
     /* Without this guarantee the oldest pointer would advance past a still-on-disk
      * block, leaving it orphaned forever. Force a Dispose failure on the discard
      * during file-02 rotation, then trigger another rotation: the next discard
-     * cycle must re-attempt block 00 — not skip past it to block 01. */
+     * cycle must re-attempt block 00 — not skip past it to block 01. Both Writes
+     * succeed (rotation acquires the new block; only the discard silently fails). */
     CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
     WriteMaxMsg(); /* file 00 */
     WriteMaxMsg(); /* file 01 */
 
     FileFake_FailNextDelete(file);
-    WriteMaxMsg(); /* file 02 — discard of 00 fails; oldest must stay at 0 */
-    WriteMaxMsg(); /* file 03 — next discard cycle re-attempts and removes 00 */
+    CHECK_TRUE(SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg))); /* file 02 — discard of 00 fails; oldest must stay at 0 */
+    CHECK_TRUE(SolidSyslogStore_Write(store, maxMsg, sizeof(maxMsg))); /* file 03 — next discard cycle re-attempts and removes 00 */
 
     CHECK_FALSE(SolidSyslogFile_Exists(file, "/tmp/test_store00.log"));
 }
