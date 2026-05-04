@@ -333,7 +333,7 @@ live under `Core/Interface/`; platform-specific helpers (the `SolidSyslogPosix*`
 | `SolidSyslogBufferDefinition.h` | Buffer implementors (extension point) | `SolidSyslogBuffer` vtable struct |
 | `SolidSyslogNullBuffer.h` | System setup code (single-task, no buffering) | `SolidSyslogNullBuffer_Create`, `_Destroy` |
 | `SolidSyslogPosixMessageQueueBuffer.h` | System setup code using POSIX message queue buffer | `SolidSyslogPosixMessageQueueBuffer_Create`, `_Destroy` |
-| `SolidSyslogCircularBuffer.h` | System setup code using an in-memory ring buffer (bare-metal / RTOS / Windows) | `SolidSyslogCircularBufferStorage`, `SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE(maxMessages)`, `SolidSyslogCircularBuffer_Create(storage, maxMessages, mutex)`, `_Destroy(buffer)` (length-prefixed records, drop-newest on overflow, no-split wrap) |
+| `SolidSyslogCircularBuffer.h` | System setup code using an in-memory ring buffer (bare-metal / RTOS / Windows) | `SolidSyslogCircularBufferStorage`, `SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE(maxMessages)` (friendly: N max-sized messages), `SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE_BYTES(ringBytes)` (raw byte capacity), `SolidSyslogCircularBuffer_Create(storage, sizeof(storage), mutex)`, `_Destroy(buffer)` (uint16-length-prefixed records, drop-newest on overflow, no-split wrap, mutex-injected synchronization) |
 | `SolidSyslogMutex.h` | Any code holding a mutex handle | `SolidSyslogMutex_Lock`, `_Unlock` |
 | `SolidSyslogMutexDefinition.h` | Mutex implementors (extension point) | `SolidSyslogMutex` vtable struct (`Lock`, `Unlock`) |
 | `SolidSyslogNullMutex.h` | System setup code (single-task, no synchronization) | `SolidSyslogNullMutex_Create`, `_Destroy` |

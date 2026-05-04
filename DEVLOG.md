@@ -2540,3 +2540,82 @@ the reality was 84 files with findings on the first run, dropping to
   addressed later with a CMake cache variable for `MAX_MESSAGE_SIZE`
   (already on the project memory backlog) or by relaxing the macro to
   take an explicit byte count alongside the message count.
+
+## 2026-05-04 — S04.05 review-driven fixes
+
+CodeRabbit review on PR #263 surfaced four substantive findings beyond the
+IWYU/format hygiene noise. All addressed via strict TDD (Red test → Green fix)
+in commit `ebddeb4`:
+
+### Decisions
+
+- **`Read` discards `maxSize`** (Critical). `Read` now refuses if
+  `recordSize > maxSize`: returns `false`, leaves the record queued, sets
+  `bytesRead = 0`. Mirrors `mq_receive` `EMSGSIZE` semantics (fail loud, not
+  silent truncation). New TEST_GROUP `SolidSyslogCircularBufferSmallRing`
+  with a 32-byte ring keeps the boundary tests readable.
+
+- **`Write` truncates `size` to `uint16_t`** (Critical). `Write` now drops
+  payloads larger than `SOLIDSYSLOG_MAX_MESSAGE_SIZE` outright, before any
+  framing. `MAX_MESSAGE_SIZE = 2048` is far below `UINT16_MAX = 65535`, so
+  this single bound subsumes the 16-bit truncation concern and aligns with
+  the rest of the library's invariant.
+
+- **`<=` on the fit-helpers collapsed full onto empty** (Critical).
+  `RecordFitsAtTail` (wrapped branch) and `RecordFitsAfterWrap` now use `<`
+  instead of `<=`. The non-wrapped branch in `RecordFitsAtTail` keeps `<=`
+  because perfect-fit at end of storage (`tail + recordBytes == capacity`)
+  does not collapse onto `head == tail` while there is unread data. Two
+  distinct tests probe both helper paths.
+
+- **`pthread_mutex_init` return ignored** (Major). Deferred to E12 (error
+  handling). Default in-process mutex init is reliable in practice; the
+  project does not yet have an error-reporting infrastructure to surface
+  failures to callers, so adding the check inconsistently with the rest of
+  the library would be premature. Tracked in
+  [robustness backlog](memory). Same applies to
+  `InitializeCriticalSection`, which is `void` on Vista+ anyway.
+
+### Refactor
+
+- **`_Create` now takes `storageBytes` instead of `maxMessages`** (commit
+  `0b89e69`). Added `SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE_BYTES(ringBytes)`
+  alongside the friendly `_STORAGE_SIZE(maxMessages)`. Lets the small-ring
+  TEST_GROUP construct a 32-byte ring directly, decoupled from
+  `MAX_MESSAGE_SIZE`. Per-record byte counts in tests are now tractable
+  (10/12/19 byte payloads instead of 1000-byte ones).
+
+### IWYU pragma keep on `SolidSyslog.h`
+
+- IWYU's verdict on `SolidSyslogCircularBuffer.h` differs per TU: the .c
+  (which does not expand `SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE`) sees
+  `SolidSyslog.h` as unused and asks to remove it; the test (which does
+  expand the macro) sees the macro body's reference to
+  `SOLIDSYSLOG_MAX_MESSAGE_SIZE` and asks to add it. The two TUs cannot
+  agree — one or the other always complains. `// IWYU pragma: keep` on the
+  include is the canonical remediation for this exact case (commit
+  `c74f142` after format pass). Verified locally with
+  `cmake --build --preset iwyu --target iwyu` exiting `0`.
+
+- This is the only IWYU pragma added in this PR. The two existing pragmas
+  (`Tests/Support/OpenSslFake.h` keeping `<stdbool.h>`, `Tests/TestUtils.h`
+  keeping `CppUTest/TestHarness.h`) cover *load-bearing* includes that IWYU
+  cannot see through; this new one covers a *macro-deferred reference*.
+
+### Cleanup
+
+- **Disabled `clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling`
+  globally** (commit `fdf75f9`). Rule recommends C11 Annex K (`memcpy_s`
+  etc.) which glibc does not ship; every `memcpy`/`memset`/`strncpy` site
+  in the codebase had a `NOLINTNEXTLINE` suppression — 21 in total. When
+  every hit is suppressed, the rule is pure noise. ASan/UBSan and
+  bounded-by-construction call sites are the real defence.
+
+### Deferred — to revisit after S04.05 lands
+
+- `.clang-tidy` also disables `-readability-magic-numbers` and
+  `-cppcoreguidelines-avoid-magic-numbers`. David's reviewer-side
+  preference is "no magic numbers." Worth a separate discussion to decide
+  whether to re-enable those rules and accept the resulting cleanup sweep.
+  Tracked in
+  [project_clang_tidy_magic_numbers.md](memory).
