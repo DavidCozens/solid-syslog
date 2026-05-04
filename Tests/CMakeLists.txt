@@ -14,6 +14,7 @@ set(TEST_SOURCES
     SolidSyslogOriginSdTest.cpp
     SolidSyslogNullBufferTest.cpp
     SolidSyslogCircularBufferTest.cpp
+    SolidSyslogNullMutexTest.cpp
     SolidSyslogNullStoreTest.cpp
     SolidSyslogNullSecurityPolicyTest.cpp
     SolidSyslogCrc16Test.cpp
@@ -23,6 +24,7 @@ set(TEST_SOURCES
     SolidSyslogUdpPayloadTest.cpp
     BufferFakeTest.cpp
     BufferFake.c
+    MutexFake.c
     StoreFakeTest.cpp
     StoreFake.c
     SenderFakeTest.cpp

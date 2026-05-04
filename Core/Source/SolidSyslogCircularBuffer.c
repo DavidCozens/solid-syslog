@@ -7,6 +7,7 @@
 
 #include "SolidSyslogBufferDefinition.h"
 #include "SolidSyslogMacros.h"
+#include "SolidSyslogMutex.h"
 
 enum
 {
@@ -16,6 +17,7 @@ enum
 struct SolidSyslogCircularBuffer
 {
     struct SolidSyslogBuffer base;
+    struct SolidSyslogMutex* mutex;
     size_t                   capacity;
     size_t                   head;
     size_t                   tail;
@@ -41,11 +43,12 @@ static inline void ConsumeWrapMarker(struct SolidSyslogCircularBuffer* circular)
 static inline void StoreRecord(struct SolidSyslogCircularBuffer* circular, const void* data, size_t size);
 static inline void LoadRecord(struct SolidSyslogCircularBuffer* circular, void* data, size_t* bytesRead);
 
-struct SolidSyslogBuffer* SolidSyslogCircularBuffer_Create(SolidSyslogCircularBufferStorage* storage, size_t maxMessages)
+struct SolidSyslogBuffer* SolidSyslogCircularBuffer_Create(SolidSyslogCircularBufferStorage* storage, size_t maxMessages, struct SolidSyslogMutex* mutex)
 {
     struct SolidSyslogCircularBuffer* circular = (struct SolidSyslogCircularBuffer*) storage;
     circular->base.Read                        = Read;
     circular->base.Write                       = Write;
+    circular->mutex                            = mutex;
     circular->capacity                         = maxMessages * (SOLIDSYSLOG_MAX_MESSAGE_SIZE + HEADER_BYTES);
     ResetToStart(circular);
     return &circular->base;
@@ -56,6 +59,7 @@ void SolidSyslogCircularBuffer_Destroy(struct SolidSyslogBuffer* buffer)
     struct SolidSyslogCircularBuffer* circular = (struct SolidSyslogCircularBuffer*) buffer;
     circular->base.Read                        = NULL;
     circular->base.Write                       = NULL;
+    circular->mutex                            = NULL;
     circular->capacity                         = 0;
     circular->head                             = 0;
     circular->tail                             = 0;
@@ -66,6 +70,7 @@ static bool Read(struct SolidSyslogBuffer* self, void* data, size_t maxSize, siz
 {
     struct SolidSyslogCircularBuffer* circular = (struct SolidSyslogCircularBuffer*) self;
     (void) maxSize;
+    SolidSyslogMutex_Lock(circular->mutex);
     *bytesRead     = 0;
     bool hadRecord = !IsEmpty(circular);
     if (hadRecord)
@@ -76,6 +81,7 @@ static bool Read(struct SolidSyslogBuffer* self, void* data, size_t maxSize, siz
         }
         LoadRecord(circular, data, bytesRead);
     }
+    SolidSyslogMutex_Unlock(circular->mutex);
     return hadRecord;
 }
 
@@ -108,6 +114,7 @@ static inline void LoadRecord(struct SolidSyslogCircularBuffer* circular, void* 
 static void Write(struct SolidSyslogBuffer* self, const void* data, size_t size)
 {
     struct SolidSyslogCircularBuffer* circular = (struct SolidSyslogCircularBuffer*) self;
+    SolidSyslogMutex_Lock(circular->mutex);
     if (IsEmpty(circular))
     {
         ResetToStart(circular);
@@ -123,6 +130,7 @@ static void Write(struct SolidSyslogBuffer* self, const void* data, size_t size)
         }
         StoreRecord(circular, data, size);
     }
+    SolidSyslogMutex_Unlock(circular->mutex);
 }
 
 static inline bool IsWrapped(const struct SolidSyslogCircularBuffer* circular)

@@ -1,9 +1,11 @@
 #include <cstring>
 
 #include "CppUTest/TestHarness.h"
+#include "MutexFake.h"
 #include "SolidSyslog.h"
 #include "SolidSyslogBuffer.h"
 #include "SolidSyslogCircularBuffer.h"
+#include "SolidSyslogNullMutex.h"
 
 enum
 {
@@ -22,13 +24,14 @@ TEST_GROUP(SolidSyslogCircularBuffer)
     void setup() override
     {
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        buffer   = SolidSyslogCircularBuffer_Create(storage, TEST_MAX_MESSAGES);
+        buffer   = SolidSyslogCircularBuffer_Create(storage, TEST_MAX_MESSAGES, SolidSyslogNullMutex_Create());
         readSize = 0;
     }
 
     void teardown() override
     {
         SolidSyslogCircularBuffer_Destroy(buffer);
+        SolidSyslogNullMutex_Destroy();
     }
 };
 
@@ -145,4 +148,41 @@ TEST(SolidSyslogCircularBuffer, WriteAfterDrainAcceptsRecordTooLargeForRemaining
     CHECK_TRUE(SolidSyslogBuffer_Read(buffer, readData, sizeof(readData), &readSize));
     LONGS_EQUAL(sizeof(big), readSize);
     MEMCMP_EQUAL(big, readData, sizeof(big));
+}
+
+// clang-format off
+TEST_GROUP(SolidSyslogCircularBufferMutex)
+{
+    SolidSyslogCircularBufferStorage storage[SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE(TEST_MAX_MESSAGES)];
+    struct SolidSyslogBuffer* buffer = nullptr;
+    char                      readData[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
+    size_t                    readSize;
+
+    void setup() override
+    {
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+        buffer   = SolidSyslogCircularBuffer_Create(storage, TEST_MAX_MESSAGES, MutexFake_Create());
+        readSize = 0;
+    }
+
+    void teardown() override
+    {
+        SolidSyslogCircularBuffer_Destroy(buffer);
+        MutexFake_Destroy();
+    }
+};
+
+// clang-format on
+
+TEST(SolidSyslogCircularBufferMutex, WriteCallsLockThenUnlockOnce)
+{
+    SolidSyslogBuffer_Write(buffer, "hello", 5);
+    STRCMP_EQUAL("LU", MutexFake_Sequence());
+}
+
+TEST(SolidSyslogCircularBufferMutex, ReadCallsLockThenUnlockOnce)
+{
+    SolidSyslogBuffer_Read(buffer, readData, sizeof(readData), &readSize);
+    STRCMP_EQUAL("LU", MutexFake_Sequence());
 }

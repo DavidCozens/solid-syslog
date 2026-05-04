@@ -11,12 +11,13 @@
 EXTERN_C_BEGIN
 
     struct SolidSyslogBuffer;
+    struct SolidSyslogMutex;
 
     typedef size_t SolidSyslogCircularBufferStorage;
 
     enum
     {
-        SOLIDSYSLOG_CIRCULARBUFFER_OVERHEAD     = 6,
+        SOLIDSYSLOG_CIRCULARBUFFER_OVERHEAD     = 7,
         SOLIDSYSLOG_CIRCULARBUFFER_HEADER_BYTES = sizeof(uint16_t)
     };
 
@@ -26,7 +27,7 @@ EXTERN_C_BEGIN
      + (((maxMessages) * (SOLIDSYSLOG_MAX_MESSAGE_SIZE + SOLIDSYSLOG_CIRCULARBUFFER_HEADER_BYTES) + sizeof(SolidSyslogCircularBufferStorage) - 1)         \
         / sizeof(SolidSyslogCircularBufferStorage)))
 
-    struct SolidSyslogBuffer* SolidSyslogCircularBuffer_Create(SolidSyslogCircularBufferStorage * storage, size_t maxMessages);
+    struct SolidSyslogBuffer* SolidSyslogCircularBuffer_Create(SolidSyslogCircularBufferStorage * storage, size_t maxMessages, struct SolidSyslogMutex * mutex);
     void                      SolidSyslogCircularBuffer_Destroy(struct SolidSyslogBuffer * buffer);
 
 EXTERN_C_END
