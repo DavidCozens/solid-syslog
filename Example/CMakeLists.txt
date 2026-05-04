@@ -20,17 +20,17 @@ if(SOLIDSYSLOG_POSIX)
     )
 
     # Threaded example: PosixMessageQueueBuffer, two pthreads (requires POSIX threads and mqueue).
-    # TLS transport is selected at link time via the ExampleTlsSender_<backend>.c
-    # source file — OpenSSL when SOLIDSYSLOG_OPENSSL, nil-object stub otherwise.
+    # TLS transport is selected at link time via Common/ExampleTlsSender_<backend>.c
+    # — OpenSSL+PosixTcp when SOLIDSYSLOG_OPENSSL, nil-object stub otherwise.
     set(THREADED_SOURCES Threaded/main.c ${COMMON_SOURCES})
     if(SOLIDSYSLOG_OPENSSL)
         list(APPEND THREADED_SOURCES
-            Threaded/ExampleTlsSender_OpenSsl.c
+            Common/ExampleTlsSender_OpenSsl_PosixTcp.c
             Common/ExampleTlsConfig.c
             Common/ExampleMtlsConfig.c
         )
     else()
-        list(APPEND THREADED_SOURCES Threaded/ExampleTlsSender_Unavailable.c)
+        list(APPEND THREADED_SOURCES Common/ExampleTlsSender_Unavailable.c)
     endif()
     add_executable(SolidSyslogThreadedExample ${THREADED_SOURCES})
     target_link_libraries(SolidSyslogThreadedExample PRIVATE ${PROJECT_NAME} Threads::Threads)
@@ -47,7 +47,7 @@ elseif(SOLIDSYSLOG_WINSOCK AND HAVE_WINDOWS_PLATFORM)
     # exercise the buffering path run on both runners. Winsock UDP/TCP +
     # Windows clock/hostname/process-id. Output binary is named
     # SolidSyslogExample.exe so BDD scenarios remain platform-agnostic.
-    add_executable(SolidSyslogWindowsExample
+    set(WINDOWS_EXAMPLE_SOURCES
         Windows/main.c
         Windows/SolidSyslogWindowsExample.c
         Windows/ExampleWindowsCommandLine.c
@@ -57,12 +57,26 @@ elseif(SOLIDSYSLOG_WINSOCK AND HAVE_WINDOWS_PLATFORM)
         Common/ExampleLanguage.c
         Common/ExampleServiceThread.c
     )
+    # TLS transport: OpenSSL+WinsockTcp when SOLIDSYSLOG_OPENSSL, nil-object stub otherwise.
+    if(SOLIDSYSLOG_OPENSSL)
+        list(APPEND WINDOWS_EXAMPLE_SOURCES
+            Common/ExampleTlsSender_OpenSsl_WinsockTcp.c
+            Common/ExampleTlsConfig.c
+            Common/ExampleMtlsConfig.c
+        )
+    else()
+        list(APPEND WINDOWS_EXAMPLE_SOURCES Common/ExampleTlsSender_Unavailable.c)
+    endif()
+    add_executable(SolidSyslogWindowsExample ${WINDOWS_EXAMPLE_SOURCES})
     set_target_properties(SolidSyslogWindowsExample PROPERTIES OUTPUT_NAME "SolidSyslogExample")
     target_link_libraries(SolidSyslogWindowsExample PRIVATE ${PROJECT_NAME})
     target_include_directories(SolidSyslogWindowsExample PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/Windows
         ${CMAKE_CURRENT_SOURCE_DIR}/Common
     )
+    if(SOLIDSYSLOG_OPENSSL)
+        target_link_libraries(SolidSyslogWindowsExample PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+    endif()
     # Merge the activeCodePage="UTF-8" manifest fragment into the linker's
     # auto-generated manifest so the MSVC CRT decodes argv as UTF-8 (S13.17 #221).
     target_link_options(SolidSyslogWindowsExample PRIVATE

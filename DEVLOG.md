@@ -1,5 +1,70 @@
 # Dev Log
 
+## 2026-05-04 — S13.19 slice 2: ExampleTlsSender hoisted, Windows TLS/mTLS arms
+
+### Decisions
+
+- **Hoisted `ExampleTlsSender.h`, `_OpenSsl_*.c`, `_Unavailable.c` from
+  `Example/Threaded/` to `Example/Common/`.** The only platform-specific
+  thing in the existing `ExampleTlsSender_OpenSsl.c` was the underlying
+  TCP stream type (`SolidSyslogPosixTcpStream`) — the rest of the
+  factory (mTLS branch, TLS stream + StreamSender wiring, mTLS-vs-TLS
+  config dispatch) is identical across platforms. Splitting the
+  underlying stream into a per-platform backend file
+  (`_OpenSsl_PosixTcp.c` and `_OpenSsl_WinsockTcp.c`, picked by CMake)
+  keeps both example binaries aligned and matches the user's
+  example-commonality preference.
+- **Backend selected by CMake, not by `#ifdef`.** `Example/CMakeLists.txt`
+  now appends `Common/ExampleTlsSender_OpenSsl_PosixTcp.c` for the
+  Threaded (POSIX) example and `Common/ExampleTlsSender_OpenSsl_WinsockTcp.c`
+  for the Windows example when `SOLIDSYSLOG_OPENSSL=ON`, falling back to
+  `Common/ExampleTlsSender_Unavailable.c` otherwise. Mirrors how the
+  rest of the project handles platform variance.
+- **Windows example `--transport` switched from
+  `enum SolidSyslogTransport` to `const char*`.** The library enum is
+  a UDP-vs-TCP socket-type discriminator for the Resolver — it has no
+  TLS value and shouldn't grow one (TLS rides on a TCP underlying
+  stream, the resolver still asks for TCP). The Linux `ExampleOptions`
+  already uses a string for the same reason. The string carries
+  `"udp" | "tcp" | "tls" | "mtls"`; sender wiring switches on
+  `strcmp` matching.
+- **Three arms in the if/else chain, not a SwitchingSender.** Slice 2
+  picks one sender at startup. The Linux Threaded example uses a
+  `SolidSyslogSwitchingSender` over UDP+TCP+TLS so the
+  `ExampleInteractive` "transport <name>" command can switch at runtime,
+  but that's a separate hoist S13.18 deferred (factory shape mismatch).
+  Today the Windows example remains startup-fixed and the `mtls` /
+  `tls` arms reuse the same `ExampleTlsSender_Create(resolver, mtls)`
+  factory the Threaded example calls.
+- **`SolidSyslogTransport.h` removed from
+  `Example/Windows/ExampleWindowsCommandLine.h` and
+  `SolidSyslogWindowsExample.c`.** No longer needed since the example
+  no longer routes through that enum, and dropping it preserves the
+  IWYU gate.
+
+### Deferred
+
+- **Hoisting the per-platform `CreateSender` / `DestroySender` factories
+  to `Example/Common`.** S13.18 already flagged this — Threaded composes
+  via `SwitchingSender` (UDP+TCP+TLS+mTLS), Windows picks one. The
+  shapes have diverged enough that any "hoist" is really "widen Windows
+  to use SwitchingSender" first. Out of slice 2 scope.
+- **Live TLS smoke test against `openssl s_server` on Windows.** Slice 2
+  shipped CMake + linker + factory wiring; live handshake testing lands
+  in slice 3 against the BDD oracle. The MSVC binary builds clean,
+  starts under each `--transport` value without crashing, and the
+  Linux Threaded TLS + mTLS BDD scenarios remain green — proves the
+  refactor didn't regress the existing pipeline.
+
+### Open questions
+
+- **Windows mTLS host string.** `ExampleMtlsConfig_GetHost()` returns
+  `"syslog-ng"` (the Linux compose service name). On the Windows BDD
+  runner the oracle will be on `127.0.0.1`. Slice 3 needs to either
+  branch by env var (`MTLS_HOST=...`) or have separate
+  `ExampleMtlsConfig_*Linux*.c` / `*Windows*.c` files. Will sort during
+  slice 3 when the otel mTLS receiver wiring lands.
+
 ## 2026-05-04 — S13.19 slice 1: OpenSslIntegrationTests on MSVC
 
 ### Decisions

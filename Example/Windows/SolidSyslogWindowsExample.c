@@ -5,6 +5,7 @@
 #include "ExampleIps.h"
 #include "ExampleLanguage.h"
 #include "ExampleServiceThread.h"
+#include "ExampleTlsSender.h"
 #include "ExampleWindowsCommandLine.h"
 #include "SolidSyslog.h"
 #include "SolidSyslogAtomicCounter.h"
@@ -17,7 +18,6 @@
 #include "SolidSyslogOriginSd.h"
 #include "SolidSyslogTimeQualitySd.h"
 #include "SolidSyslogStreamSender.h"
-#include "SolidSyslogTransport.h"
 #include "SolidSyslogUdpSender.h"
 #include "SolidSyslogWindowsAtomicOps.h"
 #include "SolidSyslogWindowsClock.h"
@@ -33,6 +33,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 #include <winsock2.h>
 // windows.h must follow winsock2.h to avoid winsock1/2 declaration conflicts
 #include <windows.h>
@@ -105,7 +106,15 @@ int SolidSyslogWindowsExample_Run(int argc, char* argv[])
     struct SolidSyslogStream*   stream   = NULL;
     struct SolidSyslogSender*   sender   = NULL;
 
-    if (options.transport == SOLIDSYSLOG_TRANSPORT_TCP)
+    bool useTcp  = (strcmp(options.transport, "tcp") == 0);
+    bool useTls  = (strcmp(options.transport, "tls") == 0);
+    bool useMtls = (strcmp(options.transport, "mtls") == 0);
+
+    if (useTls || useMtls)
+    {
+        sender = ExampleTlsSender_Create(resolver, useMtls);
+    }
+    else if (useTcp)
     {
         stream                                         = SolidSyslogWinsockTcpStream_Create(&tcpStreamStorage);
         struct SolidSyslogStreamSenderConfig tcpConfig = {
@@ -179,7 +188,11 @@ int SolidSyslogWindowsExample_Run(int argc, char* argv[])
     SolidSyslogNullStore_Destroy();
     SolidSyslogCircularBuffer_Destroy(buffer);
     SolidSyslogWindowsMutex_Destroy(mutex);
-    if (options.transport == SOLIDSYSLOG_TRANSPORT_TCP)
+    if (useTls || useMtls)
+    {
+        ExampleTlsSender_Destroy();
+    }
+    else if (useTcp)
     {
         SolidSyslogStreamSender_Destroy(sender);
         SolidSyslogWinsockTcpStream_Destroy(stream);
