@@ -1272,6 +1272,19 @@ TEST(SolidSyslogBlockStoreRotation, MarkSentDisposesOlderBlockWhenDrained)
     CHECK_FALSE(SolidSyslogFile_Exists(file, "/tmp/test_store00.log"));
 }
 
+TEST(SolidSyslogBlockStoreRotation, MarkSentDoesNotDisposeActiveWriteBlock)
+{
+    CreateWithMaxBlockSize(ONE_MAX_MSG_RECORD);
+    WriteMaxMsg(); /* file 00 — also the active write block */
+
+    char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    size_t bytesRead = 0;
+    SolidSyslogStore_ReadNextUnsent(store, buf, sizeof(buf), &bytesRead);
+    SolidSyslogStore_MarkSent(store);
+
+    CHECK_TRUE(SolidSyslogFile_Exists(file, "/tmp/test_store00.log"));
+}
+
 /* ------------------------------------------------------------------
  * Integrity (SecurityPolicy integration)
  * ----------------------------------------------------------------*/
