@@ -585,14 +585,16 @@ def step_block_store_enabled_with_config(context, max_blocks, max_block_size, po
     context.store_max_blocks = max_blocks
     context.store_max_block_size = max_block_size
     context.store_discard_policy = policy
-    # Size each MSG so ~4 records pack per (clamped) block. The store
-    # capacity scenarios were designed around this packing — multi-record
-    # blocks give OLDEST and NEWEST symmetric retention (both keep 7 of 10
-    # sent), which the seqId assertions depend on. Production clamps block
-    # size up to MAX + 7 (MIN_MAX_BLOCK_SIZE), so per-record budget is
-    # ~MAX/4. With ~95-byte RFC 5424 header + 7-byte record overhead, a
-    # body of MAX/5 - 50 lands a comfortable mid-band: 4 records fit, 5
-    # don't. Update if SOLIDSYSLOG_MAX_MESSAGE_SIZE moves.
+    # Size each MSG so several records pack per (clamped) block, ensuring at
+    # least one discard event for the 10-message outage. The store_capacity
+    # scenarios assert structural properties of the surviving seqIds (gap
+    # at start for discard-oldest, contiguous head for discard-newest) — the
+    # exact records-per-block count is platform-dependent (hostname / procid
+    # widths differ between the Linux compose container and the Windows OTel
+    # runner) but irrelevant to the policy under test. Production clamps
+    # block size to MAX + 7 (MIN_MAX_BLOCK_SIZE = 2055), so per-record budget
+    # is ~MAX/4. With ~95-byte RFC 5424 header + 7-byte record overhead,
+    # MAX/5 - 50 yields ~3-5 records per block on the runners we ship.
     context.message_body = "X" * (SOLIDSYSLOG_MAX_MESSAGE_SIZE // 5 - 50)
     clean_store_files()
 
@@ -1182,6 +1184,86 @@ def step_check_replayed_sequence_ids(context, id_list):
             f"Replayed message {i + 1}: expected sequenceId {expected[i]}, "
             f"got {actual}"
         )
+
+
+def _outage_seq_ids(context):
+    """Collected sequenceIds in oracle log, excluding the pre-outage seqId 1.
+    Used by the discard-policy structural assertions."""
+    ids = []
+    for line in context.all_lines:
+        fields = parse_oracle_line(line, context.oracle_format)
+        sd = fields.get("STRUCTURED_DATA", "")
+        match = re.search(r'sequenceId="(\d+)"', sd)
+        if match:
+            value = int(match.group(1))
+            if value != 1:
+                ids.append(value)
+    return ids
+
+
+@then("the syslog oracle finishes draining")
+def step_oracle_finishes_draining(context):
+    """Wait for the oracle's record count to stabilise — used by discard-policy
+    scenarios where we don't know in advance how many records will survive
+    the store. Considered done when no new records arrive for 750 ms (half
+    the service-thread iteration budget) or after 5 s wall-clock."""
+    deadline = time.monotonic() + 5
+    last_count = -1
+    last_change = time.monotonic()
+    while time.monotonic() < deadline:
+        cur = oracle_record_count(context.received_log, context.oracle_format)
+        if cur != last_count:
+            last_count = cur
+            last_change = time.monotonic()
+        elif time.monotonic() - last_change > 0.75:
+            break
+        time.sleep(0.1)
+    context.all_lines = read_new_oracle_records(
+        context.received_log, context.oracle_format, context.lines_before
+    )
+    context.message_count = len(context.all_lines)
+
+
+@then("the syslog oracle received sequenceId {value:d}")
+def step_oracle_received_seqid(context, value):
+    ids = []
+    for line in context.all_lines:
+        fields = parse_oracle_line(line, context.oracle_format)
+        sd = fields.get("STRUCTURED_DATA", "")
+        match = re.search(r'sequenceId="(\d+)"', sd)
+        if match:
+            ids.append(int(match.group(1)))
+    assert value in ids, (
+        f"Expected sequenceId {value} in oracle log; got {ids}"
+    )
+
+
+@then("the syslog oracle did not receive sequenceId {value:d}")
+def step_oracle_did_not_receive_seqid(context, value):
+    ids = []
+    for line in context.all_lines:
+        fields = parse_oracle_line(line, context.oracle_format)
+        sd = fields.get("STRUCTURED_DATA", "")
+        match = re.search(r'sequenceId="(\d+)"', sd)
+        if match:
+            ids.append(int(match.group(1)))
+    assert value not in ids, (
+        f"Did not expect sequenceId {value} in oracle log; got {ids}"
+    )
+
+
+@then("the outage messages have contiguous sequenceIds")
+def step_outage_messages_contiguous(context):
+    """Validate that the seqIds received from the outage period (everything
+    except the pre-outage seqId 1) form a contiguous ascending run. Doesn't
+    constrain the endpoints — that's what the per-policy 'received'/'did
+    not receive' assertions are for."""
+    ids = sorted(_outage_seq_ids(context))
+    assert ids, "Expected at least one outage sequenceId; got none"
+    expected = list(range(ids[0], ids[-1] + 1))
+    assert ids == expected, (
+        f"Expected contiguous outage sequenceIds {expected}, got {ids}"
+    )
 
 
 @then("the last message has sequenceId {value:d}")

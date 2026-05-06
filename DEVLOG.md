@@ -1,5 +1,61 @@
 # Dev Log
 
+## 2026-05-06 — S13.20 follow-up — Slice C: structural assertions for discard-policy scenarios
+
+### Decision
+
+The `store_capacity.feature` discard scenarios were failing on Windows CI
+because exact-count assertions ("receives 8 messages", "last 7 starting
+from 5") implicitly tied the test to Linux's per-block packing arithmetic
+— records pack 3-4 per (clamped 2055-byte) block on Linux, but ~4-5 on
+the Windows OTel runner because hostname / procid / timestamp widths
+differ.
+
+The user's insight: **the test is about the discard policy, not the
+exact byte arithmetic**. Replace the count-based assertions with
+structural ones that test the policy's character directly:
+
+- **Discard-oldest**: oracle receives seqId 1, oracle receives seqId 11
+  (newest preserved), oracle does *not* receive seqId 2 (some old
+  dropped), surviving outage seqIds form a contiguous tail.
+- **Discard-newest**: oracle receives seqId 1, oracle receives seqId 2
+  (oldest preserved), oracle does *not* receive seqId 11 (newest
+  dropped), surviving outage seqIds form a contiguous head.
+
+Both pass on any platform where at least one record gets dropped — and
+with `body = MAX/5 - 50 ≈ 359 X`s, even a minimal-header runner produces
+records at ~486 wire bytes, capping per-block packing at 4 records and
+guaranteeing at least 2 of 10 outage records get dropped. The per-policy
+shape of the survivors is what we're really testing.
+
+### What landed
+
+- New step defs in `Bdd/features/steps/syslog_steps.py`:
+  - `Then the syslog oracle finishes draining` — polls oracle log until
+    record count is stable for 750 ms (or 5 s wall-clock), bypassing the
+    per-count `wait_for_messages` wait.
+  - `Then the syslog oracle received sequenceId N`
+  - `Then the syslog oracle did not receive sequenceId N`
+  - `Then the outage messages have contiguous sequenceIds` — surviving
+    seqIds (excluding pre-outage seqId 1) form a contiguous ascending
+    run, no random gaps.
+- `Bdd/features/store_capacity.feature` rewritten to use these for the two
+  discard scenarios. The Halt scenarios are untouched — their assertions
+  ("exits with code 2", "receives no more messages") are already
+  policy-shape based.
+
+### Considered, rejected: probe-based body padding
+
+Earlier in this session I implemented an `--probe-record-size <path>`
+mode in both example mains plus an `ExampleProbeSender` that captured
+the wire bytes of one formatted record, with the BDD step computing
+exact body padding to land on a fixed target wire size. That worked on
+local MSVC (504 wire bytes confirmed against an independent TCP-intercept
+capture) but added ~150 lines of production code (sender + probe-mode
+branches in two mains + CLI flag plumbing through both parsers + BDD
+probe helper) — all just to keep an over-specified count assertion alive.
+Reverted in favour of weakening the assertion to its actual intent.
+
 ## 2026-05-06 — S13.20 follow-up — Slice B: --halt-exit flag-name parity
 
 ### Findings (investigated before fixing)

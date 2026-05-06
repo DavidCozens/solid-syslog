@@ -13,8 +13,11 @@ Feature: Store capacity limit and discard policy
     When the syslog oracle stops accepting TCP connections
     And the client sends 10 messages
     And the syslog oracle resumes accepting TCP connections
-    Then the syslog oracle receives 8 messages
-    And the last 7 messages have contiguous sequenceIds starting from 5
+    Then the syslog oracle finishes draining
+    And the syslog oracle received sequenceId 1
+    And the syslog oracle received sequenceId 11
+    And the syslog oracle did not receive sequenceId 2
+    And the outage messages have contiguous sequenceIds
 
   Scenario: Discard-newest preserves oldest messages when store overflows
     Given the syslog oracle is running
@@ -25,8 +28,11 @@ Feature: Store capacity limit and discard policy
     When the syslog oracle stops accepting TCP connections
     And the client sends 10 messages
     And the syslog oracle resumes accepting TCP connections
-    Then the syslog oracle receives 8 messages
-    And the last 7 messages have contiguous sequenceIds starting from 2
+    Then the syslog oracle finishes draining
+    And the syslog oracle received sequenceId 1
+    And the syslog oracle received sequenceId 2
+    And the syslog oracle did not receive sequenceId 11
+    And the outage messages have contiguous sequenceIds
 
   Scenario: Halt stops the application when store overflows
     Given the syslog oracle is running
