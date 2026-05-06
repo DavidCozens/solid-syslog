@@ -8,7 +8,9 @@
 #include "SolidSyslogMetaSd.h"
 #include "TestAtomicOps.h"
 #include "SolidSyslogTimeQualitySd.h"
+#include "SolidSyslogCircularBuffer.h"
 #include "SolidSyslogNullBuffer.h"
+#include "SolidSyslogNullMutex.h"
 #include "SolidSyslogNullStore.h"
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogStructuredDataDefinition.h"
@@ -1469,6 +1471,63 @@ TEST(SolidSyslog, ServiceDoesNotMarkSentWhenSendingFromBuffer)
     SolidSyslog_Create(&config);
     StoreFake_Destroy();
     BufferFake_Destroy();
+}
+
+TEST(SolidSyslog, ServiceEagerlyDrainsBufferIntoStoreInOneTick)
+{
+    static constexpr size_t          BUFFER_BYTES = 256;
+    SolidSyslogCircularBufferStorage bufferStorage[SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE_BYTES(BUFFER_BYTES)];
+    SolidSyslogBuffer*               circularBuffer = SolidSyslogCircularBuffer_Create(bufferStorage, sizeof(bufferStorage), SolidSyslogNullMutex_Create());
+    SolidSyslogStore*                fakeStore      = StoreFake_Create();
+    SolidSyslogConfig                serviceConfig  = {circularBuffer, fakeSender, nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
+
+    SolidSyslog_Destroy();
+    SolidSyslog_Create(&serviceConfig);
+
+    SolidSyslogBuffer_Write(circularBuffer, "msg1", 4);
+    SolidSyslogBuffer_Write(circularBuffer, "msg2", 4);
+    SolidSyslogBuffer_Write(circularBuffer, "msg3", 4);
+    SenderFake_FailNextSend(fakeSender);
+    SolidSyslog_Service();
+
+    LONGS_EQUAL(3, StoreFake_WriteCount(fakeStore));
+
+    SolidSyslog_Destroy();
+    SolidSyslog_Create(&config);
+    StoreFake_Destroy();
+    SolidSyslogCircularBuffer_Destroy(circularBuffer);
+    SolidSyslogNullMutex_Destroy();
+}
+
+TEST(SolidSyslog, ServiceSendsStoredMessagesInFifoOrderAcrossTicks)
+{
+    static constexpr size_t          BUFFER_BYTES = 256;
+    SolidSyslogCircularBufferStorage bufferStorage[SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE_BYTES(BUFFER_BYTES)];
+    SolidSyslogBuffer*               circularBuffer = SolidSyslogCircularBuffer_Create(bufferStorage, sizeof(bufferStorage), SolidSyslogNullMutex_Create());
+    SolidSyslogStore*                fakeStore      = StoreFake_Create();
+    SolidSyslogConfig                serviceConfig  = {circularBuffer, fakeSender, nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
+
+    SolidSyslog_Destroy();
+    SolidSyslog_Create(&serviceConfig);
+
+    SolidSyslogBuffer_Write(circularBuffer, "m1", 2);
+    SolidSyslogBuffer_Write(circularBuffer, "m2", 2);
+    SolidSyslogBuffer_Write(circularBuffer, "m3", 2);
+
+    SenderFake_Reset(fakeSender);
+    SolidSyslog_Service();
+    STRCMP_EQUAL("m1", SenderFake_LastBufferAsString(fakeSender));
+    SolidSyslog_Service();
+    STRCMP_EQUAL("m2", SenderFake_LastBufferAsString(fakeSender));
+    SolidSyslog_Service();
+    STRCMP_EQUAL("m3", SenderFake_LastBufferAsString(fakeSender));
+    LONGS_EQUAL(3, SenderFake_SendCount(fakeSender));
+
+    SolidSyslog_Destroy();
+    SolidSyslog_Create(&config);
+    StoreFake_Destroy();
+    SolidSyslogCircularBuffer_Destroy(circularBuffer);
+    SolidSyslogNullMutex_Destroy();
 }
 
 TEST(SolidSyslog, ServiceDoesNothingWhenStoreIsHalted)

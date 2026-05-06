@@ -29,7 +29,9 @@ static inline int16_t     AbsoluteInt16(int16_t value);
 static inline bool        CaptureTimestamp(struct SolidSyslogTimestamp* ts, SolidSyslogClockFunction clock);
 static inline uint8_t     CombineFacilityAndSeverity(uint8_t facility, uint8_t severity);
 static inline bool        FacilityIsValid(uint8_t facility);
-static inline bool        FetchFromStore(char* buf, size_t maxSize, size_t* len);
+static inline void        DrainBufferIntoStore(void);
+static inline bool        StoreDidNotRetainLastWrite(void);
+static inline void        SendOneFromStore(void);
 static inline void        FormatCapturedTimestamp(struct SolidSyslogFormatter* f, const struct SolidSyslogTimestamp* ts);
 static inline void        FormatMessage(struct SolidSyslogFormatter* f, const struct SolidSyslogMessage* message);
 static inline void        FormatMsg(struct SolidSyslogFormatter* f, const char* msg);
@@ -47,7 +49,6 @@ static void               NilClock(struct SolidSyslogTimestamp* ts);
 static void               NilStringFunction(struct SolidSyslogFormatter* formatter);
 static inline bool        PrivalComponentsAreValid(uint8_t facility, uint8_t severity);
 static void               ProcessMessages(void);
-static inline bool        ReceiveFromBufferIntoStore(char* buf, size_t maxSize, size_t* len);
 static inline bool        SeverityIsValid(uint8_t severity);
 static inline const char* SkipLeadingBom(const char* msg);
 static inline bool        StringIsValid(const char* value);
@@ -124,44 +125,46 @@ static inline bool IsServiceEnabled(void)
 
 static void ProcessMessages(void)
 {
+    DrainBufferIntoStore();
+    SendOneFromStore();
+}
+
+/* Eagerly drain the buffer so the producer-side shock absorber stays small while
+ * the sender is slow or down — overflow then engages the store's discard policy
+ * rather than silently dropping at the buffer. When a write does not land in the
+ * store (NullStore configuration, or a store-write rejection), best-effort
+ * direct send keeps the message moving. */
+static inline void DrainBufferIntoStore(void)
+{
     char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
     size_t len = 0;
 
-    bool haveMessage = ReceiveFromBufferIntoStore(buf, sizeof(buf), &len);
-    bool fromStore   = FetchFromStore(buf, sizeof(buf), &len);
-
-    if (fromStore || haveMessage)
+    while (SolidSyslogBuffer_Read(instance.buffer, buf, sizeof(buf), &len))
     {
-        if (SolidSyslogSender_Send(instance.sender, buf, len))
+        SolidSyslogStore_Write(instance.store, buf, len);
+
+        if (StoreDidNotRetainLastWrite())
         {
-            if (fromStore)
-            {
-                SolidSyslogStore_MarkSent(instance.store);
-            }
+            SolidSyslogSender_Send(instance.sender, buf, len);
         }
     }
 }
 
-static inline bool ReceiveFromBufferIntoStore(char* buf, size_t maxSize, size_t* len)
+static inline bool StoreDidNotRetainLastWrite(void)
 {
-    bool received = SolidSyslogBuffer_Read(instance.buffer, buf, maxSize, len);
-
-    if (received)
-    {
-        SolidSyslogStore_Write(instance.store, buf, *len);
-    }
-
-    return received;
+    return !SolidSyslogStore_HasUnsent(instance.store);
 }
 
-static inline bool FetchFromStore(char* buf, size_t maxSize, size_t* len)
+static inline void SendOneFromStore(void)
 {
-    if (SolidSyslogStore_HasUnsent(instance.store))
-    {
-        return SolidSyslogStore_ReadNextUnsent(instance.store, buf, maxSize, len);
-    }
+    char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
+    size_t len = 0;
 
-    return false;
+    if (SolidSyslogStore_HasUnsent(instance.store) && SolidSyslogStore_ReadNextUnsent(instance.store, buf, sizeof(buf), &len) &&
+        SolidSyslogSender_Send(instance.sender, buf, len))
+    {
+        SolidSyslogStore_MarkSent(instance.store);
+    }
 }
 
 void SolidSyslog_Log(const struct SolidSyslogMessage* message)
