@@ -1,5 +1,41 @@
 # Dev Log
 
+## 2026-05-06 — S13.20 follow-up — Slice B: --halt-exit flag-name parity
+
+### Findings (investigated before fixing)
+
+The handoff note suspected halt fired "too early" on Windows because
+post-mortem `STORE00.log` had only 1 record. The actual root cause was
+simpler — and "too early" was a misread.
+
+- The BDD step at `syslog_steps.py::build_threaded_command` passes
+  `--halt-exit` when `context.halt_exit` is set.
+- The shared parser (`ExampleCommandLine.c`, used by Linux Threaded)
+  recognises `--halt-exit`.
+- The Windows parser (`ExampleWindowsCommandLine.c`) recognised
+  `--halt-on-store-full` instead and silently dropped unknown flags.
+  Result: `options.haltExit` stayed `false`, so the `if (haltExit) _exit(2)`
+  guard in `OnStoreFull` was a no-op on Windows. **Halt never fired —
+  not too early, not at all.**
+- The "client attempts to send → exit code 2" step waits 10 s for the
+  process to exit; with no exit, the test reports as errored.
+- "STORE00 has 1 record at exit" is incidental: behave kills the still-
+  running example at the 10 s timeout; whatever is in the store at that
+  moment depends on TCP retry timing and bears no special meaning.
+- The sibling scenario "Halt prevents further service after store
+  overflows" passed because it doesn't enable the halt-exit step and
+  doesn't depend on `_exit(2)` — it only asserts no new messages arrive,
+  which the BlockStore-level halt policy delivers regardless of the flag
+  mismatch.
+
+### Fix
+
+Renamed Windows's `--halt-on-store-full` to `--halt-exit` to match the
+shared parser. Pure mechanical rename; semantic behaviour unchanged. The
+example is Tier 3, pre-1.0 — no external users to migrate. TDD red→green
+via a new `HaltExitFlagSetsHaltExit` test (red against the old name,
+green after rename); 28/28 MSVC ExampleTests now pass.
+
 ## 2026-05-06 — S13.20 follow-up — Slice A: app-name parity for capacity scenarios
 
 ### Decisions

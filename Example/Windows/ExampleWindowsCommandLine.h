@@ -22,7 +22,7 @@ EXTERN_C_BEGIN
         size_t                    maxBlockSize;      /* --max-block-size */
         const char*               discardPolicy;     /* "oldest" (default) | "newest" | "halt" */
         size_t                    capacityThreshold; /* --capacity-threshold (bytes; 0 disables) */
-        bool                      haltExit;          /* --halt-on-store-full */
+        bool                      haltExit;          /* --halt-exit */
         bool                      noSd;              /* --no-sd (suppress structured data) */
     };
 
@@ -41,7 +41,7 @@ EXTERN_C_BEGIN
          --max-block-size N              (default set by example)
          --discard-policy oldest|newest|halt   (default: oldest)
          --capacity-threshold N          (default: 0 — disabled)
-         --halt-on-store-full            (flag; default: off)
+         --halt-exit                     (flag; default: off — matches the Linux Threaded example so the BDD step's --halt-exit flag works on both runners)
          --no-sd                         (flag; default: off — suppress structured data)
        getopt is not available on MSVC and pulling in a vcpkg getopt for a
        handful of flags would be overkill. */

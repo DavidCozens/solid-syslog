@@ -160,3 +160,20 @@ TEST(ExampleWindowsCommandLine, AppNameFlagSetsAppName)
     Parse(3, argv);
     STRCMP_EQUAL("SolidSyslogThreadedExample", options.appName);
 }
+
+TEST(ExampleWindowsCommandLine, DefaultHaltExitIsFalse)
+{
+    char  arg0[] = "test";
+    char* argv[] = {arg0, nullptr};
+    Parse(1, argv);
+    CHECK_FALSE(options.haltExit);
+}
+
+TEST(ExampleWindowsCommandLine, HaltExitFlagSetsHaltExit)
+{
+    char  arg0[] = "test";
+    char  arg1[] = "--halt-exit";
+    char* argv[] = {arg0, arg1, nullptr};
+    Parse(2, argv);
+    CHECK_TRUE(options.haltExit);
+}

@@ -98,7 +98,7 @@ void ExampleWindowsCommandLine_Parse(int argc, char* argv[], struct WindowsExamp
         {
             (void) ParsePositiveSize(argv[++i], &options->capacityThreshold);
         }
-        else if (strcmp(argv[i], "--halt-on-store-full") == 0)
+        else if (strcmp(argv[i], "--halt-exit") == 0)
         {
             options->haltExit = true;
         }
