@@ -155,8 +155,7 @@ static inline void SendOneFromStore(void)
     char   buf[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
     size_t len = 0;
 
-    if (SolidSyslogStore_HasUnsent(instance.store) && SolidSyslogStore_ReadNextUnsent(instance.store, buf, sizeof(buf), &len) &&
-        SolidSyslogSender_Send(instance.sender, buf, len))
+    if (SolidSyslogStore_ReadNextUnsent(instance.store, buf, sizeof(buf), &len) && SolidSyslogSender_Send(instance.sender, buf, len))
     {
         SolidSyslogStore_MarkSent(instance.store);
     }
