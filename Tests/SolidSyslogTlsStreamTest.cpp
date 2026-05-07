@@ -13,6 +13,7 @@
 #include "CppUTest/TestHarness.h"
 
 class TEST_SolidSyslogTlsStream_ReadReturnsNegativeOneOnHardErrorAndClosesSsl_Test;
+class TEST_SolidSyslogTlsStream_ReadReturnsNegativeOneOnZeroReturnAndClosesSsl_Test;
 class TEST_SolidSyslogTlsStream_SendClosesTransportOnWriteFailure_Test;
 
 static int g_sleepCallCount;
