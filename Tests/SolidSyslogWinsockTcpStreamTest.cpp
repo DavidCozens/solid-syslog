@@ -94,12 +94,6 @@ TEST(SolidSyslogWinsockTcpStream, OpenEnablesTcpNoDelay)
     CHECK_TRUE(WinsockFake_HasSetSockOpt(IPPROTO_TCP, TCP_NODELAY));
 }
 
-TEST(SolidSyslogWinsockTcpStream, OpenSetsSendTimeout)
-{
-    SolidSyslogStream_Open(stream, addr);
-    CHECK_TRUE(WinsockFake_HasSetSockOpt(SOL_SOCKET, SO_SNDTIMEO));
-}
-
 TEST(SolidSyslogWinsockTcpStream, OpenCallsConnectWithSocketFd)
 {
     SolidSyslogStream_Open(stream, addr);
@@ -153,20 +147,13 @@ TEST(SolidSyslogWinsockTcpStream, OpenClosesSocketOnConnectFailure)
  * by Windows' default ~2 s connect()-retry on a refused loopback port.
  * -------------------------------------------------------------------- */
 
-TEST(SolidSyslogWinsockTcpStream, OpenSetsNonBlockingModeBeforeConnect)
+TEST(SolidSyslogWinsockTcpStream, OpenSetsNonBlockingMode)
 {
     SolidSyslogStream_Open(stream, addr);
-    /* First FIONBIO call is non-blocking on (1) before the connect attempt. */
+    /* Single FIONBIO call: non-blocking on (1). The socket stays non-blocking
+       so Send/Read are also fail-fast — no SO_SNDTIMEO needed. */
+    LONGS_EQUAL(1, WinsockFake_FionbioCallCount());
     LONGS_EQUAL(1, WinsockFake_FionbioArgAt(0));
-}
-
-TEST(SolidSyslogWinsockTcpStream, OpenRestoresBlockingModeAfterSuccessfulConnect)
-{
-    SolidSyslogStream_Open(stream, addr);
-    /* Two FIONBIO calls total: non-blocking on (1) before connect, blocking
-       back on (0) after success — keeps SO_SNDTIMEO honoured for send(). */
-    LONGS_EQUAL(2, WinsockFake_FionbioCallCount());
-    LONGS_EQUAL(0, WinsockFake_FionbioArgAt(1));
 }
 
 TEST(SolidSyslogWinsockTcpStream, OpenSkipsSelectWhenConnectReturnsImmediately)
@@ -327,6 +314,16 @@ TEST(SolidSyslogWinsockTcpStream, SendDoesNotRetryAfterShortWrite)
     LONGS_EQUAL(1, WinsockFake_SendCallCount());
 }
 
+TEST(SolidSyslogWinsockTcpStream, SendClosesSocketOnFailure)
+{
+    SolidSyslogStream_Open(stream, addr);
+    SOCKET openFd = WinsockFake_SocketFd();
+    WinsockFake_SetSendFails(true);
+    SolidSyslogStream_Send(stream, TEST_MESSAGE, TEST_MESSAGE_LEN);
+    LONGS_EQUAL(1, WinsockFake_CloseCallCount());
+    CHECK(openFd == WinsockFake_LastClosedFd());
+}
+
 TEST(SolidSyslogWinsockTcpStream, CloseCallsCloseOnce)
 {
     SolidSyslogStream_Open(stream, addr);
@@ -394,6 +391,39 @@ TEST(SolidSyslogWinsockTcpStream, ReadReturnsRecvReturnValue)
     char             buf[16];
     SolidSyslogSsize n = SolidSyslogStream_Read(stream, buf, sizeof(buf));
     LONGS_EQUAL(7, n);
+}
+
+TEST(SolidSyslogWinsockTcpStream, ReadReturnsZeroOnWouldBlock)
+{
+    SolidSyslogStream_Open(stream, addr);
+    WinsockFake_FailNextRecvWithLastError(WSAEWOULDBLOCK);
+    char             buf[16];
+    SolidSyslogSsize n = SolidSyslogStream_Read(stream, buf, sizeof(buf));
+    LONGS_EQUAL(0, n);
+}
+
+TEST(SolidSyslogWinsockTcpStream, ReadReturnsNegativeOneOnEofAndClosesSocket)
+{
+    SolidSyslogStream_Open(stream, addr);
+    SOCKET openFd = WinsockFake_SocketFd();
+    WinsockFake_SetRecvReturn(0); /* EOF */
+    char             buf[16];
+    SolidSyslogSsize n = SolidSyslogStream_Read(stream, buf, sizeof(buf));
+    LONGS_EQUAL(-1, n);
+    LONGS_EQUAL(1, WinsockFake_CloseCallCount());
+    CHECK(openFd == WinsockFake_LastClosedFd());
+}
+
+TEST(SolidSyslogWinsockTcpStream, ReadReturnsNegativeOneOnErrorAndClosesSocket)
+{
+    SolidSyslogStream_Open(stream, addr);
+    SOCKET openFd = WinsockFake_SocketFd();
+    WinsockFake_FailNextRecvWithLastError(WSAECONNRESET);
+    char             buf[16];
+    SolidSyslogSsize n = SolidSyslogStream_Read(stream, buf, sizeof(buf));
+    LONGS_EQUAL(-1, n);
+    LONGS_EQUAL(1, WinsockFake_CloseCallCount());
+    CHECK(openFd == WinsockFake_LastClosedFd());
 }
 
 TEST(SolidSyslogWinsockTcpStream, DestroyClosesOpenSocket)

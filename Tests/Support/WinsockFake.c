@@ -56,6 +56,8 @@ static SOCKET      lastRecvFd;
 static const void* lastRecvBuf;
 static size_t      lastRecvLen;
 static int         lastRecvFlags;
+static bool        nextRecvShouldFailWithLastError;
+static int         nextRecvLastError;
 
 static bool connectFailWithLastError;
 static int  connectLastErrorOnFail;
@@ -138,12 +140,14 @@ void WinsockFake_Reset(void)
     }
     lastSendFd = INVALID_SOCKET;
 
-    recvCallCount = 0;
-    recvReturn    = 0;
-    lastRecvFd    = INVALID_SOCKET;
-    lastRecvBuf   = NULL;
-    lastRecvLen   = 0;
-    lastRecvFlags = 0;
+    recvCallCount                   = 0;
+    recvReturn                      = 0;
+    lastRecvFd                      = INVALID_SOCKET;
+    lastRecvBuf                     = NULL;
+    lastRecvLen                     = 0;
+    lastRecvFlags                   = 0;
+    nextRecvShouldFailWithLastError = false;
+    nextRecvLastError               = 0;
 
     connectFailWithLastError = false;
     connectLastErrorOnFail   = 0;
@@ -496,6 +500,12 @@ void WinsockFake_SetRecvReturn(int value)
     recvReturn = value;
 }
 
+void WinsockFake_FailNextRecvWithLastError(int wsaError)
+{
+    nextRecvShouldFailWithLastError = true;
+    nextRecvLastError               = wsaError;
+}
+
 /* recv accessors */
 
 int WinsockFake_RecvCallCount(void)
@@ -693,6 +703,12 @@ int WSAAPI WinsockFake_recv(SOCKET s, char* buf, int len, int flags)
     lastRecvBuf   = buf;
     lastRecvLen   = (size_t) len;
     lastRecvFlags = flags;
+    if (nextRecvShouldFailWithLastError)
+    {
+        WSASetLastError(nextRecvLastError);
+        nextRecvShouldFailWithLastError = false;
+        return SOCKET_ERROR;
+    }
     return recvReturn;
 }
 

@@ -60,6 +60,9 @@ EXTERN_C_BEGIN
 
     /* recv configuration */
     void WinsockFake_SetRecvReturn(int value);
+    /* When set, the next recv returns SOCKET_ERROR with WSAGetLastError == wsaError
+       (e.g. WSAEWOULDBLOCK for the non-blocking would-block path). One-shot. */
+    void WinsockFake_FailNextRecvWithLastError(int wsaError);
 
     /* recv accessors */
     int         WinsockFake_RecvCallCount(void);
