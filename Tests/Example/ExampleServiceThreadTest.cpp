@@ -16,17 +16,17 @@
 #include "SolidSyslogPrival.h"
 #include "CppUTest/TestHarness.h"
 
-static int            g_sleepCallCount;
-static int            g_lastSleepMs;
-static volatile bool* g_sleepShutdown;
+static int            sleepCallCount;
+static int            lastSleepMs;
+static volatile bool* sleepShutdownFlag;
 
 static void SleepFake(int milliseconds)
 {
-    g_sleepCallCount++;
-    g_lastSleepMs = milliseconds;
-    if (g_sleepShutdown != nullptr)
+    sleepCallCount++;
+    lastSleepMs = milliseconds;
+    if (sleepShutdownFlag != nullptr)
     {
-        *g_sleepShutdown = true;
+        *sleepShutdownFlag = true;
     }
 }
 
@@ -55,10 +55,10 @@ TEST_GROUP(ExampleServiceThread)
         SocketFake_Reset();
         ClockFake_Reset();
         ClockFake_SetTime(1743768600, 0);
-        shutdown         = true;
-        g_sleepCallCount = 0;
-        g_lastSleepMs    = 0;
-        g_sleepShutdown  = nullptr;
+        shutdown          = true;
+        sleepCallCount    = 0;
+        lastSleepMs       = 0;
+        sleepShutdownFlag = nullptr;
 
         SolidSyslogUdpSenderConfig udpConfig = {SolidSyslogGetAddrInfoResolver_Create(), SolidSyslogPosixDatagram_Create(), ExampleEndpoint, ExampleEndpointVersion};
         sender = SolidSyslogUdpSender_Create(&udpConfig);
@@ -96,11 +96,11 @@ TEST(ExampleServiceThread, DoesNotSendWhenBufferEmpty)
 
 TEST(ExampleServiceThread, YieldsOneMillisecondAfterEachServiceTick)
 {
-    shutdown        = false;
-    g_sleepShutdown = &shutdown;
+    shutdown          = false;
+    sleepShutdownFlag = &shutdown;
 
     ExampleServiceThread_Run(&shutdown, SleepFake);
 
-    LONGS_EQUAL(1, g_sleepCallCount);
-    LONGS_EQUAL(1, g_lastSleepMs);
+    LONGS_EQUAL(1, sleepCallCount);
+    LONGS_EQUAL(1, lastSleepMs);
 }
