@@ -33,6 +33,7 @@
 #include "SolidSyslogPosixHostname.h"
 #include "SolidSyslogPosixMessageQueueBuffer.h"
 #include "SolidSyslogPosixProcessId.h"
+#include "SolidSyslogPosixSleep.h"
 #include "SolidSyslogPosixSysUpTime.h"
 #include "SolidSyslogStdAtomicOps.h"
 #include "SolidSyslogGetAddrInfoResolver.h"
@@ -67,7 +68,7 @@ static volatile bool shutdown_flag;
 static void* ServiceThreadEntry(void* arg)
 {
     volatile bool* shutdown = (volatile bool*) arg;
-    ExampleServiceThread_Run(shutdown);
+    ExampleServiceThread_Run(shutdown, SolidSyslogPosixSleep);
     return NULL;
 }
 

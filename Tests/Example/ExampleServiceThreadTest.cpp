@@ -16,6 +16,20 @@
 #include "SolidSyslogPrival.h"
 #include "CppUTest/TestHarness.h"
 
+static int            g_sleepCallCount;
+static int            g_lastSleepMs;
+static volatile bool* g_sleepShutdown;
+
+static void SleepFake(int milliseconds)
+{
+    g_sleepCallCount++;
+    g_lastSleepMs = milliseconds;
+    if (g_sleepShutdown != nullptr)
+    {
+        *g_sleepShutdown = true;
+    }
+}
+
 static void ExampleEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
     SolidSyslogFormatter_BoundedString(endpoint->host, ExampleUdpConfig_GetHost(), SOLIDSYSLOG_MAX_HOST_SIZE);
@@ -41,7 +55,10 @@ TEST_GROUP(ExampleServiceThread)
         SocketFake_Reset();
         ClockFake_Reset();
         ClockFake_SetTime(1743768600, 0);
-        shutdown = true;
+        shutdown         = true;
+        g_sleepCallCount = 0;
+        g_lastSleepMs    = 0;
+        g_sleepShutdown  = nullptr;
 
         SolidSyslogUdpSenderConfig udpConfig = {SolidSyslogGetAddrInfoResolver_Create(), SolidSyslogPosixDatagram_Create(), ExampleEndpoint, ExampleEndpointVersion};
         sender = SolidSyslogUdpSender_Create(&udpConfig);
@@ -73,6 +90,17 @@ TEST_GROUP(ExampleServiceThread)
 
 TEST(ExampleServiceThread, DoesNotSendWhenBufferEmpty)
 {
-    ExampleServiceThread_Run(&shutdown);
+    ExampleServiceThread_Run(&shutdown, SleepFake);
     LONGS_EQUAL(0, SocketFake_SendtoCallCount());
+}
+
+TEST(ExampleServiceThread, YieldsOneMillisecondAfterEachServiceTick)
+{
+    shutdown        = false;
+    g_sleepShutdown = &shutdown;
+
+    ExampleServiceThread_Run(&shutdown, SleepFake);
+
+    LONGS_EQUAL(1, g_sleepCallCount);
+    LONGS_EQUAL(1, g_lastSleepMs);
 }
