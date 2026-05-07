@@ -73,14 +73,18 @@ static bool Write(struct SolidSyslogStore* self, const void* data, size_t size)
         return false;
     }
 
-    if (fake->count < STOREFAKE_MAX_MESSAGES)
+    /* Queue full mirrors a real store's HALT-on-overflow: report the rejection
+     * via false and don't bump writeCount, so HasUnsent() and the test-side
+     * counters stay consistent with what was actually retained. */
+    if (fake->count >= STOREFAKE_MAX_MESSAGES)
     {
-        size_t copySize = MinSize(size, STOREFAKE_MAX_MESSAGE_SIZE);
-        memcpy(fake->entries[fake->count], data, copySize);
-        fake->sizes[fake->count] = copySize;
-        fake->count++;
+        return false;
     }
 
+    size_t copySize = MinSize(size, STOREFAKE_MAX_MESSAGE_SIZE);
+    memcpy(fake->entries[fake->count], data, copySize);
+    fake->sizes[fake->count] = copySize;
+    fake->count++;
     fake->writeCount++;
     return true;
 }

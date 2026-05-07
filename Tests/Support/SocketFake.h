@@ -91,10 +91,18 @@ EXTERN_C_BEGIN
     int  SocketFake_LastFcntlSetFlags(void);
     bool SocketFake_FcntlSetFlSetNonBlocking(void);
 
-    /* select configuration. ready=true makes select report fd writable in writefds;
-       ready=false leaves writefds empty (timeout). hasError=true sets fd in
-       exceptfds. returnValue overrides the int return (1 ready, 0 timeout, -1 error).
-       Default: returns 1 (one fd ready: writable, no error). */
+    /* select configuration — three independent simulations:
+       (1) successful non-blocking-connect completion: SetSelectWritable(true)
+           plus SetSoError(0) — fd is writable, SO_ERROR is clear.
+       (2) deferred connect failure (typical "connection refused" path on
+           POSIX): SetSelectWritable(true) plus SetSoError(ECONNREFUSED) —
+           the fd appears writable, getsockopt(SO_ERROR) reveals the error.
+       (3) select() reporting fd in exceptfds: SetSelectError(true) — the
+           production path additionally rejects fds in the exception set
+           via FD_ISSET on errorSet, even though typical kernels surface
+           connect failures via simulation (2) rather than exceptfds.
+       SetSelectReturn overrides the syscall return value (1 ready, 0 timeout,
+       -1 syscall failure). Default: returns 1 (one fd ready, no error). */
     void SocketFake_SetSelectWritable(bool ready);
     void SocketFake_SetSelectError(bool hasError);
     void SocketFake_SetSelectReturn(int value);

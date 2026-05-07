@@ -43,12 +43,16 @@ void SolidSyslogNullStore_Destroy(void)
     instance.base.GetUsedBytes   = NULL;
 }
 
+/* NullStore never retains. Returns false to signal "not held by this store"
+ * so the eager-drain loop in ProcessMessages takes the direct-send path —
+ * NullStore + real-buffer + UDP is the constrained-system "one attempt per
+ * message, no buffering" configuration. */
 static bool Write(struct SolidSyslogStore* self, const void* data, size_t size)
 {
     (void) self;
     (void) data;
     (void) size;
-    return true;
+    return false;
 }
 
 static bool ReadNextUnsent(struct SolidSyslogStore* self, void* data, size_t maxSize, size_t* bytesRead)

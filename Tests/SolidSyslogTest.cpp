@@ -1473,17 +1473,49 @@ TEST(SolidSyslog, ServiceDoesNotMarkSentWhenSendingFromBuffer)
     BufferFake_Destroy();
 }
 
-TEST(SolidSyslog, ServiceEagerlyDrainsBufferIntoStoreInOneTick)
+/* Shared fixture for the eager-drain Service tests — both wire a real
+ * CircularBuffer (drives the multi-message-per-tick path) and a FIFO
+ * StoreFake. Storage is static so a CHECK failure that skips the test
+ * body's cleanup cannot leave a dangling stack reference behind for
+ * SolidSyslog_Destroy in teardown. */
+// clang-format off
+TEST_GROUP(SolidSyslogServiceEagerDrain)
 {
-    static constexpr size_t          BUFFER_BYTES = 256;
-    SolidSyslogCircularBufferStorage bufferStorage[SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE_BYTES(BUFFER_BYTES)];
-    SolidSyslogBuffer*               circularBuffer = SolidSyslogCircularBuffer_Create(bufferStorage, sizeof(bufferStorage), SolidSyslogNullMutex_Create());
-    SolidSyslogStore*                fakeStore      = StoreFake_Create();
-    SolidSyslogConfig                serviceConfig  = {circularBuffer, fakeSender, nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
+    static constexpr size_t BUFFER_BYTES = 256;
 
-    SolidSyslog_Destroy();
-    SolidSyslog_Create(&serviceConfig);
+    struct SolidSyslogSender* fakeSender     = nullptr;
+    struct SolidSyslogBuffer* circularBuffer = nullptr;
+    struct SolidSyslogStore*  fakeStore      = nullptr;
 
+    void setup() override
+    {
+        static SolidSyslogCircularBufferStorage bufferStorage[
+            SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE_BYTES(BUFFER_BYTES)];
+
+        fakeSender     = SenderFake_Create();
+        circularBuffer = SolidSyslogCircularBuffer_Create(
+            bufferStorage, sizeof(bufferStorage), SolidSyslogNullMutex_Create());
+        fakeStore      = StoreFake_Create();
+
+        SolidSyslogConfig serviceConfig = {circularBuffer, fakeSender, nullptr, nullptr,
+                                           nullptr, nullptr, fakeStore, nullptr, 0};
+        SolidSyslog_Create(&serviceConfig);
+    }
+
+    void teardown() override
+    {
+        SolidSyslog_Destroy();
+        StoreFake_Destroy();
+        SolidSyslogCircularBuffer_Destroy(circularBuffer);
+        SolidSyslogNullMutex_Destroy();
+        SenderFake_Destroy(fakeSender);
+    }
+};
+
+// clang-format on
+
+TEST(SolidSyslogServiceEagerDrain, AllBufferedMessagesReachStoreInOneTickWhenSenderFails)
+{
     SolidSyslogBuffer_Write(circularBuffer, "msg1", 4);
     SolidSyslogBuffer_Write(circularBuffer, "msg2", 4);
     SolidSyslogBuffer_Write(circularBuffer, "msg3", 4);
@@ -1491,30 +1523,14 @@ TEST(SolidSyslog, ServiceEagerlyDrainsBufferIntoStoreInOneTick)
     SolidSyslog_Service();
 
     LONGS_EQUAL(3, StoreFake_WriteCount(fakeStore));
-
-    SolidSyslog_Destroy();
-    SolidSyslog_Create(&config);
-    StoreFake_Destroy();
-    SolidSyslogCircularBuffer_Destroy(circularBuffer);
-    SolidSyslogNullMutex_Destroy();
 }
 
-TEST(SolidSyslog, ServiceSendsStoredMessagesInFifoOrderAcrossTicks)
+TEST(SolidSyslogServiceEagerDrain, StoredMessagesDrainInFifoOrderAcrossTicks)
 {
-    static constexpr size_t          BUFFER_BYTES = 256;
-    SolidSyslogCircularBufferStorage bufferStorage[SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE_BYTES(BUFFER_BYTES)];
-    SolidSyslogBuffer*               circularBuffer = SolidSyslogCircularBuffer_Create(bufferStorage, sizeof(bufferStorage), SolidSyslogNullMutex_Create());
-    SolidSyslogStore*                fakeStore      = StoreFake_Create();
-    SolidSyslogConfig                serviceConfig  = {circularBuffer, fakeSender, nullptr, nullptr, nullptr, nullptr, fakeStore, nullptr, 0};
-
-    SolidSyslog_Destroy();
-    SolidSyslog_Create(&serviceConfig);
-
     SolidSyslogBuffer_Write(circularBuffer, "m1", 2);
     SolidSyslogBuffer_Write(circularBuffer, "m2", 2);
     SolidSyslogBuffer_Write(circularBuffer, "m3", 2);
 
-    SenderFake_Reset(fakeSender);
     SolidSyslog_Service();
     STRCMP_EQUAL("m1", SenderFake_LastBufferAsString(fakeSender));
     SolidSyslog_Service();
@@ -1522,12 +1538,6 @@ TEST(SolidSyslog, ServiceSendsStoredMessagesInFifoOrderAcrossTicks)
     SolidSyslog_Service();
     STRCMP_EQUAL("m3", SenderFake_LastBufferAsString(fakeSender));
     LONGS_EQUAL(3, SenderFake_SendCount(fakeSender));
-
-    SolidSyslog_Destroy();
-    SolidSyslog_Create(&config);
-    StoreFake_Destroy();
-    SolidSyslogCircularBuffer_Destroy(circularBuffer);
-    SolidSyslogNullMutex_Destroy();
 }
 
 TEST(SolidSyslog, ServiceDoesNothingWhenStoreIsHalted)

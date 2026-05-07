@@ -32,7 +32,7 @@ EXTERN_C_BEGIN
          > 0  bytes transferred into buffer
          = 0  nothing available right now (would-block)
          < 0  EOF or error — the underlying socket has been closed internally; the
-              caller must call Open before the next Send. */
+              caller must call Open before the next Send or Read. */
     SolidSyslogSsize SolidSyslogStream_Read(struct SolidSyslogStream * stream, void* buffer, size_t size);
 
     /* Close the underlying socket. Idempotent. */
