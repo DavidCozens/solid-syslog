@@ -80,6 +80,7 @@ if(SOLIDSYSLOG_POSIX)
         SolidSyslogPosixClockTest.cpp
         SolidSyslogPosixMessageQueueBufferTest.cpp
         SolidSyslogPosixMutexTest.cpp
+        SolidSyslogPosixSleepTest.cpp
         SolidSyslogPosixSysUpTimeTest.cpp
         ClockFakeTest.cpp
         SolidSyslogUdpSenderTest.cpp
@@ -111,6 +112,7 @@ if(HAVE_WINDOWS_PLATFORM)
         SolidSyslogWindowsHostnameTest.cpp
         SolidSyslogWindowsMutexTest.cpp
         SolidSyslogWindowsProcessIdTest.cpp
+        SolidSyslogWindowsSleepTest.cpp
         SolidSyslogWindowsSysUpTimeTest.cpp
     )
 endif()

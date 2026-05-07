@@ -8,7 +8,8 @@
 
 enum
 {
-    STOREFAKE_MAX_SIZE = 1024
+    STOREFAKE_MAX_MESSAGES     = 8,
+    STOREFAKE_MAX_MESSAGE_SIZE = 1024
 };
 
 static bool Write(struct SolidSyslogStore* self, const void* data, size_t size);
@@ -20,9 +21,10 @@ static bool IsHalted(struct SolidSyslogStore* self);
 struct StoreFake
 {
     struct SolidSyslogStore base;
-    char                    stored[STOREFAKE_MAX_SIZE];
-    size_t                  storedSize;
-    bool                    unsent;
+    char                    entries[STOREFAKE_MAX_MESSAGES][STOREFAKE_MAX_MESSAGE_SIZE];
+    size_t                  sizes[STOREFAKE_MAX_MESSAGES];
+    size_t                  count;
+    int                     writeCount;
     bool                    failNextWrite;
     bool                    failNextRead;
     bool                    halted;
@@ -56,6 +58,11 @@ void StoreFake_FailNextRead(void)
     instance.failNextRead = true;
 }
 
+int StoreFake_WriteCount(struct SolidSyslogStore* store)
+{
+    return ((struct StoreFake*) store)->writeCount;
+}
+
 static bool Write(struct SolidSyslogStore* self, const void* data, size_t size)
 {
     struct StoreFake* fake = (struct StoreFake*) self;
@@ -66,13 +73,19 @@ static bool Write(struct SolidSyslogStore* self, const void* data, size_t size)
         return false;
     }
 
-    if (!fake->unsent)
+    /* Queue full mirrors a real store's HALT-on-overflow: report the rejection
+     * via false and don't bump writeCount, so HasUnsent() and the test-side
+     * counters stay consistent with what was actually retained. */
+    if (fake->count >= STOREFAKE_MAX_MESSAGES)
     {
-        size_t copySize = MinSize(size, sizeof(fake->stored));
-        memcpy(fake->stored, data, copySize);
-        fake->storedSize = copySize;
-        fake->unsent     = true;
+        return false;
     }
+
+    size_t copySize = MinSize(size, STOREFAKE_MAX_MESSAGE_SIZE);
+    memcpy(fake->entries[fake->count], data, copySize);
+    fake->sizes[fake->count] = copySize;
+    fake->count++;
+    fake->writeCount++;
     return true;
 }
 
@@ -87,28 +100,38 @@ static bool ReadNextUnsent(struct SolidSyslogStore* self, void* data, size_t max
         return false;
     }
 
-    bool success = fake->unsent;
-
-    if (success)
+    if (fake->count == 0)
     {
-        size_t copySize = MinSize(fake->storedSize, maxSize);
-        memcpy(data, fake->stored, copySize);
-        *bytesRead = copySize;
+        return false;
     }
 
-    return success;
+    size_t copySize = MinSize(fake->sizes[0], maxSize);
+    memcpy(data, fake->entries[0], copySize);
+    *bytesRead = copySize;
+    return true;
 }
 
 static void MarkSent(struct SolidSyslogStore* self)
 {
     struct StoreFake* fake = (struct StoreFake*) self;
-    fake->unsent           = false;
+
+    if (fake->count == 0)
+    {
+        return;
+    }
+
+    for (size_t i = 1; i < fake->count; i++)
+    {
+        memcpy(fake->entries[i - 1], fake->entries[i], fake->sizes[i]);
+        fake->sizes[i - 1] = fake->sizes[i];
+    }
+    fake->count--;
 }
 
 static bool HasUnsent(struct SolidSyslogStore* self)
 {
     struct StoreFake* fake = (struct StoreFake*) self;
-    return fake->unsent;
+    return fake->count > 0;
 }
 
 static bool IsHalted(struct SolidSyslogStore* self)

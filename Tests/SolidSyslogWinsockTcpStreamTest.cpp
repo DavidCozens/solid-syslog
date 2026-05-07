@@ -54,9 +54,25 @@ TEST_GROUP(SolidSyslogWinsockTcpStream)
     {
         SolidSyslogWinsockTcpStream_Destroy(stream);
     }
+
+    [[nodiscard]] SolidSyslogSsize Read16ByteBuffer() const
+    {
+        char buf[16];
+        return SolidSyslogStream_Read(stream, buf, sizeof(buf));
+    }
 };
 
 // clang-format on
+
+// NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
+#define CHECK_SOCKET_CLOSED_ONCE()                                   \
+    do                                                               \
+    {                                                                \
+        LONGS_EQUAL(1, WinsockFake_CloseCallCount());                \
+        CHECK(WinsockFake_SocketFd() == WinsockFake_LastClosedFd()); \
+    } while (0)
+
+// NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 
 TEST(SolidSyslogWinsockTcpStream, CreateDestroyWorksWithoutCrashing)
 {
@@ -92,12 +108,6 @@ TEST(SolidSyslogWinsockTcpStream, OpenEnablesTcpNoDelay)
 {
     SolidSyslogStream_Open(stream, addr);
     CHECK_TRUE(WinsockFake_HasSetSockOpt(IPPROTO_TCP, TCP_NODELAY));
-}
-
-TEST(SolidSyslogWinsockTcpStream, OpenSetsSendTimeout)
-{
-    SolidSyslogStream_Open(stream, addr);
-    CHECK_TRUE(WinsockFake_HasSetSockOpt(SOL_SOCKET, SO_SNDTIMEO));
 }
 
 TEST(SolidSyslogWinsockTcpStream, OpenCallsConnectWithSocketFd)
@@ -153,20 +163,13 @@ TEST(SolidSyslogWinsockTcpStream, OpenClosesSocketOnConnectFailure)
  * by Windows' default ~2 s connect()-retry on a refused loopback port.
  * -------------------------------------------------------------------- */
 
-TEST(SolidSyslogWinsockTcpStream, OpenSetsNonBlockingModeBeforeConnect)
+TEST(SolidSyslogWinsockTcpStream, OpenSetsNonBlockingMode)
 {
     SolidSyslogStream_Open(stream, addr);
-    /* First FIONBIO call is non-blocking on (1) before the connect attempt. */
+    /* Single FIONBIO call: non-blocking on (1). The socket stays non-blocking
+       so Send/Read are also fail-fast — no SO_SNDTIMEO needed. */
+    LONGS_EQUAL(1, WinsockFake_FionbioCallCount());
     LONGS_EQUAL(1, WinsockFake_FionbioArgAt(0));
-}
-
-TEST(SolidSyslogWinsockTcpStream, OpenRestoresBlockingModeAfterSuccessfulConnect)
-{
-    SolidSyslogStream_Open(stream, addr);
-    /* Two FIONBIO calls total: non-blocking on (1) before connect, blocking
-       back on (0) after success — keeps SO_SNDTIMEO honoured for send(). */
-    LONGS_EQUAL(2, WinsockFake_FionbioCallCount());
-    LONGS_EQUAL(0, WinsockFake_FionbioArgAt(1));
 }
 
 TEST(SolidSyslogWinsockTcpStream, OpenSkipsSelectWhenConnectReturnsImmediately)
@@ -327,6 +330,14 @@ TEST(SolidSyslogWinsockTcpStream, SendDoesNotRetryAfterShortWrite)
     LONGS_EQUAL(1, WinsockFake_SendCallCount());
 }
 
+TEST(SolidSyslogWinsockTcpStream, SendClosesSocketOnFailure)
+{
+    SolidSyslogStream_Open(stream, addr);
+    WinsockFake_SetSendFails(true);
+    SolidSyslogStream_Send(stream, TEST_MESSAGE, TEST_MESSAGE_LEN);
+    CHECK_SOCKET_CLOSED_ONCE();
+}
+
 TEST(SolidSyslogWinsockTcpStream, CloseCallsCloseOnce)
 {
     SolidSyslogStream_Open(stream, addr);
@@ -394,6 +405,29 @@ TEST(SolidSyslogWinsockTcpStream, ReadReturnsRecvReturnValue)
     char             buf[16];
     SolidSyslogSsize n = SolidSyslogStream_Read(stream, buf, sizeof(buf));
     LONGS_EQUAL(7, n);
+}
+
+TEST(SolidSyslogWinsockTcpStream, ReadReturnsZeroOnWouldBlock)
+{
+    SolidSyslogStream_Open(stream, addr);
+    WinsockFake_FailNextRecvWithLastError(WSAEWOULDBLOCK);
+    LONGS_EQUAL(0, Read16ByteBuffer());
+}
+
+TEST(SolidSyslogWinsockTcpStream, ReadReturnsNegativeOneOnEofAndClosesSocket)
+{
+    SolidSyslogStream_Open(stream, addr);
+    WinsockFake_SetRecvReturn(0); /* EOF */
+    LONGS_EQUAL(-1, Read16ByteBuffer());
+    CHECK_SOCKET_CLOSED_ONCE();
+}
+
+TEST(SolidSyslogWinsockTcpStream, ReadReturnsNegativeOneOnErrorAndClosesSocket)
+{
+    SolidSyslogStream_Open(stream, addr);
+    WinsockFake_FailNextRecvWithLastError(WSAECONNRESET);
+    LONGS_EQUAL(-1, Read16ByteBuffer());
+    CHECK_SOCKET_CLOSED_ONCE();
 }
 
 TEST(SolidSyslogWinsockTcpStream, DestroyClosesOpenSocket)

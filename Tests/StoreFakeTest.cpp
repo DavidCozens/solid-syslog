@@ -91,3 +91,37 @@ TEST(StoreFake, ReadCanBeConfiguredToFail)
     StoreFake_FailNextRead();
     CHECK_FALSE(ReadNextUnsent());
 }
+
+TEST(StoreFake, ReadsTwoWrittenMessagesInFifoOrderAcrossMarkSent)
+{
+    SolidSyslogStore_Write(store, "first", 5);
+    SolidSyslogStore_Write(store, "second", 6);
+
+    ReadNextUnsent();
+    MEMCMP_EQUAL("first", readData, 5);
+    LONGS_EQUAL(5, readSize);
+
+    SolidSyslogStore_MarkSent(store);
+
+    ReadNextUnsent();
+    MEMCMP_EQUAL("second", readData, 6);
+    LONGS_EQUAL(6, readSize);
+
+    SolidSyslogStore_MarkSent(store);
+    CHECK_FALSE(SolidSyslogStore_HasUnsent(store));
+}
+
+TEST(StoreFake, WriteCountReportsSuccessfulWrites)
+{
+    SolidSyslogStore_Write(store, "a", 1);
+    SolidSyslogStore_Write(store, "b", 1);
+    LONGS_EQUAL(2, StoreFake_WriteCount(store));
+}
+
+TEST(StoreFake, WriteCountIgnoresFailedWrite)
+{
+    SolidSyslogStore_Write(store, "a", 1);
+    StoreFake_FailNextWrite();
+    SolidSyslogStore_Write(store, "b", 1);
+    LONGS_EQUAL(1, StoreFake_WriteCount(store));
+}

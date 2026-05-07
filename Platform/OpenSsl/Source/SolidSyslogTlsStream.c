@@ -1,14 +1,24 @@
-#include <openssl/ssl.h>
 #include <openssl/bio.h>
 #include <openssl/prov_ssl.h>
+#include <openssl/ssl.h>
 #include <openssl/types.h>
 #include <stdbool.h>
 #include <stddef.h>
 
 #include "SolidSyslogMacros.h"
+#include "SolidSyslogStream.h"
 #include "SolidSyslogStreamDefinition.h"
 #include "SolidSyslogTlsStream.h"
-#include "SolidSyslogStream.h"
+
+enum
+{
+    /* Bounded retry budget for the TLS handshake under non-blocking transport.
+       Real-world handshakes take ~100–500 ms (1–3 RTTs to a cloud SIEM); 5 s
+       comfortably covers WAN deployments without burning the service thread
+       indefinitely on a wedged peer. */
+    HANDSHAKE_TIMEOUT_MILLISECONDS       = 5000,
+    HANDSHAKE_POLL_INTERVAL_MILLISECONDS = 1
+};
 
 struct SolidSyslogAddress;
 
@@ -51,11 +61,11 @@ static inline int              TlsStream_TransportBioRead(BIO* bio, char* buffer
 static inline int              TlsStream_TransportBioWrite(BIO* bio, const char* buffer, int size);
 
 static const struct SolidSyslogTlsStream DEFAULT_INSTANCE = {
-    {TlsStream_Open, TlsStream_Send, TlsStream_Read, TlsStream_Close}, {NULL, NULL, NULL, NULL, NULL, NULL}, NULL, NULL, NULL,
+    {TlsStream_Open, TlsStream_Send, TlsStream_Read, TlsStream_Close}, {NULL, NULL, NULL, NULL, NULL, NULL, NULL}, NULL, NULL, NULL,
 };
 
 static const struct SolidSyslogTlsStream DESTROYED_INSTANCE = {
-    {NULL, NULL, NULL, NULL}, {NULL, NULL, NULL, NULL, NULL, NULL}, NULL, NULL, NULL,
+    {NULL, NULL, NULL, NULL}, {NULL, NULL, NULL, NULL, NULL, NULL, NULL}, NULL, NULL, NULL,
 };
 
 struct SolidSyslogStream* SolidSyslogTlsStream_Create(SolidSyslogTlsStreamStorage* storage, const struct SolidSyslogTlsStreamConfig* config)
@@ -233,16 +243,49 @@ static inline int TlsStream_TransportBioCreate(BIO* bio)
     return 1;
 }
 
+/* Translate the non-blocking transport's Read contract into the OpenSSL BIO
+ * contract:
+ *   transport > 0 → bytes available, BIO returns the same positive count.
+ *   transport = 0 → would-block. BIO must signal retry via BIO_set_retry_read
+ *                  and return -1; without this, OpenSSL treats the 0 as EOF
+ *                  and aborts the handshake on the first poll.
+ *   transport < 0 → EOF or error. BIO returns -1 with retry flags cleared so
+ *                  OpenSSL surfaces the failure rather than spinning. */
 static inline int TlsStream_TransportBioRead(BIO* bio, char* buffer, int size)
 {
     struct SolidSyslogStream* transport = (struct SolidSyslogStream*) BIO_get_data(bio);
-    return (int) SolidSyslogStream_Read(transport, buffer, (size_t) size);
+    SolidSyslogSsize          n         = SolidSyslogStream_Read(transport, buffer, (size_t) size);
+    int                       result    = -1;
+
+    if (n > 0)
+    {
+        result = (int) n;
+    }
+    else if (n == 0)
+    {
+        BIO_set_retry_read(bio);
+    }
+    else
+    {
+        BIO_clear_retry_flags(bio);
+    }
+    return result;
 }
 
 static inline int TlsStream_TransportBioWrite(BIO* bio, const char* buffer, int size)
 {
     struct SolidSyslogStream* transport = (struct SolidSyslogStream*) BIO_get_data(bio);
-    return SolidSyslogStream_Send(transport, buffer, (size_t) size) ? size : -1;
+    int                       result    = -1;
+
+    if (SolidSyslogStream_Send(transport, buffer, (size_t) size))
+    {
+        result = size;
+    }
+    else
+    {
+        BIO_clear_retry_flags(bio);
+    }
+    return result;
 }
 
 /* Minimal ctrl handler. OpenSSL calls this for a variety of control commands
@@ -279,27 +322,105 @@ static inline bool TlsStream_ConfigureExpectedHostname(struct SolidSyslogTlsStre
     return ok;
 }
 
+static inline bool IsRetryableSslError(int err)
+{
+    return (err == SSL_ERROR_WANT_READ) || (err == SSL_ERROR_WANT_WRITE);
+}
+
+static inline bool IsHandshakeBudgetExhausted(int totalSleptMs)
+{
+    return totalSleptMs >= HANDSHAKE_TIMEOUT_MILLISECONDS;
+}
+
+/* Drive SSL_connect to completion under non-blocking transport. Each call may
+ * return WANT_READ/WANT_WRITE while waiting for the multi-RTT handshake to
+ * progress; we sleep briefly between attempts (avoiding a busy spin) until
+ * either the handshake completes, hits a hard error, or the bounded budget
+ * expires. */
 static inline bool TlsStream_PerformHandshake(struct SolidSyslogTlsStream* stream)
 {
-    return SSL_connect(stream->ssl) > 0;
+    int  totalSleptMs = 0;
+    bool result       = false;
+    bool done         = false;
+
+    while (!done)
+    {
+        int rc = SSL_connect(stream->ssl);
+        if (rc > 0)
+        {
+            result = true;
+            done   = true;
+        }
+        else
+        {
+            int err = SSL_get_error(stream->ssl, rc);
+            if (!IsRetryableSslError(err) || IsHandshakeBudgetExhausted(totalSleptMs))
+            {
+                done = true;
+            }
+            else
+            {
+                stream->config.sleep(HANDSHAKE_POLL_INTERVAL_MILLISECONDS);
+                totalSleptMs += HANDSHAKE_POLL_INTERVAL_MILLISECONDS;
+            }
+        }
+    }
+    return result;
 }
 
 static inline bool TlsStream_Send(struct SolidSyslogStream* self, const void* buffer, size_t size)
 {
     struct SolidSyslogTlsStream* stream = (struct SolidSyslogTlsStream*) self;
-    return SSL_write(stream->ssl, buffer, (int) size) > 0;
+    int                          rc     = SSL_write(stream->ssl, buffer, (int) size);
+    bool                         ok     = (rc > 0) && ((size_t) rc == size);
+
+    if (!ok)
+    {
+        TlsStream_Close(self);
+    }
+    return ok;
 }
 
+/* SSL_read has two distinct modes worth keeping straight:
+ *   1. Steady-state application read: bytes available → return them; nothing
+ *      to read right now → SSL_ERROR_WANT_READ → return 0 mirrors the transport
+ *      Read contract.
+ *   2. Renegotiation or alerts mid-stream: SSL_read may need to write (server
+ *      requested re-key), surfacing as SSL_ERROR_WANT_WRITE. Under fail-fast
+ *      semantics this is a transport failure — close internally; the caller
+ *      reopens, store-and-forward replays. Same rule for any other SSL error.
+ * Anything below the WANT_READ branch therefore takes the Close path. */
 static inline SolidSyslogSsize TlsStream_Read(struct SolidSyslogStream* self, void* buffer, size_t size)
 {
     struct SolidSyslogTlsStream* stream = (struct SolidSyslogTlsStream*) self;
-    return (SolidSyslogSsize) SSL_read(stream->ssl, buffer, (int) size);
+    int                          rc     = SSL_read(stream->ssl, buffer, (int) size);
+    SolidSyslogSsize             result = -1;
+
+    if (rc > 0)
+    {
+        result = (SolidSyslogSsize) rc;
+    }
+    else if (SSL_get_error(stream->ssl, rc) == SSL_ERROR_WANT_READ)
+    {
+        result = 0;
+    }
+    else
+    {
+        TlsStream_Close(self);
+    }
+    return result;
 }
 
+/* Idempotent: Send/Read may close internally on failure, after which the
+ * StreamSender's reconnect path or the caller's Destroy may call Close
+ * again. Skipping when ssl is already NULL keeps that safe. */
 static inline void TlsStream_Close(struct SolidSyslogStream* self)
 {
     struct SolidSyslogTlsStream* stream = (struct SolidSyslogTlsStream*) self;
-    SSL_shutdown(stream->ssl);
-    TlsStream_ReleaseHandshakeState(stream);
+    if (stream->ssl != NULL)
+    {
+        SSL_shutdown(stream->ssl);
+        TlsStream_ReleaseHandshakeState(stream);
+    }
     SolidSyslogStream_Close(stream->config.transport);
 }

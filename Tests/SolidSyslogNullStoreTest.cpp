@@ -35,9 +35,13 @@ TEST(SolidSyslogNullStore, ReadNextUnsentReturnsFalse)
     CHECK_FALSE(SolidSyslogStore_ReadNextUnsent(store, data, sizeof(data), &bytesRead));
 }
 
-TEST(SolidSyslogNullStore, WriteReturnsTrue)
+TEST(SolidSyslogNullStore, WriteReturnsFalseToSignalNotRetained)
 {
-    CHECK_TRUE(SolidSyslogStore_Write(store, "hello", 5));
+    /* The Store_Write contract reads "true = retained for later replay; false
+     * = not held". NullStore never retains, so reports false — the eager-drain
+     * loop in ProcessMessages then takes the direct-send fallback, preserving
+     * the constrained-system "one attempt per message, no buffering" path. */
+    CHECK_FALSE(SolidSyslogStore_Write(store, "hello", 5));
 }
 
 TEST(SolidSyslogNullStore, MarkSentDoesNotCrash)
