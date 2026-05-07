@@ -29,6 +29,23 @@ EXTERN_C_BEGIN
     void OpenSslFake_SetBioNewFails(bool fails);
     void OpenSslFake_SetCipherListFails(bool fails);
 
+    /* SSL return-value injection — drive non-blocking I/O paths */
+    enum
+    {
+        OPENSSLFAKE_MAX_CONNECT_RETURNS = 8
+    };
+
+    void OpenSslFake_SetConnectReturnSequence(const int* values, int count);
+    void OpenSslFake_SetWriteReturn(int value);
+    void OpenSslFake_SetReadReturn(int value);
+    void OpenSslFake_SetGetErrorReturn(int err);
+    int  OpenSslFake_GetErrorCallCount(void);
+
+    /* BIO retry-flag spies */
+    int OpenSslFake_BioSetFlagsCallCount(void);
+    int OpenSslFake_LastBioSetFlags(void);
+    int OpenSslFake_BioClearFlagsCallCount(void);
+
     /* SSL_CTX_new */
     int                         OpenSslFake_CtxNewCallCount(void);
     const struct ssl_method_st* OpenSslFake_LastCtxNewMethodArg(void);

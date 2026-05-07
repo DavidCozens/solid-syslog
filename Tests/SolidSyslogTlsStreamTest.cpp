@@ -8,9 +8,19 @@
 #include "SolidSyslogAddress.h"
 #include "SolidSyslogStream.h"
 #include "SolidSyslogTlsStream.h"
+#include "SolidSyslogTlsStreamInternal.h"
 #include "SolidSyslogTransport.h"
 #include "StreamFake.h"
 #include "CppUTest/TestHarness.h"
+
+static int g_sleepCallCount;
+static int g_lastSleepMs;
+
+static void NoOpSleep(int milliseconds)
+{
+    g_sleepCallCount++;
+    g_lastSleepMs = milliseconds;
+}
 
 // clang-format off
 TEST_GROUP(SolidSyslogTlsStream)
@@ -25,6 +35,9 @@ TEST_GROUP(SolidSyslogTlsStream)
     void setup() override
     {
         OpenSslFake_Reset();
+        g_sleepCallCount = 0;
+        g_lastSleepMs    = 0;
+        UT_PTR_SET(TlsStream_sleep, NoOpSleep);
         transport        = StreamFake_Create();
         config.transport = transport;
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
@@ -830,4 +843,220 @@ TEST(SolidSyslogTlsStream, OpenPassesCtxFromNewToCheckPrivateKey)
 TEST(SolidSyslogTlsStream, DefaultPortMatchesRfc5425)
 {
     LONGS_EQUAL(6514, SOLIDSYSLOG_TLS_DEFAULT_PORT);
+}
+
+/* -------------------------------------------------------------------------
+ * Default platform sleep — exercised without the no-op override so the
+ * production sleep helper is reached at least once for coverage. Calls with
+ * 0 ms keep the test fast.
+ * ------------------------------------------------------------------------- */
+
+// clang-format off
+TEST_GROUP(SolidSyslogTlsStreamDefaultSleep)
+{
+};
+// clang-format on
+
+TEST(SolidSyslogTlsStreamDefaultSleep, DefaultSleepReturnsImmediatelyForZero)
+{
+    TlsStream_sleep(0);
+}
+
+/* -------------------------------------------------------------------------
+ * Non-blocking BIO read translation. Under the new transport contract a
+ * 0 return means "would-block, retry"; without BIO_set_retry_read OpenSSL
+ * would treat that as EOF and abort the handshake on the first poll.
+ * ------------------------------------------------------------------------- */
+
+TEST(SolidSyslogTlsStream, BioReadCallbackSignalsRetryWhenTransportWouldBlock)
+{
+    SolidSyslogStream_Open(stream, addr);
+    StreamFake_SetReadReturn(transport, 0);
+    int (*readFn)(BIO*, char*, int) = OpenSslFake_LastBioReadCallback();
+    char buf[16];
+    int  rc = readFn(OpenSslFake_LastBioReturned(), buf, sizeof(buf));
+    LONGS_EQUAL(-1, rc);
+    LONGS_EQUAL(1, OpenSslFake_BioSetFlagsCallCount());
+}
+
+TEST(SolidSyslogTlsStream, BioReadCallbackClearsRetryOnHardError)
+{
+    SolidSyslogStream_Open(stream, addr);
+    StreamFake_SetReadReturn(transport, -1);
+    int (*readFn)(BIO*, char*, int) = OpenSslFake_LastBioReadCallback();
+    char buf[16];
+    int  rc = readFn(OpenSslFake_LastBioReturned(), buf, sizeof(buf));
+    LONGS_EQUAL(-1, rc);
+    LONGS_EQUAL(1, OpenSslFake_BioClearFlagsCallCount());
+}
+
+TEST(SolidSyslogTlsStream, BioReadCallbackReturnsBytesWhenTransportHasData)
+{
+    SolidSyslogStream_Open(stream, addr);
+    StreamFake_SetReadReturn(transport, 7);
+    int (*readFn)(BIO*, char*, int) = OpenSslFake_LastBioReadCallback();
+    char buf[16];
+    int  rc = readFn(OpenSslFake_LastBioReturned(), buf, sizeof(buf));
+    LONGS_EQUAL(7, rc);
+    /* No retry signal needed: positive return is the success path. */
+    LONGS_EQUAL(0, OpenSslFake_BioSetFlagsCallCount());
+}
+
+TEST(SolidSyslogTlsStream, BioWriteCallbackClearsRetryOnTransportFailure)
+{
+    /* When the transport's fail-fast Send returns false the BIO must clear
+       any stale retry flag and return -1 so OpenSSL surfaces SSL_ERROR_SYSCALL
+       rather than spinning on a closed transport. */
+    SolidSyslogStream_Open(stream, addr);
+    StreamFake_SetSendFails(transport, true);
+    int (*writeFn)(BIO*, const char*, int) = OpenSslFake_LastBioWriteCallback();
+    const char msg[]                       = "hi";
+    int        rc                          = writeFn(OpenSslFake_LastBioReturned(), msg, (int) sizeof(msg));
+    LONGS_EQUAL(-1, rc);
+    LONGS_EQUAL(1, OpenSslFake_BioClearFlagsCallCount());
+}
+
+/* -------------------------------------------------------------------------
+ * Bounded handshake retry loop. SSL_connect under non-blocking transport
+ * will emit WANT_READ/WANT_WRITE between RTTs; the loop must drive it to
+ * completion within HANDSHAKE_TIMEOUT_MILLISECONDS.
+ * ------------------------------------------------------------------------- */
+
+TEST(SolidSyslogTlsStream, OpenRetriesHandshakeOnWantRead)
+{
+    /* First call: WANT_READ; second call: success. */
+    int seq[] = {-1, 1};
+    OpenSslFake_SetConnectReturnSequence(seq, 2);
+    OpenSslFake_SetGetErrorReturn(SSL_ERROR_WANT_READ);
+    CHECK_TRUE(SolidSyslogStream_Open(stream, addr));
+    LONGS_EQUAL(2, OpenSslFake_ConnectCallCount());
+}
+
+TEST(SolidSyslogTlsStream, OpenSleepsBetweenHandshakeRetries)
+{
+    int seq[] = {-1, 1};
+    OpenSslFake_SetConnectReturnSequence(seq, 2);
+    OpenSslFake_SetGetErrorReturn(SSL_ERROR_WANT_READ);
+    SolidSyslogStream_Open(stream, addr);
+    LONGS_EQUAL(1, g_sleepCallCount);
+}
+
+TEST(SolidSyslogTlsStream, OpenRetriesHandshakeOnWantWrite)
+{
+    /* WANT_WRITE arises when SSL needs to send (e.g. during the handshake
+       finished message under non-blocking transport with a temporarily-full
+       send buffer). Same retry treatment as WANT_READ. */
+    int seq[] = {-1, 1};
+    OpenSslFake_SetConnectReturnSequence(seq, 2);
+    OpenSslFake_SetGetErrorReturn(SSL_ERROR_WANT_WRITE);
+    CHECK_TRUE(SolidSyslogStream_Open(stream, addr));
+    LONGS_EQUAL(2, OpenSslFake_ConnectCallCount());
+}
+
+TEST(SolidSyslogTlsStream, OpenFailsWhenHandshakeNeverCompletes)
+{
+    /* SSL_connect always returns -1 with WANT_READ — handshake never makes
+       progress, so the bounded budget should expire and Open returns false. */
+    int seq[] = {-1};
+    OpenSslFake_SetConnectReturnSequence(seq, 1);
+    OpenSslFake_SetGetErrorReturn(SSL_ERROR_WANT_READ);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+}
+
+TEST(SolidSyslogTlsStream, OpenFailsImmediatelyOnHardSslError)
+{
+    /* Non-WANT error (e.g. SSL_ERROR_SSL) is fail-fast — no retry budget burn. */
+    int seq[] = {-1};
+    OpenSslFake_SetConnectReturnSequence(seq, 1);
+    OpenSslFake_SetGetErrorReturn(SSL_ERROR_SSL);
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+    LONGS_EQUAL(1, OpenSslFake_ConnectCallCount());
+    LONGS_EQUAL(0, g_sleepCallCount);
+}
+
+/* -------------------------------------------------------------------------
+ * Send fail-fast: any non-success closes the SSL session and the underlying
+ * transport so the StreamSender's reconnect path runs on the next tick.
+ * ------------------------------------------------------------------------- */
+
+TEST(SolidSyslogTlsStream, SendClosesSslOnWriteFailure)
+{
+    SolidSyslogStream_Open(stream, addr);
+    OpenSslFake_SetWriteFails(true);
+    const char msg[] = "hi";
+    SolidSyslogStream_Send(stream, msg, sizeof(msg));
+    LONGS_EQUAL(1, OpenSslFake_ShutdownCallCount());
+    LONGS_EQUAL(1, OpenSslFake_FreeCallCount());
+}
+
+TEST(SolidSyslogTlsStream, SendClosesTransportOnWriteFailure)
+{
+    SolidSyslogStream_Open(stream, addr);
+    OpenSslFake_SetWriteFails(true);
+    const char msg[] = "hi";
+    SolidSyslogStream_Send(stream, msg, sizeof(msg));
+    LONGS_EQUAL(1, StreamFake_CloseCallCount(transport));
+}
+
+TEST(SolidSyslogTlsStream, SendReturnsFalseOnShortWrite)
+{
+    SolidSyslogStream_Open(stream, addr);
+    OpenSslFake_SetWriteReturn(3);
+    const char msg[] = "hello";
+    CHECK_FALSE(SolidSyslogStream_Send(stream, msg, sizeof(msg)));
+}
+
+/* -------------------------------------------------------------------------
+ * Read non-blocking contract.
+ * ------------------------------------------------------------------------- */
+
+TEST(SolidSyslogTlsStream, ReadReturnsZeroOnWantRead)
+{
+    SolidSyslogStream_Open(stream, addr);
+    OpenSslFake_SetReadReturn(-1);
+    OpenSslFake_SetGetErrorReturn(SSL_ERROR_WANT_READ);
+    char             buf[16];
+    SolidSyslogSsize n = SolidSyslogStream_Read(stream, buf, sizeof(buf));
+    LONGS_EQUAL(0, n);
+}
+
+TEST(SolidSyslogTlsStream, ReadReturnsNegativeOneOnHardErrorAndClosesSsl)
+{
+    SolidSyslogStream_Open(stream, addr);
+    OpenSslFake_SetReadReturn(-1);
+    OpenSslFake_SetGetErrorReturn(SSL_ERROR_SSL);
+    char             buf[16];
+    SolidSyslogSsize n = SolidSyslogStream_Read(stream, buf, sizeof(buf));
+    LONGS_EQUAL(-1, n);
+    LONGS_EQUAL(1, OpenSslFake_ShutdownCallCount());
+    LONGS_EQUAL(1, StreamFake_CloseCallCount(transport));
+}
+
+TEST(SolidSyslogTlsStream, ReadReturnsNegativeOneOnZeroReturnAndClosesSsl)
+{
+    /* SSL_read returns 0 → SSL_ERROR_ZERO_RETURN (clean shutdown by peer). */
+    SolidSyslogStream_Open(stream, addr);
+    OpenSslFake_SetReadReturn(0);
+    OpenSslFake_SetGetErrorReturn(SSL_ERROR_ZERO_RETURN);
+    char             buf[16];
+    SolidSyslogSsize n = SolidSyslogStream_Read(stream, buf, sizeof(buf));
+    LONGS_EQUAL(-1, n);
+    LONGS_EQUAL(1, OpenSslFake_ShutdownCallCount());
+}
+
+/* -------------------------------------------------------------------------
+ * Close idempotency. Send/Read may close internally on failure; subsequent
+ * Close from the StreamSender's reconnect path or Destroy must not crash
+ * or double-free.
+ * ------------------------------------------------------------------------- */
+
+TEST(SolidSyslogTlsStream, CloseAfterInternalCloseFromSendFailureDoesNotDoubleFree)
+{
+    SolidSyslogStream_Open(stream, addr);
+    OpenSslFake_SetWriteFails(true);
+    const char msg[] = "hi";
+    SolidSyslogStream_Send(stream, msg, sizeof(msg)); /* internal close */
+    SolidSyslogStream_Close(stream);                  /* second close — must be safe */
+    LONGS_EQUAL(1, OpenSslFake_ShutdownCallCount());
+    LONGS_EQUAL(1, OpenSslFake_FreeCallCount());
 }

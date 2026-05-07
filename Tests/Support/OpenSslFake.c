@@ -114,6 +114,8 @@ static bool        set1HostFails;
 static int  connectCallCount;
 static SSL* lastConnectSslArg;
 static bool connectFails;
+static int  connectReturnSequence[OPENSSLFAKE_MAX_CONNECT_RETURNS];
+static int  connectReturnSequenceLen;
 
 /* SSL_write */
 static int         writeCallCount;
@@ -121,12 +123,25 @@ static SSL*        lastWriteSslArg;
 static const void* lastWriteBuf;
 static int         lastWriteSize;
 static bool        writeFails;
+static bool        writeReturnOverride;
+static int         writeReturnValue;
 
 /* SSL_read */
 static int   sslReadCallCount;
 static SSL*  lastSslReadSslArg;
 static void* lastSslReadBuf;
 static int   lastSslReadSize;
+static bool  readReturnOverride;
+static int   readReturnValue;
+
+/* SSL_get_error */
+static int getErrorCallCount;
+static int getErrorReturnValue;
+
+/* BIO_set_flags / BIO_clear_flags */
+static int bioSetFlagsCallCount;
+static int lastBioSetFlags;
+static int bioClearFlagsCallCount;
 
 /* SSL_shutdown */
 static int  shutdownCallCount;
@@ -200,31 +215,45 @@ void OpenSslFake_Reset(void)
     {
         fakeBios[i].data = NULL;
     }
-    lastSetDataBioArg           = NULL;
-    lastSetDataArg              = NULL;
-    lastGetDataBioArg           = NULL;
-    setBioCallCount             = 0;
-    lastSetBioSslArg            = NULL;
-    lastSetBioReadBioArg        = NULL;
-    lastSetBioWriteBioArg       = NULL;
-    lastSslCtrlSslArg           = NULL;
-    lastSniHostname             = NULL;
-    sniHostnameFails            = false;
-    lastSet1HostSslArg          = NULL;
-    lastSet1Host                = NULL;
-    set1HostFails               = false;
-    connectCallCount            = 0;
-    lastConnectSslArg           = NULL;
-    connectFails                = false;
+    lastSetDataBioArg        = NULL;
+    lastSetDataArg           = NULL;
+    lastGetDataBioArg        = NULL;
+    setBioCallCount          = 0;
+    lastSetBioSslArg         = NULL;
+    lastSetBioReadBioArg     = NULL;
+    lastSetBioWriteBioArg    = NULL;
+    lastSslCtrlSslArg        = NULL;
+    lastSniHostname          = NULL;
+    sniHostnameFails         = false;
+    lastSet1HostSslArg       = NULL;
+    lastSet1Host             = NULL;
+    set1HostFails            = false;
+    connectCallCount         = 0;
+    lastConnectSslArg        = NULL;
+    connectFails             = false;
+    connectReturnSequenceLen = 0;
+    for (int i = 0; i < OPENSSLFAKE_MAX_CONNECT_RETURNS; i++)
+    {
+        connectReturnSequence[i] = 0;
+    }
     writeCallCount              = 0;
     lastWriteSslArg             = NULL;
     lastWriteBuf                = NULL;
     lastWriteSize               = 0;
     writeFails                  = false;
+    writeReturnOverride         = false;
+    writeReturnValue            = 0;
     sslReadCallCount            = 0;
     lastSslReadSslArg           = NULL;
     lastSslReadBuf              = NULL;
     lastSslReadSize             = 0;
+    readReturnOverride          = false;
+    readReturnValue             = 0;
+    getErrorCallCount           = 0;
+    getErrorReturnValue         = 0;
+    bioSetFlagsCallCount        = 0;
+    lastBioSetFlags             = 0;
+    bioClearFlagsCallCount      = 0;
     shutdownCallCount           = 0;
     lastShutdownSslArg          = NULL;
     freeCallCount               = 0;
@@ -754,14 +783,31 @@ void OpenSslFake_SetSet1HostFails(bool fails)
 
 int SSL_connect(SSL* ssl)
 {
+    int rc        = connectFails ? -1 : 1;
+    int callIndex = connectCallCount;
     connectCallCount++;
     lastConnectSslArg = ssl;
-    return connectFails ? -1 : 1;
+    if (connectReturnSequenceLen > 0)
+    {
+        int idx = (callIndex < connectReturnSequenceLen) ? callIndex : (connectReturnSequenceLen - 1);
+        rc      = connectReturnSequence[idx];
+    }
+    return rc;
 }
 
 void OpenSslFake_SetConnectFails(bool fails)
 {
     connectFails = fails;
+}
+
+void OpenSslFake_SetConnectReturnSequence(const int* values, int count)
+{
+    int safe = (count < OPENSSLFAKE_MAX_CONNECT_RETURNS) ? count : OPENSSLFAKE_MAX_CONNECT_RETURNS;
+    for (int i = 0; i < safe; i++)
+    {
+        connectReturnSequence[i] = values[i];
+    }
+    connectReturnSequenceLen = safe;
 }
 
 int SSL_write(SSL* ssl, const void* buf, int num)
@@ -770,6 +816,10 @@ int SSL_write(SSL* ssl, const void* buf, int num)
     lastWriteSslArg = ssl;
     lastWriteBuf    = buf;
     lastWriteSize   = num;
+    if (writeReturnOverride)
+    {
+        return writeReturnValue;
+    }
     return writeFails ? -1 : num;
 }
 
@@ -778,13 +828,80 @@ void OpenSslFake_SetWriteFails(bool fails)
     writeFails = fails;
 }
 
+void OpenSslFake_SetWriteReturn(int value)
+{
+    writeReturnOverride = true;
+    writeReturnValue    = value;
+}
+
 int SSL_read(SSL* ssl, void* buf, int num)
 {
     sslReadCallCount++;
     lastSslReadSslArg = ssl;
     lastSslReadBuf    = buf;
     lastSslReadSize   = num;
+    if (readReturnOverride)
+    {
+        return readReturnValue;
+    }
     return num;
+}
+
+void OpenSslFake_SetReadReturn(int value)
+{
+    readReturnOverride = true;
+    readReturnValue    = value;
+}
+
+int SSL_get_error(const SSL* ssl, int ret)
+{
+    (void) ssl;
+    (void) ret;
+    getErrorCallCount++;
+    return getErrorReturnValue;
+}
+
+void OpenSslFake_SetGetErrorReturn(int err)
+{
+    getErrorReturnValue = err;
+}
+
+int OpenSslFake_GetErrorCallCount(void)
+{
+    return getErrorCallCount;
+}
+
+/* BIO_set_flags / BIO_clear_flags are macros in OpenSSL that forward to these
+ * non-inline functions. Faking the underlying calls lets the production code
+ * use the standard idioms (BIO_set_retry_read, BIO_clear_retry_flags) while
+ * tests observe whether retry semantics were signalled. */
+void BIO_set_flags(BIO* bio, int flags)
+{
+    (void) bio;
+    bioSetFlagsCallCount++;
+    lastBioSetFlags = flags;
+}
+
+void BIO_clear_flags(BIO* bio, int flags)
+{
+    (void) bio;
+    (void) flags;
+    bioClearFlagsCallCount++;
+}
+
+int OpenSslFake_BioSetFlagsCallCount(void)
+{
+    return bioSetFlagsCallCount;
+}
+
+int OpenSslFake_LastBioSetFlags(void)
+{
+    return lastBioSetFlags;
+}
+
+int OpenSslFake_BioClearFlagsCallCount(void)
+{
+    return bioClearFlagsCallCount;
 }
 
 int SSL_shutdown(SSL* ssl)

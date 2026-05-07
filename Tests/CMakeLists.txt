@@ -141,6 +141,7 @@ endif()
 
 if(SOLIDSYSLOG_OPENSSL)
     target_link_libraries(${PROJECT_NAME}Tests PRIVATE OpenSslFakes)
+    target_include_directories(${PROJECT_NAME}Tests PRIVATE ${CMAKE_SOURCE_DIR}/Platform/OpenSsl/Source)
 endif()
 
 if(HAVE_WINDOWS_PLATFORM OR SOLIDSYSLOG_WINSOCK)

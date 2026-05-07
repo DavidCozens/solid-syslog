@@ -25,6 +25,7 @@ EXTERN_C_BEGIN
     size_t                           StreamFake_LastReadSize(struct SolidSyslogStream * stream);
     void                             StreamFake_SetReadReturn(struct SolidSyslogStream * stream, SolidSyslogSsize value);
     void                             StreamFake_SetOpenFails(struct SolidSyslogStream * stream, bool fails);
+    void                             StreamFake_SetSendFails(struct SolidSyslogStream * stream, bool fails);
     int                              StreamFake_CloseCallCount(struct SolidSyslogStream * stream);
 
 EXTERN_C_END
