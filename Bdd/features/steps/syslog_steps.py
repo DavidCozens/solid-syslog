@@ -468,8 +468,15 @@ def syslog_ng_reload():
 
 
 def syslog_ng_swap_config(config_path):
-    """Replace the active syslog-ng config and reload."""
-    shutil.copy(config_path, SYSLOG_NG_CONF)
+    """Replace the active syslog-ng config and reload.
+
+    Uses copyfile (data only, no chmod) rather than copy. The destination
+    is bind-mounted from the host on developer machines; chmod fails with
+    'Operation not permitted' when the host owner is not the container's
+    `developer` user. The file already exists with the correct mode
+    so copying just the contents is sufficient.
+    """
+    shutil.copyfile(config_path, SYSLOG_NG_CONF)
     syslog_ng_reload()
 
 
