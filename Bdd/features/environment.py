@@ -136,8 +136,8 @@ def after_scenario(context, scenario):
     # Restore syslog-ng config if it was changed during the scenario.
     # copyfile (data only, no chmod) — see syslog_ng_swap_config rationale.
     if hasattr(context, "syslog_ng_config_changed") and context.syslog_ng_config_changed:
-        shutil.copyfile(SYSLOG_NG_FULL_CONF, SYSLOG_NG_CONF)
         try:
+            shutil.copyfile(SYSLOG_NG_FULL_CONF, SYSLOG_NG_CONF)
             with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
                 sock.connect(SYSLOG_NG_CTL)
                 sock.sendall(b"RELOAD\n")
