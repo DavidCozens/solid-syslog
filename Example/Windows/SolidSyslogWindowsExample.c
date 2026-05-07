@@ -32,6 +32,7 @@
 #include "SolidSyslogWindowsHostname.h"
 #include "SolidSyslogWindowsMutex.h"
 #include "SolidSyslogWindowsProcessId.h"
+#include "SolidSyslogWindowsSleep.h"
 #include "SolidSyslogWindowsSysUpTime.h"
 #include "SolidSyslogWinsockDatagram.h"
 #include "SolidSyslogWinsockResolver.h"
@@ -83,7 +84,7 @@ static struct SolidSyslogBlockDevice* storeBlockDevice;
 // NOLINTNEXTLINE(readability-non-const-parameter) -- _beginthreadex thread-entry signature requires void*
 static unsigned __stdcall ServiceThreadEntry(void* arg)
 {
-    ExampleServiceThread_Run((volatile bool*) arg);
+    ExampleServiceThread_Run((volatile bool*) arg, SolidSyslogWindowsSleep);
     return 0;
 }
 

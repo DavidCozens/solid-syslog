@@ -1,5 +1,44 @@
 # Dev Log
 
+## 2026-05-07 — S12.15 — Service thread idle yield
+
+### Decision
+
+`Example/Common/ExampleServiceThread.c` was busy-spinning at 100% CPU when the
+buffer and store were empty. Original story scoped this as a `SolidSyslog_Service`
+return-value change so the loop could yield only when truly idle, but the user
+simplified: yield 1 ms after **every** tick, unconditionally. The library API
+stays untouched; this lives entirely in example code.
+
+The other simplification in the spec was that the original story text suggested
+`#ifdef _WIN32` for the platform sleep. We already have `SolidSyslogSleepFunction`
+plus POSIX/Windows wirings (added for the TLS handshake retry), so the cleaner
+path is to inject the sleep callback into `ExampleServiceThread_Run` and let
+each platform main pass `SolidSyslogPosixSleep` / `SolidSyslogWindowsSleep`.
+That keeps `Example/Common/` platform-free and makes the test trivially fakeable.
+
+A future story can investigate signalling-based fully-idle wait (eventfd /
+SetEvent / RTOS task notifications via the buffer abstraction) — out of scope
+here.
+
+### What landed
+
+- `ExampleServiceThread_Run` takes a second arg `SolidSyslogSleepFunction sleep`
+  and calls it with `IDLE_YIELD_MILLISECONDS = 1` after every `SolidSyslog_Service()`.
+- `Example/Threaded/main.c` (Linux) wires `SolidSyslogPosixSleep`.
+- `Example/Windows/SolidSyslogWindowsExample.c` wires `SolidSyslogWindowsSleep`.
+- `Tests/Example/ExampleServiceThreadTest.cpp` — `SleepFake` mirroring the
+  existing pattern in `SolidSyslogTlsStreamTest.cpp`; the fake flips the
+  shutdown flag on first call so the new test
+  `YieldsOneMillisecondAfterEachServiceTick` can prove the yield happens once
+  per tick at 1 ms.
+
+### Local validation
+
+Linux gcc / clang / sanitize / coverage (100% lines, 100% functions) /
+clang-tidy / cppcheck / clang-format — all green via the devcontainer.
+MSVC built clean and `SolidSyslogTests.exe` ran 973/973 on the Windows host.
+
 ## 2026-05-06 — S13.20 follow-up — Slice C: structural assertions for discard-policy scenarios
 
 ### Decision
