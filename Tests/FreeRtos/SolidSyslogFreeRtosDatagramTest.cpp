@@ -60,6 +60,13 @@ TEST(SolidSyslogFreeRtosDatagram, OpenReturnsFalseWhenSocketFails)
     CHECK_FALSE(SolidSyslogDatagram_Open(datagram));
 }
 
+TEST(SolidSyslogFreeRtosDatagram, OpenIsIdempotent)
+{
+    SolidSyslogDatagram_Open(datagram);
+    CHECK_TRUE(SolidSyslogDatagram_Open(datagram));
+    LONGS_EQUAL(1, FreeRtosSocketsFake_SocketCallCount());
+}
+
 TEST(SolidSyslogFreeRtosDatagram, MaxPayloadReturnsIpv6SafeDefault)
 {
     LONGS_EQUAL(SOLIDSYSLOG_UDP_IPV6_SAFE_PAYLOAD, SolidSyslogDatagram_MaxPayload(datagram));
@@ -127,17 +134,17 @@ TEST(SolidSyslogFreeRtosDatagram, DestroyAfterCloseDoesNotCloseAgain)
 
 TEST(SolidSyslogFreeRtosDatagram, SendToSendsBufferToDestinationAfterOpen)
 {
-    static const char   MESSAGE[]   = "hello";
-    static const size_t MESSAGE_LEN = sizeof(MESSAGE) - 1;
+    static const char   TEST_MESSAGE[]   = "hello";
+    static const size_t TEST_MESSAGE_LEN = sizeof(TEST_MESSAGE) - 1;
 
     SolidSyslogDatagram_Open(datagram);
-    enum SolidSyslogDatagramSendResult result = SolidSyslogDatagram_SendTo(datagram, MESSAGE, MESSAGE_LEN, addr);
+    enum SolidSyslogDatagramSendResult result = SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr);
 
     LONGS_EQUAL(SOLIDSYSLOG_DATAGRAM_SENT, result);
     LONGS_EQUAL(1, FreeRtosSocketsFake_SendtoCallCount());
     POINTERS_EQUAL(FreeRtosSocketsFake_LastSocketReturned(), FreeRtosSocketsFake_LastSendtoSocket());
-    POINTERS_EQUAL(MESSAGE, FreeRtosSocketsFake_LastSendtoBuffer());
-    LONGS_EQUAL(MESSAGE_LEN, FreeRtosSocketsFake_LastSendtoLength());
+    POINTERS_EQUAL(TEST_MESSAGE, FreeRtosSocketsFake_LastSendtoBuffer());
+    LONGS_EQUAL(TEST_MESSAGE_LEN, FreeRtosSocketsFake_LastSendtoLength());
     LONGS_EQUAL(0, FreeRtosSocketsFake_LastSendtoFlags());
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) -- platform-layout cast, see setup
     POINTERS_EQUAL(reinterpret_cast<const struct freertos_sockaddr*>(addr), FreeRtosSocketsFake_LastSendtoDestination());
@@ -146,12 +153,12 @@ TEST(SolidSyslogFreeRtosDatagram, SendToSendsBufferToDestinationAfterOpen)
 
 TEST(SolidSyslogFreeRtosDatagram, SendToForwardsLengthVerbatim)
 {
-    static const char BUFFER[1024] = {};
+    static const char TEST_BUFFER[1024] = {};
     SolidSyslogDatagram_Open(datagram);
 
-    SolidSyslogDatagram_SendTo(datagram, BUFFER, 1, addr);
+    SolidSyslogDatagram_SendTo(datagram, TEST_BUFFER, 1, addr);
     LONGS_EQUAL(1, FreeRtosSocketsFake_LastSendtoLength());
 
-    SolidSyslogDatagram_SendTo(datagram, BUFFER, 1232, addr);
+    SolidSyslogDatagram_SendTo(datagram, TEST_BUFFER, 1232, addr);
     LONGS_EQUAL(1232, FreeRtosSocketsFake_LastSendtoLength());
 }

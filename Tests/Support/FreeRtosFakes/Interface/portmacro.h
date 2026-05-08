@@ -1,7 +1,8 @@
 #ifndef SOLIDSYSLOG_TESTS_FREERTOSFAKES_PORTMACRO_H
 #define SOLIDSYSLOG_TESTS_FREERTOSFAKES_PORTMACRO_H
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage,bugprone-macro-parentheses) -- FreeRTOS-Kernel port API requires these to be #defines, the function-declaration macros can't parenthesise their args
+// NOLINTBEGIN(cppcoreguidelines-macro-usage,bugprone-macro-parentheses) -- FreeRTOS-Kernel port API requires these to be #defines, the function-declaration
+// macros can't parenthesise their args
 
 /* Stub of FreeRTOS-Kernel's portmacro.h.
  *
@@ -20,9 +21,12 @@
 #include <stdint.h>
 #include <limits.h>
 
-/* Kernel scalar types. Sizes match the typical 32-bit-target kernel; the
- * adapter under test never depends on these widths since it stores BaseType_t
- * args verbatim and forwards them to the fake. */
+/* Kernel scalar types. BaseType_t / UBaseType_t are typedef'd to long /
+ * unsigned long so they match the host compiler's long width (64-bit on x86_64
+ * Linux, 32-bit on a 32-bit host) — that is intentional: the adapter under
+ * test never depends on these widths since it stores BaseType_t args verbatim
+ * and forwards them to the fake, and all FreeRTOS socket constants are small
+ * integers that fit any width. Real targets bring their own portmacro.h. */
 typedef long          BaseType_t;
 typedef unsigned long UBaseType_t;
 typedef uint32_t      TickType_t;

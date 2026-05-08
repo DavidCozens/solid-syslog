@@ -1,4 +1,5 @@
-// NOLINTBEGIN(performance-no-int-to-ptr) -- FREERTOS_INVALID_SOCKET is ((Socket_t)~0U) from FreeRTOS-Plus-TCP; the int-to-ptr cast is intrinsic to the upstream sentinel and unavoidable.
+// NOLINTBEGIN(performance-no-int-to-ptr) -- FREERTOS_INVALID_SOCKET is ((Socket_t)~0U) from FreeRTOS-Plus-TCP; the int-to-ptr cast is intrinsic to the upstream
+// sentinel and unavoidable.
 
 #include "SolidSyslogFreeRtosDatagram.h"
 
@@ -61,8 +62,11 @@ static inline FreeRtosDatagram* FreeRtosDatagram_From(struct SolidSyslogDatagram
 static bool FreeRtosDatagram_Open(struct SolidSyslogDatagram* self)
 {
     FreeRtosDatagram* datagram = FreeRtosDatagram_From(self);
-    datagram->socket           = FreeRTOS_socket(FREERTOS_AF_INET, FREERTOS_SOCK_DGRAM, FREERTOS_IPPROTO_UDP);
-    return datagram->socket != FREERTOS_INVALID_SOCKET;
+    if (!FreeRtosDatagram_IsOpen(datagram))
+    {
+        datagram->socket = FreeRTOS_socket(FREERTOS_AF_INET, FREERTOS_SOCK_DGRAM, FREERTOS_IPPROTO_UDP);
+    }
+    return FreeRtosDatagram_IsOpen(datagram);
 }
 
 static enum SolidSyslogDatagramSendResult FreeRtosDatagram_SendTo(struct SolidSyslogDatagram* self, const void* buffer, size_t size,
@@ -102,4 +106,5 @@ static void FreeRtosDatagram_Close(struct SolidSyslogDatagram* self)
         datagram->socket = FREERTOS_INVALID_SOCKET;
     }
 }
+
 // NOLINTEND(performance-no-int-to-ptr)

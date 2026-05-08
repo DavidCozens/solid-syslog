@@ -3,6 +3,14 @@
 # source under test with the FreeRtosFakes config and links against the
 # fakes — see project_header_configured_platforms memory.
 
+# Top-level CMakeLists.txt only checks FREERTOS_KERNEL_PATH before adding this
+# subdirectory. Adapter tests transitively include FreeRTOS-Plus-TCP headers,
+# so guard FREERTOS_PLUS_TCP_PATH here too — fail loud rather than expand to
+# a stray "/source/include" suffix on an empty path.
+if("$ENV{FREERTOS_PLUS_TCP_PATH}" STREQUAL "")
+    message(FATAL_ERROR "FREERTOS_PLUS_TCP_PATH must be set to build Tests/FreeRtos.")
+endif()
+
 add_executable(SolidSyslogFreeRtosDatagramTest
     SolidSyslogFreeRtosDatagramTest.cpp
     main.cpp
