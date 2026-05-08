@@ -32,6 +32,10 @@ extern "C"
      * the spin loop was missing or broken. Mirrors STATE.TX_OVRE on silicon. */
     bool CmsdkUartFake_TxOverrunOccurred(void);
 
+    /* Number of times the driver called the sleep hook on the access struct.
+     * Lets tests assert the spin loop yielded the CPU between status reads. */
+    int CmsdkUartFake_SleepCallCount(void);
+
 #ifdef __cplusplus
 }
 #endif

@@ -1,5 +1,6 @@
 #include "CmsdkUart.h"
 
+#include <stdbool.h>
 #include <stddef.h>
 
 #define DATA_OFFSET 0x000U
@@ -11,27 +12,56 @@
 #define TX_ENABLE 0x01U
 #define TX_FULL_BIT 0x01U
 
+#define YIELD_MILLISECONDS 1
+
 static const CmsdkUartMemoryAccess* memoryAccess = NULL;
 static uintptr_t                    base         = 0U;
+
+static inline void SetBaudDivisor(void);
+static inline void EnableTransmitter(void);
+static inline bool TransmitterIsBusy(void);
+static inline void Yield(void);
+static inline void WriteDataRegister(char c);
 
 void CmsdkUart_Init(const CmsdkUartMemoryAccess* access, uintptr_t baseAddress)
 {
     memoryAccess = access;
     base         = baseAddress;
-    access->write32(baseAddress + BAUDDIV_OFFSET, BAUD_DIVISOR);
-    access->write32(baseAddress + CTRL_OFFSET, TX_ENABLE);
+    SetBaudDivisor();
+    EnableTransmitter();
+}
+
+static inline void SetBaudDivisor(void)
+{
+    memoryAccess->write32(base + BAUDDIV_OFFSET, BAUD_DIVISOR);
+}
+
+static inline void EnableTransmitter(void)
+{
+    memoryAccess->write32(base + CTRL_OFFSET, TX_ENABLE);
 }
 
 void CmsdkUart_PutChar(char c)
 {
-    while ((memoryAccess->read32(base + STATE_OFFSET) & TX_FULL_BIT) != 0U)
+    while (TransmitterIsBusy())
     {
-        /* Spin while the transmit holding register is occupied — writing to
-         * DATA in this state sets STATE.TX_OVRE on silicon and the byte is
-         * lost. QEMU's CMSDK model drains synchronously inside the DATA
-         * write, so this spin never iterates there; it is silicon-correct
-         * and the host-side fake exercises both the busy and idle paths. */
+        Yield();
     }
+    WriteDataRegister(c);
+}
+
+static inline bool TransmitterIsBusy(void)
+{
+    return (memoryAccess->read32(base + STATE_OFFSET) & TX_FULL_BIT) != 0U;
+}
+
+static inline void Yield(void)
+{
+    memoryAccess->sleep(YIELD_MILLISECONDS);
+}
+
+static inline void WriteDataRegister(char c)
+{
     memoryAccess->write32(base + DATA_OFFSET, (uint32_t) (unsigned char) c);
 }
 

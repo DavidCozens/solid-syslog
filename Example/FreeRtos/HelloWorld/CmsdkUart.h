@@ -11,11 +11,13 @@ extern "C"
 
     typedef uint32_t (*CmsdkUartRead32Function)(uintptr_t address);
     typedef void (*CmsdkUartWrite32Function)(uintptr_t address, uint32_t value);
+    typedef void (*CmsdkUartSleepFunction)(int milliseconds);
 
     typedef struct
     {
         CmsdkUartRead32Function  read32;
         CmsdkUartWrite32Function write32;
+        CmsdkUartSleepFunction   sleep;
     } CmsdkUartMemoryAccess;
 
     void CmsdkUart_Init(const CmsdkUartMemoryAccess* access, uintptr_t baseAddress);

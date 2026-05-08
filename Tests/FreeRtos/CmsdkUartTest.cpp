@@ -46,6 +46,13 @@ TEST(CmsdkUart, PutCharSpinsForTxFullToClearBeforeWritingNextByte)
     CHECK_FALSE(CmsdkUartFake_TxOverrunOccurred());
 }
 
+TEST(CmsdkUart, PutCharCallsSleepWhileSpinningForTxFull)
+{
+    CmsdkUart_PutChar('A');
+    CmsdkUart_PutChar('B');
+    CHECK(CmsdkUartFake_SleepCallCount() > 0);
+}
+
 TEST(CmsdkUart, PutCharWritesImmediatelyWhenTransmitterIsAlwaysReady)
 {
     CmsdkUartFake_SetReadsBeforeTxReady(0);

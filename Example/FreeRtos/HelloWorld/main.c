@@ -6,15 +6,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
-/* CMSDK UART0 base on QEMU mps2-an385 (Cortex-M3). QEMU exposes UART0 over
- * `-serial stdio`, decoupling stdout from the IP stack so the network and
- * console can run independently — see #290 / DEVLOG. */
 #define CMSDK_UART0_BASE_ADDRESS UINT32_C(0x40004000)
 
-/* Real MMIO accessors injected into CmsdkUart via the CmsdkUartMemoryAccess
- * seam. The driver itself never touches volatile memory directly — that
- * keeps the polled-spin and register-write logic host-TDD-able against an
- * in-memory fake (see Tests/FreeRtos/CmsdkUartFake). */
 static uint32_t MmioRead32(uintptr_t address)
 {
     // NOLINTNEXTLINE(performance-no-int-to-ptr) -- mapping the CMSDK UART MMIO address into a 32-bit volatile pointer.
@@ -27,7 +20,12 @@ static void MmioWrite32(uintptr_t address, uint32_t value)
     *(volatile uint32_t*) address = value;
 }
 
-static const CmsdkUartMemoryAccess MMIO_ACCESS = {MmioRead32, MmioWrite32};
+static void RtosSleep(int milliseconds)
+{
+    vTaskDelay(pdMS_TO_TICKS((TickType_t) milliseconds));
+}
+
+static const CmsdkUartMemoryAccess MMIO_ACCESS = {MmioRead32, MmioWrite32, RtosSleep};
 
 static void HelloTask(void* argument)
 {

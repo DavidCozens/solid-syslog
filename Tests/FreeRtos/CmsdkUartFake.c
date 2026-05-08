@@ -22,6 +22,7 @@ static struct
     int       readsBeforeTxReadyDefault;
     int       readsRemainingBeforeTxReady;
     bool      txOverrunOccurred;
+    int       sleepCallCount;
 } fake;
 
 static uint32_t Fake_Read32(uintptr_t address)
@@ -93,7 +94,13 @@ static void Fake_Write32(uintptr_t address, uint32_t value)
     }
 }
 
-static const CmsdkUartMemoryAccess FAKE_ACCESS = {Fake_Read32, Fake_Write32};
+static void Fake_Sleep(int milliseconds)
+{
+    (void) milliseconds;
+    fake.sleepCallCount++;
+}
+
+static const CmsdkUartMemoryAccess FAKE_ACCESS = {Fake_Read32, Fake_Write32, Fake_Sleep};
 
 void CmsdkUartFake_Reset(uintptr_t baseAddress)
 {
@@ -106,6 +113,7 @@ void CmsdkUartFake_Reset(uintptr_t baseAddress)
     fake.readsBeforeTxReadyDefault   = 2;
     fake.readsRemainingBeforeTxReady = 0;
     fake.txOverrunOccurred           = false;
+    fake.sleepCallCount              = 0;
 }
 
 const CmsdkUartMemoryAccess* CmsdkUartFake_Access(void)
@@ -136,4 +144,9 @@ void CmsdkUartFake_SetReadsBeforeTxReady(int reads)
 bool CmsdkUartFake_TxOverrunOccurred(void)
 {
     return fake.txOverrunOccurred;
+}
+
+int CmsdkUartFake_SleepCallCount(void)
+{
+    return fake.sleepCallCount;
 }
