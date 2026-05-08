@@ -13,6 +13,7 @@
 #include "CmsdkUart.h"
 
 #include <errno.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <sys/stat.h>
 
@@ -23,12 +24,14 @@
 static char  syscallHeap[SYSCALL_HEAP_SIZE];
 static char* syscallHeapBreak = syscallHeap;
 
+static inline bool IsWithinSyscallHeap(const char* candidateBreak);
+
 void* _sbrk(int increment)
 {
     char* previousBreak = syscallHeapBreak;
     char* nextBreak     = syscallHeapBreak + increment;
     void* result        = (void*) -1;
-    if (nextBreak >= syscallHeap && (size_t) (nextBreak - syscallHeap) <= sizeof(syscallHeap))
+    if (IsWithinSyscallHeap(nextBreak))
     {
         syscallHeapBreak = nextBreak;
         result           = previousBreak;
@@ -38,6 +41,11 @@ void* _sbrk(int increment)
         errno = ENOMEM;
     }
     return result;
+}
+
+static inline bool IsWithinSyscallHeap(const char* candidateBreak)
+{
+    return candidateBreak >= syscallHeap && (size_t) (candidateBreak - syscallHeap) <= sizeof(syscallHeap);
 }
 
 int _write(int file, char* buffer, int length)
