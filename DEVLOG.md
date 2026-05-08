@@ -117,6 +117,45 @@ production line:
    actual behaviour) without spurious overrun.
 7. `WriteOfSingleByteEmitsThatByte` → forces `Write` to call `PutChar`.
 8. `WriteOfMultipleBytesEmitsAllByteWithoutOverrun` → forces the loop.
+9. `PutCharCallsSleepWhileSpinningForTxFull` → forces the spin to
+   yield via the injected `sleep` hook. `CmsdkUartFake` counts the
+   calls; production wires a `vTaskDelay(1)`-based sleep in `main.c`
+   so the spin doesn't hog CPU on real silicon. (See "Co-operative
+   sleep in the spin" below.)
+
+### Driver layout — intent-named static-inline helpers
+
+`CmsdkUart_PutChar` reads as
+`while (TransmitterIsBusy()) { Yield(); } WriteDataRegister(c);` after
+extracting `static inline` helpers — same pattern for
+`CmsdkUart_Init` (`SetBaudDivisor()` then `EnableTransmitter()`).
+Helpers are forward-declared at the top of the file and defined
+immediately beneath their first caller, per the project's "one thing
+at one level of abstraction" rule. No comments inside the helpers —
+the names are the documentation; the per-register quirks live in
+`CMSDK_UART.md`.
+
+### Co-operative sleep in the spin
+
+`CmsdkUartMemoryAccess` carries a third hook,
+`void (*sleep)(int milliseconds)`, called inside `PutChar`'s
+`while (TransmitterIsBusy())` body. Production wires it to
+`vTaskDelay(pdMS_TO_TICKS(1))`; the host fake counts the calls.
+
+Rationale: at 115200 8N1, one character is ~87 µs; without a yield,
+the spin would burn CPU at 100% on real silicon for the duration of
+each character. With `configTICK_RATE_HZ = 100` (10 ms tick),
+`vTaskDelay(1)` rounds up to one tick — which is more than a single
+character's worth, but the spin is bounded by the actual hardware
+drain rate and yields enough that other tasks run. QEMU's CMSDK model
+drains synchronously, so the spin (and the sleep) never iterate
+there; the yield is silicon-only behaviour.
+
+The signature mirrors `SolidSyslogSleepFunction`
+(`Core/Interface/SolidSyslogSleep.h`) — a local typedef for now to
+keep `Example/FreeRtos/HelloWorld/` free of `Core/Interface/`
+coupling, but easy to lift into the library if the driver moves to
+`Platform/FreeRtos/` in a later epic.
 
 ### Deferred to later slices
 
@@ -166,12 +205,36 @@ production line:
 - mbed-OS `targets/TARGET_ARM_FM/TARGET_FVP_MPS2/serial_api.c` — Arm's
   own HAL; corroborates `BAUDDIV ≥ 16` minimum.
 
-A full contract document covering the polled-mode TX/RX register
-sequences, QEMU-vs-silicon traps, and concurrency considerations was
-written up by claude.ai during slice-2 review and informed the v2
-rewrite. The document lives in conversation history (PR #291 review
-trail); worth promoting into `docs/` if we hit similar peripheral
-work in future epics.
+The full polled-mode TX/RX contract — register layout, bit semantics,
+QEMU-vs-silicon traps, concurrency considerations — was written up
+during slice-2 review and lives at
+`Example/FreeRtos/HelloWorld/CMSDK_UART.md`. Co-located with the
+driver so a future reader of `CmsdkUart.{h,c}` finds it one directory
+entry away. RX and concurrency sections in there are slice-3+ scope,
+included so the slice-3 author doesn't have to re-derive them.
+
+### Code review feedback addressed
+
+Two CodeRabbit findings folded in during review:
+
+- **`Syscalls.c::_sbrk` bounds check** — extracted into
+  `static inline bool IsWithinSyscallHeap(const char* candidateBreak)`
+  per the project's intent-naming-predicates rule. The mixed
+  pointer-arithmetic / cast / two-comparisons composite is now a
+  single named call site.
+- **`Tests/FreeRtos/CMakeLists.txt` `FREERTOS_PLUS_TCP_PATH` guard** —
+  scoped to `SolidSyslogFreeRtosDatagramTest` only.
+  `CmsdkUartTest` doesn't need Plus-TCP and now builds in a minimal
+  `FREERTOS_KERNEL_PATH`-only environment.
+
+A third finding — copy `CmsdkUartMemoryAccess` by value internally
+plus add NULL-checks and an `isInitialized` flag in the driver — was
+**declined**. The project rule is "no validation for scenarios that
+can't happen"; `main.c` passes `&MMIO_ACCESS` where `MMIO_ACCESS` is
+`static const` (program-lifetime), and the store-by-pointer pattern
+matches the rest of the codebase (e.g. `SolidSyslogStreamSenderConfig`
+holds resolver/stream/endpoint by pointer). If the API ever grows a
+caller with stack-allocated access, we revisit.
 
 ---
 
