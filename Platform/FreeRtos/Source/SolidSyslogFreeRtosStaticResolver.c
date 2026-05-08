@@ -8,8 +8,6 @@
 #include "SolidSyslogMacros.h"
 #include "SolidSyslogResolverDefinition.h"
 
-#include <string.h>
-
 typedef struct SolidSyslogFreeRtosStaticResolver FreeRtosStaticResolver;
 
 struct SolidSyslogFreeRtosStaticResolver
@@ -39,7 +37,10 @@ struct SolidSyslogResolver* SolidSyslogFreeRtosStaticResolver_Create(SolidSyslog
 {
     FreeRtosStaticResolver* self = (FreeRtosStaticResolver*) storage;
     *self                        = DEFAULT_INSTANCE;
-    memcpy(self->octets, ipv4Octets, sizeof(self->octets));
+    self->octets[0]              = ipv4Octets[0];
+    self->octets[1]              = ipv4Octets[1];
+    self->octets[2]              = ipv4Octets[2];
+    self->octets[3]              = ipv4Octets[3];
     return &self->base;
 }
 
