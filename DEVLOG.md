@@ -1,5 +1,89 @@
 # Dev Log
 
+## 2026-05-08 — S08.03 slice 1 — `SolidSyslogFreeRtosDatagram` adapter
+
+### Decision
+
+First slice of S08.03 (FreeRTOS UDP). Pure host-TDD against the FreeRTOS-Plus-TCP
+socket API via fakes. No QEMU, no example, no BDD — those come in slices 2/3+.
+
+The adapter mirrors the POSIX/Windows datagram shape but follows the project's
+new-adapter conventions from day one (caller-supplied storage, `DEFAULT_INSTANCE`/
+`DESTROYED_INSTANCE` const-struct vtable wiring, MISRA-prefixed statics,
+intent-named `static inline` predicates). The pre-pattern POSIX/Windows
+singletons remain — slice 1 doesn't sweep them.
+
+### What landed
+
+- **`Platform/FreeRtos/Interface/SolidSyslogFreeRtosDatagram.h`** — public Create/Destroy
+  + opaque `SolidSyslogFreeRtosDatagramStorage` (intptr_t slots) + `SOLIDSYSLOG_FREERTOSDATAGRAM_SIZE`.
+- **`Platform/FreeRtos/Source/SolidSyslogFreeRtosDatagram.c`** — adapter:
+  Open → `FreeRTOS_socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)` storing `Socket_t`;
+  SendTo → `FreeRTOS_sendto` guarded by `FreeRtosDatagram_IsOpen`;
+  Close → idempotent `FreeRTOS_closesocket` (also gated by IsOpen so double-Close /
+  Close-without-Open is a no-op);
+  Destroy → cascades through Close + writes DESTROYED_INSTANCE.
+  Static functions prefixed `FreeRtosDatagram_*` per MISRA-5.9; cast helper
+  `FreeRtosDatagram_From(self)` replaces 4 inline casts; local typedef
+  `FreeRtosDatagram` shortens references inside the .c.
+- **`Platform/FreeRtos/Source/SolidSyslogAddressInternal.h`** — platform-internal
+  `SolidSyslogAddress_AsConstFreertosSockaddr` cast helper.
+- **`Tests/FreeRtos/SolidSyslogFreeRtosDatagramTest.cpp`** — 15 ZOMBIES tests / 29
+  checks. Every constant arg in production driven by an explicit assertion.
+  `SendToForwardsLengthVerbatim` probes two distinct lengths to prove the
+  parameter actually flows through (not hardcoded). Coverage 100% lines /
+  100% functions on the adapter.
+- **`Tests/Support/FreeRtosFakes/Source/FreeRtosSocketsFake.{c,h}`** — hand-rolled
+  fake mirroring the project pattern (`SocketFake`, `WinsockFake`). Per-arg
+  accessors for `socket` (3 args) / `sendto` (6 args) / `closesocket` (1 arg).
+  Reset between tests; configurable failure modes via `_SetSocketFails`/
+  `_SetSendtoFails`.
+- **Test-isolation stubs in `Tests/Support/FreeRtosFakes/Interface/`** — `portmacro.h`
+  (kernel typedefs + no-op port primitives), `pack_struct_start.h`/`pack_struct_end.h`
+  (compiler-portable struct-packing shims). These shadow upstream port-/compiler-
+  specific variants so the test build is independent of the integrator's chosen
+  toolchain. CMake include-dir order puts the FreeRtosFakes shims ahead of the
+  upstream tree, so real upstream `${FREERTOS_PLUS_TCP_PATH}/source/portable/Compiler/GCC`
+  and `${FREERTOS_KERNEL_PATH}/portable/ThirdParty/GCC/Posix` paths are NOT on
+  the test include path. Captured in `project_freertos_test_isolation.md`.
+- **`Tests/FreeRtos/CMakeLists.txt`** — first per-adapter test executable
+  (`SolidSyslogFreeRtosDatagramTest`). Per S08.01's design, each adapter test
+  exe recompiles the adapter source itself with the FreeRtosFakes config on
+  the include path.
+
+### Lessons captured (memory)
+
+- **Drive arg values in same test** — David flagged that I'd put
+  `FREERTOS_AF_INET, FREERTOS_SOCK_DGRAM, FREERTOS_IPPROTO_UDP` in production
+  while only the call-count was asserted. Fix: backwalk to placeholders, extend
+  the same test with arg assertions, then forward. Saved as feedback memory;
+  same lesson applied later for `flags=0` and `dest_length=sizeof(*dest)` in
+  `FreeRTOS_sendto`.
+- **Happy path first within ZOMBIES** — David steered me away from leading the
+  M bucket with `SendToFailsBeforeOpen`. M is happy paths; guards/errors are E.
+  Saved as feedback memory.
+- **Project-wide naming sweep deferred** — type-naming inconsistency raised
+  during refactor; deferred to a dedicated sweep. Saved as project memory.
+
+### Local validation
+
+build-linux-gcc / build-linux-clang / sanitize / coverage (100% lines + 100% functions:
+2034/2034 lines, 429/429 functions across the whole tree) / clang-tidy /
+cppcheck / clang-format — all green via the cpputest-freertos and cpputest-clang
+images.
+
+### Out of scope (slice 1)
+
+- **No example code** — `Example/FreeRtos/SingleTask/main.c` and the QEMU smoke
+  arrive in slice 2 (with the CMSDK UART driver + newlib retarget).
+- **No resolver** — DNS path tracked separately as S08.08 (#288); slice 2 wires
+  the example with a hardcoded numeric IP via the `freertos_sockaddr` storage
+  fixture.
+- **No BDD harness work** — slice 3+ extends `Bdd/features/environment.py`
+  with the `BDD_TARGET=qemu-freertos` branch.
+- **Pre-pattern POSIX/Windows datagrams** stay singletons — naming/storage
+  sweep deferred per `project_naming_sweep_deferred`.
+
 ## 2026-05-07 — S08.02 — QEMU determinism groundwork + analyze-iwyu pin
 
 ### Context
