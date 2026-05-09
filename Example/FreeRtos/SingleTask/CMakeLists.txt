@@ -6,6 +6,13 @@
 # Slice 3b.1 of S08.03 stands the IP stack up and emits a single UDP
 # datagram on link-up. Slice 3b.2 swaps main.c's body for SolidSyslog wiring;
 # the directory + CMakeLists stay.
+#
+# Source layout: upstream FreeRTOS-Kernel + Plus-TCP sources are compiled
+# into a separate OBJECT library (`solid_syslog_freertos_upstream`) that
+# accepts the relaxed warning set those headers / sources require. Local
+# project code (main.c, Startup.c, Common/CmsdkUart.c, Common/Syscalls.c)
+# stays in the executable target under the strict project warning bar so
+# regressions in our own code can't slip through.
 
 set(FREERTOS_KERNEL_PATH "$ENV{FREERTOS_KERNEL_PATH}")
 if(NOT FREERTOS_KERNEL_PATH)
@@ -28,11 +35,13 @@ set(PLUS_TCP_PORT_GCC_DIR "${PLUS_TCP_SRC_DIR}/portable/Compiler/GCC")
 set(PLUS_TCP_BUF_DIR "${PLUS_TCP_SRC_DIR}/portable/BufferManagement")
 set(PLUS_TCP_NIF_DIR "${PLUS_TCP_SRC_DIR}/portable/NetworkInterface/MPS2_AN385")
 
-add_executable(SolidSyslogFreeRtosSingleTask
-    main.c
-    Startup.c
-    ${SOLID_SYSLOG_FREERTOS_EXAMPLE_COMMON_DIR}/CmsdkUart.c
-    ${SOLID_SYSLOG_FREERTOS_EXAMPLE_COMMON_DIR}/Syscalls.c
+# --- Upstream OBJECT library --------------------------------------------------
+#
+# Compiles all kernel + Plus-TCP + LAN9118 driver sources with the relaxed
+# warning set. Marked PRIVATE on this library; the executable consumes the
+# objects via $<TARGET_OBJECTS:...> so the relaxations don't leak.
+
+add_library(solid_syslog_freertos_upstream OBJECT
     ${FREERTOS_KERNEL_PATH}/tasks.c
     ${FREERTOS_KERNEL_PATH}/queue.c
     ${FREERTOS_KERNEL_PATH}/list.c
@@ -89,19 +98,16 @@ add_executable(SolidSyslogFreeRtosSingleTask
     ${PLUS_TCP_NIF_DIR}/ether_lan9118/smsc9220_eth_drv.c
 )
 
-set_target_properties(SolidSyslogFreeRtosSingleTask PROPERTIES SUFFIX ".elf")
-
-target_compile_options(SolidSyslogFreeRtosSingleTask PRIVATE
+target_compile_options(solid_syslog_freertos_upstream PRIVATE
     -mcpu=cortex-m3
     -mthumb
     -ffunction-sections
     -fdata-sections
     -fno-common
     # FreeRTOS-Kernel + Plus-TCP V11.1.0/V4.2.2 use non-prototype function
-    # declarations and type-narrowing constructs that trip our strict host
-    # warnings; relax for the upstream sources without lowering the bar
-    # everywhere. The Plus-TCP MPS2 driver also uses memcpy with possible
-    # null pointers (false positives under -Wnonnull) and unused parameters.
+    # declarations, type-narrowing constructs, sign-conversion patterns, and
+    # shadowed locals that trip our strict host warnings. Scoped to this
+    # OBJECT library so the relaxations never reach project code.
     -Wno-unused-parameter
     -Wno-unused-but-set-variable
     -Wno-implicit-fallthrough
@@ -112,6 +118,40 @@ target_compile_options(SolidSyslogFreeRtosSingleTask PRIVATE
     -Wno-pedantic
 )
 
+target_include_directories(solid_syslog_freertos_upstream PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}                       # FreeRTOSConfig.h, FreeRTOSIPConfig.h
+    ${FREERTOS_KERNEL_PATH}/include
+    ${FREERTOS_PORT_DIR}                              # portmacro.h
+    ${PLUS_TCP_SRC_DIR}/include
+    ${PLUS_TCP_PORT_GCC_DIR}                          # pack_struct_*.h
+    ${PLUS_TCP_NIF_DIR}                               # NetworkInterface.h consumed locally
+    ${PLUS_TCP_NIF_DIR}/ether_lan9118                 # SMM_MPS2.h, smsc9220_*.h
+)
+
+# --- Executable ---------------------------------------------------------------
+#
+# Project code only. Inherits the full project warning set
+# (-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Werror)
+# from the top-level CMakeLists.txt — no -Wno-* relaxations here.
+
+add_executable(SolidSyslogFreeRtosSingleTask
+    main.c
+    Startup.c
+    ${SOLID_SYSLOG_FREERTOS_EXAMPLE_COMMON_DIR}/CmsdkUart.c
+    ${SOLID_SYSLOG_FREERTOS_EXAMPLE_COMMON_DIR}/Syscalls.c
+    $<TARGET_OBJECTS:solid_syslog_freertos_upstream>
+)
+
+set_target_properties(SolidSyslogFreeRtosSingleTask PROPERTIES SUFFIX ".elf")
+
+target_compile_options(SolidSyslogFreeRtosSingleTask PRIVATE
+    -mcpu=cortex-m3
+    -mthumb
+    -ffunction-sections
+    -fdata-sections
+    -fno-common
+)
+
 target_include_directories(SolidSyslogFreeRtosSingleTask PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}                       # FreeRTOSConfig.h, FreeRTOSIPConfig.h
     ${SOLID_SYSLOG_FREERTOS_EXAMPLE_COMMON_DIR}       # CmsdkUart.h
@@ -119,8 +159,6 @@ target_include_directories(SolidSyslogFreeRtosSingleTask PRIVATE
     ${FREERTOS_PORT_DIR}                              # portmacro.h
     ${PLUS_TCP_SRC_DIR}/include
     ${PLUS_TCP_PORT_GCC_DIR}                          # pack_struct_*.h
-    ${PLUS_TCP_NIF_DIR}                               # NetworkInterface.h consumed locally
-    ${PLUS_TCP_NIF_DIR}/ether_lan9118                 # SMM_MPS2.h, smsc9220_*.h
 )
 
 target_link_options(SolidSyslogFreeRtosSingleTask PRIVATE

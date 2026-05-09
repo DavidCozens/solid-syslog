@@ -42,24 +42,25 @@
 /* NVIC IPR (Interrupt Priority Register) base — one byte per IRQ. */
 #define NVIC_IPR_BASE_ADDRESS UINT32_C(0xE000E400)
 
-/* Lowest priority the NVIC will accept (8-bit register, top configPRIO_BITS
- * implemented). 0xE0 = priority 7 with 3 priority bits — well below
- * configMAX_SYSCALL_INTERRUPT_PRIORITY. */
-#define ETHERNET_IRQ_PRIORITY UINT8_C(0xE0)
+/* NVIC IPR is 8-bit per IRQ but only the top configPRIO_BITS are
+ * implemented; lower (zeroed) bits read back as 0. Derive from the
+ * FreeRTOSConfig macros so a kernel-config change can't silently leave
+ * IRQ 13 at a higher-than-syscall-safe priority. */
+#define ETHERNET_IRQ_PRIORITY ((uint8_t) (configLIBRARY_LOWEST_INTERRUPT_PRIORITY << (8U - configPRIO_BITS)))
 
 /* Static IPv4 wiring matching the QEMU slirp default. 10.0.2.15 is the
  * standard slirp DHCP-allocated guest address; we hardcode it here so no
  * DHCP server is required. */
-static const uint8_t SMOKE_IP_ADDRESS[ipIP_ADDRESS_LENGTH_BYTES] = {10U, 0U, 2U, 15U};
-static const uint8_t SMOKE_NETMASK[ipIP_ADDRESS_LENGTH_BYTES]    = {255U, 255U, 255U, 0U};
-static const uint8_t SMOKE_GATEWAY[ipIP_ADDRESS_LENGTH_BYTES]    = {10U, 0U, 2U, 2U};
-static const uint8_t SMOKE_DNS[ipIP_ADDRESS_LENGTH_BYTES]        = {10U, 0U, 2U, 3U};
+static const uint8_t TEST_IP_ADDRESS[ipIP_ADDRESS_LENGTH_BYTES] = {10U, 0U, 2U, 15U};
+static const uint8_t TEST_NETMASK[ipIP_ADDRESS_LENGTH_BYTES]    = {255U, 255U, 255U, 0U};
+static const uint8_t TEST_GATEWAY[ipIP_ADDRESS_LENGTH_BYTES]    = {10U, 0U, 2U, 2U};
+static const uint8_t TEST_DNS[ipIP_ADDRESS_LENGTH_BYTES]        = {10U, 0U, 2U, 3U};
 
 /* Locally-administered MAC (U/L bit set, multicast bit clear). */
-static const uint8_t SMOKE_MAC[ipMAC_ADDRESS_LENGTH_BYTES] = {0x02U, 0x00U, 0x00U, 0x00U, 0x00U, 0x01U};
+static const uint8_t TEST_MAC[ipMAC_ADDRESS_LENGTH_BYTES] = {0x02U, 0x00U, 0x00U, 0x00U, 0x00U, 0x01U};
 
-#define SMOKE_TARGET_PORT 5514U
-static const uint8_t SMOKE_PAYLOAD[] = {'p', 'i', 'n', 'g'};
+#define TEST_TARGET_PORT 5514U
+static const uint8_t TEST_PAYLOAD[] = {'p', 'i', 'n', 'g'};
 
 /* Static storage for the network interface and its single endpoint. The
  * Plus-TCP API requires these to outlive the IP stack. */
@@ -112,8 +113,8 @@ static void SmokeTask(void* argument)
         memset(&destination, 0, sizeof(destination));
         destination.sin_len               = (uint8_t) sizeof(destination);
         destination.sin_family            = FREERTOS_AF_INET;
-        destination.sin_port              = FreeRTOS_htons(SMOKE_TARGET_PORT);
-        destination.sin_address.ulIP_IPv4 = FreeRTOS_inet_addr_quick(SMOKE_GATEWAY[0], SMOKE_GATEWAY[1], SMOKE_GATEWAY[2], SMOKE_GATEWAY[3]);
+        destination.sin_port              = FreeRTOS_htons(TEST_TARGET_PORT);
+        destination.sin_address.ulIP_IPv4 = FreeRTOS_inet_addr_quick(TEST_GATEWAY[0], TEST_GATEWAY[1], TEST_GATEWAY[2], TEST_GATEWAY[3]);
 
         /* Pre-resolve ARP for the gateway. Without this the first sendto
          * triggers ARP and the datagram is dropped while resolution is in
@@ -121,7 +122,7 @@ static void SmokeTask(void* argument)
         FreeRTOS_OutputARPRequest(destination.sin_address.ulIP_IPv4);
         vTaskDelay(pdMS_TO_TICKS(200));
 
-        (void) FreeRTOS_sendto(socket, SMOKE_PAYLOAD, sizeof(SMOKE_PAYLOAD), 0, &destination, sizeof(destination));
+        (void) FreeRTOS_sendto(socket, TEST_PAYLOAD, sizeof(TEST_PAYLOAD), 0, &destination, sizeof(destination));
 
         (void) FreeRTOS_closesocket(socket);
     }
@@ -148,7 +149,7 @@ int main(void)
     SetEthernetIrqPriority();
 
     (void) pxMPS2_FillInterfaceDescriptor(0, &networkInterface);
-    FreeRTOS_FillEndPoint(&networkInterface, &networkEndPoint, SMOKE_IP_ADDRESS, SMOKE_NETMASK, SMOKE_GATEWAY, SMOKE_DNS, SMOKE_MAC);
+    FreeRTOS_FillEndPoint(&networkInterface, &networkEndPoint, TEST_IP_ADDRESS, TEST_NETMASK, TEST_GATEWAY, TEST_DNS, TEST_MAC);
 
     if (FreeRTOS_IPInit_Multi() != pdPASS)
     {
