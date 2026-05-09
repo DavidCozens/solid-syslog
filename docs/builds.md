@@ -95,6 +95,23 @@ cmake --preset release
 cmake --build --preset release --target junit
 ```
 
+## FreeRTOS cross — `freertos-cross`
+
+ARM cross-build for FreeRTOS targets running under `qemu-system-arm`
+(Cortex-M3, mps2-an385). Uses the `freertos-target` devcontainer service
+or a host with `arm-none-eabi-gcc` + `qemu-system-arm` on `PATH`.
+
+```bash
+cmake --preset freertos-cross
+cmake --build --preset freertos-cross --target SolidSyslogFreeRtosSingleTask
+```
+
+The ELF lands at
+`build/freertos-cross/Example/FreeRtos/SingleTask/SolidSyslogFreeRtosSingleTask.elf`.
+See [`Example/FreeRtos/README.md`](../Example/FreeRtos/README.md) for run /
+GDB-attach instructions and [`Bdd/README.md`](../Bdd/README.md) for driving
+it under Behave + the syslog-ng oracle.
+
 ## Installing the library
 
 ```bash
@@ -107,17 +124,22 @@ This installs the static library to `lib/` and the public headers to `include/`.
 
 ## BDD tests — Behave
 
-End-to-end tests run inside the `behave` devcontainer service. Switch to it by changing
-`"service": "behave"` in `.devcontainer/devcontainer.json` and rebuilding, or run from the
-gcc container:
+End-to-end tests run against per-target oracle pairs. The Linux pair uses the
+`behave-linux` devcontainer service; switch to it by changing
+`"service": "behave-linux"` in `.devcontainer/devcontainer.json` and
+rebuilding, or run from the gcc container:
 
 ```bash
 behave Bdd/features/
 ```
 
-In the behave container, **Ctrl+Shift+B** runs `behave Bdd/features/` automatically.
+In the behave-linux container, **Ctrl+Shift+B** runs `behave Bdd/features/` automatically.
 
-See [BDD testing](bdd.md) for architecture details.
+For the FreeRTOS pair (cross-build the SingleTask ELF, then drive QEMU through
+Behave inside `freertos-target`), see [`Bdd/README.md`](../Bdd/README.md).
+
+See [BDD testing](bdd.md) for architecture details and the `BDD_TARGET` /
+`@freertoswip` contract.
 
 ## JUnit XML output
 

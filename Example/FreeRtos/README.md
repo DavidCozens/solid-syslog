@@ -1,13 +1,18 @@
-# FreeRTOS example
+# FreeRTOS examples
 
 Cross-compiled FreeRTOS demos that run under `qemu-system-arm` with the
 `mps2-an385` (Cortex-M3) machine.
 
 | Subdir | Purpose |
 |---|---|
-| `HelloWorld/` | Single FreeRTOS task that prints `hello` via semihosting. Bring-up smoke test for E08; no syslog content yet. |
+| `HelloWorld/` | Minimal FreeRTOS-on-QEMU bring-up smoke. Single task printing one line over the CMSDK UART; no IP stack, no syslog. CI runs this under QEMU as a fast pre-flight — when it goes red the cross-compile / scheduler / UART / newlib chain is broken before any higher layer is implicated. Will be retired once `SingleTask`'s coverage and confidence make the diagnostic separation unnecessary. |
+| `SingleTask/` | Canonical FreeRTOS-on-QEMU example: SolidSyslog with NullBuffer + UdpSender over FreeRTOS-Plus-TCP, the `SolidSyslogFreeRtosStaticResolver` pinned to the QEMU slirp gateway (`10.0.2.2`), and the `Example/Common/ExampleInteractive` runner. Drive identity / endpoint / PRIVAL fields over the UART command channel with `set NAME VALUE`, emit N RFC 5424 datagrams with `send N`, exit cleanly with `quit`. The BDD harness drives this binary by piping the same commands through `qemu-system-arm`'s stdio UART; see [`Bdd/README.md`](../../Bdd/README.md). |
 
-Future stories under E08 will add UDP / TCP / TLS examples alongside.
+Both examples share `Common/` (CMSDK UART driver, newlib syscalls, mps2-an385
+linker script, startup) and `cmake/` (the `arm-none-eabi.cmake` toolchain
+file). The `freertos-cross` CMake preset and the `freertos-target` devcontainer
+service ([`docs/containers.md`](../../docs/containers.md)) carry everything
+needed to build and run them.
 
 ## In VS Code
 

@@ -20,8 +20,12 @@ without renaming what's already there.
 | `analyze-format` | — | clang-format dry-run; fails if any file needs reformatting |
 | `analyze-iwyu` | `iwyu` | include-what-you-use; fails on missing or unused `#include` directives |
 | `integration-linux-openssl` | `debug` | Runs the in-process TLS integration tests against libssl (no network oracle) |
-| `bdd-linux-syslog-ng` | — | End-to-end BDD test via Docker Compose (syslog-ng + Behave), Linux runner |
+| `integration-windows-openssl` | `msvc-debug` | Same TLS integration tests on `windows-latest` against libssl from vcpkg |
+| `bdd-linux-syslog-ng` | — | End-to-end BDD test via Docker Compose (`syslog-ng-linux` + `behave-linux`), Linux runner |
 | `bdd-windows-otel` | — | Windows-eligible BDD scenarios driven against an OTel Collector oracle |
+| `build-freertos-host-tdd` | `debug` | Host-TDD of FreeRTOS adapters against fakes; runs inside `cpputest-freertos` (FreeRTOS upstream sources at fixed paths) |
+| `build-freertos-target` | `freertos-cross` | ARM cross-build (Cortex-M3, mps2-an385); QEMU bring-up smoke for HelloWorld; uploads the SingleTask ELF as an artifact for `bdd-freertos-qemu` |
+| `bdd-freertos-qemu` | — | Pulls the SingleTask ELF artifact, brings up the freertos compose pair (`syslog-ng-freertos` + `behave-freertos`); Behave drives the example through `qemu-system-arm`'s UART |
 
 ## Branch protection
 
