@@ -249,8 +249,13 @@ static bool OnSet(const char* name, const char* value)
     }
     if (strcmp(name, "facility") == 0)
     {
+        /* Mirrors the Linux example's atoi-and-cast (Example/Common/
+         * ExampleCommandLine.c): the example forwards the parsed value
+         * unchanged so the library is the single authority on what's
+         * valid (out-of-range facility/severity encodes as the
+         * internal-error PRIVAL 43). */
         unsigned long parsed = 0U;
-        if (!TryParseUInt(value, &parsed) || parsed > 23U)
+        if (!TryParseUInt(value, &parsed))
         {
             return false;
         }
@@ -260,7 +265,7 @@ static bool OnSet(const char* name, const char* value)
     if (strcmp(name, "severity") == 0)
     {
         unsigned long parsed = 0U;
-        if (!TryParseUInt(value, &parsed) || parsed > 7U)
+        if (!TryParseUInt(value, &parsed))
         {
             return false;
         }
@@ -290,9 +295,11 @@ static bool TryParseUInt(const char* value, unsigned long* out)
     }
     char*         end    = NULL;
     unsigned long parsed = strtoul(value, &end, 10);
-    /* strtoul accepts a leading '-' and wraps to a huge unsigned, but each
-     * call site range-checks (port <= UINT16_MAX, facility <= 23,
-     * severity <= 7) so wrapped values are still rejected upstream. */
+    /* strtoul accepts a leading '-' and wraps to a huge unsigned. The port
+     * call site bounds-checks against UINT16_MAX upstream; facility and
+     * severity intentionally don't, mirroring the Linux example's
+     * atoi-and-cast so wrapped values reach the library and encode as
+     * the internal-error PRIVAL. */
     if (*end != '\0')
     {
         return false;
