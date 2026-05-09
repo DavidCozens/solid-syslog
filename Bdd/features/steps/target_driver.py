@@ -35,6 +35,8 @@ import subprocess
 _FREERTOS_SET_TRANSLATION = {
     "--facility": "facility",
     "--severity": "severity",
+    "--msgid": "msgid",
+    "--message": "msg",
 }
 
 
