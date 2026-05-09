@@ -22,6 +22,11 @@ formatting, UDP / TCP / TLS / mTLS transport, asynchronous buffering, rotating
 block store-and-forward with CRC-16 integrity, and the full
 [IEC 62443 SL1–SL4 component set](docs/iec62443.md).
 
+FreeRTOS support is in active development on Cortex-M3 (mps2-an385 under QEMU):
+UDP transport via FreeRTOS-Plus-TCP, host-TDD'd adapters, an interactive
+SingleTask example, and BDD scenarios driven through QEMU's UART
+([epic E08 #268](https://github.com/DavidCozens/solid-syslog/issues/268)).
+
 **Not yet production-ready**, and no API stability guarantee yet. Known gaps:
 
 - Public API may evolve — sender implementations currently use static
@@ -75,12 +80,14 @@ Public headers are split by audience (Interface Segregation Principle):
 - **`SolidSyslogTimeQualitySd.h`** — timeQuality structured data (RFC 5424 §7.1): tzKnown, isSynced, syncAccuracy
 - **`SolidSyslogOriginSd.h`** — origin structured data (RFC 5424 §7.2): software, swVersion, enterpriseId, ip
 - **`SolidSyslogPosixClock.h`** / **`SolidSyslogPosixHostname.h`** / **`SolidSyslogPosixProcessId.h`** / **`SolidSyslogPosixSysUpTime.h`** — POSIX helpers
+- **`SolidSyslogFreeRtosDatagram.h`** / **`SolidSyslogFreeRtosStaticResolver.h`** — FreeRTOS-Plus-TCP UDP datagram adapter and a hardcoded-IPv4 resolver for FreeRTOS targets
 
-Three example programs demonstrate usage:
+Four example programs demonstrate usage:
 
 - **`Example/SingleTask/`** — POSIX, NullBuffer, single-task bare-metal model
 - **`Example/Threaded/`** — POSIX, PosixMessageQueueBuffer, two pthreads (logger + service), SwitchingSender over UDP + TCP + TLS + mTLS (TLS build required for the last two); `--transport` sets the initial transport, `switch <name>` flips it at runtime
 - **`Example/Windows/`** — Windows, CircularBuffer + WindowsMutex, Win32 service thread (`_beginthreadex`) draining the buffer, Winsock UDP / TCP, with the Windows clock / hostname / process-id / sysUpTime helpers
+- **`Example/FreeRtos/SingleTask/`** — FreeRTOS-on-QEMU (Cortex-M3, mps2-an385), NullBuffer, UDP via FreeRTOS-Plus-TCP, interactive `set NAME VALUE` / `send N` / `quit` command channel over the CMSDK UART; BDD-driven against syslog-ng. See [`Example/FreeRtos/README.md`](Example/FreeRtos/README.md)
 
 ## Compliance
 

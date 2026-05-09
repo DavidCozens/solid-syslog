@@ -37,16 +37,25 @@ fail here.
                               Bdd/output/received*.log
 ```
 
-Two Docker Compose services collaborate:
+BDD targets pair with their own oracle so jobs and developers
+switching containers never interfere. Each pair lives on its own
+bridge network so the `syslog-ng` DNS alias is scoped per-pair —
+see [`Bdd/README.md`](../Bdd/README.md) for the per-target compose
+layout, the `BDD_TARGET` env-var contract, and FreeRTOS local
+fault-finding tips.
 
-| Service | Role |
-|---|---|
-| `syslog-ng` | Receives syslog on UDP / TCP 5514, TLS 6514, and mTLS 6515; parses RFC 5424; writes parsed fields to per-transport log files |
-| `behave` | Runs Gherkin scenarios that invoke the example binary and assert on the parsed output |
+| Target | Behave runner | Oracle |
+|---|---|---|
+| Linux | `behave-linux` | `syslog-ng-linux` |
+| FreeRTOS | inside `freertos-target` (cross image carries QEMU + Behave) | `syslog-ng-freertos` (shared netns; QEMU slirp `10.0.2.2` reaches it on loopback) |
+| Windows | `behave` on the runner | `otelcol-contrib` (no compose; runner-direct) |
 
-The example binary is built in the `gcc` container but executed by Behave via `subprocess.run`.
-Both services share the workspace mount, so `Bdd/output/received.log` is visible to both
-syslog-ng (writer) and Behave (reader) without any network file transfer.
+The Linux example binary is built in the `gcc` container but executed by Behave via
+`subprocess.run`. Both services share the workspace mount, so `Bdd/output/received.log`
+is visible to both syslog-ng (writer) and Behave (reader) without any network file
+transfer. The FreeRTOS ELF is built in the cross image and run under
+`qemu-system-arm` from inside the `freertos-target` service; Behave drives it
+through the QEMU UART (`-serial stdio`).
 
 ## Key files
 
@@ -125,18 +134,20 @@ etc.) without rewriting feature tags.
 | `@mtls` | Needs mutual TLS (client cert + key) |
 | `@buffered` | Needs a Linux-only buffered example capability beyond a basic ring buffer + service thread — file-backed block store, switching sender between transports, or syslog-ng reload via the UNIX control socket. The cross-platform "single message via UDP/TCP through a real buffer" path is *not* `@buffered` post-S13.18; TLS and mTLS dropped `@buffered` in S13.19 once the OTel oracle gained TLS receivers (Windows otelcol-contrib listens on 6514 / 6515 with `client_ca_file` for mTLS). |
 
-Two rollout markers are also used (temporary; remove once the scenario passes):
+Three rollout markers are also used (temporary; remove once the scenario passes):
 
 | Tag | Meaning |
 | --- | --- |
 | `@wip` | Skip everywhere — work in progress |
 | `@windows_wip` | Skip on Windows only — should work but not yet verified |
+| `@freertoswip` | Skip on FreeRTOS only — currently fails or errors on the FreeRTOS-on-QEMU target. Each tagged scenario is a follow-up: usually because the FreeRTOS SingleTask example bakes hardcoded `TEST_*` values (hostname, PROCID, timestamp), wires no `meta` / `origin` / `timeQuality` SD yet, or because the scenario uses cmdline args that the FreeRTOS driver doesn't translate to `set NAME VALUE` |
 
 Runner tag filters:
 
 | Runner | Filter |
 | --- | --- |
 | Linux (syslog-ng) | `not @wip` |
+| FreeRTOS (syslog-ng-freertos via QEMU) | `not @wip and not @freertoswip and @udp` |
 | Windows (OTel Collector) | `not @wip and not @windows_wip and not @buffered` |
 
 ## Two oracles, one step file
@@ -199,8 +210,8 @@ This avoids restarting the syslog-ng container between scenarios.
 From WSL or a host terminal (not inside the devcontainer):
 
 ```bash
-# Start syslog-ng
-docker compose -f .devcontainer/docker-compose.yml up -d syslog-ng
+# Start the Linux oracle
+docker compose -f .devcontainer/docker-compose.yml up -d syslog-ng-linux
 
 # Build the example binary (inside the gcc container)
 docker compose -f .devcontainer/docker-compose.yml exec gcc \
@@ -209,9 +220,12 @@ docker compose -f .devcontainer/docker-compose.yml exec gcc \
     cmake --build --preset debug
 
 # Run Behave
-docker compose -f .devcontainer/docker-compose.yml run --rm behave \
+docker compose -f .devcontainer/docker-compose.yml run --rm behave-linux \
     behave Bdd/features/
 ```
+
+For the FreeRTOS pair (cross-build the ELF, then run Behave via QEMU
+inside `freertos-target`), see [`Bdd/README.md`](../Bdd/README.md).
 
 ## Verifying syslog-ng manually
 
