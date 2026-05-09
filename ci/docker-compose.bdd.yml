@@ -20,7 +20,7 @@ services:
         chmod 0777 /var/lib/syslog-ng/syslog-ng.ctl
         wait
     networks:
-      default:
+      linux:
         aliases:
           - syslog-ng
     healthcheck:
@@ -37,6 +37,8 @@ services:
       - bdd-output-linux:/workspaces/SolidSyslog/Bdd/output
       - syslog-ng-ctl-linux:/var/lib/syslog-ng
     working_dir: /workspaces/SolidSyslog
+    networks:
+      - linux
     depends_on:
       syslog-ng-linux:
         condition: service_healthy
@@ -44,12 +46,15 @@ services:
       - BDD_TARGET=linux
     command: behave --junit --junit-directory Bdd/junit --tags='not @wip' Bdd/features/
 
-  # Each BDD target pairs with its own syslog-ng instance so jobs don't
-  # interfere. The behave-<target> service shares the syslog-ng-<target>
-  # network namespace via network_mode so QEMU's slirp gateway 10.0.2.2
-  # NATs to the pair's loopback, where syslog-ng-<target> is listening on
-  # 0.0.0.0:5514. Adding more targets is then just another paired service
-  # block.
+  # Each BDD target pairs with its own syslog-ng instance on its own
+  # bridge network so the `syslog-ng` DNS alias is scoped per-pair —
+  # if both pairs ever run together (today they don't, by design),
+  # neither side accidentally resolves the other's oracle. The
+  # behave-<target> service shares the syslog-ng-<target> network
+  # namespace via network_mode so QEMU's slirp gateway 10.0.2.2 NATs
+  # to the pair's loopback, where syslog-ng-<target> is listening on
+  # 0.0.0.0:5514. Adding more targets is one more pair + one more
+  # network block.
   syslog-ng-freertos:
     image: balabit/syslog-ng:latest
     volumes:
@@ -71,7 +76,7 @@ services:
         chmod 0777 /var/lib/syslog-ng/syslog-ng.ctl
         wait
     networks:
-      default:
+      freertos:
         aliases:
           - syslog-ng
     healthcheck:
@@ -114,3 +119,7 @@ volumes:
   bdd-output-freertos:
   syslog-ng-ctl-linux:
   syslog-ng-ctl-freertos:
+
+networks:
+  linux:
+  freertos:

@@ -15,13 +15,16 @@ services:
       - BUILD_PRESET=debug
     user: developer
     working_dir: /workspaces/SolidSyslog
+    networks:
+      - linux
     command: sleep infinity
     depends_on:
       - syslog-ng-linux
 
   # Linux pair — syslog-ng oracle + behave runner, used by gcc/clang dev
-  # work and the bdd-linux-syslog-ng CI job. Each BDD target gets its
-  # own oracle + runner pair so they don't interfere; see
+  # work and the bdd-linux-syslog-ng CI job. Each pair lives on its own
+  # bridge network so the `syslog-ng` DNS alias is scoped per-pair, even
+  # if a future workflow runs both pairs simultaneously; see
   # ci/docker-compose.bdd.yml for the rationale.
   syslog-ng-linux:
     image: balabit/syslog-ng:latest
@@ -56,7 +59,7 @@ services:
           done ) &
         wait $$pid
     networks:
-      default:
+      linux:
         aliases:
           - syslog-ng
 
@@ -74,6 +77,8 @@ services:
       - BDD_TARGET=linux
     user: developer
     working_dir: /workspaces/SolidSyslog
+    networks:
+      - linux
     depends_on:
       - syslog-ng-linux
     command: sleep infinity
@@ -143,7 +148,7 @@ services:
           done ) &
         wait $$pid
     networks:
-      default:
+      freertos:
         aliases:
           - syslog-ng
 
@@ -174,3 +179,7 @@ services:
 volumes:
   syslog-ng-ctl-linux:
   syslog-ng-ctl-freertos:
+
+networks:
+  linux:
+  freertos:
