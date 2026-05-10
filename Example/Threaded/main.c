@@ -13,6 +13,7 @@
 #include "ExampleLanguage.h"
 #include "ExampleMtlsConfig.h"
 #include "ExampleServiceThread.h"
+#include "ExampleStderrErrorHandler.h"
 #include "ExampleSwitchConfig.h"
 #include "ExampleTcpConfig.h"
 #include "ExampleTlsConfig.h"
@@ -214,6 +215,8 @@ static void DestroyStore(struct SolidSyslogStore* store, const struct ExampleOpt
 
 int main(int argc, char* argv[])
 {
+    ExampleStderrErrorHandler_Install();
+
     /* BDD harness can override the TLS/mTLS host (defaults to "syslog-ng",
        the Linux compose service name). Same env-var contract as the Windows
        example so behave can target either oracle. */

@@ -10,6 +10,7 @@
 #include "ExampleInteractive.h"
 #include "ExampleIps.h"
 #include "ExampleLanguage.h"
+#include "ExampleStderrErrorHandler.h"
 #include "ExampleTcpConfig.h"
 #include "ExampleUdpConfig.h"
 #include "SolidSyslog.h"
@@ -44,6 +45,7 @@ static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
 
 int SolidSyslogExample_Run(int argc, char* argv[])
 {
+    ExampleStderrErrorHandler_Install();
     ExampleAppName_Set(argv[0]);
 
     struct ExampleOptions options;

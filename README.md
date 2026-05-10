@@ -55,6 +55,7 @@ no conditional compilation directives in the library source.
 Public headers are split by audience (Interface Segregation Principle):
 - **`SolidSyslog.h`** — application code that logs events (`Log`, `Service`)
 - **`SolidSyslogConfig.h`** — system setup code that creates and destroys loggers
+- **`SolidSyslogError.h`** — install a handler to react to library-internal errors (NULL guards, send failures); default is silent. See `Example/Common/ExampleStderrErrorHandler.c` for a reference implementation
 - **`SolidSyslogSenderDefinition.h`** / **`SolidSyslogBufferDefinition.h`** — extension points for custom senders and buffers
 - **`SolidSyslogNullBuffer.h`** — direct-send buffer for single-task systems
 - **`SolidSyslogCircularBuffer.h`** — portable ring buffer with caller-allocated storage and an injected `SolidSyslogMutex` (`SolidSyslogPosixMutex` / `SolidSyslogWindowsMutex` / `SolidSyslogNullMutex` / your own); the cross-platform threaded buffer
