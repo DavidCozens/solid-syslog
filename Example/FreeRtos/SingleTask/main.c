@@ -15,7 +15,9 @@
  * datagrams to {10.0.2.2, port=g_port}. */
 
 #include "CmsdkUart.h"
+#include "ExampleEnterpriseId.h"
 #include "ExampleInteractive.h"
+#include "ExampleIps.h"
 #include "SolidSyslog.h"
 #include "SolidSyslogConfig.h"
 #include "SolidSyslogEndpoint.h"
@@ -24,6 +26,7 @@
 #include "SolidSyslogFreeRtosStaticResolver.h"
 #include "SolidSyslogNullBuffer.h"
 #include "SolidSyslogNullStore.h"
+#include "SolidSyslogOriginSd.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTimestamp.h"
 #include "SolidSyslogUdpSender.h"
@@ -331,6 +334,16 @@ static void InteractiveTask(void* argument)
     struct SolidSyslogBuffer* buffer = SolidSyslogNullBuffer_Create(sender);
     struct SolidSyslogStore*  store  = SolidSyslogNullStore_Create();
 
+    struct SolidSyslogOriginSdConfig originConfig = {
+        .software     = "SolidSyslogExample",
+        .swVersion    = "0.7.0",
+        .enterpriseId = EXAMPLE_ENTERPRISE_ID,
+        .getIpCount   = ExampleIps_Count,
+        .getIpAt      = ExampleIps_At,
+    };
+    struct SolidSyslogStructuredData* originSd = SolidSyslogOriginSd_Create(&originConfig);
+    struct SolidSyslogStructuredData* sdList[] = {originSd};
+
     struct SolidSyslogConfig config = {
         .buffer       = buffer,
         .sender       = NULL,
@@ -339,14 +352,15 @@ static void InteractiveTask(void* argument)
         .getAppName   = GetAppName,
         .getProcessId = GetProcessId,
         .store        = store,
-        .sd           = NULL,
-        .sdCount      = 0U,
+        .sd           = sdList,
+        .sdCount      = sizeof(sdList) / sizeof(sdList[0]),
     };
     SolidSyslog_Create(&config);
 
     ExampleInteractive_Run(&g_message, stdin, NULL, OnSet);
 
     SolidSyslog_Destroy();
+    SolidSyslogOriginSd_Destroy();
     SolidSyslogNullStore_Destroy();
     SolidSyslogNullBuffer_Destroy();
     SolidSyslogUdpSender_Destroy();

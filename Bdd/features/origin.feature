@@ -1,5 +1,4 @@
 @udp
-@freertoswip
 Feature: Structured data — origin
   The library includes origin metadata identifying the software component.
 
@@ -23,6 +22,7 @@ Feature: Structured data — origin
     When the example program sends a syslog message
     Then the structured data contains ip "192.0.2.1"
 
+  @freertoswip
   Scenario: All standard structured data present
     Given the syslog oracle is running
     When the example program sends a syslog message
