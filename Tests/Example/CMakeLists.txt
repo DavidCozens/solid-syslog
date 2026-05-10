@@ -28,6 +28,7 @@ if(SOLIDSYSLOG_POSIX)
         ${CMAKE_SOURCE_DIR}/Example/SingleTask/SolidSyslogExample.c
         ${CMAKE_SOURCE_DIR}/Example/Common/ExampleCommandLine.c
         ${CMAKE_SOURCE_DIR}/Example/Common/ExampleServiceThread.c
+        ${CMAKE_SOURCE_DIR}/Example/Common/ExampleStderrErrorHandler.c
         ${CMAKE_SOURCE_DIR}/Example/Common/ExampleTcpConfig.c
         ${CMAKE_SOURCE_DIR}/Example/Common/ExampleUdpConfig.c
         ${CMAKE_SOURCE_DIR}/Example/Common/ExampleInteractive.c

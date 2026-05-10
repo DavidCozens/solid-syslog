@@ -6,6 +6,7 @@
 #include "ExampleLanguage.h"
 #include "ExampleMtlsConfig.h"
 #include "ExampleServiceThread.h"
+#include "ExampleStderrErrorHandler.h"
 #include "ExampleSwitchConfig.h"
 #include "ExampleTlsConfig.h"
 #include "ExampleTlsSender.h"
@@ -277,6 +278,8 @@ static void DestroyStore(struct SolidSyslogStore* store, const struct WindowsExa
 
 int SolidSyslogWindowsExample_Run(int argc, char* argv[])
 {
+    ExampleStderrErrorHandler_Install();
+
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
     {

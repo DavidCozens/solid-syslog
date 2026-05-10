@@ -6,6 +6,8 @@
 
 #include "SolidSyslogBuffer.h"
 #include "SolidSyslogConfig.h"
+#include "SolidSyslogError.h"
+#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogStore.h"
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogMacros.h"
@@ -85,15 +87,22 @@ static void NilStringFunction(struct SolidSyslogFormatter* formatter)
 
 void SolidSyslog_Create(const struct SolidSyslogConfig* config)
 {
-    instance.buffer = config->buffer;
-    instance.sender = config->sender;
-    ASSIGN_IF_NON_NULL(instance.clock, config->clock);
-    ASSIGN_IF_NON_NULL(instance.getHostname, config->getHostname);
-    ASSIGN_IF_NON_NULL(instance.getAppName, config->getAppName);
-    ASSIGN_IF_NON_NULL(instance.getProcessId, config->getProcessId);
-    instance.store   = config->store;
-    instance.sd      = config->sd;
-    instance.sdCount = config->sdCount;
+    if (config != NULL)
+    {
+        instance.buffer = config->buffer;
+        instance.sender = config->sender;
+        ASSIGN_IF_NON_NULL(instance.clock, config->clock);
+        ASSIGN_IF_NON_NULL(instance.getHostname, config->getHostname);
+        ASSIGN_IF_NON_NULL(instance.getAppName, config->getAppName);
+        ASSIGN_IF_NON_NULL(instance.getProcessId, config->getProcessId);
+        instance.store   = config->store;
+        instance.sd      = config->sd;
+        instance.sdCount = config->sdCount;
+    }
+    else
+    {
+        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERR, SOLIDSYSLOG_ERROR_MSG_CREATE_NULL_CONFIG);
+    }
 }
 
 void SolidSyslog_Destroy(void)

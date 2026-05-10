@@ -5,6 +5,7 @@ if(SOLIDSYSLOG_POSIX)
         Common/ExampleIps.c
         Common/ExampleLanguage.c
         Common/ExampleServiceThread.c
+        Common/ExampleStderrErrorHandler.c
         Common/ExampleUdpConfig.c
         Common/ExampleTcpConfig.c
         Common/ExampleInteractive.c
@@ -56,6 +57,7 @@ elseif(SOLIDSYSLOG_WINSOCK AND HAVE_WINDOWS_PLATFORM)
         Common/ExampleIps.c
         Common/ExampleLanguage.c
         Common/ExampleServiceThread.c
+        Common/ExampleStderrErrorHandler.c
         Common/ExampleSwitchConfig.c
     )
     # TLS transport: OpenSSL+WinsockTcp when SOLIDSYSLOG_OPENSSL, nil-object stub otherwise.

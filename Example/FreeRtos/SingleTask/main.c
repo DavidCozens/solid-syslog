@@ -23,6 +23,7 @@
 #include "SolidSyslogAtomicCounter.h"
 #include "SolidSyslogConfig.h"
 #include "SolidSyslogEndpoint.h"
+#include "SolidSyslogError.h"
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogFreeRtosDatagram.h"
 #include "SolidSyslogFreeRtosStaticResolver.h"
@@ -207,6 +208,12 @@ static void GetAppName(struct SolidSyslogFormatter* formatter)
  * tzKnown=0, isSynced=0. SolidSyslogConfig.clock=NULL drops through to the
  * library's NilClock; the resulting all-zero SolidSyslogTimestamp fails
  * TimestampIsValid in Core/Source/SolidSyslog.c and emits "-" on the wire. */
+static void ErrorHandler(void* context, enum SolidSyslog_Severity severity, const char* message)
+{
+    (void) context;
+    (void) printf("[solidsyslog] severity=%d %s\n", (int) severity, message);
+}
+
 static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
 {
     timeQuality->tzKnown                  = false;
@@ -370,6 +377,7 @@ static void InteractiveTask(void* argument)
         .sd           = sdList,
         .sdCount      = sizeof(sdList) / sizeof(sdList[0]),
     };
+    SolidSyslog_SetErrorHandler(ErrorHandler, NULL);
     SolidSyslog_Create(&config);
 
     ExampleInteractive_Run(&g_message, stdin, NULL, OnSet);
