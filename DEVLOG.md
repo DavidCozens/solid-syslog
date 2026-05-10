@@ -1,5 +1,73 @@
 # Dev Log
 
+## 2026-05-10 — S08.03 slice 7 — Origin SD wiring in FreeRTOS example (#308)
+
+Slice 6 closed the cmdline→`set` translation gap so the FreeRTOS BDD
+runner reached 4 features / 10 scenarios green. Slice 7 wires the
+first structured-data element — Origin — into
+`Example/FreeRtos/SingleTask/main.c`, untags 4 of 5 `origin.feature`
+scenarios, and brings the runner to **5 features / 14 scenarios
+green**.
+
+### Decisions
+
+- **Reuse `Example/Common/ExampleIps.c` via CMakeLists addition.**
+  The Linux/Windows examples already use `ExampleIps_Count` /
+  `ExampleIps_At` returning the documentation IP "192.0.2.1"; reusing
+  the same source on FreeRTOS keeps the BDD assertion target-agnostic
+  and avoids a divergent local getter. One line in the FreeRTOS
+  source list (`Example/Common/ExampleIps.c`) — the include path was
+  already wired in slice 4 for `ExampleInteractive.h`.
+- **Hardcode `software` / `swVersion` in main.c.** Linux/Windows
+  hardcode them in their own `main.c` (`SolidSyslogExample` /
+  `0.7.0`); slice 7 stays consistent rather than lifting to a shared
+  `Example/Common` constant. Lifting is a separate cleanup that
+  would touch all three examples in one go.
+- **Real-IP enumeration deferred.** David flagged that
+  `ExampleIps.c` is a fake fixture (its file comment notes that "in
+  real deployments this comes from `getifaddrs(3)` on POSIX,
+  `GetAdaptersAddresses` on Windows"). The honest path on FreeRTOS
+  is `FreeRTOS_GetEndPoints` returning the actual configured IP
+  (10.0.2.15) — but doing that in one example creates a divergent
+  honesty level vs. Linux/Windows and breaks the BDD's `ip
+  "192.0.2.1"` assertion. The right rollout is across all three
+  examples plus a target-aware BDD layer; that conversation is
+  flagged in memory to surface at S08.03 (#268) closure (memory:
+  `project_origin_sd_real_ip_enumeration`).
+- **Per-scenario `@freertoswip` tagging on origin.feature.**
+  Scenarios 1–4 (software, swVersion, enterpriseId, ip) untag at
+  feature level. Scenario 5 (`All standard structured data
+  present`) keeps the tag because it also asserts `sequenceId` and
+  `tzKnown` — those need meta SD + timeQuality SD, which are
+  separate slices.
+
+### Local verification
+
+- `cmake --build --preset freertos-cross --target
+  SolidSyslogFreeRtosSingleTask` clean.
+- `behave --tags='not @wip and not @freertoswip and @udp' Bdd/
+  features/origin.feature` against `syslog-ng-freertos`: 4
+  scenarios pass, 1 skipped.
+- Full FreeRTOS BDD sweep: 5 features / 14 scenarios pass / 32
+  skipped (slice 6 baseline 4 / 10 / 36; +1 feature / +4 scenarios
+  / -4 skipped).
+- `clang-format --dry-run --Werror` on touched C files: clean.
+- Linux unit tests / cppcheck / tidy / iwyu / sanitize / coverage:
+  not run locally (cross-only devcontainer); CI's responsibility.
+
+### Deferred
+
+- Real-IP enumeration across Linux/Windows/FreeRTOS examples
+  (separate epic; surface at #268 close — see memory entry).
+- Lifting `software` / `swVersion` to `Example/Common` (cosmetic
+  cleanup; touches three examples).
+- Untag the `All standard structured data present` scenario —
+  needs meta SD + timeQuality SD wiring.
+
+### Open questions
+
+- None for this slice.
+
 ## 2026-05-09 — S08.03 slice 6 — cmdline → `set` translation in BDD target driver (#306)
 
 Slice 5 left eight `@udp` features tagged `@freertoswip` because the

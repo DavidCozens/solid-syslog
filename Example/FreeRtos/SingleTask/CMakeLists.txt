@@ -147,6 +147,7 @@ add_executable(SolidSyslogFreeRtosSingleTask
     ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosDatagram.c
     ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosStaticResolver.c
     ${CMAKE_SOURCE_DIR}/Example/Common/ExampleInteractive.c
+    ${CMAKE_SOURCE_DIR}/Example/Common/ExampleIps.c
     $<TARGET_OBJECTS:solid_syslog_freertos_upstream>
 )
 
