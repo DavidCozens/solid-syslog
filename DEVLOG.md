@@ -1,5 +1,98 @@
 # Dev Log
 
+## 2026-05-11 — S08.09 SolidSyslogFreeRtosTcpStream + tcp_transport BDD on QEMU (#341)
+
+First slice of S08.06 (TCP transport on FreeRTOS-Plus-TCP). Lands the
+TCP stream adapter, extends the sockets fake to cover the TCP-side
+API, flips Plus-TCP into TCP mode in the BDD target, and wraps UDP+TCP
+under SolidSyslogSwitchingSender so behave's `--transport tcp` flips
+the active transport over the UART. `tcp_transport.feature` green
+against QEMU on the first CI run; no slirp-NAT flakiness on the
+bounded-connect cap.
+
+### Decisions
+
+- **Bounded blocking connect via SO_SNDTIMEO=200ms, not non-blocking +
+  select.** FreeRTOS-Plus-TCP does not expose non-blocking connect
+  with a `select` companion (no analogue of POSIX `EINPROGRESS` →
+  `select` → `SO_ERROR`). The choreography is therefore: socket →
+  setsockopt(SNDTIMEO=200ms) → connect → setsockopt(SNDTIMEO=0,
+  RCVTIMEO=0) on success, or closesocket on failure. 200ms is short
+  enough that the Service task keeps draining predictably during an
+  outage, long enough for a healthy peer to ACK over slirp/LAN.
+  Clearing both timeouts post-connect restores the non-blocking
+  single-call contract `SolidSyslogStream` requires of Send/Read.
+- **SwitchingSender with two inners on FreeRTOS, not three.** The
+  BDD_TARGET_SWITCH_TLS enum slot stays in `BddTargetSwitchConfig` for
+  cross-platform parity, but the FreeRTOS wiring sets `senderCount = 2`
+  with only UDP+TCP inners. SwitchingSender's existing bound-check
+  falls a `set transport tls` through to its NilSender (returns false,
+  no crash) rather than a NULL deref — graceful degradation until
+  S08.07 lands real TLS on FreeRTOS.
+- **Pin every argument to every FreeRTOS call in the unit tests, not
+  just the obvious ones.** First-pass tests covered socket/connect/
+  send/recv args by value but only checked setsockopt's *option name*
+  via the side-effect on `LastSndTimeoSet`/`LastRcvTimeoSet`. Added
+  two tests pinning the setsockopt socket handle, level=0, and
+  optlen=sizeof(TickType_t) too, so a regression that changed the
+  level or optlen would fail at the bar instead of slipping through
+  the option-name proxy. MISRA-style argument coverage.
+- **Single level of abstraction in Open/Send/Read, mirrored across all
+  three.** Each vtable function now reads as a three-line sentence:
+  guard on stream state → call the same-level helper
+  (`OpenSocket` / `SendOrCloseOnFailure` / `ReceiveOrCloseOnFailure`)
+  → return. Native FreeRTOS calls are pushed into the second layer
+  (`TryConnect`, `TrySend`) where they belong. Pulled the
+  `Try*`/`*OrCloseOnFailure` pair pattern across Send and Read for
+  symmetry even though Receive has different return semantics than
+  Send — the names carry the intent at each layer. `IsClosed` removes
+  the negative guard in Open. Every static now wears the
+  `FreeRtosTcpStream_` prefix for MISRA C 5.9 file-scope identifier
+  uniqueness, matching FreeRtosDatagram.
+- **InteractiveTask stack *40 → *48.** StreamSender.Connect allocates
+  a SolidSyslogAddressStorage plus a SolidSyslogFormatter sized for
+  SOLIDSYSLOG_MAX_HOST_SIZE on stack; TransmitFramed adds a small
+  octet-prefix formatter. Empirically tipped a *40 budget into a
+  Cortex-M lockup (PC=0, fault-during-fault — classic
+  stack-overflow-corrupting-the-exception-return signature) when
+  SwitchingSender flipped UDP→TCP→UDP across repeated sends. *48
+  restored ~4 KB headroom and the same scenario completed cleanly.
+- **Test fixture: openStream() / readIntoBuffer() helpers and a
+  CHECK_SOCKET_CLOSED_ONCE macro.** The arrange step in 25+ tests
+  collapses to `openStream();`. The macro pins both the closesocket
+  call count *and* the identity of the closed socket — applying it
+  uniformly across the close-on-failure tests caught three sites
+  (SendClosesSocketOnError, ReadReturnsNegativeOneOnErrorAndClosesSocket,
+  DestroyClosesOpenSocket) that previously only checked the count.
+  The check count went 56 → 59 from that tightening alone.
+
+### Deferred
+
+- **CMake-driven memory scaling** for both static-`_Create` storage
+  sizes and FreeRTOS task stack depths. The recurring stack bumps
+  (*16 → *32 → *40 → *48) and the per-class `SOLIDSYSLOG_*_SIZE`
+  macros point to this as the right next intervention: expose them as
+  CMake-tunable variables so integrators size memory once,
+  declaratively, instead of editing `main.c` each time a new feature
+  lands. Captured in memory `project_freertos_stack_budget` (renamed
+  from *40 to *48 ceiling).
+- **tcp_reconnect.feature** → S08.10 (#339, next session).
+- **switching_transport.feature** (and the `switch` runtime command in
+  `OnSet`) → S08.11 (#340).
+- **TLS on FreeRTOS** → S08.07 (#272). The
+  `BDD_TARGET_SWITCH_TLS` slot graceful-fallback decision above is
+  the bridge until then.
+- **End-to-end BDD verification locally.** Docker isn't available
+  inside the freertos-target devcontainer, so the
+  `bdd-freertos-qemu` job was the real arbiter; QEMU smoke (UDP+TCP
+  switching) was the strongest local signal. Captured in memory
+  `project_behave_container_gaps`.
+
+### Open questions
+
+- None. The merged CI run was all-green first try — including the
+  bounded-connect over slirp NAT, which was the most-suspect path.
+
 ## 2026-05-11 — S24.03 drop AtomicOps vtable; select atomics at link time (#326)
 
 E24 close-out story. The vtable through which AtomicCounter reached
