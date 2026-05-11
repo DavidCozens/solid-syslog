@@ -1578,9 +1578,6 @@ TEST(SolidSyslog, LogAfterDestroyAndRecreateWithNullFunctionsProducesNilvalues)
 IGNORE_TEST(SolidSyslog, HappyPathOnly)
 
 {
-    // Error handling not yet implemented — see Epic #31
-    //   SolidSyslog_Create with a NULL config does not crash
-    //
     // Optional header fields not yet driven in — see Epic #8
     //   MSG is preceded by UTF-8 BOM
 }
