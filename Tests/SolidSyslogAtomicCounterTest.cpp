@@ -3,6 +3,7 @@
    directly reachable. The library's own SolidSyslogAtomicCounter.o is then
    not pulled in by the linker (static-archive object-on-demand resolution),
    so there is no duplicate-symbol conflict. */
+// NOLINTNEXTLINE(bugprone-suspicious-include)
 #include "SolidSyslogAtomicCounter.c"
 
 #include "CppUTest/TestHarness.h"

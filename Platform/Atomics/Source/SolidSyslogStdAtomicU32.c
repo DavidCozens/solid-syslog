@@ -11,8 +11,7 @@ struct SolidSyslogAtomicU32
     _Atomic uint32_t value;
 };
 
-SOLIDSYSLOG_STATIC_ASSERT(sizeof(struct SolidSyslogAtomicU32) <= sizeof(SolidSyslogAtomicU32Storage),
-                          SolidSyslogAtomicU32Storage_too_small_for_StdAtomicU32);
+SOLIDSYSLOG_STATIC_ASSERT(sizeof(struct SolidSyslogAtomicU32) <= sizeof(SolidSyslogAtomicU32Storage), SolidSyslogAtomicU32Storage_too_small_for_StdAtomicU32);
 
 struct SolidSyslogAtomicU32* SolidSyslogAtomicU32_FromStorage(SolidSyslogAtomicU32Storage* storage)
 {
@@ -27,7 +26,7 @@ void SolidSyslogAtomicU32_Init(struct SolidSyslogAtomicU32* slot, uint32_t value
 
 uint32_t SolidSyslogAtomicU32_Load(struct SolidSyslogAtomicU32* slot)
 {
-    return (uint32_t) atomic_load_explicit(&slot->value, memory_order_relaxed);
+    return atomic_load_explicit(&slot->value, memory_order_relaxed);
 }
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) — CAS shape is universal (compare_exchange convention)
