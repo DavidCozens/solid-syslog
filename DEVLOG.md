@@ -5834,3 +5834,205 @@ reconfigure.
   collaborators' implementation at the bottom. Reads like two
   cooperating "classes" sharing a translation unit. Allowed by C99
   (tentative definitions of file-scope objects).
+
+## 2026-05-11 — S08.04 slice 1: SolidSyslogFreeRtosMutex adapter
+
+First slice of S08.04 (#269) — the FreeRTOS mutex backend that lets
+the existing portable `SolidSyslogCircularBuffer` (S04.05) run safely
+under concurrent task emission. Mirrors `SolidSyslogPosixMutex` /
+`SolidSyslogWindowsMutex` in shape; no example wiring yet (slice 2)
+and no multi-task driver (slice 3).
+
+### Slicing decision
+
+Story acceptance is buffered.feature + structured_data.feature on
+QEMU with concurrent emission. Discussed slicing with David upfront
+and landed on three slices: (1) host-TDD'd mutex adapter, (2)
+swap NullBuffer for CircularBuffer + FreeRtosMutex in the example
+(still single-task), (3) multi-task emission + UART mutex deferred
+from S08.03. This PR is slice 1.
+
+### TDD cycles
+
+Five red→green→refactor cycles against new `FreeRtosSemaphoreFake`:
+
+1. `HandleEqualsStorageAddress` — confirms caller-supplied
+   `SolidSyslogFreeRtosMutexStorage` is the handle (Posix/Windows
+   precedent).
+2. `CreateCallsCreateMutexStaticOnce` — drives the fake's
+   `xQueueCreateMutexStatic` intercept (semphr.h expands the public
+   `xSemaphoreCreateMutexStatic` macro down to this).
+3. `LockCallsSemaphoreTakeOnce` — fake intercepts
+   `xQueueSemaphoreTake`.
+4. `UnlockCallsSemaphoreGiveOnce` — fake intercepts
+   `xQueueGenericSend`.
+5. `DestroyCallsSemaphoreDeleteOnce` — fake intercepts
+   `vQueueDelete` (vSemaphoreDelete macro target).
+
+Refactor pass introduced the `FreeRtosMutex_From` accessor and the
+module-prefixed statics (`FreeRtosMutex_Lock` / `_Unlock`); tried
+the `DEFAULT_INSTANCE` / `DESTROYED_INSTANCE` pattern but
+`StaticSemaphore_t` contains a union and `-Werror=missing-field-
+initializers` rejects partial positional or designated
+initialization. Fell back to the explicit `mutex->base.Lock = ...`
+shape that Posix / Windows already use — same pattern, same file,
+nothing surprising.
+
+### Storage decision
+
+`xSemaphoreCreateMutexStatic` over `xSemaphoreCreateMutex`. The
+storage-injection pattern is consistent across the library
+(no malloc on the library side; integrator owns the bytes), and
+FreeRTOS happens to expose exactly the right API. Trade-off: the
+example FreeRTOSConfig.h must set `configSUPPORT_STATIC_ALLOCATION
+= 1` in slice 2 and provide `vApplicationGetIdleTaskMemory` /
+`GetTimerTaskMemory` — a one-time tax we're paying anyway as the
+RTOS demo matures toward heap-free.
+
+### FreeRtosFakes additions
+
+- `FreeRtosSemaphoreFake.{h,c}` — call-count fakes for the four
+  queue functions the semaphore macros expand to. Same shape as
+  `FreeRtosSocketsFake` / `FreeRtosArpFake` / `FreeRtosTaskFake`.
+- `Tests/Support/FreeRtosFakes/Interface/FreeRTOSConfig.h` now sets
+  `configSUPPORT_STATIC_ALLOCATION = 1` (and explicitly
+  `configSUPPORT_DYNAMIC_ALLOCATION = 1` to mirror what the example
+  will need). The doc comment about "first content lands with
+  S08.04" comes true.
+
+### Verified
+
+- `debug`, `tidy`, `cppcheck` presets pass on the new target
+  (`SolidSyslogFreeRtosMutexTest` — 5 tests).
+- `freertos-host-1` container's full `ctest --preset debug` is
+  green on all 7 suites; no regressions in Datagram / Resolver /
+  SysUpTime / CmsdkUart / OpenSslIntegration / SolidSyslogTests.
+- `freertos-cross` preset still builds `SolidSyslogFreeRtosSingleTask.elf`
+  unchanged (the adapter source isn't wired into the example
+  yet — that's slice 2).
+- cppcheck needed the standard `unreadVariable` suppression on the
+  `mutex` field consumed across TEST_GROUP methods; matches the
+  Posix mutex test.
+
+### Decisions
+
+- **Adapter-then-wiring slicing.** Land the FreeRtosMutex adapter
+  ahead of the example switch so the next slice can focus on the
+  CircularBuffer wiring and Service driver task without the mutex
+  refactor confounding any failure.
+- **Match Posix/Windows mutex shape over DEFAULT_INSTANCE pattern.**
+  The `feedback_storage_pattern` memory points at DEFAULT_INSTANCE,
+  but `StaticSemaphore_t`'s internal union forces back to explicit
+  field assignment. Existing Posix/Windows mutex use the same
+  explicit shape, so consistency wins here.
+
+### Deferred to later slices
+
+- Example wiring (NullBuffer → CircularBuffer + FreeRtosMutex,
+  Service driver task, `configSUPPORT_STATIC_ALLOCATION` flip + the
+  idle/timer-task memory hooks) — slice 2.
+- Multi-task emission to make `buffered.feature` and
+  `structured_data.feature` exercise concurrent producers; UART
+  mutex deferred from S08.03 — slice 3.
+
+### Open questions
+
+- HelloWorld retirement watching brief surfaced at session start as
+  per memory — left open; David decides.
+
+## 2026-05-11 — S08.04 slice 2: FreeRTOS example switches to CircularBuffer + FreeRtosMutex
+
+Second slice of S08.04 (#269). The FreeRTOS SingleTask example now drives
+emission through `SolidSyslogCircularBuffer` + `SolidSyslogFreeRtosMutex`
+in place of `SolidSyslogNullBuffer`, with a dedicated FreeRTOS Service
+task draining the ring concurrently with the Interactive producer. Both
+BDD acceptance features (`buffered.feature` and `structured_data.feature`)
+pass against QEMU on this single-producer wiring; multi-producer
+contention belongs in slice 3.
+
+### Wiring changes
+
+- `Example/FreeRtos/SingleTask/FreeRTOSConfig.h`:
+  - `configSUPPORT_STATIC_ALLOCATION = 1` (required by
+    `xSemaphoreCreateMutexStatic`).
+  - `configKERNEL_PROVIDED_STATIC_MEMORY = 1` to lean on the kernel's
+    default `vApplicationGet{Idle,Timer}TaskMemory` implementations —
+    no extra boilerplate in `main.c`, no MPU port.
+- `Example/FreeRtos/SingleTask/main.c`:
+  - 8-message `SolidSyslogCircularBufferStorage` and a
+    `SolidSyslogFreeRtosMutexStorage` declared at file scope (~16 KB of
+    `.bss`, trivial against mps2-an385's 16 MB SRAM).
+  - `InteractiveTask` now composes `CircularBuffer_Create(storage,
+    sizeof(storage), mutex)` over the existing UDP sender and passes
+    both `buffer` and `sender` into `SolidSyslogConfig` (the
+    `config.sender = NULL` shortcut that NullBuffer permitted is gone —
+    Service reads from buffer and dispatches through `config.sender`).
+  - New `ServiceTask` loops `SolidSyslog_Service()` + `vTaskDelay(1ms)`
+    at the same priority as Interactive — equal-priority round-robin
+    is enough to keep the ring drained without starving the producer.
+  - IP-network event hook spawns Service alongside Interactive on
+    first `eNetworkUp`.
+- `Example/FreeRtos/SingleTask/CMakeLists.txt`: links the new
+  `SolidSyslogFreeRtosMutex.c` adapter into the .elf.
+
+### BDD driver fix
+
+`run_buffered_example` in `Bdd/features/steps/syslog_steps.py` was
+selecting `THREADED_BINARY` whenever `oracle_format == "syslog-ng"` —
+which conflated "Linux runner" with "any syslog-ng runner" and tripped
+on FreeRTOS-on-QEMU (also syslog-ng, but its example binary is the
+.elf, not the POSIX threaded binary). Switched the dispatch to
+`context.target == "linux"` so FreeRTOS routes through
+`context.example_binary`. `buffered.feature` lost its `@freertoswip`
+tag in the same pass.
+
+### Verified
+
+- `freertos-cross` builds `SolidSyslogFreeRtosSingleTask.elf`.
+- Manual QEMU smoke: `send 3` → "Sent 3 messages" → `quit` clean.
+- `BDD_TARGET=freertos behave --tags='@udp and not @wip and not @freertoswip
+  and not @rtc' Bdd/features/`: 9 features / 26 scenarios pass / 0 fail
+  / 12 features and 23 scenarios skipped on remaining gaps (TCP, TLS,
+  store-and-forward, mTLS — all genuine S08.06/07/05 scope). Up from
+  8 features / 24 scenarios at S08.03 close.
+- Host-side `ctest --preset debug`: 7/7 green, no regressions to the
+  Datagram / Resolver / SysUpTime / Mutex / UART / OpenSslIntegration
+  / SolidSyslogTests suites.
+
+### Decisions
+
+- **Equal-priority producer + drainer over priority bump.** A higher-
+  priority Service task would preempt the producer the instant a
+  message lands in the ring — which sounds good but starves a
+  fast-emitting producer and obscures whether the buffer is actually
+  the contended resource. Equal priority + FreeRTOS round-robin
+  matches the Linux Threaded example's pthread fair-share semantics
+  and exposes any starvation issue at the right place (slice 3 will
+  add more producers).
+- **`config.sender = sender`** (Threaded shape), not the NullBuffer
+  shortcut. The buffered Service algorithm goes through `config.sender`;
+  passing it explicitly removes the ambiguity that "NullBuffer carries
+  its own sender" introduced.
+- **Drop `@freertoswip` on `buffered.feature` now**, not at slice 3
+  close. The feature acceptance is single-producer-multi-message
+  delivery — passing today proves the buffer + Service wiring is
+  correct. The multi-producer contention slice 3 brings is exercised
+  better through a dedicated multi-task scenario than by retrofitting
+  buffered.feature.
+
+### Deferred to slice 3
+
+- Multi-task producers (several Interactive-like tasks emitting
+  concurrently) to put the FreeRtosMutex under genuine contention.
+- The UART mutex deferred from S08.03 (multiple printf-using tasks).
+- HelloWorld retirement decision (slice-3 gate at the latest — by
+  then SingleTask exercises everything HelloWorld does, plus
+  contention).
+
+### Open questions
+
+- Should buffer capacity (currently hard-coded at 8 max-sized messages
+  ≈ 16 KB) move to a CMake cache variable, like the eventual
+  `SOLIDSYSLOG_MAX_MESSAGE_SIZE` / SD-count knobs in the resource-sizing
+  backlog? Trivial to change later, but worth flagging for the resource-
+  sizing epic when it lands.
