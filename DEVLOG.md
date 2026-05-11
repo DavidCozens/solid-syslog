@@ -1,5 +1,78 @@
 # Dev Log
 
+## 2026-05-11 — S12.05 NULL guards for UdpSender (#116)
+
+First copy of the S12.04 exemplar pattern onto a sibling singleton.
+The story body only required a guard for `Create(NULL config)`; the
+implementation went further and aligned the file with the
+`SolidSyslog.c` shape so S12.06 (MetaSd, OriginSd, AtomicCounter) can
+follow the same template mechanically.
+
+### Decisions
+
+- **Three slices, one PR.** Slice 1: top-level `Create(NULL)` guard,
+  with the install body extracted into an `InstallConfig` helper for
+  the per-field expansion in slice 2 (issue scope). Slice 2: private
+  `NilResolver` and `NilDatagram` vtables with audible-once dispatch
+  reporting, per-field `InstallResolver` / `InstallDatagram` /
+  `InstallEndpoint` / `InstallEndpointVersion` helpers, replace
+  `DEFAULT_INSTANCE` with `NilInstance`. Slice 3: `instanceInitialised`
+  flag rejecting re-Create without an intervening `_Destroy`, mirroring
+  S12.04. Each slice committed separately to keep the diff reviewable.
+- **Audible nils for both required collaborators.** `NilResolverResolve`
+  and `NilDatagramOpen` each report once via `SolidSyslog_Error` on
+  first dispatch from `Send`, then silently consume; `_Destroy` re-arms
+  both flags so a Destroy/Create cycle produces a fresh warning.
+  Reporting from `Open` rather than every nil method keeps the wire to
+  one report-per-mistake even though `Send` walks `Reconcile → Connect
+  → OpenSocket → ResolveDestination → CloseSocket` and would otherwise
+  fire several times. NilEndpoint and NilEndpointVersion stay silent —
+  not configuring an endpoint is a valid integrator choice and is
+  already covered by `NoEndpointConfiguredSendsToPortZero`.
+- **`Create(NULL config)` returns NULL, re-Create returns the active
+  sender pointer.** Two reject paths, two different signals. `NULL`
+  signals "no sender was created" so the integrator's call site sees
+  the failure explicitly. Re-Create returning the *already-active*
+  pointer means an integrator who overwrites their handle with the
+  rejected Create's return value gets transparent fallthrough to the
+  first config, which is the safest possible degraded behaviour. The
+  S12.04 exemplar's `Create` is void so this asymmetry doesn't arise
+  there; for the UdpSender's `struct SolidSyslogSender*` return I
+  picked per-path semantics rather than uniform NULL.
+- **Tentative-definition forward declarations for the nil structs.**
+  C99 lets a file-scope `static T x;` (no initializer) sit at the top
+  of the file with `static T x = {...};` at the bottom. `instance`'s
+  initialiser at the top of the file then captures `&NilResolver` /
+  `&NilDatagram` as link-time addresses, with the structs' contents
+  filled in below. Same pattern the S12.04 exemplar uses for
+  `NilBuffer` / `NilSender` / `NilStore`.
+
+### Deferred
+
+- **No `Send`-side NULL guard for the sender pointer.** Integrators
+  who call `SolidSyslogSender_Send(NULL, ...)` crash. The exemplar
+  doesn't guard at this level either — `Send` derefs `sender->Send`
+  directly. Cross-cutting NULL-safety for the public `_Send`/
+  `_Disconnect` entry points belongs in its own story if it lands at
+  all.
+- **Same pattern on `StreamSender` / `SwitchingSender`.** Not in
+  scope for #116. Likely a single follow-up story rather than per-
+  class once UdpSender shows the template is tight.
+- **100% coverage on UdpSender.c.** Landed at 96.6% line / 92.6%
+  function. `NilDatagram.SendTo` and `NilDatagram.MaxPayload` are
+  vacuously defensive — the vtable struct requires non-NULL slots but
+  the public Send path can't reach them (Open returns false, Reconcile
+  short-circuits). The S24.03 whitebox-include trick that worked for
+  AtomicCounter doesn't compose here: SolidSyslogUdpSender.c uses
+  designated initializers throughout, and the project's C++17 standard
+  rejects those as `-Werror=c++20-extensions` when the file is pulled
+  into a `.cpp` translation unit. Documented in the nil-section
+  comment in the source. Still above the 90% CI gate.
+
+### Open questions
+
+- None.
+
 ## 2026-05-11 — S24.03 drop AtomicOps vtable; select atomics at link time (#326)
 
 E24 close-out story. The vtable through which AtomicCounter reached

@@ -289,6 +289,12 @@ static inline enum SolidSyslogDatagramSendResult RetryAfterOversize(struct Solid
  * Destroy/Create cycle produces a fresh warning. The endpoint and endpoint-
  * version nils are silent — supplying neither is a valid integrator choice
  * (matches NoEndpointConfiguredSendsToPortZero coverage).
+ *
+ * NilDatagram.SendTo and NilDatagram.MaxPayload are vacuously defensive: the
+ * vtable struct contract requires every slot to be non-NULL so dispatch never
+ * crashes, but from the public Send path they are unreachable —
+ * NilDatagramOpen returns false, so Reconcile short-circuits before
+ * TransmitDatagram is ever entered. The bodies exist for vtable safety only.
  * ============================================================================ */
 
 static bool NilResolverResolve(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, const char* host, uint16_t port,
