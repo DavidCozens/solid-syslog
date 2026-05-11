@@ -17,6 +17,8 @@
 #include "SolidSyslogUdpPayload.h"
 #include "SolidSyslogUdpSender.h"
 
+struct SolidSyslogAddress;
+
 struct SolidSyslogUdpSender
 {
     struct SolidSyslogSender          base;
