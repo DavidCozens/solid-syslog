@@ -11,7 +11,7 @@ EXTERN_C_BEGIN
 
     enum
     {
-        SOLIDSYSLOG_FREERTOSMUTEX_SIZE = sizeof(intptr_t) * 24
+        SOLIDSYSLOG_FREERTOSMUTEX_SIZE = sizeof(intptr_t) * 20
     };
 
     typedef struct
