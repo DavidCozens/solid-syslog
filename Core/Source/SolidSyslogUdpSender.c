@@ -3,12 +3,15 @@
 #include <stdbool.h>
 
 #include "SolidSyslogEndpoint.h"
+#include "SolidSyslogError.h"
+#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogUdpPayload.h"
 #include "SolidSyslogUdpSender.h"
 #include "SolidSyslogSenderDefinition.h"
 #include "SolidSyslogAddress.h"
 #include "SolidSyslogDatagram.h"
+#include "SolidSyslogPrival.h"
 #include "SolidSyslogResolver.h"
 #include "SolidSyslogTransport.h"
 
@@ -21,6 +24,7 @@ struct SolidSyslogUdpSender
     uint32_t                          lastEndpointVersion;
 };
 
+static struct SolidSyslogSender*                 InstallConfig(const struct SolidSyslogUdpSenderConfig* config);
 static bool                                      Send(struct SolidSyslogSender* self, const void* buffer, size_t size);
 static inline bool                               Reconcile(struct SolidSyslogUdpSender* udp);
 static inline void                               DisconnectIfStale(struct SolidSyslogUdpSender* udp);
@@ -41,6 +45,22 @@ static const struct SolidSyslogUdpSender DEFAULT_INSTANCE = {.config = {.endpoin
 static struct SolidSyslogUdpSender       instance;
 
 struct SolidSyslogSender* SolidSyslogUdpSender_Create(const struct SolidSyslogUdpSenderConfig* config)
+{
+    struct SolidSyslogSender* result = NULL;
+
+    if (config == NULL)
+    {
+        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERR, SOLIDSYSLOG_ERROR_MSG_UDP_CREATE_NULL_CONFIG);
+    }
+    else
+    {
+        result = InstallConfig(config);
+    }
+
+    return result;
+}
+
+static struct SolidSyslogSender* InstallConfig(const struct SolidSyslogUdpSenderConfig* config)
 {
     instance                 = DEFAULT_INSTANCE;
     instance.config.resolver = config->resolver;

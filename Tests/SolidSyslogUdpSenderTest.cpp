@@ -5,7 +5,9 @@
 #include <cstdint>
 
 #include "DatagramFake.h"
+#include "ErrorHandlerFake.h"
 #include "SolidSyslogEndpoint.h"
+#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogGetAddrInfoResolver.h"
 #include "SolidSyslogPosixDatagram.h"
@@ -722,4 +724,32 @@ TEST(SolidSyslogUdpSenderRetry, NonOversizeFailureReturnsFalse)
 {
     DatagramFake_SetSendResult(datagram, 0, SOLIDSYSLOG_DATAGRAM_FAILED);
     CHECK_FALSE(SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN));
+}
+
+// clang-format off
+TEST_GROUP(SolidSyslogUdpSenderLifecycle)
+{
+    void setup() override
+    {
+        SocketFake_Reset();
+        endpointGetHost = GetDefaultHost;
+        endpointGetPort = GetDefaultPort;
+        endpointVersion = 0;
+        ErrorHandlerFake_Install(nullptr);
+    }
+
+    void teardown() override
+    {
+        SolidSyslogUdpSender_Destroy();
+        ErrorHandlerFake_Uninstall();
+    }
+};
+
+// clang-format on
+
+TEST(SolidSyslogUdpSenderLifecycle, CreateWithNullConfigReportsError)
+{
+    SolidSyslogUdpSender_Create(nullptr);
+
+    CHECK_REPORTED_ERROR(SOLIDSYSLOG_ERROR_MSG_UDP_CREATE_NULL_CONFIG);
 }

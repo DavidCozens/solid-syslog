@@ -10,4 +10,6 @@
 #define SOLIDSYSLOG_ERROR_MSG_NIL_BUFFER_USED "SolidSyslog_Log called with no buffer configured"
 #define SOLIDSYSLOG_ERROR_MSG_NIL_SENDER_USED "SolidSyslog_Service tried to send with no sender configured"
 
+#define SOLIDSYSLOG_ERROR_MSG_UDP_CREATE_NULL_CONFIG "SolidSyslogUdpSender_Create called with NULL config"
+
 #endif /* SOLIDSYSLOGERRORMESSAGES_H */
