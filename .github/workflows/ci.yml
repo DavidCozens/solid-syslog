@@ -30,10 +30,10 @@ jobs:
         run: cmake --preset debug
 
       - name: Build and test
-        run: cmake --build --preset debug --target junit ExampleTests SolidSyslogThreadedExample
+        run: cmake --build --preset debug --target junit BddTargetTests SolidSyslogBddTarget
 
-      - name: Run example tests
-        run: cd build/debug && ./Tests/Example/ExampleTests -ojunit -k ExampleTests
+      - name: Run BDD target tests
+        run: cd build/debug && ./Tests/Bdd/Targets/BddTargetTests -ojunit -k BddTargetTests
 
       - name: Test Report
         uses: dorny/test-reporter@v3
@@ -51,12 +51,12 @@ jobs:
           path: build/debug/cpputest_*.xml
           retention-days: 1
 
-      - name: Upload example binaries
+      - name: Upload BDD target binaries
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
-          name: solid-syslog-examples
+          name: solid-syslog-bdd-targets
           path: |
-            build/debug/Example/SolidSyslogThreadedExample
+            build/debug/Bdd/Targets/SolidSyslogBddTarget
           retention-days: 1
           compression-level: 0
 
@@ -395,7 +395,7 @@ jobs:
 
       - name: Check clang-format
         run: |
-          find Core/Interface Core/Source Tests Example -name '*.c' -o -name '*.cpp' -o -name '*.h' \
+          find Core/Interface Core/Source Tests Bdd/Targets -name '*.c' -o -name '*.cpp' -o -name '*.h' \
             | xargs clang-format --dry-run --Werror
 
   analyze-cppcheck:
@@ -472,7 +472,7 @@ jobs:
         run: cmake --preset msvc-debug
 
       - name: Build and test
-        run: cmake --build --preset msvc-debug --target junit SolidSyslogWindowsExample
+        run: cmake --build --preset msvc-debug --target junit SolidSyslogBddTarget
 
       - name: Test Report
         uses: dorny/test-reporter@v3
@@ -490,11 +490,11 @@ jobs:
           path: build/msvc-debug/cpputest_*.xml
           retention-days: 1
 
-      - name: Upload Windows example binary
+      - name: Upload Windows BDD target binary
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
-          name: solid-syslog-windows-example
-          path: build/msvc-debug/Example/Debug/SolidSyslogExample.exe
+          name: solid-syslog-bdd-target-windows
+          path: build/msvc-debug/Bdd/Targets/Debug/SolidSyslogBddTarget.exe
           retention-days: 1
           compression-level: 0
 
@@ -513,8 +513,8 @@ jobs:
 
       - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
-          name: solid-syslog-windows-example
-          path: build/msvc-debug/Example/Debug/
+          name: solid-syslog-bdd-target-windows
+          path: build/msvc-debug/Bdd/Targets/Debug/
 
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
@@ -574,7 +574,7 @@ jobs:
       - name: Run BDD tests
         env:
           BDD_TARGET: windows
-          EXAMPLE_BINARY: build/msvc-debug/Example/Debug/SolidSyslogExample.exe
+          EXAMPLE_BINARY: build/msvc-debug/Bdd/Targets/Debug/SolidSyslogBddTarget.exe
           RECEIVED_LOG: Bdd/output/received.jsonl
           ORACLE_FORMAT: otel-jsonl
         run: >
@@ -618,11 +618,11 @@ jobs:
 
       - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
-          name: solid-syslog-examples
-          path: build/debug/Example/
+          name: solid-syslog-bdd-targets
+          path: build/debug/Bdd/Targets/
 
       - name: Make example binary executable
-        run: chmod +x build/debug/Example/SolidSyslogThreadedExample
+        run: chmod +x build/debug/Bdd/Targets/SolidSyslogBddTarget
 
       - name: Prepare BDD output directory
         run: mkdir -p Bdd/junit && chmod 777 Bdd/junit
@@ -677,7 +677,7 @@ jobs:
         run: cmake --preset debug
 
       - name: Build and test
-        run: cmake --build --preset debug --target junit ExampleTests SolidSyslogThreadedExample
+        run: cmake --build --preset debug --target junit BddTargetTests SolidSyslogBddTarget
 
   build-freertos-target:
     runs-on: ubuntu-latest
@@ -697,14 +697,14 @@ jobs:
       - name: Configure (ARM cross)
         run: cmake --preset freertos-cross
 
-      - name: Cross-build SingleTask ELF
-        run: cmake --build --preset freertos-cross --target SolidSyslogFreeRtosSingleTask
+      - name: Cross-build FreeRTOS BDD target ELF
+        run: cmake --build --preset freertos-cross --target SolidSyslogBddTarget
 
-      - name: Upload SingleTask ELF
+      - name: Upload FreeRTOS BDD target ELF
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
-          name: solid-syslog-freertos-singletask
-          path: build/freertos-cross/Example/FreeRtos/SingleTask/SolidSyslogFreeRtosSingleTask.elf
+          name: solid-syslog-bdd-target-freertos
+          path: build/freertos-cross/Bdd/Targets/FreeRtos/SolidSyslogBddTarget.elf
           retention-days: 1
           compression-level: 0
 
@@ -720,11 +720,11 @@ jobs:
 
       - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
-          name: solid-syslog-freertos-singletask
-          path: build/freertos-cross/Example/FreeRtos/SingleTask/
+          name: solid-syslog-bdd-target-freertos
+          path: build/freertos-cross/Bdd/Targets/FreeRtos/
 
       - name: Make ELF readable
-        run: chmod +r build/freertos-cross/Example/FreeRtos/SingleTask/SolidSyslogFreeRtosSingleTask.elf
+        run: chmod +r build/freertos-cross/Bdd/Targets/FreeRtos/SolidSyslogBddTarget.elf
 
       - name: Prepare BDD output directory
         run: mkdir -p Bdd/junit && chmod 777 Bdd/junit

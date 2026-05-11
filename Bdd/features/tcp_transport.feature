@@ -8,5 +8,5 @@ Feature: TCP message delivery
 
   Scenario: Message delivered over TCP
     Given the syslog oracle is running
-    When the buffered example sends a syslog message with transport tcp
+    When the BDD target sends a syslog message with transport tcp
     Then the syslog oracle receives a message with priority "134"

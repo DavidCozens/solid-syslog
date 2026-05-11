@@ -7,14 +7,14 @@ Feature: Power cycle replay from block store
   Scenario: Stored messages replayed after power cycle
     Given the syslog oracle is running
     And the block store is enabled
-    And the threaded example is running with transport tcp
+    And the BDD target is running with transport tcp
     When the client sends a message
     Then the syslog oracle receives 1 message
     When the syslog oracle stops accepting TCP connections
     And the client sends 3 messages
     And the client is killed
     And the syslog oracle resumes accepting TCP connections
-    Given the threaded example is running with transport tcp
+    Given the BDD target is running with transport tcp
     Then the syslog oracle receives 4 messages
     And the replayed messages have sequenceIds 2, 3, 4
     When the client sends a message

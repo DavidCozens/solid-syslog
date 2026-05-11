@@ -123,7 +123,7 @@ if(HAVE_WINDOWS_INTERLOCKED OR HAVE_WINDOWS_PLATFORM OR SOLIDSYSLOG_WINSOCK)
 endif()
 
 if(SOLIDSYSLOG_POSIX OR (SOLIDSYSLOG_WINSOCK AND HAVE_WINDOWS_PLATFORM))
-    add_subdirectory(Example)
+    add_subdirectory(Bdd/Targets)
 endif()
 
 # FreeRTOS adapters ship as sources via an INTERFACE library — the integrator's
@@ -134,11 +134,11 @@ if(DEFINED ENV{FREERTOS_KERNEL_PATH})
     add_subdirectory(Platform/FreeRtos)
 endif()
 
-# The cross-compiled FreeRTOS hello-world example is selected by the
-# arm-none-eabi toolchain file (see Example/FreeRtos/cmake/arm-none-eabi.cmake);
-# it only enters the build when a freertos-cross preset is active.
+# The cross-compiled FreeRTOS BDD target is selected by the arm-none-eabi
+# toolchain file (see Bdd/Targets/FreeRtos/cmake/arm-none-eabi.cmake); it
+# only enters the build when a freertos-cross preset is active.
 if(CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_PROCESSOR STREQUAL "arm")
-    add_subdirectory(Example/FreeRtos)
+    add_subdirectory(Bdd/Targets/FreeRtos)
 endif()
 
 if(NOT CMAKE_CROSSCOMPILING)

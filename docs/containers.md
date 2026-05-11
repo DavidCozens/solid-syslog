@@ -30,7 +30,7 @@ devcontainer; the `freertos-target` service depends on `syslog-ng-freertos` and 
 its network namespace via `network_mode: service:syslog-ng-freertos`, so QEMU's
 slirp gateway `10.0.2.2` NATs to the pair's loopback where `syslog-ng-freertos` is
 listening on `0.0.0.0:5514`. Both oracles also alias as the bare hostname `syslog-ng`
-on their network so the existing example wiring (`Example/Common/Example*Config.c`,
+on their network so the existing BDD target wiring (`Bdd/Targets/Linux/BddTarget*Config.c`,
 the BDD step helpers) keeps resolving without per-target host overrides. The
 pairs never run together, so the alias collision is academic.
 
@@ -103,7 +103,7 @@ The same VS Code keys work across every service:
   - `Debug SolidSyslogTests (host)` — works in `gcc`, `clang`, and
     `freertos-host` (path resolves via `${env:BUILD_PRESET}`). Builds first
     via the same `build and test` task and stops at `main`.
-  - `Debug FreeRTOS SingleTask (QEMU)` — works in `freertos-target`
+  - `Debug FreeRTOS BDD Target (QEMU)` — works in `freertos-target`
     (cortex-debug + arm-none-eabi-gdb + qemu-system-arm). Stops at `main`
     via `runToEntryPoint`.
   - After switching the devcontainer service, pick the matching config from
@@ -115,4 +115,4 @@ The same VS Code keys work across every service:
   QEMU run for sanity-checking the build, output to the integrated
   terminal. Use only in the `freertos-target` service.
 
-For the FreeRTOS examples, see [Example/FreeRtos/README.md](../Example/FreeRtos/README.md) for build / run / GDB-attach instructions.
+For the FreeRTOS BDD target, see [Bdd/Targets/FreeRtos/README.md](../Bdd/Targets/FreeRtos/README.md) for build / run / GDB-attach instructions.

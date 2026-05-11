@@ -21,8 +21,7 @@ In scope:
   downstream integrators inherit. Tampering here is a compliance issue.
 
 Out of scope:
-- `Example/` — reference integrations, not product.
-- `Tests/`, `Bdd/` — test harnesses.
+- `Tests/`, `Bdd/` — test harnesses (`Bdd/Targets/` holds the BDD-driven binaries — test infrastructure, not product).
 - `ci/`, `docs/`, `.devcontainer/`, `.github/`, `.vscode/` — dev/CI infrastructure.
 - `sbom/` — the SBOM template itself (meta; including it would be self-referential).
 - `scripts/` — utility scripts not consumed by the integrator.

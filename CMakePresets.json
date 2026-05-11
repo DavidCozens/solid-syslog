@@ -101,7 +101,7 @@
             "name": "freertos-cross",
             "displayName": "FreeRTOS cross (ARM Cortex-M3, QEMU mps2-an385)",
             "binaryDir": "${sourceDir}/build/${presetName}",
-            "toolchainFile": "${sourceDir}/Example/FreeRtos/cmake/arm-none-eabi.cmake",
+            "toolchainFile": "${sourceDir}/Bdd/Targets/FreeRtos/cmake/arm-none-eabi.cmake",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"

@@ -278,11 +278,11 @@ Coverage report: `cmake --preset coverage && cmake --build --preset coverage --t
 Core/Interface/     — Public headers of the core library. No implementation. This is the API boundary.
 Core/Source/        — Core library implementation. Compiled into a static library.
 Platform/           — Platform-specific code (Posix, Windows, OpenSsl) — each a subfolder with its own Interface/ and Source/.
-Example/            — Example applications (Common, Threaded, Windows, FreeRtos).
 Tests/              — CppUTest unit tests. Never link production code directly; always via the library.
 Tests/Support/      — PosixFakes static lib (SocketFake, ClockFake) — shared across test executables.
-Tests/Example/      — Example code unit tests (ExampleTests executable).
+Tests/Bdd/Targets/  — BDD target code unit tests (BddTargetTests executable).
 Bdd/                — BDD test infrastructure: Gherkin features, step definitions, syslog-ng config.
+Bdd/Targets/        — One BDD-driven binary per platform (Common, Linux, Windows, FreeRtos) — all named SolidSyslogBddTarget. Not pedagogical examples.
 ci/                 — CI-specific files (e.g. docker-compose.bdd.yml).
 docs/               — Project documentation.
 ```
@@ -295,7 +295,7 @@ Not all directories carry the same review rigour or long-term support commitment
 |---|---|---|
 | 1 | Full support, highest review bar, stable API | `Core/Interface/`, `Core/Source/` |
 | 2 | Supported, API may evolve per target platform | `Platform/*/` |
-| 3 | Best-effort examples | `Example/` |
+| 3 | Best-effort BDD targets | `Bdd/Targets/` |
 | — | Out of scope for support | `Tests/`, `Bdd/`, `docs/`, `ci/`, `.github/`, `.devcontainer/`, build tooling |
 
 The separation between `Core/Interface/` and `Core/Source/` is deliberate — it enforces the dependency inversion

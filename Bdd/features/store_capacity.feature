@@ -7,7 +7,7 @@ Feature: Store capacity limit and discard policy
   Scenario: Discard-oldest drops oldest messages when store overflows
     Given the syslog oracle is running
     And the block store is enabled with max-blocks 2 and max-block-size 520 and discard-policy oldest
-    And the threaded example is running with transport tcp and no structured data
+    And the BDD target is running with transport tcp and no structured data
     When the client sends a message
     Then the syslog oracle receives 1 message
     When the syslog oracle stops accepting TCP connections
@@ -22,7 +22,7 @@ Feature: Store capacity limit and discard policy
   Scenario: Discard-newest preserves oldest messages when store overflows
     Given the syslog oracle is running
     And the block store is enabled with max-blocks 2 and max-block-size 520 and discard-policy newest
-    And the threaded example is running with transport tcp and no structured data
+    And the BDD target is running with transport tcp and no structured data
     When the client sends a message
     Then the syslog oracle receives 1 message
     When the syslog oracle stops accepting TCP connections
@@ -38,7 +38,7 @@ Feature: Store capacity limit and discard policy
     Given the syslog oracle is running
     And the block store is enabled with max-blocks 2 and max-block-size 520 and discard-policy halt
     And the halt callback exits the process
-    And the threaded example is running with transport tcp and no structured data
+    And the BDD target is running with transport tcp and no structured data
     When the client sends a message
     Then the syslog oracle receives 1 message
     When the syslog oracle stops accepting TCP connections
@@ -48,7 +48,7 @@ Feature: Store capacity limit and discard policy
   Scenario: Halt prevents further service after store overflows
     Given the syslog oracle is running
     And the block store is enabled with max-blocks 2 and max-block-size 520 and discard-policy halt
-    And the threaded example is running with transport tcp and no structured data
+    And the BDD target is running with transport tcp and no structured data
     When the client sends a message
     Then the syslog oracle receives 1 message
     When the syslog oracle stops accepting TCP connections

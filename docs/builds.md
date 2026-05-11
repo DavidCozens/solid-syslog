@@ -103,12 +103,12 @@ or a host with `arm-none-eabi-gcc` + `qemu-system-arm` on `PATH`.
 
 ```bash
 cmake --preset freertos-cross
-cmake --build --preset freertos-cross --target SolidSyslogFreeRtosSingleTask
+cmake --build --preset freertos-cross --target SolidSyslogBddTarget
 ```
 
 The ELF lands at
-`build/freertos-cross/Example/FreeRtos/SingleTask/SolidSyslogFreeRtosSingleTask.elf`.
-See [`Example/FreeRtos/README.md`](../Example/FreeRtos/README.md) for run /
+`build/freertos-cross/Bdd/Targets/FreeRtos/SolidSyslogBddTarget.elf`.
+See [`Bdd/Targets/FreeRtos/README.md`](../Bdd/Targets/FreeRtos/README.md) for run /
 GDB-attach instructions and [`Bdd/README.md`](../Bdd/README.md) for driving
 it under Behave + the syslog-ng oracle.
 
@@ -135,7 +135,7 @@ behave Bdd/features/
 
 In the behave-linux container, **Ctrl+Shift+B** runs `behave Bdd/features/` automatically.
 
-For the FreeRTOS pair (cross-build the SingleTask ELF, then drive QEMU through
+For the FreeRTOS pair (cross-build the BDD target ELF, then drive QEMU through
 Behave inside `freertos-target`), see [`Bdd/README.md`](../Bdd/README.md).
 
 See [BDD testing](bdd.md) for architecture details and the `BDD_TARGET` /

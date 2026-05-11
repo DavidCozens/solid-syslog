@@ -7,7 +7,7 @@ Feature: Capacity threshold alert
     Given the syslog oracle is running
     And the block store is enabled with max-blocks 2 and max-block-size 520 and discard-policy oldest
     And the capacity threshold callback is enabled at 200 bytes
-    And the threaded example is running with transport tcp and no structured data
+    And the BDD target is running with transport tcp and no structured data
     When the syslog oracle stops accepting TCP connections
     And the client sends 4 messages
     Then the capacity threshold callback was invoked
@@ -16,7 +16,7 @@ Feature: Capacity threshold alert
     Given the syslog oracle is running
     And the block store is enabled with max-blocks 2 and max-block-size 520 and discard-policy oldest
     And the capacity threshold callback is enabled at 5000 bytes
-    And the threaded example is running with transport tcp and no structured data
+    And the BDD target is running with transport tcp and no structured data
     When the client sends a message
     Then the syslog oracle receives 1 message
     And the capacity threshold callback was not invoked

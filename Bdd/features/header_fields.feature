@@ -5,15 +5,15 @@ Feature: Message header fields
 
   Scenario: Hostname matches the system hostname
     Given the syslog oracle is running
-    When the example program sends a syslog message
+    When the BDD target sends a syslog message
     Then the syslog oracle receives a message with the system hostname
 
-  Scenario: App name matches the example program
+  Scenario: App name matches the BDD target
     Given the syslog oracle is running
-    When the example program sends a syslog message
-    Then the app name is "SolidSyslogExample"
+    When the BDD target sends a syslog message
+    Then the app name is "SolidSyslogBddTarget"
 
-  Scenario: Process ID matches the example program PID
+  Scenario: Process ID matches the BDD target PID
     Given the syslog oracle is running
-    When the example program sends a syslog message
-    Then the syslog oracle receives a message with the process ID of the example program
+    When the BDD target sends a syslog message
+    Then the syslog oracle receives a message with the process ID of the BDD target
