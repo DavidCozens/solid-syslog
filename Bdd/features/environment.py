@@ -13,9 +13,9 @@ SYSLOG_NG_CONF = "Bdd/syslog-ng/syslog-ng.conf"
 SYSLOG_NG_FULL_CONF = "Bdd/syslog-ng/syslog-ng-full.conf"
 SYSLOG_NG_CTL = "/var/lib/syslog-ng/syslog-ng.ctl"
 
-# Store-and-forward backing files. POSIX uses /tmp (Linux Threaded example
+# Store-and-forward backing files. POSIX uses /tmp (Linux BDD target
 # hardcodes this); Windows uses Bdd/output/ relative to the working dir
-# (Windows Example hardcodes this). Both runners run behave from the project
+# (Windows BDD target hardcodes this). Both runners run behave from the project
 # root so the relative path resolves cleanly. Keep the Python side aligned
 # with whichever path the binary is using on each platform.
 if platform.system() == "Windows":
@@ -95,16 +95,16 @@ def before_all(context):
     # Configurable via env so the same step code drives Linux (syslog-ng),
     # Windows (OTel Collector), and FreeRTOS-on-QEMU runners with
     # different binary paths and oracle output formats. BDD_TARGET picks
-    # how the example is spawned (native subprocess vs qemu-system-arm)
+    # how the BDD target is spawned (native subprocess vs qemu-system-arm)
     # — see Bdd/features/steps/target_driver.py.
     context.target = os.environ.get("BDD_TARGET", "linux").lower()
 
     default_binaries = {
-        "linux": "build/debug/Example/SolidSyslogThreadedExample",
-        "windows": "build/msvc-debug/Example/Debug/SolidSyslogExample.exe",
+        "linux": "build/debug/Bdd/Targets/SolidSyslogBddTarget",
+        "windows": "build/msvc-debug/Bdd/Targets/Debug/SolidSyslogBddTarget.exe",
         "freertos": (
-            "build/freertos-cross/Example/FreeRtos/SingleTask/"
-            "SolidSyslogFreeRtosSingleTask.elf"
+            "build/freertos-cross/Bdd/Targets/FreeRtos/"
+            "SolidSyslogBddTarget.elf"
         ),
     }
     if context.target not in default_binaries:

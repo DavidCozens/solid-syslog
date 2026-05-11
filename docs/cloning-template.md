@@ -74,8 +74,8 @@ bash scripts/init-component.sh LedDriver
 This will:
 - Rename the CMake project to `LedDriver`
 - Replace the example source, header, and test files with a `LedDriver` stub
-- Replace the example program in `Example/` with a `LedDriver` stub
-- Update the BDD feature and steps to test the new example program
+- Replace the BDD target binary in `Bdd/Targets/` with a `LedDriver` stub
+- Update the BDD feature and steps to test the new BDD target
 - Update the VS Code debugger launch configuration
 - Update the README title
 - Update the devcontainer name and workspace path in `.devcontainer/devcontainer.json`

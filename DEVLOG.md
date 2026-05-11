@@ -6166,3 +6166,121 @@ tag in the same pass.
 ### Open questions
 
 - None.
+
+## 2026-05-11 — S24.05 move BDD targets out of Example/
+
+### Decisions
+
+- **`Example/` retired; BDD-driven binaries now live under
+  `Bdd/Targets/`** with one binary per platform — Linux
+  (`Bdd/Targets/Linux/main.c` + Linux-only configs), Windows
+  (`Bdd/Targets/Windows/main.c` + `BddTargetWindows.c`), FreeRTOS
+  (`Bdd/Targets/FreeRtos/main.c` + Startup/Common/cmake co-located).
+  Two-tier layout: anything pulled by ≥2 targets lives in
+  `Bdd/Targets/Common/` (BddTargetInteractive, Ips, Language, AppName,
+  ServiceThread, StderrErrorHandler, SwitchConfig, EnterpriseId,
+  Tls/Mtls configs, all TlsSender variants); per-platform leaves hold
+  `main.c` plus truly-platform-specific files. The old "Example"
+  naming actively misdescribed test infrastructure once S24.04
+  collapsed each platform to one binary.
+- **Single basename `SolidSyslogBddTarget` across all three
+  platforms.** CMake declares one `add_executable(SolidSyslogBddTarget
+  …)` per platform branch (only one fires per configure), so the
+  produced binaries share a basename — `SolidSyslogBddTarget` on
+  Linux, `SolidSyslogBddTarget.exe` on Windows,
+  `SolidSyslogBddTarget.elf` on FreeRTOS — and APP-NAME naturally
+  matches on every runner without a pin. Drops the S24.04
+  `--app-name "SolidSyslogExample"` pin from `run_example` and the
+  `--app-name "SolidSyslogThreadedExample"` pin from
+  `build_threaded_command` (renamed `build_buffered_command`).
+- **OriginSdConfig.software + FreeRTOS `g_appName` rename in
+  lockstep** to `"SolidSyslogBddTarget"`. Three `.feature` files
+  (`syslog.feature`, `header_fields.feature`, `message_fields.feature`)
+  and the three `origin.feature` software assertions update to the
+  same string. `udp_mtu.feature`'s narrative reference updates too.
+- **Python harness phrasings unified.** The four prior phrasings —
+  "the example program", "the threaded example", "the buffered
+  example", "the switching example" — all collapsed to "the BDD
+  target" across feature files and `@given`/`@when` decorators in
+  `syslog_steps.py`. Net effect: 15+ duplicate decorators collapsed to
+  ~8 canonical ones (e.g. three separate "sends a syslog message" /
+  "sends N messages" / "sends with transport X" branches each became
+  one). Helpers renamed in step:
+  `build_threaded_command → build_buffered_command`,
+  `start_threaded_example → start_bdd_target_process`.
+- **Identifier sweep: `Example*` → `BddTarget*`, `EXAMPLE_*` →
+  `BDD_TARGET_*`, `SolidSyslogWindowsExample` → `BddTargetWindows`.**
+  Mostly mechanical sed; one straggler caught
+  (`WindowsExampleOptions`, missed by the `\bExample[A-Z]` boundary
+  pattern because `Windows` ends mid-word, fixed by a literal
+  substitution). Header guards (`EXAMPLEXYZ_H`) likewise renamed.
+  `clang-format -i` reflowed the few lines that overshot 132 cols
+  after the wider rename.
+- **Tests/Example moved with the sources.** `Tests/Example/` →
+  `Tests/Bdd/Targets/` (flat directory matching `Tests/`'s
+  Core/Platform pattern). Executable target renamed
+  `ExampleTests` → `BddTargetTests`; CMakeLists rewritten to point at
+  the new source paths.
+- **Top-level wiring.** `CMakeLists.txt` swaps
+  `add_subdirectory(Example)` → `add_subdirectory(Bdd/Targets)` and
+  `add_subdirectory(Example/FreeRtos)` →
+  `add_subdirectory(Bdd/Targets/FreeRtos)`; same swap in
+  `Tests/CMakeLists.txt`. `CMakePresets.json`'s freertos-cross
+  toolchain file path updates to the new location. The old descender
+  `Example/FreeRtos/CMakeLists.txt` evaporated — the FreeRTOS branch
+  now goes directly into `Bdd/Targets/FreeRtos/CMakeLists.txt`, which
+  uses `CMAKE_CURRENT_SOURCE_DIR/Common/...` instead of the now-dead
+  `SOLID_SYSLOG_FREERTOS_EXAMPLE_COMMON_DIR` variable.
+- **CI workflow + devcontainer paths swept.** All
+  `build/<preset>/Example/...` paths become
+  `build/<preset>/Bdd/Targets/...`; target names
+  (`SolidSyslogThreadedExample`, `SolidSyslogWindowsExample`,
+  `SolidSyslogFreeRtosSingleTask`) all collapse to
+  `SolidSyslogBddTarget`; artifact names rename to
+  `solid-syslog-bdd-targets` / `solid-syslog-bdd-target-windows` /
+  `solid-syslog-bdd-target-freertos`. `.vscode/tasks.json`,
+  `.vscode/launch.json`, `.devcontainer/docker-compose.yml`,
+  `Bdd/features/environment.py` defaults all updated in lock-step.
+- **Live docs rewritten (`README.md`, `Bdd/README.md`,
+  `Bdd/Targets/FreeRtos/README.md`, `docs/bdd.md`, `docs/builds.md`,
+  `docs/ci.md`, `docs/containers.md`, `docs/cloning-template.md`,
+  `docs/security/sbom.md`, `CLAUDE.md`).** Three-bullet "example
+  programs" section in README replaced with the three BDD-target
+  bullets; FreeRTOS README opens with "FreeRTOS BDD target" rather
+  than describing a `SingleTask/` subdirectory; CLAUDE.md project
+  structure adds `Bdd/Targets/` and drops the `Example/` row; SBOM
+  out-of-scope table folds the now-test-infra `Bdd/Targets/` into the
+  `Tests/Bdd/` line. DEVLOG history untouched per *Never rewrite
+  history*.
+
+### Test evidence
+
+- `analyze-format`: clang-format `--dry-run --Werror` clean over
+  `Core/Interface Core/Source Tests Bdd/Targets`.
+- `debug` preset: configure + build + 2180 tests / 0 failures /
+  0 errors across `SolidSyslogTests` and `BddTargetTests`
+  (was `ExampleTests`).
+- `clang-debug` preset: clean build of `SolidSyslog`,
+  `SolidSyslogTests`, `BddTargetTests`, `SolidSyslogBddTarget`.
+- `sanitize` preset: ASan + UBSan clean (both test executables exit 0).
+- `coverage` preset: 99.5% lines (2107/2117), 98.9% functions
+  (449/454) — matches the pre-rename baseline; no coverage drift from
+  the move.
+- `analyze-tidy`: clang-tidy clean (exit 0).
+- `analyze-cppcheck`: clean (exit 0).
+- `freertos-cross`: cross-build of `SolidSyslogBddTarget.elf` green
+  end-to-end (took two takes — first attempt hit the stale
+  `CMakePresets.json` toolchainFile path which I'd missed during the
+  doc/CI sweep, fixed and re-verified).
+
+### Deferred
+
+- Local BDD smoke (Linux syslog-ng + Windows OTel + FreeRTOS QEMU)
+  needs the full compose stack — CI's three BDD jobs will validate
+  the rename end-to-end. Feature-file/step-decorator phrasings cross-
+  checked textually: every old phrasing was replaced by exactly one
+  new phrasing, decorator dispatch tables collapsed cleanly.
+
+### Open questions
+
+- None.

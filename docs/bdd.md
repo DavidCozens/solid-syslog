@@ -65,8 +65,8 @@ through the QEMU UART (`-serial stdio`).
 | `ghcr.io/davidcozens/behave` | GHCR image — Debian trixie + Python + Behave ([source](https://github.com/DavidCozens/BehaveDocker)) |
 | `Bdd/output/` | Shared directory — syslog-ng writes here, Behave reads |
 | `Bdd/features/` | Gherkin feature files and step definitions |
-| `Example/Threaded/main.c` | Buffered example: PosixMessageQueueBuffer + service pthread + SwitchingSender. Accepts `--facility`, `--severity`, `--transport`, `--app-name`, store-config flags |
-| `Example/CMakeLists.txt` | Builds the example binary, linked against the SolidSyslog library |
+| `Bdd/Targets/Linux/main.c` | Linux BDD target: PosixMessageQueueBuffer + service pthread + SwitchingSender. Accepts `--facility`, `--severity`, `--transport`, `--app-name`, store-config flags |
+| `Bdd/Targets/CMakeLists.txt` | Builds the BDD target binary, linked against the SolidSyslog library |
 
 ## syslog-ng configuration
 
@@ -184,13 +184,13 @@ powershell -ExecutionPolicy Bypass -File Bdd/otel/Install-OtelCollector.ps1
 
 # 3. Build the Windows example
 cmake --preset msvc-debug
-cmake --build --preset msvc-debug --target SolidSyslogWindowsExample
+cmake --build --preset msvc-debug --target SolidSyslogBddTarget
 
 # 4. Start the OTel oracle (binds 127.0.0.1:5514 udp+tcp, 6514 tls, 6515 mtls)
 ./Bdd/otel/bin/otelcol-contrib.exe --config=Bdd/otel/config.yaml &
 
 # 5. Run the Windows-eligible scenarios
-EXAMPLE_BINARY=build/msvc-debug/Example/Debug/SolidSyslogExample.exe \
+EXAMPLE_BINARY=build/msvc-debug/Bdd/Targets/Debug/SolidSyslogBddTarget.exe \
 RECEIVED_LOG=Bdd/output/received.jsonl \
 ORACLE_FORMAT=otel-jsonl \
 behave --tags='not @wip and not @windows_wip and not @buffered' Bdd/features/

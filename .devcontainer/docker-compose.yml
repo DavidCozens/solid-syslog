@@ -169,7 +169,7 @@ services:
       - SSH_AUTH_SOCK=/ssh-agent
       - BUILD_PRESET=freertos-cross
       - BDD_TARGET=freertos
-      - EXAMPLE_BINARY=build/freertos-cross/Example/FreeRtos/SingleTask/SolidSyslogFreeRtosSingleTask.elf
+      - EXAMPLE_BINARY=build/freertos-cross/Bdd/Targets/FreeRtos/SolidSyslogBddTarget.elf
     user: developer
     working_dir: /workspaces/SolidSyslog
     depends_on:

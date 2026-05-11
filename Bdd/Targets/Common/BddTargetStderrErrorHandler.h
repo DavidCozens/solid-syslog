@@ -1,0 +1,12 @@
+#ifndef BDDTARGETSTDERRERRORHANDLER_H
+#define BDDTARGETSTDERRERRORHANDLER_H
+
+#include "ExternC.h"
+
+EXTERN_C_BEGIN
+
+    void BddTargetStderrErrorHandler_Install(void);
+
+EXTERN_C_END
+
+#endif /* BDDTARGETSTDERRERRORHANDLER_H */

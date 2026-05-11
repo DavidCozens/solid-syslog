@@ -3,7 +3,7 @@ if(SOLIDSYSLOG_POSIX OR SOLIDSYSLOG_WINSOCK)
 endif()
 
 if(SOLIDSYSLOG_POSIX OR (SOLIDSYSLOG_WINSOCK AND HAVE_WINDOWS_PLATFORM))
-    add_subdirectory(Example)
+    add_subdirectory(Bdd/Targets)
 endif()
 
 if(DEFINED ENV{FREERTOS_KERNEL_PATH})

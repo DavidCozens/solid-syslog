@@ -6,7 +6,7 @@ Feature: TCP reconnection after server outage
 
   Scenario: Message delivered after server recovery
     Given the syslog oracle is running
-    And the threaded example is running with transport tcp
+    And the BDD target is running with transport tcp
     When the client sends a message
     Then the syslog oracle receives 1 message
     When the syslog oracle stops accepting TCP connections

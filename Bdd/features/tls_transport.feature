@@ -1,12 +1,12 @@
 @tls
 Feature: TLS message delivery
-  The buffered example sends messages via TLS transport (RFC 5425) —
+  The BDD target sends messages via TLS transport (RFC 5425) —
   RFC 6587 octet-counting framing over TLS — to the configured oracle
   (syslog-ng on Linux, otelcol-contrib on Windows; same listener cert).
 
   Scenario: Message delivered over TLS
     Given the syslog oracle is running
-    When the buffered example sends a syslog message with transport tls
+    When the BDD target sends a syslog message with transport tls
     Then the syslog oracle receives 1 message over tls
     And the syslog oracle receives a message with priority "134"
 
@@ -17,5 +17,5 @@ Feature: TLS message delivery
     # completed at TLS 1.3 — the library has no 1.3-specific knob, it just
     # happens because OpenSSL prefers the highest mutually-supported version.
     Given the syslog oracle is running
-    When the buffered example sends a syslog message with transport tls
+    When the BDD target sends a syslog message with transport tls
     Then the syslog oracle receives 1 message over tls

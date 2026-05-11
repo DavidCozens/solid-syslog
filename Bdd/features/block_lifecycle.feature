@@ -9,7 +9,7 @@ Feature: Block lifecycle
   Scenario: Active write block is not disposed when its only records are sent
     Given the syslog oracle is running
     And the block store is enabled with max-blocks 4 and max-block-size 5000 and discard-policy oldest
-    And the threaded example is running with transport tcp and no structured data
+    And the BDD target is running with transport tcp and no structured data
     And the set of existing block files is recorded
     When the client sends 2 messages
     Then the syslog oracle receives 2 messages
@@ -18,7 +18,7 @@ Feature: Block lifecycle
   Scenario: Older block is disposed once all its records are drained
     Given the syslog oracle is running
     And the block store is enabled with max-blocks 4 and max-block-size 520 and discard-policy oldest
-    And the threaded example is running with transport tcp and no structured data
+    And the BDD target is running with transport tcp and no structured data
     When the client sends 5 messages
     Then the syslog oracle receives 5 messages
     And block file 00 has been disposed

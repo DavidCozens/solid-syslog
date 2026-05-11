@@ -28,12 +28,12 @@
             ]
         },
         {
-            "name": "Debug FreeRTOS SingleTask (QEMU)",
+            "name": "Debug FreeRTOS BDD Target (QEMU)",
             "type": "cortex-debug",
             "request": "launch",
             "servertype": "qemu",
             "cwd": "${workspaceFolder}",
-            "executable": "${workspaceFolder}/build/freertos-cross/Example/FreeRtos/SingleTask/SolidSyslogFreeRtosSingleTask.elf",
+            "executable": "${workspaceFolder}/build/freertos-cross/Bdd/Targets/FreeRtos/SolidSyslogBddTarget.elf",
             "cpu": "cortex-m3",
             "machine": "mps2-an385",
             "armToolchainPath": "/usr/bin",

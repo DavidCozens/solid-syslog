@@ -6,11 +6,11 @@ same feature files run on every target — the active runner is selected by the
 `BDD_TARGET` environment variable, which `features/environment.py` reads in
 `before_all` and dispatches via `features/steps/target_driver.py`.
 
-| `BDD_TARGET` | Example-under-test | Oracle |
+| `BDD_TARGET` | Target binary | Oracle |
 |---|---|---|
-| `linux` (default) | `build/debug/Example/SolidSyslogThreadedExample` (native subprocess) | `syslog-ng-linux` |
-| `windows` | `build/msvc-debug/Example/Debug/SolidSyslogExample.exe` (native subprocess) | `otelcol-contrib` |
-| `freertos` | `build/freertos-cross/Example/FreeRtos/SingleTask/SolidSyslogFreeRtosSingleTask.elf` driven through `qemu-system-arm` | `syslog-ng-freertos` |
+| `linux` (default) | `build/debug/Bdd/Targets/SolidSyslogBddTarget` (native subprocess) | `syslog-ng-linux` |
+| `windows` | `build/msvc-debug/Bdd/Targets/Debug/SolidSyslogBddTarget.exe` (native subprocess) | `otelcol-contrib` |
+| `freertos` | `build/freertos-cross/Bdd/Targets/FreeRtos/SolidSyslogBddTarget.elf` driven through `qemu-system-arm` | `syslog-ng-freertos` |
 
 Each BDD target pairs with its own oracle service so jobs (and developers
 switching containers) never interfere — see [`docs/containers.md`](../docs/containers.md)
@@ -38,7 +38,7 @@ behave Bdd/features/syslog.feature              # one feature
 behave --tags='not @wip' Bdd/features/          # full Linux suite
 ```
 
-The example binary and oracle path default to the values
+The target binary and oracle path default to the values
 `environment.before_all` sets for `BDD_TARGET=linux`; no env vars needed.
 
 ### FreeRTOS-on-QEMU
@@ -50,7 +50,7 @@ once and run Behave from inside the container:
 
 ```bash
 cmake --preset freertos-cross
-cmake --build --preset freertos-cross --target SolidSyslogFreeRtosSingleTask
+cmake --build --preset freertos-cross --target SolidSyslogBddTarget
 behave --tags='not @wip and not @freertoswip and not @rtc and @udp' Bdd/features/
 ```
 
@@ -72,7 +72,7 @@ oracle on the shared loopback.
   qemu-system-arm -M mps2-an385 -m 16M -display none -serial stdio \
       -icount shift=auto,sleep=off,align=off \
       -netdev user,id=net0 -net nic,netdev=net0,model=lan9118 \
-      -kernel build/freertos-cross/Example/FreeRtos/SingleTask/SolidSyslogFreeRtosSingleTask.elf
+      -kernel build/freertos-cross/Bdd/Targets/FreeRtos/SolidSyslogBddTarget.elf
   ```
 - **Oracle is silent**: confirm the syslog-ng-freertos service is
   healthy (`docker compose ps`), and that the host you're testing
@@ -99,5 +99,5 @@ oracle on the shared loopback.
 | `bdd-windows-otel` | runner-direct (no compose); spawns `otelcol-contrib.exe` directly |
 
 `bdd-freertos-qemu` depends on `build-freertos-target` to upload the
-SingleTask ELF as an artifact; the new job downloads it before
+BDD target ELF as an artifact; the new job downloads it before
 `docker compose up`.

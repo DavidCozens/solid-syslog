@@ -53,11 +53,10 @@ def per_transport_log(context, transport):
         return PER_TRANSPORT_LOG_OTEL[transport]
     return PER_TRANSPORT_LOG_SYSLOG_NG[transport]
 
-# Paths used by the threaded/buffered scenarios. context.example_binary
+# Paths used by the BDD target scenarios. context.example_binary
 # (set in environment.before_all from EXAMPLE_BINARY / per-target default) is
-# the single binary path on every runner now — S24.04 collapsed Linux onto the
-# Threaded binary, matching Windows (single buffered example since S13.20) and
-# FreeRTOS (single buffered example since S08.04).
+# the single binary path on every runner — one buffered SolidSyslogBddTarget
+# per platform (S24.05).
 SYSLOG_NG_CTL = "/var/lib/syslog-ng/syslog-ng.ctl"
 SYSLOG_NG_CONF = "Bdd/syslog-ng/syslog-ng.conf"
 SYSLOG_NG_FULL_CONF = "Bdd/syslog-ng/syslog-ng-full.conf"
@@ -304,9 +303,8 @@ def _start_stdout_reader(process):
 
     The select.select-based read pattern this replaces only worked on POSIX
     pipe fds. The thread + queue pattern is portable across POSIX and Windows
-    so the prompt protocol can drive both the Linux Threaded example and the
-    Windows buffered example. Idempotent — only starts the thread once per
-    process.
+    so the prompt protocol can drive the BDD target on either host.
+    Idempotent — only starts the thread once per process.
     """
     if hasattr(process, "_solidsyslog_byte_queue"):
         return
@@ -388,40 +386,27 @@ def wait_for_messages(context, expected_messages):
 
 
 def run_example(context, extra_args=None, expected_messages=1):
-    """Run the example via the prompt protocol.
+    """Run the BDD target via the prompt protocol.
 
-    Every supported runner ships a single buffered example binary now —
-    Linux (pthread + PosixMessageQueueBuffer, S24.04), Windows (Win32 +
-    CircularBuffer, S13.20), FreeRTOS-on-QEMU (Service task +
-    CircularBuffer, S08.04) — so context.example_binary is the only
-    binary path on any target.
-
-    Pin --app-name "SolidSyslogExample" on Linux/Windows so the RFC 5424
-    APP-NAME field stays runner-independent. Without it, Linux records
-    would carry the binary basename "SolidSyslogThreadedExample" and
-    Windows would carry "SolidSyslogExample", breaking the
-    `the app name is "SolidSyslogExample"` assertions in the
-    platform-agnostic features. FreeRTOS hardcodes the same string in
-    Example/FreeRtos/SingleTask/main.c and doesn't accept --app-name, so
-    skip the flag on that runner.
+    Every supported runner ships a single buffered binary now — Linux
+    (pthread + PosixMessageQueueBuffer), Windows (Win32 + CircularBuffer),
+    FreeRTOS-on-QEMU (Service task + CircularBuffer) — and every runner's
+    binary is named SolidSyslogBddTarget so the RFC 5424 APP-NAME field
+    matches the platform-agnostic feature assertions without a pin
+    (S24.05).
 
     The pre-S13.18 implementation wrote `send N\\nquit\\n` upfront via
     process.communicate() and relied on NullBuffer's synchronous Send to
     guarantee delivery before exit. That assumption broke once the
-    example became buffered — `quit` could land before the service
+    target became buffered — `quit` could land before the service
     thread had drained, losing the UDP packet. The prompt protocol
     coordinates around it: wait for the oracle to confirm receipt before
     sending `quit`.
     """
     binary = context.example_binary
     assert os.path.exists(binary), (
-        f"Example binary not found at {binary} — build with cmake first"
+        f"BDD target binary not found at {binary} — build with cmake first"
     )
-
-    if context.target != "freertos":
-        extra_args = list(extra_args or [])
-        if "--app-name" not in extra_args:
-            extra_args += ["--app-name", "SolidSyslogExample"]
 
     process = spawn_example_process(context, extra_args=extra_args, binary=binary)
     context.example_pid = process.pid
@@ -504,31 +489,22 @@ def step_syslog_ng_is_running(context):
         )
 
 
-def build_threaded_command(context, transport, no_sd=False):
-    """Build the command line for the threaded example with all options.
+def build_buffered_command(context, transport, no_sd=False):
+    """Build the command line for the buffered BDD target with all options.
 
-    Linux runner (syslog-ng oracle): the pthread-driven Threaded example.
-    Windows runner (OTel oracle): the unified SolidSyslogExample.exe — its
-    BlockStore + SwitchingSender wiring (S13.20) accepts the same flags.
-    Both resolve through context.example_binary now that S24.04 retired the
-    Linux SingleTask binary.
+    Linux runner (syslog-ng oracle) and Windows runner (OTel oracle) both
+    ship SolidSyslogBddTarget — same basename, same flags, same wire-record
+    sizes byte-for-byte (S24.05 unified the basename so capacity-feature
+    block packing is identical across runners).
     """
     binary = context.example_binary
     assert os.path.exists(binary), (
-        f"Threaded binary not found at {binary} — build with cmake first"
+        f"BDD target binary not found at {binary} — build with cmake first"
     )
 
-    # Pin app-name to a fixed value across runners so RFC 5424 record sizes
-    # match byte-for-byte. Without this, Linux records carry a 26-char app
-    # name (binary basename "SolidSyslogThreadedExample") while Windows
-    # records carry an 18-char one ("SolidSyslogExample"), shifting
-    # per-block packing on the BlockStore — capacity scenarios designed
-    # around 4 records/block on Linux fit 5 on Windows and the discard
-    # assertions drift.
     cmd = [
         os.path.join(".", binary),
         "--transport", transport,
-        "--app-name", "SolidSyslogThreadedExample",
     ]
     if getattr(context, "store_type", None):
         cmd.extend(["--store", context.store_type])
@@ -549,8 +525,8 @@ def build_threaded_command(context, transport, no_sd=False):
     return cmd
 
 
-def start_threaded_example(context, cmd):
-    """Start the threaded example process and wait for the initial prompt."""
+def start_bdd_target_process(context, cmd):
+    """Start the BDD target process and wait for the initial prompt."""
     context.interactive_process = subprocess.Popen(
         cmd,
         stdin=subprocess.PIPE,
@@ -562,16 +538,16 @@ def start_threaded_example(context, cmd):
     wait_for_prompt(context.interactive_process)
 
 
-@given("the threaded example is running with transport {transport:w}")
-def step_threaded_running_with_transport(context, transport):
-    cmd = build_threaded_command(context, transport)
-    start_threaded_example(context, cmd)
+@given("the BDD target is running with transport {transport:w}")
+def step_bdd_target_running_with_transport(context, transport):
+    cmd = build_buffered_command(context, transport)
+    start_bdd_target_process(context, cmd)
 
 
-@given("the threaded example is running with transport {transport:w} and no structured data")
-def step_threaded_running_with_transport_no_sd(context, transport):
-    cmd = build_threaded_command(context, transport, no_sd=True)
-    start_threaded_example(context, cmd)
+@given("the BDD target is running with transport {transport:w} and no structured data")
+def step_bdd_target_running_with_transport_no_sd(context, transport):
+    cmd = build_buffered_command(context, transport, no_sd=True)
+    start_bdd_target_process(context, cmd)
 
 
 @given("the block store is enabled")
@@ -748,73 +724,43 @@ def step_oracle_resumes_tcp(context):
         context.otel_oracle_paused = False
 
 
-@when("the example program sends a syslog message")
-def step_example_sends_message(context):
+@when("the BDD target sends a syslog message")
+def step_bdd_target_sends_message(context):
     run_example(context)
 
 
-@when("the example program sends a syslog message with transport {transport}")
-def step_example_sends_with_transport(context, transport):
+@when("the BDD target sends a syslog message with transport {transport}")
+def step_bdd_target_sends_with_transport(context, transport):
     run_example(context, ["--transport", transport])
 
 
-@when("the threaded example sends a syslog message")
-def step_threaded_sends_message(context):
-    run_example(context)
-
-
-@when("the threaded example sends a syslog message with transport {transport}")
-def step_threaded_sends_with_transport(context, transport):
-    run_example(context, ["--transport", transport])
-
-
-@when("the threaded example sends {count:d} syslog messages")
-def step_threaded_sends_multiple(context, count):
+@when("the BDD target sends {count:d} syslog messages")
+def step_bdd_target_sends_multiple(context, count):
     run_example(context, expected_messages=count)
 
 
-@when("the buffered example sends a syslog message")
-def step_buffered_sends_message(context):
-    run_example(context)
-
-
-@when("the buffered example sends a syslog message with transport {transport}")
-def step_buffered_sends_with_transport(context, transport):
-    run_example(context, ["--transport", transport])
-
-
-@when("the buffered example sends {count:d} syslog messages")
-def step_buffered_sends_multiple(context, count):
-    run_example(context, expected_messages=count)
-
-
-@when("the example program sends a message with facility {facility:d} and severity {severity:d}")
-def step_example_sends_with_facility_severity(context, facility, severity):
+@when("the BDD target sends a message with facility {facility:d} and severity {severity:d}")
+def step_bdd_target_sends_with_facility_severity(context, facility, severity):
     run_example(context, ["--facility", str(facility), "--severity", str(severity)])
 
 
-@when('the example program sends a message with message ID "{msgid}"')
-def step_example_sends_with_msgid(context, msgid):
+@when('the BDD target sends a message with message ID "{msgid}"')
+def step_bdd_target_sends_with_msgid(context, msgid):
     run_example(context, ["--msgid", msgid])
 
 
-@when('the example program sends a message with body "{body}"')
-def step_example_sends_with_body(context, body):
+@when('the BDD target sends a message with body "{body}"')
+def step_bdd_target_sends_with_body(context, body):
     run_example(context, ["--message", body])
 
 
-@when('the example program sends a complete message with message ID "{msgid}" and body "{body}"')
-def step_example_sends_with_msgid_and_body(context, msgid, body):
+@when('the BDD target sends a complete message with message ID "{msgid}" and body "{body}"')
+def step_bdd_target_sends_with_msgid_and_body(context, msgid, body):
     run_example(context, ["--msgid", msgid, "--message", body])
 
 
-@when("the example program sends {count:d} syslog messages")
-def step_example_sends_multiple(context, count):
-    run_example(context, expected_messages=count)
-
-
-@when("the example program sends a UTF-8 message that fits the path MTU")
-def step_example_sends_utf8_within_mtu(context):
+@when("the BDD target sends a UTF-8 message that fits the path MTU")
+def step_bdd_target_sends_utf8_within_mtu(context):
     # Comfortably under the typical 1472-byte path payload, with multi-byte
     # UTF-8 mixed in. Tests the no-trim path: the message goes out whole.
     msg = "Hello, " + ("é" * 100) + " - mixed " + ("€" * 50) + " - end"
@@ -822,8 +768,8 @@ def step_example_sends_utf8_within_mtu(context):
     run_example(context, ["--message", msg])
 
 
-@when("the example program sends an oversize UTF-8 message")
-def step_example_sends_oversize_utf8(context):
+@when("the BDD target sends an oversize UTF-8 message")
+def step_bdd_target_sends_oversize_utf8(context):
     # Build a message that overflows the path MTU. The ASCII prefix keeps
     # the prefix-equality assertion robust; the long run of '€' (3 bytes
     # each) ensures the trim point almost certainly lands mid-codepoint,
@@ -908,7 +854,7 @@ def step_check_system_hostname(context):
     )
 
 
-@then("the syslog oracle receives a message with the process ID of the example program")
+@then("the syslog oracle receives a message with the process ID of the BDD target")
 def step_check_example_pid(context):
     """Asserts the wire PROCID matches what the originator can supply per
     RFC 5424 §6.2.6 (NILVALUE permitted "when no value is provided"). Each
@@ -1103,7 +1049,7 @@ def step_check_sys_up_time_shape(context):
         f"No sysUpTime found in structured data: {sd}"
     )
     # Live boot clocks (CLOCK_BOOTTIME / GetTickCount64) always read > 0 by the
-    # time the example program runs. Pinning > 0 catches a regression where the
+    # time the BDD target runs. Pinning > 0 catches a regression where the
     # implementation collapses to a constant zero.
     assert int(match.group(1)) > 0, (
         f"Expected positive sysUpTime, got {match.group(1)} in structured data: {sd}"
@@ -1321,10 +1267,10 @@ def step_check_last_sequence_id(context, value):
 # --- S20.1 SwitchingSender steps ------------------------------------------
 
 
-@given("the switching example is running with default transport {transport:w}")
-def step_switching_example_running(context, transport):
-    cmd = build_threaded_command(context, transport)
-    start_threaded_example(context, cmd)
+@given("the BDD target is running with default transport {transport:w}")
+def step_bdd_target_running_with_default_transport(context, transport):
+    cmd = build_buffered_command(context, transport)
+    start_bdd_target_process(context, cmd)
 
 
 @when("the client switches to transport {transport:w}")
