@@ -1,6 +1,6 @@
 # Dev Log
 
-## 2026-05-11 — S24.03 drop AtomicOps vtable; select atomics at link time (#325)
+## 2026-05-11 — S24.03 drop AtomicOps vtable; select atomics at link time (#326)
 
 E24 close-out story. The vtable through which AtomicCounter reached
 its atomic primitive was the only DI seam in the library where the

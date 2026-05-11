@@ -13,6 +13,8 @@ struct SolidSyslogAtomicU32
 
 SOLIDSYSLOG_STATIC_ASSERT(sizeof(struct SolidSyslogAtomicU32) <= sizeof(SolidSyslogAtomicU32Storage),
                           SolidSyslogAtomicU32Storage_too_small_for_WindowsAtomicU32);
+SOLIDSYSLOG_STATIC_ASSERT(_Alignof(struct SolidSyslogAtomicU32) <= _Alignof(SolidSyslogAtomicU32Storage),
+                          SolidSyslogAtomicU32Storage_misaligned_for_WindowsAtomicU32);
 
 struct SolidSyslogAtomicU32* SolidSyslogAtomicU32_FromStorage(SolidSyslogAtomicU32Storage* storage)
 {

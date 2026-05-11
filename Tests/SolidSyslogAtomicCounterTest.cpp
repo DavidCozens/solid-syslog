@@ -6,7 +6,10 @@
 // NOLINTNEXTLINE(bugprone-suspicious-include)
 #include "SolidSyslogAtomicCounter.c"
 
+#include "SolidSyslogAtomicU32.h"
 #include "CppUTest/TestHarness.h"
+
+#include <stdint.h>
 
 enum
 {
