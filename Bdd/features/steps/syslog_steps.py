@@ -504,13 +504,16 @@ def build_buffered_extra_args(context, transport, no_sd=False):
     args = ["--transport", transport]
     if getattr(context, "store_type", None):
         args.extend(["--store", context.store_type])
-    if getattr(context, "store_max_blocks", None):
+    # Numeric option guards use `is not None` so an explicit 0 survives:
+    # `--capacity-threshold 0` is the documented "disable" sentinel for
+    # SolidSyslogStoreThresholdFunction (Core/Interface/SolidSyslogBlockStore.h).
+    if getattr(context, "store_max_blocks", None) is not None:
         args.extend(["--max-blocks", str(context.store_max_blocks)])
-    if getattr(context, "store_max_block_size", None):
+    if getattr(context, "store_max_block_size", None) is not None:
         args.extend(["--max-block-size", str(context.store_max_block_size)])
     if getattr(context, "store_discard_policy", None):
         args.extend(["--discard-policy", context.store_discard_policy])
-    if getattr(context, "capacity_threshold", None):
+    if getattr(context, "capacity_threshold", None) is not None:
         args.extend(["--capacity-threshold", str(context.capacity_threshold)])
     if getattr(context, "message_body", None):
         args.extend(["--message", context.message_body])
