@@ -16,6 +16,7 @@ EXTERN_C_BEGIN
 EXTERN_C_END
 
 #ifdef __cplusplus
+#include "CppUTest/TestHarness.h"
 #include "TestUtils.h"
 
 /* Assertion macros for tests that observe SolidSyslog_Error through the fake.

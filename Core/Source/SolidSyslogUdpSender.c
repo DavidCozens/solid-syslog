@@ -4,7 +4,6 @@
 
 #include "SolidSyslogEndpoint.h"
 #include "SolidSyslogFormatter.h"
-#include "SolidSyslogMacros.h"
 #include "SolidSyslogUdpPayload.h"
 #include "SolidSyslogUdpSender.h"
 #include "SolidSyslogSenderDefinition.h"

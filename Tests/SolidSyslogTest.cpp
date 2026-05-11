@@ -15,7 +15,6 @@
 #include "SolidSyslogStructuredDataDefinition.h"
 #include "BufferFake.h"
 #include "ErrorHandlerFake.h"
-#include "SolidSyslogError.h"
 #include "SolidSyslogErrorMessages.h"
 #include "StoreFake.h"
 #include "SenderFake.h"
@@ -110,6 +109,7 @@ class TEST_SolidSyslog_ProcessIdNonPrintableByteIsSubstitutedWithQuestionMark_Te
 class TEST_SolidSyslog_SeverityAppearsInPrival_Test;
 struct SolidSyslogAtomicCounter;
 struct SolidSyslogBuffer;
+struct SolidSyslogSender;
 struct SolidSyslogStore;
 
 // clang-format off
