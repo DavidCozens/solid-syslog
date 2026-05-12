@@ -16,6 +16,11 @@ static const char* const TEST_PATH = "test.log";
 // NOLINTBEGIN(cppcoreguidelines-macro-usage) -- macros preserve __FILE__/__LINE__ in test failure output
 #define CHECK_FILE_IS_OPEN() CHECK_TRUE(SolidSyslogFile_IsOpen(file))
 #define CHECK_FILE_CLOSED() CHECK_FALSE(SolidSyslogFile_IsOpen(file))
+#define CHECK_LSEEK_OFFSET(offset) LONGS_EQUAL((offset), FatFsFake_LastLseekOffset())
+#define CHECK_READ_BUF(buf) POINTERS_EQUAL((buf), FatFsFake_LastReadBuf())
+#define CHECK_READ_COUNT(count) LONGS_EQUAL((count), FatFsFake_LastReadCount())
+#define CHECK_WRITE_BUF(buf) POINTERS_EQUAL((buf), FatFsFake_LastWriteBuf())
+#define CHECK_WRITE_COUNT(count) LONGS_EQUAL((count), FatFsFake_LastWriteCount())
 
 // NOLINTEND(cppcoreguidelines-macro-usage)
 
@@ -101,4 +106,83 @@ TEST(SolidSyslogFatFsFile, DestroyClosesOpenFile)
     SolidSyslogFile_Open(localFile, TEST_PATH);
     SolidSyslogFatFsFile_Destroy(localFile);
     CALLED_FAKE(FatFsFake_Close, ONCE);
+}
+
+TEST(SolidSyslogFatFsFile, TruncateSeeksToZeroAndCallsFTruncate)
+{
+    Open();
+    SolidSyslogFile_Truncate(file);
+    CALLED_FAKE(FatFsFake_Lseek, ONCE);
+    CHECK_LSEEK_OFFSET(0);
+    CALLED_FAKE(FatFsFake_Truncate, ONCE);
+}
+
+TEST(SolidSyslogFatFsFile, SeekToCallsFLseekWithGivenOffset)
+{
+    Open();
+    SolidSyslogFile_SeekTo(file, 42);
+    CALLED_FAKE(FatFsFake_Lseek, ONCE);
+    CHECK_LSEEK_OFFSET(42);
+
+    SolidSyslogFile_SeekTo(file, 99);
+    CHECK_LSEEK_OFFSET(99);
+}
+
+TEST(SolidSyslogFatFsFile, SizeReturnsFileObjectSize)
+{
+    Open();
+    FatFsFake_SetFileSize(42);
+    LONGS_EQUAL(42, SolidSyslogFile_Size(file));
+}
+
+TEST(SolidSyslogFatFsFile, ReadCallsFReadWithCorrectDefaults)
+{
+    Open();
+    char buf[5] = {};
+    CHECK_TRUE(SolidSyslogFile_Read(file, buf, sizeof(buf)));
+    CALLED_FAKE(FatFsFake_Read, ONCE);
+    CHECK_READ_BUF(buf);
+    CHECK_READ_COUNT(sizeof(buf));
+}
+
+TEST(SolidSyslogFatFsFile, ReadFailsWhenFReadReturnsPartial)
+{
+    Open();
+    FatFsFake_SetReadBytesReturned(3);
+    char buf[5];
+    CHECK_FALSE(SolidSyslogFile_Read(file, buf, sizeof(buf)));
+}
+
+TEST(SolidSyslogFatFsFile, ReadFailsWhenFReadFails)
+{
+    Open();
+    FatFsFake_SetReadResult(FR_DISK_ERR);
+    char buf[5];
+    CHECK_FALSE(SolidSyslogFile_Read(file, buf, sizeof(buf)));
+}
+
+TEST(SolidSyslogFatFsFile, WriteCallsFWriteWithCorrectDefaults)
+{
+    Open();
+    const char buf[5] = {'h', 'e', 'l', 'l', 'o'};
+    CHECK_TRUE(SolidSyslogFile_Write(file, buf, sizeof(buf)));
+    CALLED_FAKE(FatFsFake_Write, ONCE);
+    CHECK_WRITE_BUF(buf);
+    CHECK_WRITE_COUNT(sizeof(buf));
+}
+
+TEST(SolidSyslogFatFsFile, WriteFailsWhenFWriteReturnsPartial)
+{
+    Open();
+    FatFsFake_SetWriteBytesReturned(3);
+    const char buf[5] = {};
+    CHECK_FALSE(SolidSyslogFile_Write(file, buf, sizeof(buf)));
+}
+
+TEST(SolidSyslogFatFsFile, WriteFailsWhenFWriteFails)
+{
+    Open();
+    FatFsFake_SetWriteResult(FR_DISK_ERR);
+    const char buf[5] = {};
+    CHECK_FALSE(SolidSyslogFile_Write(file, buf, sizeof(buf)));
 }

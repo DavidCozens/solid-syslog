@@ -12,6 +12,11 @@
 static bool                                FatFsFile_Open(struct SolidSyslogFile* self, const char* path);
 static void                                FatFsFile_Close(struct SolidSyslogFile* self);
 static bool                                FatFsFile_IsOpen(struct SolidSyslogFile* self);
+static bool                                FatFsFile_Read(struct SolidSyslogFile* self, void* buf, size_t count);
+static bool                                FatFsFile_Write(struct SolidSyslogFile* self, const void* buf, size_t count);
+static void                                FatFsFile_SeekTo(struct SolidSyslogFile* self, size_t offset);
+static size_t                              FatFsFile_Size(struct SolidSyslogFile* self);
+static void                                FatFsFile_Truncate(struct SolidSyslogFile* self);
 static inline struct SolidSyslogFatFsFile* Self(struct SolidSyslogFile* self);
 
 struct SolidSyslogFatFsFile
@@ -25,7 +30,8 @@ SOLIDSYSLOG_STATIC_ASSERT(sizeof(struct SolidSyslogFatFsFile) <= sizeof(SolidSys
                           "SOLIDSYSLOG_FATFS_FILE_SIZE is too small for struct SolidSyslogFatFsFile");
 
 static const struct SolidSyslogFatFsFile DEFAULT_INSTANCE = {
-    .base   = {FatFsFile_Open, FatFsFile_Close, FatFsFile_IsOpen, NULL, NULL, NULL, NULL, NULL, NULL, NULL},
+    .base   = {FatFsFile_Open, FatFsFile_Close, FatFsFile_IsOpen, FatFsFile_Read, FatFsFile_Write, FatFsFile_SeekTo, FatFsFile_Size, FatFsFile_Truncate, NULL,
+               NULL},
     .isOpen = false,
 };
 
@@ -67,4 +73,39 @@ static void FatFsFile_Close(struct SolidSyslogFile* self)
 static bool FatFsFile_IsOpen(struct SolidSyslogFile* self)
 {
     return Self(self)->isOpen;
+}
+
+static bool FatFsFile_Read(struct SolidSyslogFile* self, void* buf, size_t count)
+{
+    struct SolidSyslogFatFsFile* fatfs  = Self(self);
+    UINT                         br     = 0;
+    FRESULT                      result = f_read(&fatfs->fp, buf, (UINT) count, &br);
+    return result == FR_OK && br == count;
+}
+
+static bool FatFsFile_Write(struct SolidSyslogFile* self, const void* buf, size_t count)
+{
+    struct SolidSyslogFatFsFile* fatfs  = Self(self);
+    UINT                         bw     = 0;
+    FRESULT                      result = f_write(&fatfs->fp, buf, (UINT) count, &bw);
+    return result == FR_OK && bw == count;
+}
+
+static void FatFsFile_SeekTo(struct SolidSyslogFile* self, size_t offset)
+{
+    struct SolidSyslogFatFsFile* fatfs = Self(self);
+    f_lseek(&fatfs->fp, (FSIZE_t) offset);
+}
+
+static size_t FatFsFile_Size(struct SolidSyslogFile* self)
+{
+    struct SolidSyslogFatFsFile* fatfs = Self(self);
+    return (size_t) f_size(&fatfs->fp);
+}
+
+static void FatFsFile_Truncate(struct SolidSyslogFile* self)
+{
+    struct SolidSyslogFatFsFile* fatfs = Self(self);
+    f_lseek(&fatfs->fp, 0);
+    f_truncate(&fatfs->fp);
 }
