@@ -163,6 +163,10 @@ static SolidSyslogFreeRtosMutexStorage  mutexStorage;
  * goes down and back up. */
 static BaseType_t interactiveTaskCreated = pdFALSE;
 
+/* Service task handle is captured at creation so the interactive task can
+ * report its peak stack usage alongside its own on `quit`. */
+static TaskHandle_t serviceTaskHandle = NULL;
+
 extern NetworkInterface_t* pxMPS2_FillInterfaceDescriptor(BaseType_t xEMACIndex, NetworkInterface_t* pxInterface);
 
 static bool TryUpdateString(char* storage, size_t storageSize, const char* value);
@@ -454,6 +458,15 @@ static void InteractiveTask(void* argument)
 
     BddTargetInteractive_Run(&g_message, stdin, BddTargetSwitchConfig_SetByName, OnSet);
 
+    /* Peak stack usage report on `quit`. Captured into every BDD run's QEMU
+     * console output so stack regressions surface in bdd-freertos-qemu logs
+     * and so E21 tunable changes (S21.02 onward) leave an empirical trail
+     * for the deferred stack-shrink optimisation to consume. Words, not
+     * bytes — FreeRTOS reports min free stack in StackType_t units (4 B on
+     * Cortex-M3). */
+    (void) printf("[stack-hwm] interactive=%lu words service=%lu words\n", (unsigned long) uxTaskGetStackHighWaterMark(NULL),
+                  (unsigned long) uxTaskGetStackHighWaterMark(serviceTaskHandle));
+
     SolidSyslog_Destroy();
     SolidSyslogOriginSd_Destroy();
     SolidSyslogTimeQualitySd_Destroy();
@@ -496,7 +509,7 @@ void vApplicationIPNetworkEventHook_Multi(eIPCallbackEvent_t eNetworkEvent, stru
     {
         if (xTaskCreate(InteractiveTask, "interactive", INTERACTIVE_TASK_STACK_DEPTH, NULL, tskIDLE_PRIORITY + 1, NULL) == pdPASS)
         {
-            (void) xTaskCreate(ServiceTask, "service", SERVICE_TASK_STACK_DEPTH, NULL, tskIDLE_PRIORITY + 1, NULL);
+            (void) xTaskCreate(ServiceTask, "service", SERVICE_TASK_STACK_DEPTH, NULL, tskIDLE_PRIORITY + 1, &serviceTaskHandle);
             interactiveTaskCreated = pdTRUE;
         }
     }
