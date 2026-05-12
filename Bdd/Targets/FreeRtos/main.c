@@ -463,9 +463,13 @@ static void InteractiveTask(void* argument)
      * and so E21 tunable changes (S21.02 onward) leave an empirical trail
      * for the deferred stack-shrink optimisation to consume. Words, not
      * bytes — FreeRTOS reports min free stack in StackType_t units (4 B on
-     * Cortex-M3). */
-    (void) printf("[stack-hwm] interactive=%lu words service=%lu words\n", (unsigned long) uxTaskGetStackHighWaterMark(NULL),
-                  (unsigned long) uxTaskGetStackHighWaterMark(serviceTaskHandle));
+     * Cortex-M3). serviceTaskHandle is guarded because
+     * uxTaskGetStackHighWaterMark(NULL) means "the calling task" — passing a
+     * NULL handle after a Service xTaskCreate failure would silently
+     * double-report the interactive task's HWM. */
+    const UBaseType_t interactiveHwm = uxTaskGetStackHighWaterMark(NULL);
+    const UBaseType_t serviceHwm     = (serviceTaskHandle != NULL) ? uxTaskGetStackHighWaterMark(serviceTaskHandle) : 0U;
+    (void) printf("[stack-hwm] interactive=%lu words service=%lu words\n", (unsigned long) interactiveHwm, (unsigned long) serviceHwm);
 
     SolidSyslog_Destroy();
     SolidSyslogOriginSd_Destroy();

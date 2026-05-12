@@ -10,8 +10,10 @@
  *
  * BDD impact: path-MTU clipping scenarios (udp_mtu.feature) need MAX
  * large enough to build a >1472-byte message and trigger EMSGSIZE — that
- * feature is tagged @requires_message_size_1500 and excluded from the
- * bdd-freertos-qemu tag filter in ci/docker-compose.bdd.yml. */
+ * feature is tagged @requires_message_size_1500 and skipped at runtime
+ * by the tunable-driven gate in Bdd/features/environment.py (which
+ * compares the tag's threshold against this header's value via the
+ * generated Bdd/features/steps/solidsyslog_tunables.py mirror). */
 #define SOLIDSYSLOG_MAX_MESSAGE_SIZE 512
 
 #endif /* SOLIDSYSLOG_USER_TUNABLES_H */

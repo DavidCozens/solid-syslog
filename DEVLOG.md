@@ -60,9 +60,10 @@ Total reclaimed: 4.5 KB across the two tasks per `Log`/`Service` cycle —
 matches the analytical estimate (two `char[MAX]` frames in the library's
 `SolidSyslog_Log` + `DrainBufferIntoStore` + `SendOneFromStore` paths
 plus the `MAX_LINE_LENGTH`-sized line buffer and `HandleSet` name buffer
-in `BddTargetInteractive`). `INTERACTIVE_TASK_STACK_DEPTH = *48` is now
-much more conservative than it needs to be; the deferred stack-shrink
-optimisation can use this baseline.
+in `BddTargetInteractive`). `INTERACTIVE_TASK_STACK_DEPTH =
+configMINIMAL_STACK_SIZE * 48U` is now much more conservative than it
+needs to be; the deferred stack-shrink optimisation can use this
+baseline.
 
 ### Deferred
 
