@@ -20,6 +20,7 @@ static void                                FatFsFile_Truncate(struct SolidSyslog
 static bool                                FatFsFile_Exists(struct SolidSyslogFile* self, const char* path);
 static bool                                FatFsFile_Delete(struct SolidSyslogFile* self, const char* path);
 static inline struct SolidSyslogFatFsFile* Self(struct SolidSyslogFile* self);
+static inline FIL*                         Fp(struct SolidSyslogFile* self);
 
 struct SolidSyslogFatFsFile
 {
@@ -79,37 +80,37 @@ static bool FatFsFile_IsOpen(struct SolidSyslogFile* self)
 
 static bool FatFsFile_Read(struct SolidSyslogFile* self, void* buf, size_t count)
 {
-    struct SolidSyslogFatFsFile* fatfs  = Self(self);
-    UINT                         br     = 0;
-    FRESULT                      result = f_read(&fatfs->fp, buf, (UINT) count, &br);
+    UINT    br     = 0;
+    FRESULT result = f_read(Fp(self), buf, (UINT) count, &br);
     return (result == FR_OK) && (br == count);
+}
+
+static inline FIL* Fp(struct SolidSyslogFile* self)
+{
+    return &Self(self)->fp;
 }
 
 static bool FatFsFile_Write(struct SolidSyslogFile* self, const void* buf, size_t count)
 {
-    struct SolidSyslogFatFsFile* fatfs  = Self(self);
-    UINT                         bw     = 0;
-    FRESULT                      result = f_write(&fatfs->fp, buf, (UINT) count, &bw);
+    UINT    bw     = 0;
+    FRESULT result = f_write(Fp(self), buf, (UINT) count, &bw);
     return (result == FR_OK) && (bw == count);
 }
 
 static void FatFsFile_SeekTo(struct SolidSyslogFile* self, size_t offset)
 {
-    struct SolidSyslogFatFsFile* fatfs = Self(self);
-    f_lseek(&fatfs->fp, (FSIZE_t) offset);
+    f_lseek(Fp(self), (FSIZE_t) offset);
 }
 
 static size_t FatFsFile_Size(struct SolidSyslogFile* self)
 {
-    struct SolidSyslogFatFsFile* fatfs = Self(self);
-    return (size_t) f_size(&fatfs->fp);
+    return (size_t) f_size(Fp(self));
 }
 
 static void FatFsFile_Truncate(struct SolidSyslogFile* self)
 {
-    struct SolidSyslogFatFsFile* fatfs = Self(self);
-    f_lseek(&fatfs->fp, 0);
-    f_truncate(&fatfs->fp);
+    f_lseek(Fp(self), 0);
+    f_truncate(Fp(self));
 }
 
 static bool FatFsFile_Exists(struct SolidSyslogFile* self, const char* path)

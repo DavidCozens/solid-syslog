@@ -16,11 +16,15 @@ static const char* const TEST_PATH = "test.log";
 // NOLINTBEGIN(cppcoreguidelines-macro-usage) -- macros preserve __FILE__/__LINE__ in test failure output
 #define CHECK_FILE_IS_OPEN() CHECK_TRUE(SolidSyslogFile_IsOpen(file))
 #define CHECK_FILE_CLOSED() CHECK_FALSE(SolidSyslogFile_IsOpen(file))
+#define CHECK_OPEN_PATH(path) STRCMP_EQUAL((path), FatFsFake_LastOpenPath())
+#define CHECK_OPEN_MODE(mode) LONGS_EQUAL((mode), FatFsFake_LastOpenMode())
 #define CHECK_LSEEK_OFFSET(offset) LONGS_EQUAL((offset), FatFsFake_LastLseekOffset())
 #define CHECK_READ_BUF(buf) POINTERS_EQUAL((buf), FatFsFake_LastReadBuf())
 #define CHECK_READ_COUNT(count) LONGS_EQUAL((count), FatFsFake_LastReadCount())
 #define CHECK_WRITE_BUF(buf) POINTERS_EQUAL((buf), FatFsFake_LastWriteBuf())
 #define CHECK_WRITE_COUNT(count) LONGS_EQUAL((count), FatFsFake_LastWriteCount())
+#define CHECK_STAT_PATH(path) STRCMP_EQUAL((path), FatFsFake_LastStatPath())
+#define CHECK_UNLINK_PATH(path) STRCMP_EQUAL((path), FatFsFake_LastUnlinkPath())
 
 // NOLINTEND(cppcoreguidelines-macro-usage)
 
@@ -68,14 +72,14 @@ TEST(SolidSyslogFatFsFile, OpenCallsFOpenWithCorrectDefaults)
 {
     Open();
     CALLED_FAKE(FatFsFake_Open, ONCE);
-    STRCMP_EQUAL(TEST_PATH, FatFsFake_LastOpenPath());
-    LONGS_EQUAL(FA_READ | FA_WRITE | FA_OPEN_ALWAYS, FatFsFake_LastOpenMode());
+    CHECK_OPEN_PATH(TEST_PATH);
+    CHECK_OPEN_MODE(FA_READ | FA_WRITE | FA_OPEN_ALWAYS);
 }
 
 TEST(SolidSyslogFatFsFile, OpenUsesPassedFilename)
 {
     Open("different.log");
-    STRCMP_EQUAL("different.log", FatFsFake_LastOpenPath());
+    CHECK_OPEN_PATH("different.log");
 }
 
 TEST(SolidSyslogFatFsFile, OpenFailsWhenFOpenFails)
@@ -191,13 +195,13 @@ TEST(SolidSyslogFatFsFile, ExistsCallsFStatAndReportsTrue)
 {
     CHECK_TRUE(SolidSyslogFile_Exists(file, TEST_PATH));
     CALLED_FAKE(FatFsFake_Stat, ONCE);
-    STRCMP_EQUAL(TEST_PATH, FatFsFake_LastStatPath());
+    CHECK_STAT_PATH(TEST_PATH);
 }
 
 TEST(SolidSyslogFatFsFile, ExistsUsesPassedPath)
 {
     SolidSyslogFile_Exists(file, "different.log");
-    STRCMP_EQUAL("different.log", FatFsFake_LastStatPath());
+    CHECK_STAT_PATH("different.log");
 }
 
 TEST(SolidSyslogFatFsFile, ExistsReportsFalseWhenFStatFails)
@@ -210,13 +214,13 @@ TEST(SolidSyslogFatFsFile, DeleteCallsFUnlinkAndReportsTrue)
 {
     CHECK_TRUE(SolidSyslogFile_Delete(file, TEST_PATH));
     CALLED_FAKE(FatFsFake_Unlink, ONCE);
-    STRCMP_EQUAL(TEST_PATH, FatFsFake_LastUnlinkPath());
+    CHECK_UNLINK_PATH(TEST_PATH);
 }
 
 TEST(SolidSyslogFatFsFile, DeleteUsesPassedPath)
 {
     SolidSyslogFile_Delete(file, "different.log");
-    STRCMP_EQUAL("different.log", FatFsFake_LastUnlinkPath());
+    CHECK_UNLINK_PATH("different.log");
 }
 
 TEST(SolidSyslogFatFsFile, DeleteReportsFalseWhenFUnlinkFails)
