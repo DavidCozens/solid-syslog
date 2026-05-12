@@ -11,6 +11,8 @@
 add_executable(SolidSyslogFatFsFileTest
     SolidSyslogFatFsFileTest.cpp
     main.cpp
+    ${CMAKE_SOURCE_DIR}/Platform/FatFs/Source/SolidSyslogFatFsFile.c
+    ${CMAKE_SOURCE_DIR}/Tests/Support/FatFsFakes/Source/FatFsFake.c
 )
 
 target_link_libraries(SolidSyslogFatFsFileTest PRIVATE
@@ -25,6 +27,7 @@ target_include_directories(SolidSyslogFatFsFileTest PRIVATE
     ${CMAKE_SOURCE_DIR}/Core/Source
     ${CMAKE_SOURCE_DIR}/Tests/Support
     ${CMAKE_SOURCE_DIR}/Tests/Support/FatFsFakes/Interface
+    ${CMAKE_SOURCE_DIR}/Tests/Support/FatFsFakes/Source
     $ENV{FATFS_PATH}/source
 )
 
