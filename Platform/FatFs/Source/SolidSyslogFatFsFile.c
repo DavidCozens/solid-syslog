@@ -80,7 +80,7 @@ static bool FatFsFile_Read(struct SolidSyslogFile* self, void* buf, size_t count
     struct SolidSyslogFatFsFile* fatfs  = Self(self);
     UINT                         br     = 0;
     FRESULT                      result = f_read(&fatfs->fp, buf, (UINT) count, &br);
-    return result == FR_OK && br == count;
+    return (result == FR_OK) && (br == count);
 }
 
 static bool FatFsFile_Write(struct SolidSyslogFile* self, const void* buf, size_t count)
@@ -88,7 +88,7 @@ static bool FatFsFile_Write(struct SolidSyslogFile* self, const void* buf, size_
     struct SolidSyslogFatFsFile* fatfs  = Self(self);
     UINT                         bw     = 0;
     FRESULT                      result = f_write(&fatfs->fp, buf, (UINT) count, &bw);
-    return result == FR_OK && bw == count;
+    return (result == FR_OK) && (bw == count);
 }
 
 static void FatFsFile_SeekTo(struct SolidSyslogFile* self, size_t offset)
