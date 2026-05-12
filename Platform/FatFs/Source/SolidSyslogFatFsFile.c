@@ -17,6 +17,8 @@ static bool                                FatFsFile_Write(struct SolidSyslogFil
 static void                                FatFsFile_SeekTo(struct SolidSyslogFile* self, size_t offset);
 static size_t                              FatFsFile_Size(struct SolidSyslogFile* self);
 static void                                FatFsFile_Truncate(struct SolidSyslogFile* self);
+static bool                                FatFsFile_Exists(struct SolidSyslogFile* self, const char* path);
+static bool                                FatFsFile_Delete(struct SolidSyslogFile* self, const char* path);
 static inline struct SolidSyslogFatFsFile* Self(struct SolidSyslogFile* self);
 
 struct SolidSyslogFatFsFile
@@ -30,8 +32,8 @@ SOLIDSYSLOG_STATIC_ASSERT(sizeof(struct SolidSyslogFatFsFile) <= sizeof(SolidSys
                           "SOLIDSYSLOG_FATFS_FILE_SIZE is too small for struct SolidSyslogFatFsFile");
 
 static const struct SolidSyslogFatFsFile DEFAULT_INSTANCE = {
-    .base   = {FatFsFile_Open, FatFsFile_Close, FatFsFile_IsOpen, FatFsFile_Read, FatFsFile_Write, FatFsFile_SeekTo, FatFsFile_Size, FatFsFile_Truncate, NULL,
-               NULL},
+    .base   = {FatFsFile_Open, FatFsFile_Close, FatFsFile_IsOpen, FatFsFile_Read, FatFsFile_Write, FatFsFile_SeekTo, FatFsFile_Size, FatFsFile_Truncate,
+               FatFsFile_Exists, FatFsFile_Delete},
     .isOpen = false,
 };
 
@@ -108,4 +110,16 @@ static void FatFsFile_Truncate(struct SolidSyslogFile* self)
     struct SolidSyslogFatFsFile* fatfs = Self(self);
     f_lseek(&fatfs->fp, 0);
     f_truncate(&fatfs->fp);
+}
+
+static bool FatFsFile_Exists(struct SolidSyslogFile* self, const char* path)
+{
+    (void) self;
+    return f_stat(path, NULL) == FR_OK;
+}
+
+static bool FatFsFile_Delete(struct SolidSyslogFile* self, const char* path)
+{
+    (void) self;
+    return f_unlink(path) == FR_OK;
 }

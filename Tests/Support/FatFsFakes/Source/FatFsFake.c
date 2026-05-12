@@ -38,6 +38,16 @@ static FRESULT     writeResult;
 static UINT        writeBytesReturned;
 static bool        writeBytesReturnedOverridden;
 
+/* f_stat state */
+static int         statCallCount;
+static const char* lastStatPath;
+static FRESULT     statResult;
+
+/* f_unlink state */
+static int         unlinkCallCount;
+static const char* lastUnlinkPath;
+static FRESULT     unlinkResult;
+
 void FatFsFake_Reset(void)
 {
     openCallCount                = 0;
@@ -61,6 +71,12 @@ void FatFsFake_Reset(void)
     writeResult                  = FR_OK;
     writeBytesReturned           = 0;
     writeBytesReturnedOverridden = false;
+    statCallCount                = 0;
+    lastStatPath                 = NULL;
+    statResult                   = FR_OK;
+    unlinkCallCount              = 0;
+    lastUnlinkPath               = NULL;
+    unlinkResult                 = FR_OK;
 }
 
 void FatFsFake_SetOpenResult(FRESULT result)
@@ -212,4 +228,49 @@ FRESULT f_write(FIL* fp, const void* buff, UINT btw, UINT* bw)
     lastWriteCount = btw;
     *bw            = writeBytesReturnedOverridden ? writeBytesReturned : btw;
     return writeResult;
+}
+
+void FatFsFake_SetStatResult(FRESULT result)
+{
+    statResult = result;
+}
+
+int FatFsFake_StatCallCount(void)
+{
+    return statCallCount;
+}
+
+const char* FatFsFake_LastStatPath(void)
+{
+    return lastStatPath;
+}
+
+FRESULT f_stat(const TCHAR* path, FILINFO* fno)
+{
+    (void) fno;
+    statCallCount++;
+    lastStatPath = path;
+    return statResult;
+}
+
+void FatFsFake_SetUnlinkResult(FRESULT result)
+{
+    unlinkResult = result;
+}
+
+int FatFsFake_UnlinkCallCount(void)
+{
+    return unlinkCallCount;
+}
+
+const char* FatFsFake_LastUnlinkPath(void)
+{
+    return lastUnlinkPath;
+}
+
+FRESULT f_unlink(const TCHAR* path)
+{
+    unlinkCallCount++;
+    lastUnlinkPath = path;
+    return unlinkResult;
 }

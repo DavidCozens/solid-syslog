@@ -38,6 +38,16 @@ EXTERN_C_BEGIN
     const void*  FatFsFake_LastWriteBuf(void);
     unsigned int FatFsFake_LastWriteCount(void);
 
+    /* f_stat */
+    void        FatFsFake_SetStatResult(FRESULT result);
+    int         FatFsFake_StatCallCount(void);
+    const char* FatFsFake_LastStatPath(void);
+
+    /* f_unlink */
+    void        FatFsFake_SetUnlinkResult(FRESULT result);
+    int         FatFsFake_UnlinkCallCount(void);
+    const char* FatFsFake_LastUnlinkPath(void);
+
     /* file size — writes obj.objsize on the last-opened FIL, so f_size(fp)
      * (a macro that dereferences fp->obj.objsize) returns the programmed
      * value. */

@@ -186,3 +186,41 @@ TEST(SolidSyslogFatFsFile, WriteFailsWhenFWriteFails)
     const char buf[5] = {};
     CHECK_FALSE(SolidSyslogFile_Write(file, buf, sizeof(buf)));
 }
+
+TEST(SolidSyslogFatFsFile, ExistsCallsFStatAndReportsTrue)
+{
+    CHECK_TRUE(SolidSyslogFile_Exists(file, TEST_PATH));
+    CALLED_FAKE(FatFsFake_Stat, ONCE);
+    STRCMP_EQUAL(TEST_PATH, FatFsFake_LastStatPath());
+}
+
+TEST(SolidSyslogFatFsFile, ExistsUsesPassedPath)
+{
+    SolidSyslogFile_Exists(file, "different.log");
+    STRCMP_EQUAL("different.log", FatFsFake_LastStatPath());
+}
+
+TEST(SolidSyslogFatFsFile, ExistsReportsFalseWhenFStatFails)
+{
+    FatFsFake_SetStatResult(FR_NO_FILE);
+    CHECK_FALSE(SolidSyslogFile_Exists(file, TEST_PATH));
+}
+
+TEST(SolidSyslogFatFsFile, DeleteCallsFUnlinkAndReportsTrue)
+{
+    CHECK_TRUE(SolidSyslogFile_Delete(file, TEST_PATH));
+    CALLED_FAKE(FatFsFake_Unlink, ONCE);
+    STRCMP_EQUAL(TEST_PATH, FatFsFake_LastUnlinkPath());
+}
+
+TEST(SolidSyslogFatFsFile, DeleteUsesPassedPath)
+{
+    SolidSyslogFile_Delete(file, "different.log");
+    STRCMP_EQUAL("different.log", FatFsFake_LastUnlinkPath());
+}
+
+TEST(SolidSyslogFatFsFile, DeleteReportsFalseWhenFUnlinkFails)
+{
+    FatFsFake_SetUnlinkResult(FR_DENIED);
+    CHECK_FALSE(SolidSyslogFile_Delete(file, TEST_PATH));
+}
