@@ -193,8 +193,10 @@ def apply_extra_args(context, process, extra_args):
                 ) from exc
             # Guard against the next-token-is-another-flag mistake:
             # `--facility --severity 6` would silently use `--severity` as
-            # facility's value. Fail fast so the scenario builder fixes it.
-            if value.startswith("-"):
+            # facility's value. Match against the known-flag set so that
+            # legitimate hyphen-prefixed values (e.g. `--message -hello`)
+            # aren't rejected. Fail fast so the scenario builder fixes it.
+            if value in _FREERTOS_SET_TRANSLATION:
                 raise ValueError(
                     f"FreeRTOS extra_args flag {flag!r} expects a value but "
                     f"got another flag {value!r}."
