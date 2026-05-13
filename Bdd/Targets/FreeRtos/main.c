@@ -252,7 +252,6 @@ static bool                          TryUpdateString(char* storage, size_t stora
 static bool                          TryParseUInt(const char* value, unsigned long* out);
 static bool                          RebuildWithFileStore(void);
 static bool                          EnsureFatFsMounted(void);
-static void                          RunFatFsSelfTest(void);
 static enum SolidSyslogDiscardPolicy MapDiscardPolicy(const char* policy);
 static void                          OnStoreFull(void* context);
 static size_t                        GetCapacityThreshold(void* context);
@@ -605,23 +604,18 @@ static bool EnsureFatFsMounted(void)
     {
         return true;
     }
-    (void) printf("[fatfs] mounting volume 0\n");
     FRESULT res = f_mount(&g_fatfs, "", 1); /* opt=1 → mount immediately, surface FR_NO_FILESYSTEM here rather than at first f_open */
-    (void) printf("[fatfs] f_mount initial -> %d\n", (int) res);
     if (res == FR_NO_FILESYSTEM)
     {
         /* Fresh disk image — lay down a FAT and re-mount. FAT12 is the
          * natural choice for a 1 MiB volume (small enough that FAT32's
          * cluster overhead would dominate). */
-        (void) printf("[fatfs] no filesystem, formatting\n");
         static BYTE     workBuffer[FF_MAX_SS];
         const MKFS_PARM opts = {.fmt = FM_FAT | FM_SFD, .n_fat = 1, .align = 1, .n_root = 0, .au_size = 0};
         res                  = f_mkfs("", &opts, workBuffer, sizeof(workBuffer));
-        (void) printf("[fatfs] f_mkfs -> %d\n", (int) res);
         if (res == FR_OK)
         {
             res = f_mount(&g_fatfs, "", 1);
-            (void) printf("[fatfs] f_mount post-mkfs -> %d\n", (int) res);
         }
     }
     if (res != FR_OK)
@@ -630,63 +624,7 @@ static bool EnsureFatFsMounted(void)
         return false;
     }
     g_fatfsMounted = true;
-    (void) printf("[fatfs] mount complete\n");
-    RunFatFsSelfTest();
     return true;
-}
-
-/* Exercise every FatFs operation that BlockStore + FileBlockDevice will use:
- * open(write), write, close, stat-exists, open(read), read, close, unlink,
- * stat-not-exists. If any step fails, we know the FatFs layer is the
- * regression source. Runs once per mount (after f_mkfs), inside the
- * lifecycle-mutex critical section, so it can't race the Service task. */
-static void RunFatFsSelfTest(void)
-{
-    static const char TEST_PATH[] = "TEST.TMP";
-    static const char TEST_DATA[] = "hello";
-
-    enum
-    {
-        TEST_DATA_LEN = sizeof(TEST_DATA) - 1U
-    };
-
-    FIL     fp;
-    FILINFO fno                         = {0};
-    UINT    bw                          = 0U;
-    UINT    br                          = 0U;
-    char    readBuf[TEST_DATA_LEN + 1U] = {0};
-
-    FRESULT res = f_open(&fp, TEST_PATH, FA_CREATE_ALWAYS | FA_WRITE);
-    (void) printf("[fatfs-test] f_open(W) -> %d\n", (int) res);
-    if (res != FR_OK)
-    {
-        return;
-    }
-
-    res = f_write(&fp, TEST_DATA, (UINT) TEST_DATA_LEN, &bw);
-    (void) printf("[fatfs-test] f_write %u bytes -> %d (bw=%u)\n", (unsigned) TEST_DATA_LEN, (int) res, (unsigned) bw);
-
-    res = f_close(&fp);
-    (void) printf("[fatfs-test] f_close(W) -> %d\n", (int) res);
-
-    res = f_stat(TEST_PATH, &fno);
-    (void) printf("[fatfs-test] f_stat exists -> %d (size=%u)\n", (int) res, (unsigned) fno.fsize);
-
-    res = f_open(&fp, TEST_PATH, FA_READ);
-    (void) printf("[fatfs-test] f_open(R) -> %d\n", (int) res);
-    if (res == FR_OK)
-    {
-        res = f_read(&fp, readBuf, sizeof(readBuf) - 1U, &br);
-        (void) printf("[fatfs-test] f_read -> %d (br=%u, data='%s')\n", (int) res, (unsigned) br, readBuf);
-        res = f_close(&fp);
-        (void) printf("[fatfs-test] f_close(R) -> %d\n", (int) res);
-    }
-
-    res = f_unlink(TEST_PATH);
-    (void) printf("[fatfs-test] f_unlink -> %d\n", (int) res);
-
-    res = f_stat(TEST_PATH, &fno);
-    (void) printf("[fatfs-test] f_stat after-unlink -> %d (expect FR_NO_FILE=4)\n", (int) res);
 }
 
 static void SemihostingExit(int status)
