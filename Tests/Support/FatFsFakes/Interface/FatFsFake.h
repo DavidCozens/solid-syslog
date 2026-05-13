@@ -27,16 +27,20 @@ EXTERN_C_BEGIN
     /* f_read */
     void         FatFsFake_SetReadResult(FRESULT result);
     void         FatFsFake_SetReadBytesReturned(unsigned int bytes);
+    void         FatFsFake_SetReadSource(const void* bytes, unsigned int count);
     int          FatFsFake_ReadCallCount(void);
-    const void*  FatFsFake_LastReadBuf(void);
     unsigned int FatFsFake_LastReadCount(void);
 
     /* f_write */
     void         FatFsFake_SetWriteResult(FRESULT result);
     void         FatFsFake_SetWriteBytesReturned(unsigned int bytes);
     int          FatFsFake_WriteCallCount(void);
-    const void*  FatFsFake_LastWriteBuf(void);
+    const void*  FatFsFake_LastWriteBytes(void);
     unsigned int FatFsFake_LastWriteCount(void);
+
+    /* f_sync */
+    void FatFsFake_SetSyncResult(FRESULT result);
+    int  FatFsFake_SyncCallCount(void);
 
     /* f_stat */
     void        FatFsFake_SetStatResult(FRESULT result);

@@ -19,9 +19,7 @@ static const char* const TEST_PATH = "test.log";
 #define CHECK_OPEN_PATH(path) STRCMP_EQUAL((path), FatFsFake_LastOpenPath())
 #define CHECK_OPEN_MODE(mode) LONGS_EQUAL((mode), FatFsFake_LastOpenMode())
 #define CHECK_LSEEK_OFFSET(offset) LONGS_EQUAL((offset), FatFsFake_LastLseekOffset())
-#define CHECK_READ_BUF(buf) POINTERS_EQUAL((buf), FatFsFake_LastReadBuf())
 #define CHECK_READ_COUNT(count) LONGS_EQUAL((count), FatFsFake_LastReadCount())
-#define CHECK_WRITE_BUF(buf) POINTERS_EQUAL((buf), FatFsFake_LastWriteBuf())
 #define CHECK_WRITE_COUNT(count) LONGS_EQUAL((count), FatFsFake_LastWriteCount())
 #define CHECK_STAT_PATH(path) STRCMP_EQUAL((path), FatFsFake_LastStatPath())
 #define CHECK_UNLINK_PATH(path) STRCMP_EQUAL((path), FatFsFake_LastUnlinkPath())
@@ -31,12 +29,15 @@ static const char* const TEST_PATH = "test.log";
 // clang-format off
 TEST_GROUP(SolidSyslogFatFsFile)
 {
-    SolidSyslogFatFsFileStorage storage = {};
-    struct SolidSyslogFile*     file    = nullptr;
+    SolidSyslogFatFsFileStorage storage     = {};
+    struct SolidSyslogFile*     file        = nullptr;
+    // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+    char                        buffer[5]   = {'h', 'e', 'l', 'l', 'o'};
 
     void setup() override
     {
         FatFsFake_Reset();
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
         file = SolidSyslogFatFsFile_Create(&storage);
     }
 
@@ -142,53 +143,71 @@ TEST(SolidSyslogFatFsFile, SizeReturnsFileObjectSize)
 TEST(SolidSyslogFatFsFile, ReadCallsFReadWithCorrectDefaults)
 {
     Open();
-    char buf[5] = {};
-    CHECK_TRUE(SolidSyslogFile_Read(file, buf, sizeof(buf)));
+    const char source[5] = {'h', 'e', 'l', 'l', 'o'};
+    FatFsFake_SetReadSource(source, sizeof(source));
+    CHECK_TRUE(SolidSyslogFile_Read(file, buffer, sizeof(buffer)));
     CALLED_FAKE(FatFsFake_Read, ONCE);
-    CHECK_READ_BUF(buf);
-    CHECK_READ_COUNT(sizeof(buf));
+    MEMCMP_EQUAL(source, buffer, sizeof(source));
+    CHECK_READ_COUNT(sizeof(buffer));
 }
 
 TEST(SolidSyslogFatFsFile, ReadFailsWhenFReadReturnsPartial)
 {
     Open();
     FatFsFake_SetReadBytesReturned(3);
-    char buf[5];
-    CHECK_FALSE(SolidSyslogFile_Read(file, buf, sizeof(buf)));
+    CHECK_FALSE(SolidSyslogFile_Read(file, buffer, sizeof(buffer)));
 }
 
 TEST(SolidSyslogFatFsFile, ReadFailsWhenFReadFails)
 {
     Open();
     FatFsFake_SetReadResult(FR_DISK_ERR);
-    char buf[5];
-    CHECK_FALSE(SolidSyslogFile_Read(file, buf, sizeof(buf)));
+    CHECK_FALSE(SolidSyslogFile_Read(file, buffer, sizeof(buffer)));
 }
 
 TEST(SolidSyslogFatFsFile, WriteCallsFWriteWithCorrectDefaults)
 {
     Open();
-    const char buf[5] = {'h', 'e', 'l', 'l', 'o'};
-    CHECK_TRUE(SolidSyslogFile_Write(file, buf, sizeof(buf)));
+    CHECK_TRUE(SolidSyslogFile_Write(file, buffer, sizeof(buffer)));
     CALLED_FAKE(FatFsFake_Write, ONCE);
-    CHECK_WRITE_BUF(buf);
-    CHECK_WRITE_COUNT(sizeof(buf));
+    MEMCMP_EQUAL(buffer, FatFsFake_LastWriteBytes(), sizeof(buffer));
+    CHECK_WRITE_COUNT(sizeof(buffer));
 }
 
 TEST(SolidSyslogFatFsFile, WriteFailsWhenFWriteReturnsPartial)
 {
     Open();
     FatFsFake_SetWriteBytesReturned(3);
-    const char buf[5] = {};
-    CHECK_FALSE(SolidSyslogFile_Write(file, buf, sizeof(buf)));
+    CHECK_FALSE(SolidSyslogFile_Write(file, buffer, sizeof(buffer)));
 }
 
 TEST(SolidSyslogFatFsFile, WriteFailsWhenFWriteFails)
 {
     Open();
     FatFsFake_SetWriteResult(FR_DISK_ERR);
-    const char buf[5] = {};
-    CHECK_FALSE(SolidSyslogFile_Write(file, buf, sizeof(buf)));
+    CHECK_FALSE(SolidSyslogFile_Write(file, buffer, sizeof(buffer)));
+}
+
+TEST(SolidSyslogFatFsFile, WriteCommitsToDisk)
+{
+    Open();
+    SolidSyslogFile_Write(file, buffer, 1);
+    CALLED_FAKE(FatFsFake_Sync, ONCE);
+}
+
+TEST(SolidSyslogFatFsFile, WriteFailsWhenFSyncFails)
+{
+    Open();
+    FatFsFake_SetSyncResult(FR_DISK_ERR);
+    CHECK_FALSE(SolidSyslogFile_Write(file, buffer, sizeof(buffer)));
+}
+
+TEST(SolidSyslogFatFsFile, WriteDoesNotSyncWhenFWriteFails)
+{
+    Open();
+    FatFsFake_SetWriteResult(FR_DISK_ERR);
+    SolidSyslogFile_Write(file, buffer, sizeof(buffer));
+    CALLED_FAKE(FatFsFake_Sync, NEVER);
 }
 
 TEST(SolidSyslogFatFsFile, ExistsCallsFStatAndReportsTrue)
