@@ -19,12 +19,13 @@ struct SolidSyslogFreeRtosTcpStream
     Socket_t                 socket;
 };
 
-/* FreeRTOS-Plus-TCP does not expose non-blocking connect with select(), so we
- * bound the blocking connect call with SO_SNDTIMEO instead. 200 ms is short
- * enough that the Service task keeps draining predictably during an outage,
- * long enough for a healthy peer to ACK over slirp/LAN. After connect both
- * timeouts go back to 0 so subsequent Send/Read follow the non-blocking
- * single-call contract from SolidSyslogStream. */
+/* 200 ms is short enough that the Service task keeps draining predictably
+ * during an outage, long enough for a healthy peer to ACK over slirp/LAN.
+ * Both SO_SNDTIMEO and SO_RCVTIMEO are set before FreeRTOS_connect —
+ * upstream gates connect on SO_RCVTIMEO, but we set both as belt-and-braces
+ * against an upstream change. After connect both timeouts go back to 0 so
+ * subsequent Send/Read follow the non-blocking single-call contract from
+ * SolidSyslogStream. */
 static const TickType_t CONNECT_TIMEOUT_TICKS = pdMS_TO_TICKS(200);
 static const TickType_t NO_TIMEOUT_TICKS      = 0;
 
@@ -140,6 +141,7 @@ static bool FreeRtosTcpStream_TryConnect(FreeRtosTcpStream* stream, const struct
 {
     const struct freertos_sockaddr* dest = SolidSyslogAddress_AsConstFreertosSockaddr(addr);
     FreeRtosTcpStream_SetSendTimeout(stream->socket, CONNECT_TIMEOUT_TICKS);
+    FreeRtosTcpStream_SetRecvTimeout(stream->socket, CONNECT_TIMEOUT_TICKS);
     return FreeRTOS_connect(stream->socket, dest, sizeof(*dest)) == 0;
 }
 

@@ -102,6 +102,12 @@ TEST(SolidSyslogFreeRtosTcpStream, OpenSetsConnectTimeoutBeforeConnect)
     LONGS_EQUAL(pdMS_TO_TICKS(200), FreeRtosSocketsFake_SndTimeoAtConnect());
 }
 
+TEST(SolidSyslogFreeRtosTcpStream, OpenSetsRecvTimeoutBeforeConnect)
+{
+    openStream();
+    LONGS_EQUAL(pdMS_TO_TICKS(200), FreeRtosSocketsFake_RcvTimeoAtConnect());
+}
+
 TEST(SolidSyslogFreeRtosTcpStream, OpenCallsConnectWithSocketAndAddress)
 {
     openStream();
@@ -122,7 +128,7 @@ TEST(SolidSyslogFreeRtosTcpStream, OpenClearsRecvTimeoutAfterConnect)
 {
     openStream();
     LONGS_EQUAL(0, FreeRtosSocketsFake_LastRcvTimeoSet());
-    LONGS_EQUAL(1, FreeRtosSocketsFake_RcvTimeoSetCallCount());
+    LONGS_EQUAL(2, FreeRtosSocketsFake_RcvTimeoSetCallCount());
 }
 
 TEST(SolidSyslogFreeRtosTcpStream, OpenCallsSetsockoptWithReturnedSocketAndLevelZero)
