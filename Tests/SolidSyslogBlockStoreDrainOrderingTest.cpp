@@ -23,7 +23,6 @@ extern "C"
 #include "SolidSyslogBuffer.h"
 #include "SolidSyslogCircularBuffer.h"
 #include "SolidSyslogConfig.h"
-#include "SolidSyslogFile.h"
 #include "SolidSyslogFileBlockDevice.h"
 #include "SolidSyslogNullMutex.h"
 #include "SolidSyslogNullSecurityPolicy.h"
@@ -105,22 +104,47 @@ struct DrainTestConfig
     enum SolidSyslogDiscardPolicy discardPolicy;
 };
 
+/* Shared file / block-device / null-security-policy fixture. Lifted out of
+ * the two TEST_GROUPs below so each can focus on its own moving parts —
+ * BlockStoreDrainOrdering adds a BlockStore directly; ServiceDrainInterleave
+ * adds Buffer + Mutex + SenderSpy + the SolidSyslog facade. Matches the
+ * established TEST_BASE / TEST_GROUP_BASE pattern from
+ * SolidSyslogBlockStoreTest.cpp. */
 // clang-format off
-TEST_GROUP(BlockStoreDrainOrdering)
+TEST_BASE(DrainTestFixtureBase)
 {
-    struct FileFakeStorage            fileStorage    = {};
-    struct SolidSyslogFile*           file           = nullptr;
-    SolidSyslogFileBlockDeviceStorage deviceStorage  = {};
-    struct SolidSyslogBlockDevice*    device         = nullptr;
-    SolidSyslogBlockStoreStorage      storeStorage   = {};
-    struct SolidSyslogStore*          store          = nullptr;
-    struct SolidSyslogSecurityPolicy* policy         = nullptr;
+    struct FileFakeStorage            fileStorage   = {};
+    struct SolidSyslogFile*           file          = nullptr;
+    SolidSyslogFileBlockDeviceStorage deviceStorage = {};
+    struct SolidSyslogBlockDevice*    device        = nullptr;
+    struct SolidSyslogSecurityPolicy* policy        = nullptr;
 
-    void setup() override
+    void setupBlockDeviceAndPolicy()
     {
         file   = FileFake_Create(&fileStorage);
         device = SolidSyslogFileBlockDevice_Create(&deviceStorage, file, TEST_PATH_PREFIX);
         policy = SolidSyslogNullSecurityPolicy_Create();
+    }
+
+    void teardownBlockDeviceAndPolicy() const
+    {
+        SolidSyslogNullSecurityPolicy_Destroy();
+        SolidSyslogFileBlockDevice_Destroy(device);
+        FileFake_Destroy();
+    }
+};
+
+// clang-format on
+
+// clang-format off
+TEST_GROUP_BASE(BlockStoreDrainOrdering, DrainTestFixtureBase)
+{
+    SolidSyslogBlockStoreStorage      storeStorage   = {};
+    struct SolidSyslogStore*          store          = nullptr;
+
+    void setup() override
+    {
+        setupBlockDeviceAndPolicy();
     }
 
     void teardown() override
@@ -129,9 +153,7 @@ TEST_GROUP(BlockStoreDrainOrdering)
         {
             SolidSyslogBlockStore_Destroy(store);
         }
-        SolidSyslogNullSecurityPolicy_Destroy();
-        SolidSyslogFileBlockDevice_Destroy(device);
-        FileFake_Destroy();
+        teardownBlockDeviceAndPolicy();
     }
 
     void CreateStore(const DrainTestConfig& cfg)
@@ -195,29 +217,22 @@ TEST_GROUP(BlockStoreDrainOrdering)
  * buffered message bypass *older* stored messages once the oracle
  * recovers. */
 // clang-format off
-TEST_GROUP(ServiceDrainInterleave)
+TEST_GROUP_BASE(ServiceDrainInterleave, DrainTestFixtureBase)
 {
     /* Sized to hold 16 max-sized messages — plenty for the outage
      * reproducer; CircularBuffer is FIFO so all messages are retained
      * until Service drains them (unlike BufferFake which only keeps
      * the last one). */
-    SolidSyslogCircularBufferStorage  bufferStorage[SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE(16)] = {};
-    struct FileFakeStorage            fileStorage                                               = {};
-    struct SolidSyslogFile*           file                                                      = nullptr;
-    SolidSyslogFileBlockDeviceStorage deviceStorage                                             = {};
-    struct SolidSyslogBlockDevice*    device                                                    = nullptr;
-    SolidSyslogBlockStoreStorage      storeStorage                                              = {};
-    struct SolidSyslogStore*          store                                                     = nullptr;
-    struct SolidSyslogSecurityPolicy* policy                                                    = nullptr;
-    struct SolidSyslogMutex*          mutex                                                     = nullptr;
-    struct SolidSyslogBuffer*         buffer                                                    = nullptr;
-    SenderSpy                         spy                                                       = {};
+    SolidSyslogCircularBufferStorage bufferStorage[SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE(16)] = {};
+    SolidSyslogBlockStoreStorage     storeStorage                                              = {};
+    struct SolidSyslogStore*         store                                                     = nullptr;
+    struct SolidSyslogMutex*         mutex                                                     = nullptr;
+    struct SolidSyslogBuffer*        buffer                                                    = nullptr;
+    SenderSpy                        spy                                                       = {};
 
     void setup() override
     {
-        file   = FileFake_Create(&fileStorage);
-        device = SolidSyslogFileBlockDevice_Create(&deviceStorage, file, TEST_PATH_PREFIX);
-        policy = SolidSyslogNullSecurityPolicy_Create();
+        setupBlockDeviceAndPolicy();
         mutex  = SolidSyslogNullMutex_Create();
         buffer = SolidSyslogCircularBuffer_Create(bufferStorage, sizeof(bufferStorage), mutex);
         SenderSpy_Init(spy);
@@ -233,9 +248,7 @@ TEST_GROUP(ServiceDrainInterleave)
         }
         SolidSyslogCircularBuffer_Destroy(buffer);
         SolidSyslogNullMutex_Destroy();
-        SolidSyslogNullSecurityPolicy_Destroy();
-        SolidSyslogFileBlockDevice_Destroy(device);
-        FileFake_Destroy();
+        teardownBlockDeviceAndPolicy();
     }
 
     /* Build BlockStore + wire SolidSyslog facade with buffer + store + spy. */
@@ -313,6 +326,8 @@ TEST(ServiceDrainInterleave, DiscardNewestDoesNotLetNewestBypassOldestOnRecovery
     /* Oracle resumes. Drain by ticking Service repeatedly. */
     spy.outage = false;
     ServiceTickUntilQuiet(10);
+    CHECK_FALSE_TEXT(SolidSyslogStore_HasUnsent(store), "store still holds unsent records after recovery — ServiceTickUntilQuiet cap too small");
+    CHECK_TRUE_TEXT(spy.successfulSends.size() > 1U, "expected post-recovery successful sends; only the pre-outage send fired");
 
     std::vector<uint32_t> ids = DecodeSequenceIds(spy.successfulSends);
 

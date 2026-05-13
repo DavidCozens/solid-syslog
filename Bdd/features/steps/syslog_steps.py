@@ -1140,7 +1140,13 @@ def step_client_is_killed(context):
             process.wait(timeout=5)
         except subprocess.TimeoutExpired:
             process.kill()
-            process.wait(timeout=5)
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                # SIGKILL should be immediate; if we still time out the OS
+                # is in trouble — proceed so `del context.interactive_process`
+                # still runs.
+                pass
     else:
         # process.kill() is portable: TerminateProcess on Windows, SIGKILL on POSIX.
         # signal.SIGKILL is not defined on Windows.
