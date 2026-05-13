@@ -29,12 +29,13 @@ extern "C"
 #include "SolidSyslogNullSecurityPolicy.h"
 #include "SolidSyslogSenderDefinition.h"
 #include "SolidSyslogStore.h"
+#include "SolidSyslogTunables.h"
 }
 
 #include <algorithm>
+#include <cstdio>
 #include <iterator>
 #include <stdint.h>
-#include <string.h>
 
 #include <vector>
 
@@ -54,7 +55,8 @@ struct SenderSpy
 
 static bool SenderSpy_Send(struct SolidSyslogSender* self, const void* buffer, size_t size)
 {
-    SenderSpy* spy = reinterpret_cast<SenderSpy*>(self);
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) -- vtable downcast; SenderSpy embeds SolidSyslogSender as its first field
+    auto* spy = reinterpret_cast<SenderSpy*>(self);
     if (spy->outage)
     {
         return false;
@@ -147,7 +149,8 @@ TEST_GROUP(BlockStoreDrainOrdering)
     // bytes (little-endian) and is padded with 'x' to the test's chosen
     // payload size. Returns the Write result so tests can pin discard
     // behaviour without asserting truthy here.
-    bool WriteMessage(uint32_t sequenceId, size_t payloadSize)
+    // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- sequenceId and payloadSize are distinct concepts; both numeric is incidental
+    [[nodiscard]] bool WriteMessage(uint32_t sequenceId, size_t payloadSize) const
     {
         std::vector<uint8_t> buf(payloadSize, 'x');
         buf[0] = static_cast<uint8_t>(sequenceId & 0xFFU);
@@ -160,7 +163,7 @@ TEST_GROUP(BlockStoreDrainOrdering)
     // Drains the next unsent record. Returns the sequenceId decoded from
     // the first 4 bytes. Asserts there is something to drain so misuse
     // surfaces as a test failure, not a 0 quietly slipped into the list.
-    uint32_t DrainOne()
+    [[nodiscard]] uint32_t DrainOne() const
     {
         CHECK_TRUE(SolidSyslogStore_HasUnsent(store));
         uint8_t buf[4096] = {};
@@ -170,7 +173,7 @@ TEST_GROUP(BlockStoreDrainOrdering)
         return static_cast<uint32_t>(buf[0]) | (static_cast<uint32_t>(buf[1]) << 8) | (static_cast<uint32_t>(buf[2]) << 16) | (static_cast<uint32_t>(buf[3]) << 24);
     }
 
-    std::vector<uint32_t> DrainAll()
+    [[nodiscard]] std::vector<uint32_t> DrainAll() const
     {
         std::vector<uint32_t> drained;
         while (SolidSyslogStore_HasUnsent(store))
@@ -256,7 +259,8 @@ TEST_GROUP(ServiceDrainInterleave)
     /* Push one record into the buffer with sequenceId encoded in the first
      * 4 bytes — bypasses SolidSyslog_Log so we control exact bytes and
      * don't pull in clock / hostname / SD plumbing. */
-    void Enqueue(uint32_t sequenceId, size_t payloadSize)
+    // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- sequenceId and payloadSize are distinct concepts; both numeric is incidental
+    void Enqueue(uint32_t sequenceId, size_t payloadSize) const
     {
         std::vector<uint8_t> buf(payloadSize, 'x');
         buf[0] = static_cast<uint8_t>(sequenceId & 0xFFU);
@@ -266,7 +270,7 @@ TEST_GROUP(ServiceDrainInterleave)
         SolidSyslogBuffer_Write(buffer, buf.data(), buf.size());
     }
 
-    void ServiceTickUntilQuiet(size_t cap)
+    static void ServiceTickUntilQuiet(size_t cap)
     {
         for (size_t i = 0; i < cap; ++i)
         {
@@ -279,12 +283,14 @@ TEST_GROUP(ServiceDrainInterleave)
 
 TEST(ServiceDrainInterleave, DiscardNewestDoesNotLetNewestBypassOldestOnRecovery)
 {
-    /* Use payloads close to SOLIDSYSLOG_MAX_MESSAGE_SIZE so the runtime
-     * clamp on maxBlockSize bottoms out at ~MAX+overhead and each block
-     * holds exactly one record. With maxBlocks=2 the store fits 2
-     * records — small enough for the outage to overflow with just a
-     * couple of messages. */
-    DrainTestConfig cfg = {/*maxBlocks=*/2, /*maxBlockSize=*/200 /*will clamp up*/, /*payloadSize=*/2000, SOLIDSYSLOG_DISCARD_NEWEST};
+    /* Size the payload to MAX - small-slack so the runtime clamp on
+     * maxBlockSize bottoms out at ~MAX+overhead and each block holds
+     * exactly one record. MAX-relative keeps the test portable across
+     * SOLIDSYSLOG_MAX_MESSAGE_SIZE tunable overrides. With maxBlocks=2
+     * the store fits 2 records — small enough for the outage to overflow
+     * with just a couple of messages. */
+    DrainTestConfig cfg = {/*maxBlocks=*/2, /*maxBlockSize=*/200 /*will clamp up*/, /*payloadSize=*/SOLIDSYSLOG_MAX_MESSAGE_SIZE - 100U,
+                           SOLIDSYSLOG_DISCARD_NEWEST};
     Setup(cfg);
 
     /* Pre-outage send: msg 1 flows buffer -> store -> sender successfully. */
@@ -310,14 +316,6 @@ TEST(ServiceDrainInterleave, DiscardNewestDoesNotLetNewestBypassOldestOnRecovery
 
     std::vector<uint32_t> ids = DecodeSequenceIds(spy.successfulSends);
 
-    /* Dump for visibility — the BDD failure was [1, 11, 2, 3, 4, 5, 6]. */
-    (void) printf("[service-drain] successful sends in order: [");
-    for (size_t i = 0; i < ids.size(); ++i)
-    {
-        (void) printf("%s%u", (i == 0) ? "" : ", ", ids[i]);
-    }
-    (void) printf("]\n");
-
     /* Structural assertion: successful sends must be in non-descending
      * order. ANY descent (e.g. 11 followed by 2) means a newer message
      * jumped ahead of older ones — exactly the bug the BDD scenario
@@ -326,7 +324,8 @@ TEST(ServiceDrainInterleave, DiscardNewestDoesNotLetNewestBypassOldestOnRecovery
     {
         if (ids[i] < ids[i - 1])
         {
-            char message[256];
+            char message[256] = {};
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg) -- snprintf is the lingua franca for building CppUTest FAIL messages
             (void) snprintf(message, sizeof(message), "Send order descended: ids[%zu]=%u after ids[%zu]=%u", i, ids[i], i - 1, ids[i - 1]);
             FAIL(message);
         }
@@ -362,17 +361,6 @@ TEST(BlockStoreDrainOrdering, OutageDrainProducesAscendingSequenceIds)
     /* Drain everything that's still there. */
     std::vector<uint32_t> drained = DrainAll();
 
-    /* Dump the drained sequence to stdout so we can see the shape even
-     * when the structural assertion below passes. The user-visible
-     * artifact from the BDD scenario is [1, 11, 2, 3, 4, 5, 6]; we need
-     * to know what we actually produce here to compare. */
-    (void) printf("[drain-ordering] outage drained %zu records: [", drained.size());
-    for (size_t i = 0; i < drained.size(); ++i)
-    {
-        (void) printf("%s%u", (i == 0) ? "" : ", ", drained[i]);
-    }
-    (void) printf("]\n");
-
     /* Structural check: drain must be strictly ascending. Any descent
      * (e.g. 11 followed by 2) is an ordering bug regardless of which ids
      * the discard policy kept. */
@@ -380,7 +368,8 @@ TEST(BlockStoreDrainOrdering, OutageDrainProducesAscendingSequenceIds)
     {
         if (drained[i] <= drained[i - 1])
         {
-            char message[256];
+            char message[256] = {};
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg) -- snprintf is the lingua franca for building CppUTest FAIL messages
             (void) snprintf(message, sizeof(message), "Drain order not strictly ascending: drained[%zu]=%u after drained[%zu]=%u", i, drained[i], i - 1,
                             drained[i - 1]);
             FAIL(message);
