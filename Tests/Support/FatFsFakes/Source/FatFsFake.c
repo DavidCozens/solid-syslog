@@ -207,7 +207,7 @@ FRESULT f_read(FIL* fp, void* buff, UINT btr, UINT* br)
     lastReadCount  = btr;
     UINT copyCount = (btr <= readSourceCount) ? btr : readSourceCount;
     memcpy(buff, readSource, copyCount);
-    *br = readBytesReturnedOverridden ? readBytesReturned : btr;
+    *br = readBytesReturnedOverridden ? readBytesReturned : copyCount;
     return readResult;
 }
 

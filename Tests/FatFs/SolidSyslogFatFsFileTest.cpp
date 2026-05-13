@@ -158,6 +158,14 @@ TEST(SolidSyslogFatFsFile, ReadFailsWhenFReadReturnsPartial)
     CHECK_FALSE(SolidSyslogFile_Read(file, buffer, sizeof(buffer)));
 }
 
+TEST(SolidSyslogFatFsFile, ReadFailsWhenSourceShorterThanRequested)
+{
+    Open();
+    const char source[3] = {'a', 'b', 'c'};
+    FatFsFake_SetReadSource(source, sizeof(source));
+    CHECK_FALSE(SolidSyslogFile_Read(file, buffer, sizeof(buffer)));
+}
+
 TEST(SolidSyslogFatFsFile, ReadFailsWhenFReadFails)
 {
     Open();
