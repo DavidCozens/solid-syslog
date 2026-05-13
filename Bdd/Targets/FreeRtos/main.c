@@ -56,6 +56,8 @@
 #include "SolidSyslogTimeQualitySd.h"
 #include "SolidSyslogUdpSender.h"
 
+#include "ff.h" /* f_mount / f_mkfs — FatFs requires an explicit volume mount before any file operation; we eagerly mount-or-format on the `set store file` rebuild trigger. */
+
 #include <FreeRTOS.h>
 #include <task.h>
 
@@ -190,6 +192,12 @@ static SolidSyslogFatFsFileStorage       g_storeWriteFileStorage;
 static SolidSyslogFileBlockDeviceStorage g_blockDeviceStorage;
 static SolidSyslogBlockStoreStorage      g_blockStoreStorage;
 
+/* FATFS object lives in .bss because f_mount stores its address inside the
+ * FatFs volume registry — the object must outlive every f_open / f_stat /
+ * f_unlink. One per volume (FF_VOLUMES = 1). */
+static FATFS g_fatfs;
+static bool  g_fatfsMounted = false;
+
 static struct SolidSyslogFile*        g_storeReadFile      = NULL;
 static struct SolidSyslogFile*        g_storeWriteFile     = NULL;
 static struct SolidSyslogBlockDevice* g_storeBlockDevice   = NULL;
@@ -211,6 +219,10 @@ static size_t        g_pendingMaxBlockSize      = DEFAULT_PENDING_MAX_BLOCK_SIZE
 static const char*   g_pendingDiscardPolicy     = "oldest";
 static volatile bool g_pendingHaltExit          = false;
 static size_t        g_pendingCapacityThreshold = 0;
+/* When true, SolidSyslog gets only the meta SD (sequenceId / sysUpTime /
+ * language) — timeQuality and origin are dropped. Mirrors Linux's
+ * --no-sd. Consumed by the initial Setup and by RebuildWithFileStore. */
+static volatile bool g_pendingNoSd = false;
 
 /* Holds the final SolidSyslog config so the rebuild path can rewrite
  * .store and pass the same struct back into SolidSyslog_Create. */
@@ -234,6 +246,7 @@ extern NetworkInterface_t* pxMPS2_FillInterfaceDescriptor(BaseType_t xEMACIndex,
 static bool                          TryUpdateString(char* storage, size_t storageSize, const char* value);
 static bool                          TryParseUInt(const char* value, unsigned long* out);
 static bool                          RebuildWithFileStore(void);
+static bool                          EnsureFatFsMounted(void);
 static enum SolidSyslogDiscardPolicy MapDiscardPolicy(const char* policy);
 static void                          OnStoreFull(void* context);
 static size_t                        GetCapacityThreshold(void* context);
@@ -444,6 +457,20 @@ static bool OnSet(const char* name, const char* value)
         g_pendingHaltExit = (parsed != 0U);
         return true;
     }
+    if (strcmp(name, "no-sd") == 0)
+    {
+        /* `set no-sd 1` drops the SD list to only metaSd — mirrors
+         * Linux's --no-sd bare flag. The setting takes effect via
+         * SolidSyslog re-Create (initial Setup or `set store file`
+         * rebuild). */
+        unsigned long parsed = 0U;
+        if (!TryParseUInt(value, &parsed))
+        {
+            return false;
+        }
+        g_pendingNoSd = (parsed != 0U);
+        return true;
+    }
     if (strcmp(name, "store") == 0)
     {
         /* "null" is the default state — accept it as a no-op so the harness
@@ -498,8 +525,20 @@ static bool RebuildWithFileStore(void)
      * across the Destroy → re-Create transition. Service waits on the next
      * iteration's lock; rebuild releases when done. */
     SolidSyslogMutex_Lock(g_lifecycleMutex);
-    g_solidSyslogReady = false;
 
+    /* FatFs does NOT auto-mount on first f_open — the integrator must call
+     * f_mount before any file operation, and f_mkfs when the volume is
+     * fresh. EnsureFatFsMounted handles both. Doing this BEFORE tearing down
+     * the existing store means a mount failure leaves the target running on
+     * the original NullStore (zero-disruption); we return false so OnSet
+     * reports the failure to the harness. */
+    if (!EnsureFatFsMounted())
+    {
+        SolidSyslogMutex_Unlock(g_lifecycleMutex);
+        return false;
+    }
+
+    g_solidSyslogReady = false;
     SolidSyslog_Destroy();
 
     /* Tear down whichever store is currently installed. */
@@ -516,10 +555,9 @@ static bool RebuildWithFileStore(void)
         SolidSyslogNullStore_Destroy();
     }
 
-    /* Build a fresh FatFs-backed BlockStore. f_mount + f_mkfs run lazily on
-     * the first BlockStore operation via FileBlockDevice — disk_initialize
-     * (diskio.c) opens/creates solidsyslog-disk.img through QEMU
-     * semihosting. */
+    /* Build a fresh FatFs-backed BlockStore. With the volume mounted above,
+     * BlockSequence_Open's f_stat / f_open calls now hit a live filesystem
+     * via disk_read / disk_write semihosting traps. */
     g_storeReadFile    = SolidSyslogFatFsFile_Create(&g_storeReadFileStorage);
     g_storeWriteFile   = SolidSyslogFatFsFile_Create(&g_storeWriteFileStorage);
     g_storeBlockDevice = SolidSyslogFileBlockDevice_Create(&g_blockDeviceStorage, g_storeReadFile, g_storeWriteFile, STORE_PATH_PREFIX);
@@ -541,9 +579,46 @@ static bool RebuildWithFileStore(void)
     g_currentStoreIsFile = true;
 
     g_solidSyslogConfig.store = g_currentStore;
+    /* Re-honour `set no-sd 1` if it arrived before this rebuild — the
+     * sort order in target_driver.py guarantees `set no-sd` comes before
+     * `set store file` so the value is final by the time we get here. */
+    g_solidSyslogConfig.sdCount = g_pendingNoSd ? 1U : (sizeof(g_sdList) / sizeof(g_sdList[0]));
     SolidSyslog_Create(&g_solidSyslogConfig);
     g_solidSyslogReady = true;
     SolidSyslogMutex_Unlock(g_lifecycleMutex);
+    return true;
+}
+
+/* Mount volume 0; format-on-first-use if the disk image has no FAT yet.
+ * Idempotent — subsequent calls short-circuit on g_fatfsMounted. The work
+ * buffer for f_mkfs is sized to FF_MAX_SS (512 B) which is the minimum
+ * f_mkfs accepts on a FAT12/16 volume. */
+static bool EnsureFatFsMounted(void)
+{
+    if (g_fatfsMounted)
+    {
+        return true;
+    }
+    FRESULT res = f_mount(&g_fatfs, "", 1); /* opt=1 → mount immediately, surface FR_NO_FILESYSTEM here rather than at first f_open */
+    if (res == FR_NO_FILESYSTEM)
+    {
+        /* Fresh disk image — lay down a FAT and re-mount. FAT12 is the
+         * natural choice for a 1 MiB volume (small enough that FAT32's
+         * cluster overhead would dominate). */
+        static BYTE     workBuffer[FF_MAX_SS];
+        const MKFS_PARM opts = {.fmt = FM_FAT | FM_SFD, .n_fat = 1, .align = 1, .n_root = 0, .au_size = 0};
+        res                  = f_mkfs("", &opts, workBuffer, sizeof(workBuffer));
+        if (res == FR_OK)
+        {
+            res = f_mount(&g_fatfs, "", 1);
+        }
+    }
+    if (res != FR_OK)
+    {
+        (void) printf("[solidsyslog] fatfs mount failed: FRESULT=%d\n", (int) res);
+        return false;
+    }
+    g_fatfsMounted = true;
     return true;
 }
 
@@ -693,7 +768,14 @@ static void InteractiveTask(void* argument)
         .getProcessId = NULL,
         .store        = g_currentStore,
         .sd           = g_sdList,
-        .sdCount      = sizeof(g_sdList) / sizeof(g_sdList[0]),
+        /* g_pendingNoSd is normally false at this initial Setup call —
+         * the `set no-sd 1` translation runs over the UART AFTER the
+         * prompt is up. Slice 6's @store scenarios on FreeRTOS always
+         * couple --no-sd with --store file, so the rebuild path rewrites
+         * .sdCount with the up-to-date value. This initial value is
+         * defensive in case a future scenario sends `set no-sd 1` before
+         * any rebuild. */
+        .sdCount = g_pendingNoSd ? 1U : (sizeof(g_sdList) / sizeof(g_sdList[0])),
     };
     SolidSyslog_SetErrorHandler(ErrorHandler, NULL);
     SolidSyslog_Create(&g_solidSyslogConfig);

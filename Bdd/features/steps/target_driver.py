@@ -45,12 +45,14 @@ _FREERTOS_SET_TRANSLATION = {
     # S08.05 store-and-forward keys. `--store file` is the rebuild trigger
     # — it must be emitted AFTER the four configuration keys so the rebuild
     # sees the final pending values (see apply_extra_args sorting below).
-    # `--max-blocks`, `--max-block-size`, `--discard-policy`, and
-    # `--halt-exit` update pending globals; `--store file` consumes them.
+    # `--max-blocks`, `--max-block-size`, `--discard-policy`,
+    # `--halt-exit`, and `--no-sd` update pending globals; `--store file`
+    # consumes them.
     "--max-blocks": "max-blocks",
     "--max-block-size": "max-block-size",
     "--discard-policy": "discard-policy",
     "--halt-exit": "halt-exit",
+    "--no-sd": "no-sd",
     "--store": "store",
 }
 
@@ -61,6 +63,7 @@ _FREERTOS_SET_TRANSLATION = {
 # (always NAME VALUE) is honoured.
 _FREERTOS_BARE_FLAG_VALUE = {
     "--halt-exit": "1",
+    "--no-sd": "1",
 }
 
 # Emit order for the FreeRTOS `set` translations. `--store` must be last
