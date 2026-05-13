@@ -277,10 +277,7 @@ TEST_GROUP(ServiceDrainInterleave)
 
 // clang-format on
 
-/* IGNORE_TEST while the fix is being staged in the next commit — the
- * test is RED-by-design here, captured for the commit history and to
- * keep CI green until the production fix lands. */
-IGNORE_TEST(ServiceDrainInterleave, DiscardNewestDoesNotLetNewestBypassOldestOnRecovery)
+TEST(ServiceDrainInterleave, DiscardNewestDoesNotLetNewestBypassOldestOnRecovery)
 {
     /* Use payloads close to SOLIDSYSLOG_MAX_MESSAGE_SIZE so the runtime
      * clamp on maxBlockSize bottoms out at ~MAX+overhead and each block
