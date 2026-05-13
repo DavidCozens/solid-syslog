@@ -18,19 +18,77 @@
 extern "C"
 {
 #include "FileFake.h"
+#include "SolidSyslog.h"
 #include "SolidSyslogBlockStore.h"
+#include "SolidSyslogBuffer.h"
+#include "SolidSyslogCircularBuffer.h"
+#include "SolidSyslogConfig.h"
 #include "SolidSyslogFile.h"
 #include "SolidSyslogFileBlockDevice.h"
+#include "SolidSyslogNullMutex.h"
 #include "SolidSyslogNullSecurityPolicy.h"
+#include "SolidSyslogSenderDefinition.h"
 #include "SolidSyslogStore.h"
 }
 
+#include <algorithm>
+#include <iterator>
 #include <stdint.h>
 #include <string.h>
 
 #include <vector>
 
 static const char* const TEST_PATH_PREFIX = "/tmp/draintest_";
+
+/* SenderSpy — sticky outage mode (every Send returns false until cleared)
+ * and a vector of every *successful* send. Bigger than SenderFake's
+ * last-only capture and one-shot FailNextSend; the BDD reproducer needs
+ * to see the full successful-send sequence to spot the [1, 11, 2, ...]
+ * interleave. */
+struct SenderSpy
+{
+    struct SolidSyslogSender          base;
+    std::vector<std::vector<uint8_t>> successfulSends;
+    bool                              outage;
+};
+
+static bool SenderSpy_Send(struct SolidSyslogSender* self, const void* buffer, size_t size)
+{
+    SenderSpy* spy = reinterpret_cast<SenderSpy*>(self);
+    if (spy->outage)
+    {
+        return false;
+    }
+    spy->successfulSends.emplace_back(static_cast<const uint8_t*>(buffer), static_cast<const uint8_t*>(buffer) + size);
+    return true;
+}
+
+static void SenderSpy_Disconnect(struct SolidSyslogSender* self)
+{
+    (void) self;
+}
+
+static void SenderSpy_Init(SenderSpy& spy)
+{
+    spy.base.Send       = SenderSpy_Send;
+    spy.base.Disconnect = SenderSpy_Disconnect;
+    spy.outage          = false;
+    spy.successfulSends.clear();
+}
+
+static uint32_t DecodeSequenceId(const std::vector<uint8_t>& payload)
+{
+    return static_cast<uint32_t>(payload[0]) | (static_cast<uint32_t>(payload[1]) << 8) | (static_cast<uint32_t>(payload[2]) << 16) |
+           (static_cast<uint32_t>(payload[3]) << 24);
+}
+
+static std::vector<uint32_t> DecodeSequenceIds(const std::vector<std::vector<uint8_t>>& sends)
+{
+    std::vector<uint32_t> ids;
+    ids.reserve(sends.size());
+    std::transform(sends.begin(), sends.end(), std::back_inserter(ids), DecodeSequenceId);
+    return ids;
+}
 
 struct DrainTestConfig
 {
@@ -124,6 +182,159 @@ TEST_GROUP(BlockStoreDrainOrdering)
 };
 
 // clang-format on
+
+/* Service-level reproducer — wires the real Buffer drain logic from
+ * SolidSyslog_Service against a real BlockStore and a SenderSpy that
+ * simulates oracle outage / recovery. This is the harness where the
+ * [1, 11, 2, 3, ...] BDD shape actually arises — DrainBufferIntoStore
+ * falls back to Sender_Send when Store_Write rejects (NullStore path),
+ * which on a full BlockStore in discard-newest mode lets the *latest*
+ * buffered message bypass *older* stored messages once the oracle
+ * recovers. */
+// clang-format off
+TEST_GROUP(ServiceDrainInterleave)
+{
+    /* Sized to hold 16 max-sized messages — plenty for the outage
+     * reproducer; CircularBuffer is FIFO so all messages are retained
+     * until Service drains them (unlike BufferFake which only keeps
+     * the last one). */
+    SolidSyslogCircularBufferStorage  bufferStorage[SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE(16)] = {};
+    struct FileFakeStorage            fileStorage                                               = {};
+    struct SolidSyslogFile*           file                                                      = nullptr;
+    SolidSyslogFileBlockDeviceStorage deviceStorage                                             = {};
+    struct SolidSyslogBlockDevice*    device                                                    = nullptr;
+    SolidSyslogBlockStoreStorage      storeStorage                                              = {};
+    struct SolidSyslogStore*          store                                                     = nullptr;
+    struct SolidSyslogSecurityPolicy* policy                                                    = nullptr;
+    struct SolidSyslogMutex*          mutex                                                     = nullptr;
+    struct SolidSyslogBuffer*         buffer                                                    = nullptr;
+    SenderSpy                         spy                                                       = {};
+
+    void setup() override
+    {
+        file   = FileFake_Create(&fileStorage);
+        device = SolidSyslogFileBlockDevice_Create(&deviceStorage, file, TEST_PATH_PREFIX);
+        policy = SolidSyslogNullSecurityPolicy_Create();
+        mutex  = SolidSyslogNullMutex_Create();
+        buffer = SolidSyslogCircularBuffer_Create(bufferStorage, sizeof(bufferStorage), mutex);
+        SenderSpy_Init(spy);
+    }
+
+    void teardown() override
+    {
+        SolidSyslog_Destroy();
+        if (store != nullptr)
+        {
+            SolidSyslogBlockStore_Destroy(store);
+            store = nullptr;
+        }
+        SolidSyslogCircularBuffer_Destroy(buffer);
+        SolidSyslogNullMutex_Destroy();
+        SolidSyslogNullSecurityPolicy_Destroy();
+        SolidSyslogFileBlockDevice_Destroy(device);
+        FileFake_Destroy();
+    }
+
+    /* Build BlockStore + wire SolidSyslog facade with buffer + store + spy. */
+    void Setup(const DrainTestConfig& cfg)
+    {
+        struct SolidSyslogBlockStoreConfig storeCfg = {};
+        storeCfg.blockDevice                        = device;
+        storeCfg.maxBlockSize                       = cfg.maxBlockSize;
+        storeCfg.maxBlocks                          = cfg.maxBlocks;
+        storeCfg.discardPolicy                      = cfg.discardPolicy;
+        storeCfg.securityPolicy                     = policy;
+        store                                       = SolidSyslogBlockStore_Create(&storeStorage, &storeCfg);
+
+        struct SolidSyslogConfig sysCfg = {};
+        sysCfg.buffer                   = buffer;
+        sysCfg.sender                   = &spy.base;
+        sysCfg.store                    = store;
+        SolidSyslog_Create(&sysCfg);
+    }
+
+    /* Push one record into the buffer with sequenceId encoded in the first
+     * 4 bytes — bypasses SolidSyslog_Log so we control exact bytes and
+     * don't pull in clock / hostname / SD plumbing. */
+    void Enqueue(uint32_t sequenceId, size_t payloadSize)
+    {
+        std::vector<uint8_t> buf(payloadSize, 'x');
+        buf[0] = static_cast<uint8_t>(sequenceId & 0xFFU);
+        buf[1] = static_cast<uint8_t>((sequenceId >> 8) & 0xFFU);
+        buf[2] = static_cast<uint8_t>((sequenceId >> 16) & 0xFFU);
+        buf[3] = static_cast<uint8_t>((sequenceId >> 24) & 0xFFU);
+        SolidSyslogBuffer_Write(buffer, buf.data(), buf.size());
+    }
+
+    void ServiceTickUntilQuiet(size_t cap)
+    {
+        for (size_t i = 0; i < cap; ++i)
+        {
+            SolidSyslog_Service();
+        }
+    }
+};
+
+// clang-format on
+
+/* IGNORE_TEST while the fix is being staged in the next commit — the
+ * test is RED-by-design here, captured for the commit history and to
+ * keep CI green until the production fix lands. */
+IGNORE_TEST(ServiceDrainInterleave, DiscardNewestDoesNotLetNewestBypassOldestOnRecovery)
+{
+    /* Use payloads close to SOLIDSYSLOG_MAX_MESSAGE_SIZE so the runtime
+     * clamp on maxBlockSize bottoms out at ~MAX+overhead and each block
+     * holds exactly one record. With maxBlocks=2 the store fits 2
+     * records — small enough for the outage to overflow with just a
+     * couple of messages. */
+    DrainTestConfig cfg = {/*maxBlocks=*/2, /*maxBlockSize=*/200 /*will clamp up*/, /*payloadSize=*/2000, SOLIDSYSLOG_DISCARD_NEWEST};
+    Setup(cfg);
+
+    /* Pre-outage send: msg 1 flows buffer -> store -> sender successfully. */
+    Enqueue(1, cfg.payloadSize);
+    SolidSyslog_Service();
+    LONGS_EQUAL(1U, spy.successfulSends.size());
+
+    /* Outage begins. */
+    spy.outage = true;
+
+    /* Two messages fit into the 2-block store. */
+    Enqueue(2, cfg.payloadSize);
+    Enqueue(3, cfg.payloadSize);
+    SolidSyslog_Service();
+
+    /* Message 11 arrives still in outage — it lands in the buffer but
+     * hasn't been pulled by Service yet at the moment the oracle resumes. */
+    Enqueue(11, cfg.payloadSize);
+
+    /* Oracle resumes. Drain by ticking Service repeatedly. */
+    spy.outage = false;
+    ServiceTickUntilQuiet(10);
+
+    std::vector<uint32_t> ids = DecodeSequenceIds(spy.successfulSends);
+
+    /* Dump for visibility — the BDD failure was [1, 11, 2, 3, 4, 5, 6]. */
+    (void) printf("[service-drain] successful sends in order: [");
+    for (size_t i = 0; i < ids.size(); ++i)
+    {
+        (void) printf("%s%u", (i == 0) ? "" : ", ", ids[i]);
+    }
+    (void) printf("]\n");
+
+    /* Structural assertion: successful sends must be in non-descending
+     * order. ANY descent (e.g. 11 followed by 2) means a newer message
+     * jumped ahead of older ones — exactly the bug the BDD scenario
+     * pins. */
+    for (size_t i = 1; i < ids.size(); ++i)
+    {
+        if (ids[i] < ids[i - 1])
+        {
+            char message[256];
+            (void) snprintf(message, sizeof(message), "Send order descended: ids[%zu]=%u after ids[%zu]=%u", i, ids[i], i - 1, ids[i - 1]);
+            FAIL(message);
+        }
+    }
+}
 
 /* Reproducer for the BDD discard-newest failure shape. With max-blocks=2
  * and a small max-block-size relative to the payload, an "outage" of 10
