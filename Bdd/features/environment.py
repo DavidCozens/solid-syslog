@@ -181,6 +181,16 @@ def before_feature(context, feature):
 
 def before_scenario(context, scenario):
     _skip_if_tunable_too_small(scenario)
+    # Defence against an aborted prior run leaving a stale FatFs disk
+    # image at the project root — diskio.c::DiskImageIsReady keeps any
+    # existing image of full size, so STORE*.log content from a crashed
+    # prior session would silently carry into this scenario's f_mount.
+    # after_scenario removes it on the happy path; this is the belt to
+    # that brace.
+    try:
+        os.remove(FREERTOS_DISK_IMAGE_PATH)
+    except FileNotFoundError:
+        pass
 
 
 def after_step(context, step):
