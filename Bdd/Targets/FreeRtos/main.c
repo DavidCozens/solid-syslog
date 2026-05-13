@@ -194,8 +194,7 @@ static volatile bool g_solidSyslogTeardown = false;
  * in our ffconf.h). */
 static const char STORE_PATH_PREFIX[] = "STORE";
 
-static SolidSyslogFatFsFileStorage       g_storeReadFileStorage;
-static SolidSyslogFatFsFileStorage       g_storeWriteFileStorage;
+static SolidSyslogFatFsFileStorage       g_storeFileStorage;
 static SolidSyslogFileBlockDeviceStorage g_blockDeviceStorage;
 static SolidSyslogBlockStoreStorage      g_blockStoreStorage;
 
@@ -205,8 +204,7 @@ static SolidSyslogBlockStoreStorage      g_blockStoreStorage;
 static FATFS g_fatfs;
 static bool  g_fatfsMounted = false;
 
-static struct SolidSyslogFile*        g_storeReadFile      = NULL;
-static struct SolidSyslogFile*        g_storeWriteFile     = NULL;
+static struct SolidSyslogFile*        g_storeFile          = NULL;
 static struct SolidSyslogBlockDevice* g_storeBlockDevice   = NULL;
 static struct SolidSyslogStore*       g_currentStore       = NULL;
 static bool                           g_currentStoreIsFile = false;
@@ -255,7 +253,6 @@ static bool                          TryParseUInt(const char* value, unsigned lo
 static bool                          RebuildWithFileStore(void);
 static bool                          EnsureFatFsMounted(void);
 static void                          RunFatFsSelfTest(void);
-static void                          RunFatFsDualFilProbe(void);
 static enum SolidSyslogDiscardPolicy MapDiscardPolicy(const char* policy);
 static void                          OnStoreFull(void* context);
 static size_t                        GetCapacityThreshold(void* context);
@@ -558,8 +555,7 @@ static bool RebuildWithFileStore(void)
         SolidSyslogBlockStore_Destroy(g_currentStore);
         SolidSyslogFileBlockDevice_Destroy(g_storeBlockDevice);
         SolidSyslogCrc16Policy_Destroy();
-        SolidSyslogFatFsFile_Destroy(g_storeWriteFile);
-        SolidSyslogFatFsFile_Destroy(g_storeReadFile);
+        SolidSyslogFatFsFile_Destroy(g_storeFile);
     }
     else
     {
@@ -569,9 +565,8 @@ static bool RebuildWithFileStore(void)
     /* Build a fresh FatFs-backed BlockStore. With the volume mounted above,
      * BlockSequence_Open's f_stat / f_open calls now hit a live filesystem
      * via disk_read / disk_write semihosting traps. */
-    g_storeReadFile    = SolidSyslogFatFsFile_Create(&g_storeReadFileStorage);
-    g_storeWriteFile   = SolidSyslogFatFsFile_Create(&g_storeWriteFileStorage);
-    g_storeBlockDevice = SolidSyslogFileBlockDevice_Create(&g_blockDeviceStorage, g_storeReadFile, g_storeWriteFile, STORE_PATH_PREFIX);
+    g_storeFile        = SolidSyslogFatFsFile_Create(&g_storeFileStorage);
+    g_storeBlockDevice = SolidSyslogFileBlockDevice_Create(&g_blockDeviceStorage, g_storeFile, STORE_PATH_PREFIX);
 
     struct SolidSyslogSecurityPolicy*  policy      = SolidSyslogCrc16Policy_Create();
     struct SolidSyslogBlockStoreConfig storeConfig = {
@@ -637,7 +632,6 @@ static bool EnsureFatFsMounted(void)
     g_fatfsMounted = true;
     (void) printf("[fatfs] mount complete\n");
     RunFatFsSelfTest();
-    RunFatFsDualFilProbe();
     return true;
 }
 
@@ -693,105 +687,6 @@ static void RunFatFsSelfTest(void)
 
     res = f_stat(TEST_PATH, &fno);
     (void) printf("[fatfs-test] f_stat after-unlink -> %d (expect FR_NO_FILE=4)\n", (int) res);
-}
-
-/* DIAGNOSTIC (S08.05 slice 6): reproduce FileBlockDevice's dual-FIL open
- * pattern away from BDD. With FF_FS_LOCK=4 and both FIL handles opened
- * FA_READ|FA_WRITE|FA_OPEN_ALWAYS on the same path, the FatFs lock code
- * (chk_share) is documented to reject the 2nd write-mode open with
- * FR_LOCKED. This probe confirms that, and also tests whether a 2nd
- * FA_READ open is permitted while a FA_WRITE open exists. Whichever path
- * works tells us how FileBlockDevice must be reshaped. Remove once the
- * design is settled. */
-static void RunFatFsDualFilProbe(void)
-{
-    static const char DUAL_PATH[]    = "DUAL.TMP";
-    static const char DUAL_PAYLOAD[] = "AAAAAAAAAAAAAAAAAAAAAAAA";
-    enum
-    {
-        PAYLOAD_LEN     = sizeof(DUAL_PAYLOAD) - 1U,
-        SENT_FLAG_OFFSET = PAYLOAD_LEN - 1U
-    };
-
-    FIL     fpW;
-    FIL     fpR;
-    UINT    bw       = 0U;
-    UINT    br       = 0U;
-    char    readBuf[PAYLOAD_LEN + 1U] = {0};
-    FRESULT res;
-
-    /* Step 1: open writer with same mode FileBlockDevice uses. */
-    res = f_open(&fpW, DUAL_PATH, FA_READ | FA_WRITE | FA_OPEN_ALWAYS);
-    (void) printf("[dualfil] 1) f_open(W, RW|OPEN_ALWAYS) -> %d\n", (int) res);
-    if (res != FR_OK)
-    {
-        return;
-    }
-
-    /* Step 2: truncate + first append (mirror Acquire + Append). */
-    (void) f_lseek(&fpW, 0);
-    res = f_truncate(&fpW);
-    (void) printf("[dualfil] 2) f_truncate(W) -> %d\n", (int) res);
-    res = f_write(&fpW, DUAL_PAYLOAD, (UINT) PAYLOAD_LEN, &bw);
-    (void) printf("[dualfil] 3) f_write(W, %u bytes) -> %d (bw=%u)\n", (unsigned) PAYLOAD_LEN, (int) res, (unsigned) bw);
-
-    /* Step 3: try to open a SECOND FIL on the same path in the SAME mode
-     * FileBlockDevice uses for its readHandle. With FF_FS_LOCK=4 this
-     * is expected to fail with FR_LOCKED. */
-    res = f_open(&fpR, DUAL_PATH, FA_READ | FA_WRITE | FA_OPEN_ALWAYS);
-    (void) printf("[dualfil] 4) f_open(R, RW|OPEN_ALWAYS, while W open) -> %d (FR_LOCKED=18)\n", (int) res);
-    bool readerOpen = (res == FR_OK);
-
-    /* Step 4: if RW open was rejected, try FA_READ only — that's a possible
-     * remediation path (split read/write handle modes in FileBlockDevice). */
-    if (!readerOpen)
-    {
-        res = f_open(&fpR, DUAL_PATH, FA_READ);
-        (void) printf("[dualfil] 5) f_open(R, FA_READ only, while W open) -> %d (FR_LOCKED=18)\n", (int) res);
-        readerOpen = (res == FR_OK);
-    }
-
-    /* Step 5: if a reader handle opened, can it see what the writer wrote?
-     * If yes, the per-FIL sector cache is shared / coherent enough that
-     * reads see prior writes without f_sync. If no (or wrong data), the
-     * cache hazard is real and we need a flush. */
-    if (readerOpen)
-    {
-        (void) f_lseek(&fpR, 0);
-        res = f_read(&fpR, readBuf, (UINT) PAYLOAD_LEN, &br);
-        readBuf[PAYLOAD_LEN] = '\0';
-        (void) printf("[dualfil] 6) f_read(R, %u bytes) -> %d (br=%u, data='%s')\n", (unsigned) PAYLOAD_LEN, (int) res, (unsigned) br, readBuf);
-
-        /* Step 6: WriteAt mirroring sent-flag write (1 byte at last offset). */
-        (void) f_lseek(&fpW, SENT_FLAG_OFFSET);
-        res = f_write(&fpW, "B", 1U, &bw);
-        (void) printf("[dualfil] 7) f_write(W at +%u, 1 byte 'B') -> %d (bw=%u)\n", (unsigned) SENT_FLAG_OFFSET, (int) res, (unsigned) bw);
-
-        /* Step 7: can reader see the WriteAt change without an explicit sync? */
-        (void) f_lseek(&fpR, 0);
-        res = f_read(&fpR, readBuf, (UINT) PAYLOAD_LEN, &br);
-        readBuf[PAYLOAD_LEN] = '\0';
-        (void) printf("[dualfil] 8) f_read(R) after WriteAt -> %d (br=%u, data='%s', last='%c' expect 'B')\n", (int) res, (unsigned) br, readBuf, readBuf[SENT_FLAG_OFFSET]);
-
-        /* Step 8: now try with explicit f_sync(W) between WriteAt and Read. */
-        (void) f_lseek(&fpW, SENT_FLAG_OFFSET);
-        res = f_write(&fpW, "C", 1U, &bw);
-        (void) printf("[dualfil] 9) f_write(W at +%u, 1 byte 'C') -> %d (bw=%u)\n", (unsigned) SENT_FLAG_OFFSET, (int) res, (unsigned) bw);
-        res = f_sync(&fpW);
-        (void) printf("[dualfil] 10) f_sync(W) -> %d\n", (int) res);
-        (void) f_lseek(&fpR, 0);
-        res = f_read(&fpR, readBuf, (UINT) PAYLOAD_LEN, &br);
-        readBuf[PAYLOAD_LEN] = '\0';
-        (void) printf("[dualfil] 11) f_read(R) after WriteAt+sync -> %d (br=%u, data='%s', last='%c' expect 'C')\n", (int) res, (unsigned) br, readBuf, readBuf[SENT_FLAG_OFFSET]);
-
-        res = f_close(&fpR);
-        (void) printf("[dualfil] 12) f_close(R) -> %d\n", (int) res);
-    }
-
-    res = f_close(&fpW);
-    (void) printf("[dualfil] 13) f_close(W) -> %d\n", (int) res);
-    res = f_unlink(DUAL_PATH);
-    (void) printf("[dualfil] 14) f_unlink -> %d (cleanup)\n", (int) res);
 }
 
 static void SemihostingExit(int status)
@@ -985,8 +880,7 @@ static void InteractiveTask(void* argument)
         SolidSyslogBlockStore_Destroy(g_currentStore);
         SolidSyslogFileBlockDevice_Destroy(g_storeBlockDevice);
         SolidSyslogCrc16Policy_Destroy();
-        SolidSyslogFatFsFile_Destroy(g_storeWriteFile);
-        SolidSyslogFatFsFile_Destroy(g_storeReadFile);
+        SolidSyslogFatFsFile_Destroy(g_storeFile);
     }
     else
     {
