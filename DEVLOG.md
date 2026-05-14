@@ -1,5 +1,82 @@
 # Dev Log
 
+## 2026-05-14 — S12.05 UdpSender NULL guards (#116)
+
+Second pass at the E12 bad-setup contract, this time on the UDP sender.
+`SolidSyslogUdpSender_Create` no longer crashes on any of `config`,
+`config->resolver`, `config->datagram`, or `config->endpoint` being
+NULL — each reports once via `SolidSyslog_Error(SEVERITY_ERR, …)` and
+returns a static `NilUdpSender` whose `Send` is a swallowing no-op
+(returns `true`) and whose `Disconnect` is a no-op. A Send-time guard
+also detects NULL buffer and reports without reaching the datagram
+layer. Bundled with a clarity refactor across both
+`SolidSyslogUdpSender.c` and the test file.
+
+### Decisions
+
+- **Severity is `ERR`, not S12.06's `WARNING`.** WARNING is "delivered
+  in degraded form" (the line still goes out, minus one SD). UdpSender
+  with a NULL collaborator can't deliver *anything* — that's ERR. This
+  fixes the ERR/WARNING ladder against the bad-setup contract: ERR =
+  can't deliver, WARNING = delivered degraded.
+- **Endpoint became required.** The original audit had `endpoint` as
+  out-of-scope ("already optional via NilEndpoint fallback"), but the
+  fallback emitted `host="" port=0` — a permanently broken sender that
+  silently shipped. Tightened to required, with the now-dead
+  `NilEndpoint` helper removed. The existing
+  `NoEndpointConfiguredSendsToPortZero` test asserting the old
+  behaviour was deleted. `endpointVersion` stays optional — its
+  fallback of "version 0 forever" is a legitimate "destination never
+  changes" mode for single-destination embedded deployments.
+- **Nil-Send returns `true` (swallow), not `false`.** Matches the
+  existing `TransmitDatagram` "undeliverable in principle → swallow
+  so the Service algorithm doesn't loop on an undeliverable"
+  precedent. There is no recovery from a NULL-at-Create-time config,
+  so retries would spin forever.
+- **Send-time NULL buffer guard added.** Beyond the original Create-only
+  S12.05 scope. NULL buffer should never reach Send from the library's
+  own code path (the formatter always writes a real buffer), but it's
+  a programmer error severe enough to surface — defensive guard reports
+  `ERR` and returns false without invoking the datagram layer. Zero
+  length stays valid (RFC 768 permits zero-length UDP datagrams) and
+  flows through to sendto; characterised by test.
+- **Refactor sweep landed in the same PR.** Touched
+  `SolidSyslogUdpSender.c` enough that a clarity pass was natural:
+  extract `IsValidConfig` + `InstallConfig` from `_Create`,
+  `InstallConfig` uses struct-assign so future config fields flow
+  through automatically, extract `QueryEndpointPort` from `Connect`,
+  reshape Connect to positive logic, restore the project's top-down
+  function order, replace the 12-line `TransmitDatagram` block comment
+  with two targeted `Why:` comments at the actual swallow sites in
+  `RetryAfterOversize`.
+- **Test sweep too.** `TEST_BASE(UdpSenderTestBase)` lifts shared
+  fixture out of six groups; `Send()` returns bool so
+  `CHECK_TRUE(Send())` works; 28 sites of
+  `SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN)`
+  collapse to `Send()`. Retry-group `firstSendReturns(result)` /
+  `retrySendReturns(result)` / `maxPayload(bytes)` / `retrySendSize()`
+  helpers replace the positional-index magic numbers in
+  `DatagramFake_SetSendResult(datagram, 0|1, …)`. The `getHostFn` /
+  `getPortFn` indirection in the Config group, which pre-dated the
+  unified Endpoint callback, is gone. `IGNORE_TEST(HappyPathOnly)`
+  removed — every backlog item is now covered or declared
+  out-of-scope.
+
+### Deferred
+
+- **Project-wide static-prefix naming sweep** — discussed during
+  this PR (`UdpSender_Send` etc. per MISRA 5.9). In practice only
+  TlsStream consistently applies the prefix; `SolidSyslog…` names
+  are already long, and David is torn. Rolled into the broader
+  naming sweep (`project_naming_sweep_deferred`). Don't retro-apply
+  when touching a file that uses the bare-name pattern.
+- **Other E12 NULL guards** — OriginSd and AtomicCounter remain in
+  the E12 backlog. Per the per-class cadence established by S12.06.
+
+### Open questions
+
+- *(none)*
+
 ## 2026-05-14 — S12.06 MetaSd NULL guards (#117)
 
 First story under the new "skip the SD on bad setup, report once at
