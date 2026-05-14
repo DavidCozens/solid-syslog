@@ -54,24 +54,24 @@ tiers (rule 5.1 is not enforced there at all).
 
 The C99 31-character limit is a legacy linker artifact from the late
 1980s. Every toolchain that SolidSyslog targets — hosted or embedded —
-supports external identifiers far longer than 63 characters:
+supports external identifiers well in excess of 63 significant
+characters:
 
-| Toolchain | Significant external-identifier characters |
-|-----------|-------------------------------------------|
-| GCC (any supported version)              | ≥ 1024 (effectively unlimited; capped only by symbol table length) |
-| Clang / LLVM                             | ≥ 1024 (effectively unlimited) |
-| MSVC 2015+                               | ≥ 2047 |
-| `arm-none-eabi-gcc` (embedded GCC)       | ≥ 1024 |
-| IAR Embedded Workbench (C/C++ compilers) | ≥ 200 |
-| Arm Compiler 6 (Keil ARMCC 6+, LLVM-based) | ≥ 1024 |
+| Toolchain | External identifier behaviour |
+|-----------|-------------------------------|
+| GCC (incl. `arm-none-eabi-gcc`)                | No compiler-imposed limit; identifier length is delegated to the target's linker, and all characters are significant on every linker SolidSyslog targets (ld, gold, lld, link.exe). See GCC manual, "Implementation-defined behavior". |
+| Clang / LLVM (incl. Arm Compiler 6 / armclang) | Same rule as GCC for external identifiers — no compiler-imposed limit. |
+| MSVC 2015+                                     | Documented maximum identifier length **2,047 characters** ([Microsoft Learn — C Identifiers](https://learn.microsoft.com/en-us/cpp/c-language/c-identifiers)). |
+| IAR Embedded Workbench                         | C/C++ compiler reference manual documents an identifier limit well above 63 characters in every currently shipping version (verify on the target SKU's compiler reference for ports of SolidSyslog to non-standard SKUs). |
 
 The Tier 1 naming scheme in `docs/NAMING.md` (form
 `SolidSyslogClass_Function`) routinely produces identifiers in the
-40–60 character range — `SolidSyslogFreeRtosStaticResolver_Create` is
-38, `SolidSyslogFreeRtosTcpStream_Destroy` is 36 — and a few public
-storage-size enums approach 60 (e.g. `SOLIDSYSLOG_FREERTOSSTATICRESOLVER_SIZE`,
-40). Strict 31-character distinctness would either collapse identifier
-pairs that read identically up to a trailing word
+30–40 character range — `SolidSyslogFreeRtosStaticResolver_Create` is
+40, `SolidSyslogFreeRtosTcpStream_Destroy` is 36 — and a few public
+storage-size enums sit just below 40 (e.g.
+`SOLIDSYSLOG_FREERTOSSTATICRESOLVER_SIZE`, 39). Strict 31-character
+distinctness would either collapse identifier pairs that read
+identically up to a trailing word
 (`SolidSyslogFreeRtosStaticResolver_Create` vs `_Destroy`) into a
 single name, or force unidiomatic abbreviation throughout the public
 API. Neither outcome serves clarity or MISRA's underlying intent
