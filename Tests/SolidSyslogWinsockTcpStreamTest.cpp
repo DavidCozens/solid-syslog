@@ -2,7 +2,7 @@
 #include "CppUTest/TestHarness.h"
 
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
-                               // macros
+    // macros
 #include "SolidSyslogAddress.h"
 #include "SolidSyslogStream.h"
 #include "SolidSyslogTransport.h"
@@ -85,7 +85,7 @@ TEST(SolidSyslogWinsockTcpStream, CreateDestroyWorksWithoutCrashing)
 TEST(SolidSyslogWinsockTcpStream, CreateReturnsHandleInsideCallerSuppliedStorage)
 {
     SolidSyslogWinsockTcpStreamStorage storage{};
-    struct SolidSyslogStream*          localStream = SolidSyslogWinsockTcpStream_Create(&storage);
+    struct SolidSyslogStream* localStream = SolidSyslogWinsockTcpStream_Create(&storage);
     POINTERS_EQUAL(&storage, localStream);
     SolidSyslogWinsockTcpStream_Destroy(localStream);
 }
@@ -434,7 +434,7 @@ TEST(SolidSyslogWinsockTcpStream, ReadReturnsRecvReturnValue)
 {
     WinsockFake_SetRecvReturn(7);
     SolidSyslogStream_Open(stream, addr);
-    char             buf[16];
+    char buf[16];
     SolidSyslogSsize n = SolidSyslogStream_Read(stream, buf, sizeof(buf));
     LONGS_EQUAL(7, n);
 }

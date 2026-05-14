@@ -69,7 +69,7 @@ TEST(SolidSyslogTimeQualitySd, FormatProducesTzKnownAndIsSynced)
 
 TEST(SolidSyslogTimeQualitySd, FormatWithFalseValues)
 {
-    stubTimeQuality.tzKnown  = false;
+    stubTimeQuality.tzKnown = false;
     stubTimeQuality.isSynced = false;
     format();
     STRCMP_EQUAL("[timeQuality tzKnown=\"0\" isSynced=\"0\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter));
@@ -79,21 +79,30 @@ TEST(SolidSyslogTimeQualitySd, FormatIncludesSyncAccuracyWhenNonZero)
 {
     stubTimeQuality.syncAccuracyMicroseconds = 50;
     format();
-    STRCMP_EQUAL("[timeQuality tzKnown=\"1\" isSynced=\"1\" syncAccuracy=\"50\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter));
+    STRCMP_EQUAL(
+        "[timeQuality tzKnown=\"1\" isSynced=\"1\" syncAccuracy=\"50\"]",
+        SolidSyslogFormatter_AsFormattedBuffer(formatter)
+    );
 }
 
 TEST(SolidSyslogTimeQualitySd, SyncAccuracyOfOneIsSmallestNonOmitValue)
 {
     stubTimeQuality.syncAccuracyMicroseconds = 1;
     format();
-    STRCMP_EQUAL("[timeQuality tzKnown=\"1\" isSynced=\"1\" syncAccuracy=\"1\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter));
+    STRCMP_EQUAL(
+        "[timeQuality tzKnown=\"1\" isSynced=\"1\" syncAccuracy=\"1\"]",
+        SolidSyslogFormatter_AsFormattedBuffer(formatter)
+    );
 }
 
 TEST(SolidSyslogTimeQualitySd, SyncAccuracyAtMaxUint32)
 {
     stubTimeQuality.syncAccuracyMicroseconds = UINT32_MAX;
     format();
-    STRCMP_EQUAL("[timeQuality tzKnown=\"1\" isSynced=\"1\" syncAccuracy=\"4294967295\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter));
+    STRCMP_EQUAL(
+        "[timeQuality tzKnown=\"1\" isSynced=\"1\" syncAccuracy=\"4294967295\"]",
+        SolidSyslogFormatter_AsFormattedBuffer(formatter)
+    );
 }
 
 TEST(SolidSyslogTimeQualitySd, OmitSyncAccuracyUsesDefinedConstant)

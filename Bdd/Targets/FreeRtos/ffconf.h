@@ -31,7 +31,7 @@
 
 /* Locale and Namespace */
 #define FF_CODE_PAGE 437 /* Latin1 — avoids pulling in DBCS sub-tables when LFN=0. */
-#define FF_USE_LFN 0     /* Short 8.3 filenames; pathPrefix scheme fits (e.g. STORE00.LOG). */
+#define FF_USE_LFN 0 /* Short 8.3 filenames; pathPrefix scheme fits (e.g. STORE00.LOG). */
 #define FF_MAX_LFN 255
 #define FF_LFN_UNICODE 0
 #define FF_LFN_BUF 255

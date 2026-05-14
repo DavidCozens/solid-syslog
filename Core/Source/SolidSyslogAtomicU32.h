@@ -16,9 +16,9 @@ EXTERN_C_BEGIN
     struct SolidSyslogAtomicU32;
 
     struct SolidSyslogAtomicU32* SolidSyslogAtomicU32_FromStorage(SolidSyslogAtomicU32Storage * storage);
-    void                         SolidSyslogAtomicU32_Init(struct SolidSyslogAtomicU32 * slot, uint32_t value);
-    uint32_t                     SolidSyslogAtomicU32_Load(struct SolidSyslogAtomicU32 * slot);
-    bool                         SolidSyslogAtomicU32_CompareAndSwap(struct SolidSyslogAtomicU32 * slot, uint32_t expected, uint32_t desired);
+    void SolidSyslogAtomicU32_Init(struct SolidSyslogAtomicU32 * slot, uint32_t value);
+    uint32_t SolidSyslogAtomicU32_Load(struct SolidSyslogAtomicU32 * slot);
+    bool SolidSyslogAtomicU32_CompareAndSwap(struct SolidSyslogAtomicU32 * slot, uint32_t expected, uint32_t desired);
 
 EXTERN_C_END
 

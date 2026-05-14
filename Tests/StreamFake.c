@@ -5,19 +5,19 @@
 
 struct StreamFake
 {
-    struct SolidSyslogStream         base;
-    int                              openCallCount;
+    struct SolidSyslogStream base;
+    int openCallCount;
     const struct SolidSyslogAddress* lastOpenAddr;
-    bool                             openFails;
-    int                              sendCallCount;
-    const void*                      lastSendBuf;
-    size_t                           lastSendSize;
-    bool                             sendFails;
-    int                              readCallCount;
-    void*                            lastReadBuf;
-    size_t                           lastReadSize;
-    SolidSyslogSsize                 readReturn;
-    int                              closeCallCount;
+    bool openFails;
+    int sendCallCount;
+    const void* lastSendBuf;
+    size_t lastSendSize;
+    bool sendFails;
+    int readCallCount;
+    void* lastReadBuf;
+    size_t lastReadSize;
+    SolidSyslogSsize readReturn;
+    int closeCallCount;
 };
 
 static bool Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr)
@@ -32,7 +32,7 @@ static bool Send(struct SolidSyslogStream* self, const void* buffer, size_t size
 {
     struct StreamFake* fake = (struct StreamFake*) self;
     fake->sendCallCount++;
-    fake->lastSendBuf  = buffer;
+    fake->lastSendBuf = buffer;
     fake->lastSendSize = size;
     return !fake->sendFails;
 }
@@ -41,7 +41,7 @@ static SolidSyslogSsize Read(struct SolidSyslogStream* self, void* buffer, size_
 {
     struct StreamFake* fake = (struct StreamFake*) self;
     fake->readCallCount++;
-    fake->lastReadBuf  = buffer;
+    fake->lastReadBuf = buffer;
     fake->lastReadSize = size;
     return fake->readReturn;
 }
@@ -55,10 +55,10 @@ static void Close(struct SolidSyslogStream* self)
 struct SolidSyslogStream* StreamFake_Create(void)
 {
     struct StreamFake* fake = (struct StreamFake*) calloc(1, sizeof(struct StreamFake));
-    fake->base.Open         = Open;
-    fake->base.Send         = Send;
-    fake->base.Read         = Read;
-    fake->base.Close        = Close;
+    fake->base.Open = Open;
+    fake->base.Send = Send;
+    fake->base.Read = Read;
+    fake->base.Close = Close;
     return &fake->base;
 }
 

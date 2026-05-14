@@ -11,10 +11,10 @@ namespace
 {
 struct SetHandlerSpy
 {
-    int         callCount = 0;
+    int callCount = 0;
     std::string lastName;
     std::string lastValue;
-    bool        returnValue = false;
+    bool returnValue = false;
 };
 
 SetHandlerSpy spy;
@@ -22,13 +22,13 @@ SetHandlerSpy spy;
 bool RecordSet(const char* name, const char* value)
 {
     spy.callCount++;
-    spy.lastName  = name;
+    spy.lastName = name;
     spy.lastValue = value;
     return spy.returnValue;
 }
 
 const char* const STDOUT_CAPTURE_PATH = "/tmp/solidsyslog_example_interactive_stdout.txt";
-int               saved_stdout_fd     = -1;
+int saved_stdout_fd = -1;
 
 void StartStdoutCapture()
 {
@@ -52,7 +52,7 @@ std::string EndStdoutCapture()
     FILE* f = fopen(STDOUT_CAPTURE_PATH, "r");
     if (f != nullptr)
     {
-        char   buf[2048];
+        char buf[2048];
         size_t n = 0;
         // NOLINTNEXTLINE(clang-analyzer-unix.Stream) -- test helper; fread on EOF/error returns 0 and exits the loop cleanly
         while ((n = fread(buf, 1, sizeof(buf), f)) > 0)
@@ -70,7 +70,7 @@ void RunWithInput(const char* input, BddTargetInteractiveSetHandler onSet)
     /* fmemopen takes a non-const void*; with mode "r" it never writes to
      * the buffer, so dropping const here is safe in practice. */
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast) -- see comment above; fmemopen mode "r" never writes
-    FILE*                     in      = fmemopen(const_cast<char*>(input), strlen(input), "r");
+    FILE* in = fmemopen(const_cast<char*>(input), strlen(input), "r");
     struct SolidSyslogMessage message = {};
     BddTargetInteractive_Run(&message, in, nullptr, onSet);
     // NOLINTNEXTLINE(cppcoreguidelines-owning-memory) -- fclose is POSIX C; no owning memory concern

@@ -8,8 +8,8 @@
 // 2025-04-02T00:00:00Z — matches the POSIX clock test default so timestamps
 // behave identically across platforms when the same wall-clock value is faked.
 static SYSTEMTIME fakeSystemTime;
-static FILETIME   fakeFileTime;
-static bool       useRawFileTime;
+static FILETIME fakeFileTime;
+static bool useRawFileTime;
 
 static void WINAPI FakeGetSystemTimeAsFileTime(LPFILETIME fileTime)
 {

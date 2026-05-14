@@ -9,11 +9,13 @@
 struct SolidSyslogWindowsMutex
 {
     struct SolidSyslogMutex base;
-    CRITICAL_SECTION        section;
+    CRITICAL_SECTION section;
 };
 
-SOLIDSYSLOG_STATIC_ASSERT(sizeof(struct SolidSyslogWindowsMutex) <= SOLIDSYSLOG_WINDOWSMUTEX_SIZE,
-                          "SOLIDSYSLOG_WINDOWSMUTEX_SIZE is too small for SolidSyslogWindowsMutex layout");
+SOLIDSYSLOG_STATIC_ASSERT(
+    sizeof(struct SolidSyslogWindowsMutex) <= SOLIDSYSLOG_WINDOWSMUTEX_SIZE,
+    "SOLIDSYSLOG_WINDOWSMUTEX_SIZE is too small for SolidSyslogWindowsMutex layout"
+);
 
 static void Lock(struct SolidSyslogMutex* self);
 static void Unlock(struct SolidSyslogMutex* self);
@@ -21,8 +23,8 @@ static void Unlock(struct SolidSyslogMutex* self);
 struct SolidSyslogMutex* SolidSyslogWindowsMutex_Create(SolidSyslogWindowsMutexStorage* storage)
 {
     struct SolidSyslogWindowsMutex* windows = (struct SolidSyslogWindowsMutex*) storage;
-    windows->base.Lock                      = Lock;
-    windows->base.Unlock                    = Unlock;
+    windows->base.Lock = Lock;
+    windows->base.Unlock = Unlock;
     InitializeCriticalSection(&windows->section);
     return &windows->base;
 }
@@ -31,7 +33,7 @@ void SolidSyslogWindowsMutex_Destroy(struct SolidSyslogMutex* mutex)
 {
     struct SolidSyslogWindowsMutex* windows = (struct SolidSyslogWindowsMutex*) mutex;
     DeleteCriticalSection(&windows->section);
-    windows->base.Lock   = NULL;
+    windows->base.Lock = NULL;
     windows->base.Unlock = NULL;
 }
 

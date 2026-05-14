@@ -6,8 +6,8 @@
 EXTERN_C_BEGIN
 
     struct SolidSyslogMutex* MutexFake_Create(void);
-    void                     MutexFake_Destroy(void);
-    const char*              MutexFake_Sequence(void);
+    void MutexFake_Destroy(void);
+    const char* MutexFake_Sequence(void);
 
 EXTERN_C_END
 

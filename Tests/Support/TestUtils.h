@@ -10,9 +10,9 @@ namespace CososoTesting
  * at include sites. Tests opt in via `using namespace CososoTesting;`. */
 enum
 {
-    NEVER  = 0,
-    ONCE   = 1,
-    TWICE  = 2,
+    NEVER = 0,
+    ONCE = 1,
+    TWICE = 2,
     THRICE = 3,
 };
 } // namespace CososoTesting

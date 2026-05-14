@@ -21,73 +21,73 @@ enum
     SOCKETFAKE_MAX_BUFFER_SIZE = SOLIDSYSLOG_MAX_MESSAGE_SIZE + 1
 };
 
-static bool               sendtoFails;
-static bool               nextSendtoShouldFailWithErrno;
-static int                nextSendtoErrno;
-static int                sendtoCallCount;
-static char               lastBufCopy[SOCKETFAKE_MAX_BUFFER_SIZE];
-static size_t             lastLen;
-static int                lastFlags;
+static bool sendtoFails;
+static bool nextSendtoShouldFailWithErrno;
+static int nextSendtoErrno;
+static int sendtoCallCount;
+static char lastBufCopy[SOCKETFAKE_MAX_BUFFER_SIZE];
+static size_t lastLen;
+static int lastFlags;
 static struct sockaddr_in lastAddr;
-static socklen_t          lastAddrLen;
-static int                lastSendtoFd;
+static socklen_t lastAddrLen;
+static int lastSendtoFd;
 
-static int  ipMtuValue;
+static int ipMtuValue;
 static bool ipMtuLookupFails;
-static int  getSockOptCallCount;
-static int  lastGetSockOptLevel;
-static int  lastGetSockOptOptname;
-static int  soErrorValue;
+static int getSockOptCallCount;
+static int lastGetSockOptLevel;
+static int lastGetSockOptOptname;
+static int soErrorValue;
 static bool soErrorLookupFails;
 
-static int  fcntlCallCount;
-static int  lastFcntlCmd;
-static int  lastFcntlSetFlags;
-static int  fcntlGetFlReturn;
+static int fcntlCallCount;
+static int lastFcntlCmd;
+static int lastFcntlSetFlags;
+static int fcntlGetFlReturn;
 static bool fcntlSetFlFails;
 
-static int  selectCallCount;
+static int selectCallCount;
 static bool selectReady;
 static bool selectError;
 static bool selectReturnOverride;
-static int  selectReturnValue;
+static int selectReturnValue;
 static long lastSelectTimeoutSec;
 static long lastSelectTimeoutUsec;
 
 static bool nextConnectShouldFailWithErrno;
-static int  nextConnectErrno;
+static int nextConnectErrno;
 
 static bool nextRecvShouldFailWithErrno;
-static int  nextRecvErrno;
+static int nextRecvErrno;
 
 static bool socketFails;
-static int  socketCallCount;
-static int  socketFd;
-static int  lastSocketDomain;
-static int  lastSocketType;
+static int socketCallCount;
+static int socketFd;
+static int lastSocketDomain;
+static int lastSocketType;
 
 enum
 {
     SOCKETFAKE_MAX_SEND_CALLS = 8
 };
 
-static bool    sendFails;
-static int     sendFailOnCall;
-static int     sendCallCount;
-static bool    sendReturnOverride;
+static bool sendFails;
+static int sendFailOnCall;
+static int sendCallCount;
+static bool sendReturnOverride;
 static ssize_t sendReturnValue;
-static bool    nextSendShouldFailWithErrno;
-static int     nextSendErrno;
-static char    sendBufCopy[SOCKETFAKE_MAX_SEND_CALLS][SOCKETFAKE_MAX_BUFFER_SIZE];
-static size_t  sendLenCopy[SOCKETFAKE_MAX_SEND_CALLS];
-static int     sendFlagsCopy[SOCKETFAKE_MAX_SEND_CALLS];
-static int     lastSendFd;
+static bool nextSendShouldFailWithErrno;
+static int nextSendErrno;
+static char sendBufCopy[SOCKETFAKE_MAX_SEND_CALLS][SOCKETFAKE_MAX_BUFFER_SIZE];
+static size_t sendLenCopy[SOCKETFAKE_MAX_SEND_CALLS];
+static int sendFlagsCopy[SOCKETFAKE_MAX_SEND_CALLS];
+static int lastSendFd;
 
-static bool               connectFails;
-static int                connectCallCount;
-static int                lastConnectFd;
+static bool connectFails;
+static int connectCallCount;
+static int lastConnectFd;
 static struct sockaddr_in lastConnectAddr;
-static char               lastConnectAddrString[INET_ADDRSTRLEN];
+static char lastConnectAddrString[INET_ADDRSTRLEN];
 
 enum
 {
@@ -104,119 +104,119 @@ static int setSockOptValues[SOCKETFAKE_MAX_SETSOCKOPT_CALLS];
 static int closeCallCount;
 static int lastClosedFd;
 
-static int         recvCallCount;
-static ssize_t     recvReturn;
-static int         lastRecvFd;
+static int recvCallCount;
+static ssize_t recvReturn;
+static int lastRecvFd;
 static const void* lastRecvBuf;
-static size_t      lastRecvLen;
-static int         lastRecvFlags;
+static size_t lastRecvLen;
+static int lastRecvFlags;
 
 static char lastAddrString[INET_ADDRSTRLEN];
 
-static bool               getAddrInfoFails;
-static int                getAddrInfoCallCount;
-static char               lastGetAddrInfoHostname[256];
-static int                lastGetAddrInfoSocktype;
+static bool getAddrInfoFails;
+static int getAddrInfoCallCount;
+static char lastGetAddrInfoHostname[256];
+static int lastGetAddrInfoSocktype;
 static struct sockaddr_in fakeResolvedAddr;
-static struct addrinfo    fakeAddrInfo;
-static int                freeAddrInfoCallCount;
+static struct addrinfo fakeAddrInfo;
+static int freeAddrInfoCallCount;
 
 void SocketFake_Reset(void)
 {
     /* Reset errno so a stale value from a prior test (notably EINTR set via
      * FailNextSendWithErrno) cannot leak into the next test's retry loop. */
-    errno                         = 0;
-    sendtoFails                   = false;
+    errno = 0;
+    sendtoFails = false;
     nextSendtoShouldFailWithErrno = false;
-    nextSendtoErrno               = 0;
-    sendtoCallCount               = 0;
-    lastBufCopy[0]                = '\0';
-    lastLen                       = 0;
-    lastFlags                     = 0;
-    lastAddr                      = (struct sockaddr_in) {0};
-    lastAddrLen                   = 0;
-    lastSendtoFd                  = -1;
-    sendFails                     = false;
-    sendFailOnCall                = -1;
-    sendCallCount                 = 0;
-    sendReturnOverride            = false;
-    sendReturnValue               = 0;
-    nextSendShouldFailWithErrno   = false;
-    nextSendErrno                 = 0;
+    nextSendtoErrno = 0;
+    sendtoCallCount = 0;
+    lastBufCopy[0] = '\0';
+    lastLen = 0;
+    lastFlags = 0;
+    lastAddr = (struct sockaddr_in) {0};
+    lastAddrLen = 0;
+    lastSendtoFd = -1;
+    sendFails = false;
+    sendFailOnCall = -1;
+    sendCallCount = 0;
+    sendReturnOverride = false;
+    sendReturnValue = 0;
+    nextSendShouldFailWithErrno = false;
+    nextSendErrno = 0;
     for (int i = 0; i < SOCKETFAKE_MAX_SEND_CALLS; i++)
     {
         sendBufCopy[i][0] = '\0';
-        sendLenCopy[i]    = 0;
-        sendFlagsCopy[i]  = 0;
+        sendLenCopy[i] = 0;
+        sendFlagsCopy[i] = 0;
     }
-    lastSendFd               = -1;
-    connectFails             = false;
-    connectCallCount         = 0;
-    lastConnectFd            = -1;
-    lastConnectAddr          = (struct sockaddr_in) {0};
+    lastSendFd = -1;
+    connectFails = false;
+    connectCallCount = 0;
+    lastConnectFd = -1;
+    lastConnectAddr = (struct sockaddr_in) {0};
     lastConnectAddrString[0] = '\0';
-    setSockOptCallCount      = 0;
-    lastSetSockOptLevel      = 0;
-    lastSetSockOptOptname    = 0;
+    setSockOptCallCount = 0;
+    lastSetSockOptLevel = 0;
+    lastSetSockOptOptname = 0;
     for (int i = 0; i < SOCKETFAKE_MAX_SETSOCKOPT_CALLS; i++)
     {
-        setSockOptLevels[i]   = 0;
+        setSockOptLevels[i] = 0;
         setSockOptOptnames[i] = 0;
-        setSockOptValues[i]   = 0;
+        setSockOptValues[i] = 0;
     }
-    getSockOptCallCount   = 0;
-    lastGetSockOptLevel   = 0;
+    getSockOptCallCount = 0;
+    lastGetSockOptLevel = 0;
     lastGetSockOptOptname = 0;
-    ipMtuValue            = 0;
-    ipMtuLookupFails      = false;
-    soErrorValue          = 0;
-    soErrorLookupFails    = false;
+    ipMtuValue = 0;
+    ipMtuLookupFails = false;
+    soErrorValue = 0;
+    soErrorLookupFails = false;
 
-    fcntlCallCount    = 0;
-    lastFcntlCmd      = 0;
+    fcntlCallCount = 0;
+    lastFcntlCmd = 0;
     lastFcntlSetFlags = 0;
-    fcntlGetFlReturn  = 0;
-    fcntlSetFlFails   = false;
+    fcntlGetFlReturn = 0;
+    fcntlSetFlFails = false;
 
-    selectCallCount       = 0;
-    selectReady           = true;
-    selectError           = false;
-    selectReturnOverride  = false;
-    selectReturnValue     = 0;
-    lastSelectTimeoutSec  = 0;
+    selectCallCount = 0;
+    selectReady = true;
+    selectError = false;
+    selectReturnOverride = false;
+    selectReturnValue = 0;
+    lastSelectTimeoutSec = 0;
     lastSelectTimeoutUsec = 0;
 
     nextConnectShouldFailWithErrno = false;
-    nextConnectErrno               = 0;
+    nextConnectErrno = 0;
 
     nextRecvShouldFailWithErrno = false;
-    nextRecvErrno               = 0;
-    socketFails                 = false;
-    socketCallCount             = 0;
-    socketFd                    = -1;
-    lastSocketDomain            = 0;
-    lastSocketType              = 0;
-    closeCallCount              = 0;
-    lastClosedFd                = -1;
-    recvCallCount               = 0;
-    recvReturn                  = 0;
-    lastRecvFd                  = -1;
-    lastRecvBuf                 = NULL;
-    lastRecvLen                 = 0;
-    lastRecvFlags               = 0;
-    lastAddrString[0]           = '\0';
+    nextRecvErrno = 0;
+    socketFails = false;
+    socketCallCount = 0;
+    socketFd = -1;
+    lastSocketDomain = 0;
+    lastSocketType = 0;
+    closeCallCount = 0;
+    lastClosedFd = -1;
+    recvCallCount = 0;
+    recvReturn = 0;
+    lastRecvFd = -1;
+    lastRecvBuf = NULL;
+    lastRecvLen = 0;
+    lastRecvFlags = 0;
+    lastAddrString[0] = '\0';
 
-    getAddrInfoFails            = false;
-    getAddrInfoCallCount        = 0;
-    lastGetAddrInfoHostname[0]  = '\0';
-    lastGetAddrInfoSocktype     = 0;
-    freeAddrInfoCallCount       = 0;
-    fakeResolvedAddr            = (struct sockaddr_in) {0};
+    getAddrInfoFails = false;
+    getAddrInfoCallCount = 0;
+    lastGetAddrInfoHostname[0] = '\0';
+    lastGetAddrInfoSocktype = 0;
+    freeAddrInfoCallCount = 0;
+    fakeResolvedAddr = (struct sockaddr_in) {0};
     fakeResolvedAddr.sin_family = AF_INET;
-    fakeAddrInfo                = (struct addrinfo) {0};
-    fakeAddrInfo.ai_family      = AF_INET;
-    fakeAddrInfo.ai_addr        = (struct sockaddr*) &fakeResolvedAddr;
-    fakeAddrInfo.ai_addrlen     = sizeof(fakeResolvedAddr);
+    fakeAddrInfo = (struct addrinfo) {0};
+    fakeAddrInfo.ai_family = AF_INET;
+    fakeAddrInfo.ai_addr = (struct sockaddr*) &fakeResolvedAddr;
+    fakeAddrInfo.ai_addrlen = sizeof(fakeResolvedAddr);
 }
 
 void SocketFake_SetSendtoFails(bool fails)
@@ -227,7 +227,7 @@ void SocketFake_SetSendtoFails(bool fails)
 void SocketFake_FailNextSendtoWithErrno(int errnoValue)
 {
     nextSendtoShouldFailWithErrno = true;
-    nextSendtoErrno               = errnoValue;
+    nextSendtoErrno = errnoValue;
 }
 
 void SocketFake_SetIpMtu(int mtu)
@@ -258,7 +258,7 @@ int SocketFake_LastGetSockOptOptname(void)
 void SocketFake_SetConnectFailsWithErrno(int errnoValue)
 {
     nextConnectShouldFailWithErrno = true;
-    nextConnectErrno               = errnoValue;
+    nextConnectErrno = errnoValue;
 }
 
 void SocketFake_SetFcntlSetFlFails(bool fails)
@@ -304,7 +304,7 @@ void SocketFake_SetSelectError(bool hasError)
 void SocketFake_SetSelectReturn(int value)
 {
     selectReturnOverride = true;
-    selectReturnValue    = value;
+    selectReturnValue = value;
 }
 
 int SocketFake_SelectCallCount(void)
@@ -325,7 +325,7 @@ long SocketFake_LastSelectTimeoutUsec(void)
 void SocketFake_FailNextRecvWithErrno(int errnoValue)
 {
     nextRecvShouldFailWithErrno = true;
-    nextRecvErrno               = errnoValue;
+    nextRecvErrno = errnoValue;
 }
 
 void SocketFake_SetIpMtuLookupFails(bool fails)
@@ -435,13 +435,13 @@ void SocketFake_FailSendOnCall(int callNumber)
 void SocketFake_SetSendReturn(ssize_t value)
 {
     sendReturnOverride = true;
-    sendReturnValue    = value;
+    sendReturnValue = value;
 }
 
 void SocketFake_FailNextSendWithErrno(int errnoValue)
 {
     nextSendShouldFailWithErrno = true;
-    nextSendErrno               = errnoValue;
+    nextSendErrno = errnoValue;
 }
 
 /* send accessors */
@@ -532,7 +532,8 @@ int SocketFake_LastSetSockOptOptname(void)
 
 bool SocketFake_HasSetSockOpt(int level, int optname)
 {
-    int recorded = setSockOptCallCount < SOCKETFAKE_MAX_SETSOCKOPT_CALLS ? setSockOptCallCount : SOCKETFAKE_MAX_SETSOCKOPT_CALLS;
+    int recorded =
+        setSockOptCallCount < SOCKETFAKE_MAX_SETSOCKOPT_CALLS ? setSockOptCallCount : SOCKETFAKE_MAX_SETSOCKOPT_CALLS;
     for (int i = 0; i < recorded; i++)
     {
         if (setSockOptLevels[i] == level && setSockOptOptnames[i] == optname)
@@ -545,8 +546,9 @@ bool SocketFake_HasSetSockOpt(int level, int optname)
 
 int SocketFake_LastSetSockOptValue(int level, int optname)
 {
-    int recorded = setSockOptCallCount < SOCKETFAKE_MAX_SETSOCKOPT_CALLS ? setSockOptCallCount : SOCKETFAKE_MAX_SETSOCKOPT_CALLS;
-    int value    = 0;
+    int recorded =
+        setSockOptCallCount < SOCKETFAKE_MAX_SETSOCKOPT_CALLS ? setSockOptCallCount : SOCKETFAKE_MAX_SETSOCKOPT_CALLS;
+    int value = 0;
     for (int i = 0; i < recorded; i++)
     {
         if (setSockOptLevels[i] == level && setSockOptOptnames[i] == optname)
@@ -642,7 +644,7 @@ int socket(int domain, int type, int protocol)
     (void) protocol;
     socketCallCount++;
     lastSocketDomain = domain;
-    lastSocketType   = type;
+    lastSocketType = type;
     if (socketFails)
     {
         socketFd = -1;
@@ -660,17 +662,17 @@ ssize_t sendto(int sockfd, const void* buf, size_t len, int flags, const struct 
 // clang-format on
 {
     sendtoCallCount++;
-    lastSendtoFd    = sockfd;
+    lastSendtoFd = sockfd;
     size_t copySize = len < sizeof(lastBufCopy) - 1 ? len : sizeof(lastBufCopy) - 1;
     memcpy(lastBufCopy, buf, copySize);
     lastBufCopy[copySize] = '\0';
-    lastLen               = len;
-    lastFlags             = flags;
-    lastAddr              = *(const struct sockaddr_in*) dest_addr;
-    lastAddrLen           = addrlen;
+    lastLen = len;
+    lastFlags = flags;
+    lastAddr = *(const struct sockaddr_in*) dest_addr;
+    lastAddrLen = addrlen;
     if (nextSendtoShouldFailWithErrno)
     {
-        errno                         = nextSendtoErrno;
+        errno = nextSendtoErrno;
         nextSendtoShouldFailWithErrno = false;
         return (ssize_t) -1;
     }
@@ -692,7 +694,7 @@ int getsockopt(int sockfd, int level, int optname, void* optval, socklen_t* optl
 {
     (void) sockfd;
     getSockOptCallCount++;
-    lastGetSockOptLevel   = level;
+    lastGetSockOptLevel = level;
     lastGetSockOptOptname = optname;
     if ((level == IPPROTO_IP) && (optname == IP_MTU))
     {
@@ -703,7 +705,7 @@ int getsockopt(int sockfd, int level, int optname, void* optval, socklen_t* optl
         if ((optval != NULL) && (optlen != NULL) && (*optlen >= sizeof(int)))
         {
             *(int*) optval = ipMtuValue;
-            *optlen        = sizeof(int);
+            *optlen = sizeof(int);
         }
         return 0;
     }
@@ -716,7 +718,7 @@ int getsockopt(int sockfd, int level, int optname, void* optval, socklen_t* optl
         if ((optval != NULL) && (optlen != NULL) && (*optlen >= sizeof(int)))
         {
             *(int*) optval = soErrorValue;
-            *optlen        = sizeof(int);
+            *optlen = sizeof(int);
         }
         return 0;
     }
@@ -734,14 +736,14 @@ ssize_t send(int sockfd, const void* buf, size_t len, int flags)
         size_t copySize = len < sizeof(sendBufCopy[0]) - 1 ? len : sizeof(sendBufCopy[0]) - 1;
         memcpy(sendBufCopy[sendCallCount], buf, copySize);
         sendBufCopy[sendCallCount][copySize] = '\0';
-        sendLenCopy[sendCallCount]           = len;
-        sendFlagsCopy[sendCallCount]         = flags;
+        sendLenCopy[sendCallCount] = len;
+        sendFlagsCopy[sendCallCount] = flags;
     }
     bool failThisCall = sendFails || (sendFailOnCall == sendCallCount);
     sendCallCount++;
     if (nextSendShouldFailWithErrno)
     {
-        errno                       = nextSendErrno;
+        errno = nextSendErrno;
         nextSendShouldFailWithErrno = false;
         return (ssize_t) -1;
     }
@@ -764,11 +766,11 @@ int connect(int sockfd, const struct sockaddr* addr, socklen_t addrlen)
 {
     (void) addrlen;
     connectCallCount++;
-    lastConnectFd   = sockfd;
+    lastConnectFd = sockfd;
     lastConnectAddr = *(const struct sockaddr_in*) addr;
     if (nextConnectShouldFailWithErrno)
     {
-        errno                          = nextConnectErrno;
+        errno = nextConnectErrno;
         nextConnectShouldFailWithErrno = false;
         return -1;
     }
@@ -783,7 +785,7 @@ int setsockopt(int sockfd, int level, int optname, const void* optval, socklen_t
     (void) sockfd;
     if (setSockOptCallCount < SOCKETFAKE_MAX_SETSOCKOPT_CALLS)
     {
-        setSockOptLevels[setSockOptCallCount]   = level;
+        setSockOptLevels[setSockOptCallCount] = level;
         setSockOptOptnames[setSockOptCallCount] = optname;
         if ((optval != NULL) && (optlen == sizeof(int)))
         {
@@ -793,7 +795,7 @@ int setsockopt(int sockfd, int level, int optname, const void* optval, socklen_t
         }
     }
     setSockOptCallCount++;
-    lastSetSockOptLevel   = level;
+    lastSetSockOptLevel = level;
     lastSetSockOptOptname = optname;
     return 0;
 }
@@ -811,13 +813,13 @@ ssize_t recv(int sockfd, void* buf, size_t len, int flags)
 // clang-format on
 {
     recvCallCount++;
-    lastRecvFd    = sockfd;
-    lastRecvBuf   = buf;
-    lastRecvLen   = len;
+    lastRecvFd = sockfd;
+    lastRecvBuf = buf;
+    lastRecvLen = len;
     lastRecvFlags = flags;
     if (nextRecvShouldFailWithErrno)
     {
-        errno                       = nextRecvErrno;
+        errno = nextRecvErrno;
         nextRecvShouldFailWithErrno = false;
         return (ssize_t) -1;
     }
@@ -857,7 +859,7 @@ int select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* exceptfds, struc
     selectCallCount++;
     if (timeout != NULL)
     {
-        lastSelectTimeoutSec  = timeout->tv_sec;
+        lastSelectTimeoutSec = timeout->tv_sec;
         lastSelectTimeoutUsec = timeout->tv_usec;
     }
     if (writefds != NULL)

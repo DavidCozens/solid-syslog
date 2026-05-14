@@ -18,11 +18,11 @@ EXTERN_C_BEGIN
     typedef int(WSAAPI * WinsockGetSockOptFn)(SOCKET, int, int, char*, int*);
     typedef int(WSAAPI * WinsockCloseSocketFn)(SOCKET);
 
-    extern WinsockSocketFn      Winsock_socket;
-    extern WinsockSendToFn      Winsock_sendto;
-    extern WinsockConnectFn     Winsock_connect;
-    extern WinsockSetSockOptFn  Winsock_setsockopt;
-    extern WinsockGetSockOptFn  Winsock_getsockopt;
+    extern WinsockSocketFn Winsock_socket;
+    extern WinsockSendToFn Winsock_sendto;
+    extern WinsockConnectFn Winsock_connect;
+    extern WinsockSetSockOptFn Winsock_setsockopt;
+    extern WinsockGetSockOptFn Winsock_getsockopt;
     extern WinsockCloseSocketFn Winsock_closesocket;
 
 EXTERN_C_END

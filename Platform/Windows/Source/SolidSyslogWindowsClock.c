@@ -20,16 +20,20 @@ static void WINAPI CallGetSystemTimeAsFileTime(LPFILETIME fileTime)
 enum
 {
     HUNDRED_NS_PER_MICROSECOND = 10,
-    HUNDRED_NS_PER_SECOND      = 10000000
+    HUNDRED_NS_PER_SECOND = 10000000
 };
 
-static inline bool     BreakDownFileTime(const FILETIME* fileTime, SYSTEMTIME* breakdown);
+static inline bool BreakDownFileTime(const FILETIME* fileTime, SYSTEMTIME* breakdown);
 static inline uint32_t MicrosecondsFromFileTime(const FILETIME* fileTime);
-static inline void     PopulateTimestamp(struct SolidSyslogTimestamp* timestamp, const SYSTEMTIME* breakdown, uint32_t microseconds);
+static inline void PopulateTimestamp(
+    struct SolidSyslogTimestamp* timestamp,
+    const SYSTEMTIME* breakdown,
+    uint32_t microseconds
+);
 
 void SolidSyslogWindowsClock_GetTimestamp(struct SolidSyslogTimestamp* timestamp)
 {
-    FILETIME   fileTime;
+    FILETIME fileTime;
     SYSTEMTIME breakdown;
 
     *timestamp = (struct SolidSyslogTimestamp) {0};
@@ -53,13 +57,17 @@ static inline uint32_t MicrosecondsFromFileTime(const FILETIME* fileTime)
     return (uint32_t) ((hundredNs % HUNDRED_NS_PER_SECOND) / HUNDRED_NS_PER_MICROSECOND);
 }
 
-static inline void PopulateTimestamp(struct SolidSyslogTimestamp* timestamp, const SYSTEMTIME* breakdown, uint32_t microseconds)
+static inline void PopulateTimestamp(
+    struct SolidSyslogTimestamp* timestamp,
+    const SYSTEMTIME* breakdown,
+    uint32_t microseconds
+)
 {
-    timestamp->year        = breakdown->wYear;
-    timestamp->month       = (uint8_t) breakdown->wMonth;
-    timestamp->day         = (uint8_t) breakdown->wDay;
-    timestamp->hour        = (uint8_t) breakdown->wHour;
-    timestamp->minute      = (uint8_t) breakdown->wMinute;
-    timestamp->second      = (uint8_t) breakdown->wSecond;
+    timestamp->year = breakdown->wYear;
+    timestamp->month = (uint8_t) breakdown->wMonth;
+    timestamp->day = (uint8_t) breakdown->wDay;
+    timestamp->hour = (uint8_t) breakdown->wHour;
+    timestamp->minute = (uint8_t) breakdown->wMinute;
+    timestamp->second = (uint8_t) breakdown->wSecond;
     timestamp->microsecond = microseconds;
 }

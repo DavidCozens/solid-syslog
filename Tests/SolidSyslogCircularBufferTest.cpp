@@ -110,7 +110,7 @@ TEST(SolidSyslogCircularBuffer, WrapsAroundEndOfStorage)
 {
     enum
     {
-        CYCLES       = 400,
+        CYCLES = 400,
         PAYLOAD_SIZE = 10
     };
 
@@ -162,7 +162,7 @@ TEST(SolidSyslogCircularBuffer, WriteExceedingMaxMessageSizeIsDropped)
     memset(tooBig, 'X', sizeof(tooBig));
     SolidSyslogBuffer_Write(buffer, tooBig, sizeof(tooBig));
 
-    char   bigDest[SOLIDSYSLOG_MAX_MESSAGE_SIZE + 1];
+    char bigDest[SOLIDSYSLOG_MAX_MESSAGE_SIZE + 1];
     size_t got = 0;
     CHECK_FALSE(SolidSyslogBuffer_Read(buffer, bigDest, sizeof(bigDest), &got));
 }
@@ -295,7 +295,7 @@ TEST(SolidSyslogCircularBufferSmallRing, ReadIntoSmallerBufferReturnsFalseAndLea
 {
     SolidSyslogBuffer_Write(buffer, "hello", 5);
 
-    char   dest[5];
+    char dest[5];
     size_t got = 0;
     CHECK_FALSE(SolidSyslogBuffer_Read(buffer, dest, 4, &got));
     LONGS_EQUAL(0, got);

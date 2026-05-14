@@ -25,12 +25,12 @@
 
 enum
 {
-    SEMIHOSTING_SYS_OPEN  = 0x01,
+    SEMIHOSTING_SYS_OPEN = 0x01,
     SEMIHOSTING_SYS_CLOSE = 0x02,
     SEMIHOSTING_SYS_WRITE = 0x05,
-    SEMIHOSTING_SYS_READ  = 0x06,
-    SEMIHOSTING_SYS_SEEK  = 0x0A,
-    SEMIHOSTING_SYS_FLEN  = 0x0C,
+    SEMIHOSTING_SYS_READ = 0x06,
+    SEMIHOSTING_SYS_SEEK = 0x0A,
+    SEMIHOSTING_SYS_FLEN = 0x0C,
 };
 
 /* Semihosting file open modes per the ARM Semihosting spec table 5-3.
@@ -38,15 +38,15 @@ enum
  * "w+b" creates or truncates and opens for read/write. */
 enum
 {
-    SEMIHOSTING_MODE_READ_PLUS_BINARY  = 3,
+    SEMIHOSTING_MODE_READ_PLUS_BINARY = 3,
     SEMIHOSTING_MODE_WRITE_PLUS_BINARY = 7,
 };
 
 enum
 {
-    DISK_SECTOR_SIZE  = 512,
+    DISK_SECTOR_SIZE = 512,
     DISK_SECTOR_COUNT = 2048,
-    DISK_TOTAL_BYTES  = DISK_SECTOR_COUNT * DISK_SECTOR_SIZE,
+    DISK_TOTAL_BYTES = DISK_SECTOR_COUNT * DISK_SECTOR_SIZE,
 };
 
 static const char DISK_IMAGE_PATH[] = "solidsyslog-disk.img";
@@ -203,7 +203,7 @@ static int Semihosting(int op, const void* args)
      * operation number on entry and the return value on exit; r1
      * is a pointer to a per-op parameter block. memory clobber so
      * the compiler doesn't reorder around buffers passed by pointer. */
-    register int         result __asm("r0")  = op;
+    register int result __asm("r0") = op;
     register const void* request __asm("r1") = args;
     __asm volatile("bkpt 0xAB" : "+r"(result) : "r"(request) : "memory");
     return result;
@@ -214,8 +214,8 @@ static int SemihostingOpen(const char* path, int mode)
     const struct
     {
         const char* name;
-        int         mode;
-        int         length;
+        int mode;
+        int length;
     } args = {path, mode, (int) strlen(path)};
 
     return Semihosting(SEMIHOSTING_SYS_OPEN, &args);
@@ -226,9 +226,9 @@ static int SemihostingRead(int handle, void* buffer, int count)
     /* SYS_READ returns the number of bytes NOT read (0 == full read). */
     const struct
     {
-        int   handle;
+        int handle;
         void* buffer;
-        int   count;
+        int count;
     } args = {handle, buffer, count};
 
     return Semihosting(SEMIHOSTING_SYS_READ, &args);
@@ -239,9 +239,9 @@ static int SemihostingWrite(int handle, const void* buffer, int count)
     /* SYS_WRITE returns the number of bytes NOT written (0 == full write). */
     const struct
     {
-        int         handle;
+        int handle;
         const void* buffer;
-        int         count;
+        int count;
     } args = {handle, buffer, count};
 
     return Semihosting(SEMIHOSTING_SYS_WRITE, &args);

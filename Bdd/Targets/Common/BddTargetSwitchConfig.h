@@ -15,7 +15,7 @@ EXTERN_C_BEGIN
         BDD_TARGET_SWITCH_COUNT,
     };
 
-    void    BddTargetSwitchConfig_SetByName(const char* name);
+    void BddTargetSwitchConfig_SetByName(const char* name);
     uint8_t BddTargetSwitchConfig_Selector(void); // NOLINT(modernize-redundant-void-arg) -- C idiom
 
 EXTERN_C_END

@@ -13,7 +13,7 @@
 
 enum
 {
-    RSA_BITS                 = 2048,
+    RSA_BITS = 2048,
     DEFAULT_VALIDITY_SECONDS = 3600,
 };
 
@@ -24,8 +24,8 @@ static void AddBasicConstraintsCa(X509* cert);
 
 void TlsTestCert_Create(const struct TlsTestCertConfig* config, struct TlsTestCert* out)
 {
-    EVP_PKEY* key  = EVP_RSA_gen(RSA_BITS);
-    X509*     cert = X509_new();
+    EVP_PKEY* key = EVP_RSA_gen(RSA_BITS);
+    X509* cert = X509_new();
 
     X509_set_version(cert, 2); /* X.509 v3 */
     ASN1_INTEGER_set(X509_get_serialNumber(cert), 1);
@@ -35,14 +35,14 @@ void TlsTestCert_Create(const struct TlsTestCertConfig* config, struct TlsTestCe
     AddSubjectAltNames(cert, config->subjectAltDnsNames);
     AddBasicConstraintsCa(cert);
 
-    X509*     issuerCert = (config->issuer != NULL) ? config->issuer->cert : cert;
-    EVP_PKEY* issuerKey  = (config->issuer != NULL) ? config->issuer->key : key;
+    X509* issuerCert = (config->issuer != NULL) ? config->issuer->cert : cert;
+    EVP_PKEY* issuerKey = (config->issuer != NULL) ? config->issuer->key : key;
     X509_set_issuer_name(cert, X509_get_subject_name(issuerCert));
     X509_set_pubkey(cert, key);
     X509_sign(cert, issuerKey, EVP_sha256());
 
     out->cert = cert;
-    out->key  = key;
+    out->key = key;
 }
 
 void TlsTestCert_Destroy(struct TlsTestCert* cert)
@@ -83,9 +83,9 @@ void TlsTestCert_WritePrivateKeyPemToFile(const struct TlsTestCert* cert, const 
 
 static void SetValidity(X509* cert, const struct TlsTestCertConfig* config)
 {
-    time_t now   = time(NULL);
+    time_t now = time(NULL);
     time_t start = (config->notBefore != 0) ? config->notBefore : now;
-    time_t end   = (config->notAfter != 0) ? config->notAfter : now + DEFAULT_VALIDITY_SECONDS;
+    time_t end = (config->notAfter != 0) ? config->notAfter : now + DEFAULT_VALIDITY_SECONDS;
     X509_time_adj_ex(X509_getm_notBefore(cert), 0, 0, &start);
     X509_time_adj_ex(X509_getm_notAfter(cert), 0, 0, &end);
 }
@@ -105,7 +105,7 @@ static void AddSubjectAltNames(X509* cert, const char* const * dnsNames)
     STACK_OF(GENERAL_NAME)* sans = sk_GENERAL_NAME_new_null();
     for (int i = 0; dnsNames[i] != NULL; i++)
     {
-        GENERAL_NAME*   gen = GENERAL_NAME_new();
+        GENERAL_NAME* gen = GENERAL_NAME_new();
         ASN1_IA5STRING* str = ASN1_IA5STRING_new();
         ASN1_STRING_set(str, dnsNames[i], -1);
         GENERAL_NAME_set0_value(gen, GEN_DNS, str);
@@ -121,7 +121,7 @@ static void AddSubjectAltNames(X509* cert, const char* const * dnsNames)
 static void AddBasicConstraintsCa(X509* cert)
 {
     BASIC_CONSTRAINTS* bc = BASIC_CONSTRAINTS_new();
-    bc->ca                = 1;
+    bc->ca = 1;
     X509_add1_ext_i2d(cert, NID_basic_constraints, bc, 1 /* critical */, 0);
     BASIC_CONSTRAINTS_free(bc);
 }

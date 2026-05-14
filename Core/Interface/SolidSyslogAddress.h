@@ -8,7 +8,8 @@ EXTERN_C_BEGIN
 
     enum
     {
-        SOLIDSYSLOG_ADDRESS_SIZE = 128 /* bytes; sized to cover struct sockaddr_storage for cross-platform parity (glibc, Winsock) */
+        SOLIDSYSLOG_ADDRESS_SIZE =
+            128 /* bytes; sized to cover struct sockaddr_storage for cross-platform parity (glibc, Winsock) */
     };
 
     typedef struct

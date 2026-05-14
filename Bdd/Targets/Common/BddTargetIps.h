@@ -10,7 +10,7 @@ EXTERN_C_BEGIN
     struct SolidSyslogFormatter;
 
     size_t BddTargetIps_Count(void); // NOLINT(modernize-redundant-void-arg) -- C idiom
-    void   BddTargetIps_At(struct SolidSyslogFormatter * formatter, size_t index);
+    void BddTargetIps_At(struct SolidSyslogFormatter * formatter, size_t index);
 
 EXTERN_C_END
 

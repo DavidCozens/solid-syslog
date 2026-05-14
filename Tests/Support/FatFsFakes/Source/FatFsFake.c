@@ -12,85 +12,85 @@ enum
 };
 
 /* f_open state */
-static int         openCallCount;
+static int openCallCount;
 static const char* lastOpenPath;
-static BYTE        lastOpenMode;
-static FRESULT     openResult;
-static FIL*        lastOpenedFp;
+static BYTE lastOpenMode;
+static FRESULT openResult;
+static FIL* lastOpenedFp;
 
 /* f_close state */
 static int closeCallCount;
 
 /* f_lseek state */
-static int     lseekCallCount;
+static int lseekCallCount;
 static FSIZE_t lastLseekOffset;
 
 /* f_truncate state */
 static int truncateCallCount;
 
 /* f_read state */
-static int     readCallCount;
-static UINT    lastReadCount;
+static int readCallCount;
+static UINT lastReadCount;
 static FRESULT readResult;
-static UINT    readBytesReturned;
-static bool    readBytesReturnedOverridden;
-static BYTE    readSource[CAPTURE_BUFFER_SIZE];
-static UINT    readSourceCount;
+static UINT readBytesReturned;
+static bool readBytesReturnedOverridden;
+static BYTE readSource[CAPTURE_BUFFER_SIZE];
+static UINT readSourceCount;
 
 /* f_write state */
-static int     writeCallCount;
-static BYTE    lastWriteBytes[CAPTURE_BUFFER_SIZE];
-static UINT    lastWriteCount;
+static int writeCallCount;
+static BYTE lastWriteBytes[CAPTURE_BUFFER_SIZE];
+static UINT lastWriteCount;
 static FRESULT writeResult;
-static UINT    writeBytesReturned;
-static bool    writeBytesReturnedOverridden;
+static UINT writeBytesReturned;
+static bool writeBytesReturnedOverridden;
 
 /* f_sync state */
-static int     syncCallCount;
+static int syncCallCount;
 static FRESULT syncResult;
 
 /* f_stat state */
-static int         statCallCount;
+static int statCallCount;
 static const char* lastStatPath;
-static FRESULT     statResult;
+static FRESULT statResult;
 
 /* f_unlink state */
-static int         unlinkCallCount;
+static int unlinkCallCount;
 static const char* lastUnlinkPath;
-static FRESULT     unlinkResult;
+static FRESULT unlinkResult;
 
 void FatFsFake_Reset(void)
 {
-    openCallCount               = 0;
-    lastOpenPath                = NULL;
-    lastOpenMode                = 0;
-    openResult                  = FR_OK;
-    lastOpenedFp                = NULL;
-    closeCallCount              = 0;
-    lseekCallCount              = 0;
-    lastLseekOffset             = 0;
-    truncateCallCount           = 0;
-    readCallCount               = 0;
-    lastReadCount               = 0;
-    readResult                  = FR_OK;
-    readBytesReturned           = 0;
+    openCallCount = 0;
+    lastOpenPath = NULL;
+    lastOpenMode = 0;
+    openResult = FR_OK;
+    lastOpenedFp = NULL;
+    closeCallCount = 0;
+    lseekCallCount = 0;
+    lastLseekOffset = 0;
+    truncateCallCount = 0;
+    readCallCount = 0;
+    lastReadCount = 0;
+    readResult = FR_OK;
+    readBytesReturned = 0;
     readBytesReturnedOverridden = false;
-    readSourceCount             = 0;
+    readSourceCount = 0;
     memset(readSource, 0, sizeof(readSource));
     writeCallCount = 0;
     memset(lastWriteBytes, 0, sizeof(lastWriteBytes));
-    lastWriteCount               = 0;
-    writeResult                  = FR_OK;
-    writeBytesReturned           = 0;
+    lastWriteCount = 0;
+    writeResult = FR_OK;
+    writeBytesReturned = 0;
     writeBytesReturnedOverridden = false;
-    syncCallCount                = 0;
-    syncResult                   = FR_OK;
-    statCallCount                = 0;
-    lastStatPath                 = NULL;
-    statResult                   = FR_OK;
-    unlinkCallCount              = 0;
-    lastUnlinkPath               = NULL;
-    unlinkResult                 = FR_OK;
+    syncCallCount = 0;
+    syncResult = FR_OK;
+    statCallCount = 0;
+    lastStatPath = NULL;
+    statResult = FR_OK;
+    unlinkCallCount = 0;
+    lastUnlinkPath = NULL;
+    unlinkResult = FR_OK;
 }
 
 void FatFsFake_SetOpenResult(FRESULT result)
@@ -179,7 +179,7 @@ void FatFsFake_SetReadResult(FRESULT result)
 
 void FatFsFake_SetReadBytesReturned(unsigned int bytes)
 {
-    readBytesReturned           = bytes;
+    readBytesReturned = bytes;
     readBytesReturnedOverridden = true;
 }
 
@@ -204,7 +204,7 @@ FRESULT f_read(FIL* fp, void* buff, UINT btr, UINT* br)
 {
     (void) fp;
     readCallCount++;
-    lastReadCount  = btr;
+    lastReadCount = btr;
     UINT copyCount = (btr <= readSourceCount) ? btr : readSourceCount;
     memcpy(buff, readSource, copyCount);
     *br = readBytesReturnedOverridden ? readBytesReturned : copyCount;
@@ -218,7 +218,7 @@ void FatFsFake_SetWriteResult(FRESULT result)
 
 void FatFsFake_SetWriteBytesReturned(unsigned int bytes)
 {
-    writeBytesReturned           = bytes;
+    writeBytesReturned = bytes;
     writeBytesReturnedOverridden = true;
 }
 
@@ -244,7 +244,7 @@ FRESULT f_write(FIL* fp, const void* buff, UINT btw, UINT* bw)
     UINT copyCount = (btw <= sizeof(lastWriteBytes)) ? btw : (UINT) sizeof(lastWriteBytes);
     memcpy(lastWriteBytes, buff, copyCount);
     lastWriteCount = btw;
-    *bw            = writeBytesReturnedOverridden ? writeBytesReturned : btw;
+    *bw = writeBytesReturnedOverridden ? writeBytesReturned : btw;
     return writeResult;
 }
 

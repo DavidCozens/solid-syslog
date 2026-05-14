@@ -11,7 +11,7 @@ EXTERN_C_BEGIN
     void FreeRtosTaskFake_Reset(void);
 
     /* vTaskDelay accessors */
-    unsigned   FreeRtosTaskFake_VTaskDelayCallCount(void);
+    unsigned FreeRtosTaskFake_VTaskDelayCallCount(void);
     TickType_t FreeRtosTaskFake_LastVTaskDelayTicks(void);
 
     /* xTaskGetTickCount stub */

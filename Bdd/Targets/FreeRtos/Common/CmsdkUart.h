@@ -14,9 +14,9 @@ EXTERN_C_BEGIN
 
     typedef struct
     {
-        CmsdkUartRead32Function  read32;
+        CmsdkUartRead32Function read32;
         CmsdkUartWrite32Function write32;
-        CmsdkUartSleepFunction   sleep;
+        CmsdkUartSleepFunction sleep;
     } CmsdkUartMemoryAccess;
 
     void CmsdkUart_Init(const CmsdkUartMemoryAccess* access, uintptr_t baseAddress);

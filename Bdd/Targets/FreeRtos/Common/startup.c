@@ -14,7 +14,7 @@ extern uint32_t _edata;
 extern uint32_t _sbss;
 extern uint32_t _ebss;
 
-extern int  main(void);
+extern int main(void);
 extern void __libc_init_array(void);
 
 void Reset_Handler(void);
@@ -72,20 +72,20 @@ void Default_Handler(void)
 
 /* Cortex-M3 vector table at the start of FLASH. */
 __attribute__((section(".vectors"), used)) const uint32_t vector_table[] = {
-    (uint32_t) &_estack,           /* 0x00 — initial stack pointer */
-    (uint32_t) Reset_Handler,      /* 0x04 — reset                 */
-    (uint32_t) NMI_Handler,        /* 0x08                         */
-    (uint32_t) HardFault_Handler,  /* 0x0C                         */
-    (uint32_t) MemManage_Handler,  /* 0x10                         */
-    (uint32_t) BusFault_Handler,   /* 0x14                         */
+    (uint32_t) &_estack, /* 0x00 — initial stack pointer */
+    (uint32_t) Reset_Handler, /* 0x04 — reset                 */
+    (uint32_t) NMI_Handler, /* 0x08                         */
+    (uint32_t) HardFault_Handler, /* 0x0C                         */
+    (uint32_t) MemManage_Handler, /* 0x10                         */
+    (uint32_t) BusFault_Handler, /* 0x14                         */
     (uint32_t) UsageFault_Handler, /* 0x18                         */
     0U,
     0U,
     0U,
-    0U,                          /* 0x1C-0x28 reserved           */
-    (uint32_t) SVC_Handler,      /* 0x2C — FreeRTOS              */
+    0U, /* 0x1C-0x28 reserved           */
+    (uint32_t) SVC_Handler, /* 0x2C — FreeRTOS              */
     (uint32_t) DebugMon_Handler, /* 0x30                         */
-    0U,                          /* 0x34 reserved                */
-    (uint32_t) PendSV_Handler,   /* 0x38 — FreeRTOS              */
-    (uint32_t) SysTick_Handler,  /* 0x3C — FreeRTOS              */
+    0U, /* 0x34 reserved                */
+    (uint32_t) PendSV_Handler, /* 0x38 — FreeRTOS              */
+    (uint32_t) SysTick_Handler, /* 0x3C — FreeRTOS              */
 };

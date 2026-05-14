@@ -2,7 +2,7 @@
 #include "CppUTest/TestHarness.h"
 
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
-                               // macros
+    // macros
 #include "SolidSyslogAddress.h"
 #include "SolidSyslogDatagram.h"
 #include "SolidSyslogUdpPayload.h"
@@ -156,7 +156,10 @@ TEST(SolidSyslogWinsockDatagram, SendToReturnsFailedOnSendtoFailure)
 {
     SolidSyslogDatagram_Open(datagram);
     WinsockFake_SetSendtoFails(true);
-    LONGS_EQUAL(SOLIDSYSLOG_DATAGRAM_FAILED, SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr));
+    LONGS_EQUAL(
+        SOLIDSYSLOG_DATAGRAM_FAILED,
+        SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr)
+    );
 }
 
 TEST(SolidSyslogWinsockDatagram, CloseCallsCloseOnce)
@@ -210,14 +213,20 @@ TEST(SolidSyslogWinsockDatagram, SendToReturnsOversizeOnWsaemsgsize)
 {
     SolidSyslogDatagram_Open(datagram);
     WinsockFake_FailNextSendtoWithLastError(WSAEMSGSIZE);
-    LONGS_EQUAL(SOLIDSYSLOG_DATAGRAM_OVERSIZE, SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr));
+    LONGS_EQUAL(
+        SOLIDSYSLOG_DATAGRAM_OVERSIZE,
+        SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr)
+    );
 }
 
 TEST(SolidSyslogWinsockDatagram, SendToReturnsFailedWhenConnectFails)
 {
     SolidSyslogDatagram_Open(datagram);
     WinsockFake_SetConnectFails(true);
-    LONGS_EQUAL(SOLIDSYSLOG_DATAGRAM_FAILED, SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr));
+    LONGS_EQUAL(
+        SOLIDSYSLOG_DATAGRAM_FAILED,
+        SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr)
+    );
 }
 
 TEST(SolidSyslogWinsockDatagram, MaxPayloadAfterConnectQueriesIpMtu)

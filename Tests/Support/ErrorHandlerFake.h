@@ -6,12 +6,12 @@
 
 EXTERN_C_BEGIN
 
-    void                      ErrorHandlerFake_Install(void* context);
-    void                      ErrorHandlerFake_Uninstall(void);
-    int                       ErrorHandlerFake_HandleCallCount(void);
+    void ErrorHandlerFake_Install(void* context);
+    void ErrorHandlerFake_Uninstall(void);
+    int ErrorHandlerFake_HandleCallCount(void);
     enum SolidSyslog_Severity ErrorHandlerFake_LastSeverity(void);
-    const char*               ErrorHandlerFake_LastMessage(void);
-    const void*               ErrorHandlerFake_LastContext(void);
+    const char* ErrorHandlerFake_LastMessage(void);
+    const void* ErrorHandlerFake_LastContext(void);
 
 EXTERN_C_END
 

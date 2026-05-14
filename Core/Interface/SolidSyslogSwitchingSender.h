@@ -12,13 +12,13 @@ EXTERN_C_BEGIN
 
     struct SolidSyslogSwitchingSenderConfig
     {
-        struct SolidSyslogSender**         senders;
-        size_t                             senderCount;
+        struct SolidSyslogSender** senders;
+        size_t senderCount;
         SolidSyslogSwitchingSenderSelector selector;
     };
 
     struct SolidSyslogSender* SolidSyslogSwitchingSender_Create(const struct SolidSyslogSwitchingSenderConfig* config);
-    void                      SolidSyslogSwitchingSender_Destroy(void);
+    void SolidSyslogSwitchingSender_Destroy(void);
 
 EXTERN_C_END
 

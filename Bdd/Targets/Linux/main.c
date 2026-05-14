@@ -47,19 +47,19 @@
 
 struct SolidSyslogStore;
 
-static const char* const                STORE_PATH_PREFIX     = "/tmp/STORE";
-static const char* const                THRESHOLD_MARKER_PATH = "/tmp/solidsyslog_threshold_marker.log";
-static struct SolidSyslogFile*          storeFile;
-static struct SolidSyslogBlockDevice*   storeBlockDevice;
+static const char* const STORE_PATH_PREFIX = "/tmp/STORE";
+static const char* const THRESHOLD_MARKER_PATH = "/tmp/solidsyslog_threshold_marker.log";
+static struct SolidSyslogFile* storeFile;
+static struct SolidSyslogBlockDevice* storeBlockDevice;
 static SolidSyslogPosixTcpStreamStorage plainTcpStreamStorage;
-static struct SolidSyslogStream*        plainTcpStream;
-static SolidSyslogStreamSenderStorage   plainTcpSenderStorage;
-static struct SolidSyslogSender*        plainTcpSender;
+static struct SolidSyslogStream* plainTcpStream;
+static SolidSyslogStreamSenderStorage plainTcpSenderStorage;
+static struct SolidSyslogSender* plainTcpSender;
 
 static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
 {
-    timeQuality->tzKnown                  = true;
-    timeQuality->isSynced                 = true;
+    timeQuality->tzKnown = true;
+    timeQuality->isSynced = true;
     timeQuality->syncAccuracyMicroseconds = SOLIDSYSLOG_SYNC_ACCURACY_OMIT;
 }
 
@@ -79,19 +79,19 @@ static struct SolidSyslogSender* CreateSender(const struct BddTargetOptions* opt
     struct SolidSyslogResolver* resolver = SolidSyslogGetAddrInfoResolver_Create();
 
     static struct SolidSyslogUdpSenderConfig udpConfig = {0};
-    udpConfig.resolver                                 = resolver;
-    udpConfig.datagram                                 = SolidSyslogPosixDatagram_Create();
-    udpConfig.endpoint                                 = BddTargetUdpConfig_GetEndpoint;
-    udpConfig.endpointVersion                          = BddTargetUdpConfig_GetEndpointVersion;
-    struct SolidSyslogSender* udpSender                = SolidSyslogUdpSender_Create(&udpConfig);
+    udpConfig.resolver = resolver;
+    udpConfig.datagram = SolidSyslogPosixDatagram_Create();
+    udpConfig.endpoint = BddTargetUdpConfig_GetEndpoint;
+    udpConfig.endpointVersion = BddTargetUdpConfig_GetEndpointVersion;
+    struct SolidSyslogSender* udpSender = SolidSyslogUdpSender_Create(&udpConfig);
 
-    plainTcpStream                                        = SolidSyslogPosixTcpStream_Create(&plainTcpStreamStorage);
+    plainTcpStream = SolidSyslogPosixTcpStream_Create(&plainTcpStreamStorage);
     static struct SolidSyslogStreamSenderConfig tcpConfig = {0};
-    tcpConfig.resolver                                    = resolver;
-    tcpConfig.stream                                      = plainTcpStream;
-    tcpConfig.endpoint                                    = BddTargetTcpConfig_GetEndpoint;
-    tcpConfig.endpointVersion                             = BddTargetTcpConfig_GetEndpointVersion;
-    plainTcpSender                                        = SolidSyslogStreamSender_Create(&plainTcpSenderStorage, &tcpConfig);
+    tcpConfig.resolver = resolver;
+    tcpConfig.stream = plainTcpStream;
+    tcpConfig.endpoint = BddTargetTcpConfig_GetEndpoint;
+    tcpConfig.endpointVersion = BddTargetTcpConfig_GetEndpointVersion;
+    plainTcpSender = SolidSyslogStreamSender_Create(&plainTcpSenderStorage, &tcpConfig);
 
     struct SolidSyslogSender* tlsSender = BddTargetTlsSender_Create(resolver, mtlsModeActive);
 
@@ -101,9 +101,9 @@ static struct SolidSyslogSender* CreateSender(const struct BddTargetOptions* opt
     inners[BDD_TARGET_SWITCH_TLS] = tlsSender;
 
     static struct SolidSyslogSwitchingSenderConfig switchConfig = {0};
-    switchConfig.senders                                        = inners;
-    switchConfig.senderCount                                    = BDD_TARGET_SWITCH_COUNT;
-    switchConfig.selector                                       = BddTargetSwitchConfig_Selector;
+    switchConfig.senders = inners;
+    switchConfig.senderCount = BDD_TARGET_SWITCH_COUNT;
+    switchConfig.selector = BddTargetSwitchConfig_Selector;
 
     BddTargetSwitchConfig_SetByName(options->transport);
     return SolidSyslogSwitchingSender_Create(&switchConfig);
@@ -162,17 +162,17 @@ static struct SolidSyslogStore* CreateStore(const struct BddTargetOptions* optio
         storeBlockDevice = SolidSyslogFileBlockDevice_Create(&blockDeviceStorage, storeFile, STORE_PATH_PREFIX);
 
         static size_t capacityThreshold;
-        capacityThreshold                                     = options->capacityThreshold;
+        capacityThreshold = options->capacityThreshold;
         static struct SolidSyslogBlockStoreConfig storeConfig = {0};
-        storeConfig.blockDevice                               = storeBlockDevice;
-        storeConfig.maxBlockSize                              = options->maxBlockSize;
-        storeConfig.maxBlocks                                 = options->maxBlocks;
-        storeConfig.discardPolicy                             = MapDiscardPolicy(options->discardPolicy);
-        storeConfig.securityPolicy                            = SolidSyslogCrc16Policy_Create();
-        storeConfig.onStoreFull                               = OnStoreFull;
-        storeConfig.getCapacityThreshold                      = GetCapacityThreshold;
-        storeConfig.onThresholdCrossed                        = OnThresholdCrossed;
-        storeConfig.thresholdContext                          = &capacityThreshold;
+        storeConfig.blockDevice = storeBlockDevice;
+        storeConfig.maxBlockSize = options->maxBlockSize;
+        storeConfig.maxBlocks = options->maxBlocks;
+        storeConfig.discardPolicy = MapDiscardPolicy(options->discardPolicy);
+        storeConfig.securityPolicy = SolidSyslogCrc16Policy_Create();
+        storeConfig.onStoreFull = OnStoreFull;
+        storeConfig.getCapacityThreshold = GetCapacityThreshold;
+        storeConfig.onThresholdCrossed = OnThresholdCrossed;
+        storeConfig.thresholdContext = &capacityThreshold;
 
         static SolidSyslogBlockStoreStorage storeStorage;
         return SolidSyslogBlockStore_Create(&storeStorage, &storeConfig);
@@ -230,54 +230,54 @@ int main(int argc, char* argv[])
     BddTargetAppName_Set((options.appName != NULL) ? options.appName : argv[0]);
 
     struct SolidSyslogSender* sender = CreateSender(&options);
-    struct SolidSyslogStore*  store  = CreateStore(&options);
+    struct SolidSyslogStore* store = CreateStore(&options);
 
-    struct SolidSyslogBuffer*        buffer     = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
-    struct SolidSyslogAtomicCounter* counter    = SolidSyslogAtomicCounter_Create();
-    struct SolidSyslogMetaSdConfig   metaConfig = {
-          .counter      = counter,
-          .getSysUpTime = SolidSyslogPosixSysUpTime_Get,
-          .getLanguage  = BddTargetLanguage_Get,
+    struct SolidSyslogBuffer* buffer = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
+    struct SolidSyslogAtomicCounter* counter = SolidSyslogAtomicCounter_Create();
+    struct SolidSyslogMetaSdConfig metaConfig = {
+        .counter = counter,
+        .getSysUpTime = SolidSyslogPosixSysUpTime_Get,
+        .getLanguage = BddTargetLanguage_Get,
     };
     struct SolidSyslogStructuredData* metaSd = SolidSyslogMetaSd_Create(&metaConfig);
 
-    struct SolidSyslogStructuredData* timeQuality  = SolidSyslogTimeQualitySd_Create(GetTimeQuality);
-    struct SolidSyslogOriginSdConfig  originConfig = {
-         .software     = "SolidSyslogBddTarget",
-         .swVersion    = "0.7.0",
-         .enterpriseId = BDD_TARGET_ENTERPRISE_ID,
-         .getIpCount   = BddTargetIps_Count,
-         .getIpAt      = BddTargetIps_At,
+    struct SolidSyslogStructuredData* timeQuality = SolidSyslogTimeQualitySd_Create(GetTimeQuality);
+    struct SolidSyslogOriginSdConfig originConfig = {
+        .software = "SolidSyslogBddTarget",
+        .swVersion = "0.7.0",
+        .enterpriseId = BDD_TARGET_ENTERPRISE_ID,
+        .getIpCount = BddTargetIps_Count,
+        .getIpAt = BddTargetIps_At,
     };
     struct SolidSyslogStructuredData* originSd = SolidSyslogOriginSd_Create(&originConfig);
 
     struct SolidSyslogStructuredData* sdList[3] = {metaSd, timeQuality, originSd};
-    size_t                            sdCount   = options.noSd ? 1 : 3;
+    size_t sdCount = options.noSd ? 1 : 3;
 
     struct SolidSyslogConfig config = {
-        .buffer       = buffer,
-        .sender       = sender,
-        .clock        = SolidSyslogPosixClock_GetTimestamp,
-        .getHostname  = SolidSyslogPosixHostname_Get,
-        .getAppName   = BddTargetAppName_Get,
+        .buffer = buffer,
+        .sender = sender,
+        .clock = SolidSyslogPosixClock_GetTimestamp,
+        .getHostname = SolidSyslogPosixHostname_Get,
+        .getAppName = BddTargetAppName_Get,
         .getProcessId = SolidSyslogPosixProcessId_Get,
-        .store        = store,
-        .sd           = sdList,
-        .sdCount      = sdCount,
+        .store = store,
+        .sd = sdList,
+        .sdCount = sdCount,
     };
     SolidSyslog_Create(&config);
 
     shutdown_flag = false;
-    haltExit      = options.haltExit;
+    haltExit = options.haltExit;
 
     pthread_t serviceThread = 0;
     pthread_create(&serviceThread, NULL, ServiceThreadEntry, (void*) &shutdown_flag);
 
     struct SolidSyslogMessage message = {
-        .facility  = options.facility,
-        .severity  = options.severity,
+        .facility = options.facility,
+        .severity = options.severity,
         .messageId = options.messageId,
-        .msg       = options.msg,
+        .msg = options.msg,
     };
 
     BddTargetInteractive_Run(&message, stdin, BddTargetSwitchConfig_SetByName, NULL);

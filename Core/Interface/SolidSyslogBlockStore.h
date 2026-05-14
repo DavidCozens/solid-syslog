@@ -36,21 +36,22 @@ EXTERN_C_BEGIN
     {
         /* Required. Caller-owned: must outlive the BlockStore. SolidSyslogBlockStore_Destroy
          * does NOT destroy the block device — that is the integrator's responsibility. */
-        struct SolidSyslogBlockDevice*    blockDevice;
-        size_t                            maxBlockSize;
-        size_t                            maxBlocks;
-        enum SolidSyslogDiscardPolicy     discardPolicy;
+        struct SolidSyslogBlockDevice* blockDevice;
+        size_t maxBlockSize;
+        size_t maxBlocks;
+        enum SolidSyslogDiscardPolicy discardPolicy;
         struct SolidSyslogSecurityPolicy* securityPolicy;
-        SolidSyslogStoreFullCallback      onStoreFull;
-        void*                             storeFullContext;
+        SolidSyslogStoreFullCallback onStoreFull;
+        void* storeFullContext;
         SolidSyslogStoreThresholdFunction getCapacityThreshold;
         SolidSyslogStoreThresholdCallback onThresholdCrossed;
-        void*                             thresholdContext;
+        void* thresholdContext;
     };
 
     enum
     {
-        SOLIDSYSLOG_BLOCKSTORE_STORAGE_SIZE = (sizeof(intptr_t) * 32) + SOLIDSYSLOG_MAX_MESSAGE_SIZE + SOLIDSYSLOG_MAX_INTEGRITY_SIZE + 16
+        SOLIDSYSLOG_BLOCKSTORE_STORAGE_SIZE =
+            (sizeof(intptr_t) * 32) + SOLIDSYSLOG_MAX_MESSAGE_SIZE + SOLIDSYSLOG_MAX_INTEGRITY_SIZE + 16
     };
 
     typedef struct
@@ -58,8 +59,11 @@ EXTERN_C_BEGIN
         intptr_t slots[(SOLIDSYSLOG_BLOCKSTORE_STORAGE_SIZE + sizeof(intptr_t) - 1) / sizeof(intptr_t)];
     } SolidSyslogBlockStoreStorage;
 
-    struct SolidSyslogStore* SolidSyslogBlockStore_Create(SolidSyslogBlockStoreStorage * storage, const struct SolidSyslogBlockStoreConfig* config);
-    void                     SolidSyslogBlockStore_Destroy(struct SolidSyslogStore * store);
+    struct SolidSyslogStore* SolidSyslogBlockStore_Create(
+        SolidSyslogBlockStoreStorage * storage,
+        const struct SolidSyslogBlockStoreConfig* config
+    );
+    void SolidSyslogBlockStore_Destroy(struct SolidSyslogStore * store);
 
 EXTERN_C_END
 

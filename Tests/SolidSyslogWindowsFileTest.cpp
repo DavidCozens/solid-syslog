@@ -54,7 +54,7 @@ TEST(SolidSyslogWindowsFile, CreateReturnsNonNull)
 TEST(SolidSyslogWindowsFile, CreateReturnsHandleInsideCallerSuppliedStorage)
 {
     SolidSyslogWindowsFileStorage localStorage{};
-    struct SolidSyslogFile*       localFile = SolidSyslogWindowsFile_Create(&localStorage);
+    struct SolidSyslogFile* localFile = SolidSyslogWindowsFile_Create(&localStorage);
     POINTERS_EQUAL(&localStorage, localFile);
     SolidSyslogWindowsFile_Destroy(localFile);
 }

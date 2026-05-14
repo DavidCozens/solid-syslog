@@ -10,7 +10,7 @@
 #include "CppUTest/TestHarness.h"
 
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
-                               // macros
+    // macros
 #include "SolidSyslogAddress.h"
 #include "SolidSyslogPosixTcpStream.h"
 #include "SolidSyslogStream.h"
@@ -79,7 +79,7 @@ TEST(SolidSyslogPosixTcpStream, CreateDestroyWorksWithoutCrashing)
 TEST(SolidSyslogPosixTcpStream, CreateReturnsHandleInsideCallerSuppliedStorage)
 {
     SolidSyslogPosixTcpStreamStorage storage{};
-    struct SolidSyslogStream*        localStream = SolidSyslogPosixTcpStream_Create(&storage);
+    struct SolidSyslogStream* localStream = SolidSyslogPosixTcpStream_Create(&storage);
     POINTERS_EQUAL(&storage, localStream);
     SolidSyslogPosixTcpStream_Destroy(localStream);
 }
@@ -358,7 +358,7 @@ TEST(SolidSyslogPosixTcpStream, ReadReturnsRecvReturnValue)
 {
     SocketFake_SetRecvReturn(7);
     SolidSyslogStream_Open(stream, addr);
-    char             buf[16];
+    char buf[16];
     SolidSyslogSsize n = SolidSyslogStream_Read(stream, buf, sizeof(buf));
     LONGS_EQUAL(7, n);
 }

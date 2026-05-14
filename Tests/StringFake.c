@@ -12,8 +12,8 @@ static const char* fakeProcessId;
 
 void StringFake_Reset(void)
 {
-    fakeHostname  = "";
-    fakeAppName   = "";
+    fakeHostname = "";
+    fakeAppName = "";
     fakeProcessId = "";
 }
 

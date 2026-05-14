@@ -17,7 +17,7 @@
 #define YIELD_MILLISECONDS 1
 
 static const CmsdkUartMemoryAccess* memoryAccess = NULL;
-static uintptr_t                    base         = 0U;
+static uintptr_t base = 0U;
 
 static inline void SetBaudDivisor(void);
 static inline void EnableTxAndRx(void);
@@ -30,7 +30,7 @@ static inline char ReadDataRegister(void);
 void CmsdkUart_Init(const CmsdkUartMemoryAccess* access, uintptr_t baseAddress)
 {
     memoryAccess = access;
-    base         = baseAddress;
+    base = baseAddress;
     SetBaudDivisor();
     EnableTxAndRx();
 }

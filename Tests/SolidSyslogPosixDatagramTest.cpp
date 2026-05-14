@@ -2,7 +2,7 @@
 #include "CppUTest/TestHarness.h"
 
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
-                               // macros
+    // macros
 #include "SolidSyslogAddress.h"
 #include "SolidSyslogDatagram.h"
 #include "SolidSyslogPosixDatagram.h"
@@ -152,7 +152,10 @@ TEST(SolidSyslogPosixDatagram, SendToReturnsFailedOnSendtoFailure)
 {
     SolidSyslogDatagram_Open(datagram);
     SocketFake_SetSendtoFails(true);
-    LONGS_EQUAL(SOLIDSYSLOG_DATAGRAM_FAILED, SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr));
+    LONGS_EQUAL(
+        SOLIDSYSLOG_DATAGRAM_FAILED,
+        SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr)
+    );
 }
 
 TEST(SolidSyslogPosixDatagram, CloseCallsCloseOnce)
@@ -206,7 +209,10 @@ TEST(SolidSyslogPosixDatagram, SendToReturnsOversizeOnEmsgsize)
 {
     SolidSyslogDatagram_Open(datagram);
     SocketFake_FailNextSendtoWithErrno(EMSGSIZE);
-    LONGS_EQUAL(SOLIDSYSLOG_DATAGRAM_OVERSIZE, SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr));
+    LONGS_EQUAL(
+        SOLIDSYSLOG_DATAGRAM_OVERSIZE,
+        SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr)
+    );
 }
 
 TEST(SolidSyslogPosixDatagram, MaxPayloadAfterConnectQueriesIpMtu)
@@ -237,5 +243,8 @@ TEST(SolidSyslogPosixDatagram, SendToReturnsFailedWhenConnectFails)
 {
     SolidSyslogDatagram_Open(datagram);
     SocketFake_SetConnectFails(true);
-    LONGS_EQUAL(SOLIDSYSLOG_DATAGRAM_FAILED, SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr));
+    LONGS_EQUAL(
+        SOLIDSYSLOG_DATAGRAM_FAILED,
+        SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr)
+    );
 }

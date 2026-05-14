@@ -9,7 +9,7 @@ enum
     /* Mirrors the Linux Threaded example defaults. The block store is sized
        so a single block holds a few records, so several scenarios involving
        store rotation / discard policies trigger inside one BDD scenario. */
-    DEFAULT_MAX_BLOCKS     = 4,
+    DEFAULT_MAX_BLOCKS = 4,
     DEFAULT_MAX_BLOCK_SIZE = 1024
 };
 
@@ -25,8 +25,8 @@ static bool ParsePositiveSize(const char* text, size_t* out)
     {
         return false;
     }
-    char* end           = NULL;
-    errno               = 0;
+    char* end = NULL;
+    errno = 0;
     unsigned long value = strtoul(text, &end, 10);
     if ((end == text) || (*end != '\0') || (errno == ERANGE) || (value == 0))
     {
@@ -38,19 +38,19 @@ static bool ParsePositiveSize(const char* text, size_t* out)
 
 void BddTargetWindowsCommandLine_Parse(int argc, char* argv[], struct BddTargetWindowsOptions* options)
 {
-    options->facility          = SOLIDSYSLOG_FACILITY_LOCAL0;
-    options->severity          = SOLIDSYSLOG_SEVERITY_INFO;
-    options->transport         = "udp";
-    options->messageId         = NULL;
-    options->msg               = NULL;
-    options->appName           = NULL;
-    options->store             = "null";
-    options->maxBlocks         = DEFAULT_MAX_BLOCKS;
-    options->maxBlockSize      = DEFAULT_MAX_BLOCK_SIZE;
-    options->discardPolicy     = "oldest";
+    options->facility = SOLIDSYSLOG_FACILITY_LOCAL0;
+    options->severity = SOLIDSYSLOG_SEVERITY_INFO;
+    options->transport = "udp";
+    options->messageId = NULL;
+    options->msg = NULL;
+    options->appName = NULL;
+    options->store = "null";
+    options->maxBlocks = DEFAULT_MAX_BLOCKS;
+    options->maxBlockSize = DEFAULT_MAX_BLOCK_SIZE;
+    options->discardPolicy = "oldest";
     options->capacityThreshold = 0;
-    options->haltExit          = false;
-    options->noSd              = false;
+    options->haltExit = false;
+    options->noSd = false;
 
     for (int i = 1; i < argc; i++)
     {

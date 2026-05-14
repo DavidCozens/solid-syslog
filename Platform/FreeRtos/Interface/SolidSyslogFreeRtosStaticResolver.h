@@ -19,8 +19,11 @@ EXTERN_C_BEGIN
         intptr_t slots[(SOLIDSYSLOG_FREERTOSSTATICRESOLVER_SIZE + sizeof(intptr_t) - 1) / sizeof(intptr_t)];
     } SolidSyslogFreeRtosStaticResolverStorage;
 
-    struct SolidSyslogResolver* SolidSyslogFreeRtosStaticResolver_Create(SolidSyslogFreeRtosStaticResolverStorage * storage, const uint8_t ipv4Octets[4]);
-    void                        SolidSyslogFreeRtosStaticResolver_Destroy(struct SolidSyslogResolver * resolver);
+    struct SolidSyslogResolver* SolidSyslogFreeRtosStaticResolver_Create(
+        SolidSyslogFreeRtosStaticResolverStorage * storage,
+        const uint8_t ipv4Octets[4]
+    );
+    void SolidSyslogFreeRtosStaticResolver_Destroy(struct SolidSyslogResolver * resolver);
 
 EXTERN_C_END
 

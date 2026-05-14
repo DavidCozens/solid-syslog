@@ -76,10 +76,10 @@ static void HandleSend(const char* args, const struct SolidSyslogMessage* messag
 
 static void HandleSet(const char* args, BddTargetInteractiveSetHandler onSet)
 {
-    char        name[MAX_LINE_LENGTH];
-    const char* space   = strchr(args, ' ');
-    size_t      nameLen = (space != NULL) ? (size_t) (space - args) : strlen(args);
-    const char* value   = (space != NULL) ? (space + 1) : "";
+    char name[MAX_LINE_LENGTH];
+    const char* space = strchr(args, ' ');
+    size_t nameLen = (space != NULL) ? (size_t) (space - args) : strlen(args);
+    const char* value = (space != NULL) ? (space + 1) : "";
 
     memcpy(name, args, nameLen);
     name[nameLen] = '\0';
@@ -94,8 +94,12 @@ static void HandleSet(const char* args, BddTargetInteractiveSetHandler onSet)
     }
 }
 
-void BddTargetInteractive_Run(const struct SolidSyslogMessage* message, FILE* input, BddTargetInteractiveSwitchHandler onSwitch,
-                              BddTargetInteractiveSetHandler onSet)
+void BddTargetInteractive_Run(
+    const struct SolidSyslogMessage* message,
+    FILE* input,
+    BddTargetInteractiveSwitchHandler onSwitch,
+    BddTargetInteractiveSetHandler onSet
+)
 {
     char line[MAX_LINE_LENGTH];
 

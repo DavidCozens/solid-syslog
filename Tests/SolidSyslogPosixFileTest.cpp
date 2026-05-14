@@ -43,7 +43,7 @@ TEST(SolidSyslogPosixFile, CreateReturnsNonNull)
 TEST(SolidSyslogPosixFile, CreateReturnsHandleInsideCallerSuppliedStorage)
 {
     SolidSyslogPosixFileStorage localStorage{};
-    struct SolidSyslogFile*     localFile = SolidSyslogPosixFile_Create(&localStorage);
+    struct SolidSyslogFile* localFile = SolidSyslogPosixFile_Create(&localStorage);
     POINTERS_EQUAL(&localStorage, localFile);
     SolidSyslogPosixFile_Destroy(localFile);
 }

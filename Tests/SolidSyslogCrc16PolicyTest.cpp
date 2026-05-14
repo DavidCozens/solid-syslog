@@ -35,8 +35,8 @@ TEST(SolidSyslogCrc16Policy, IntegritySizeIsTwo)
 
 TEST(SolidSyslogCrc16Policy, ComputeIntegrityReturnsCrc16)
 {
-    const uint8_t data[]       = "123456789";
-    uint8_t       integrity[2] = {};
+    const uint8_t data[] = "123456789";
+    uint8_t integrity[2] = {};
     policy->ComputeIntegrity(data, 9, integrity);
     /* CRC-16/CCITT-FALSE of "123456789" is 0x29B1 */
     BYTES_EQUAL(0x29, integrity[0]);
@@ -45,16 +45,16 @@ TEST(SolidSyslogCrc16Policy, ComputeIntegrityReturnsCrc16)
 
 TEST(SolidSyslogCrc16Policy, ComputeThenVerifyRoundTrip)
 {
-    const uint8_t data[]       = "hello";
-    uint8_t       integrity[2] = {};
+    const uint8_t data[] = "hello";
+    uint8_t integrity[2] = {};
     policy->ComputeIntegrity(data, 5, integrity);
     CHECK_TRUE(policy->VerifyIntegrity(data, 5, integrity));
 }
 
 TEST(SolidSyslogCrc16Policy, VerifyDetectsSingleBitFlip)
 {
-    const uint8_t data[]       = "hello";
-    uint8_t       integrity[2] = {};
+    const uint8_t data[] = "hello";
+    uint8_t integrity[2] = {};
     policy->ComputeIntegrity(data, 5, integrity);
     integrity[0] ^= 0x01;
     CHECK_FALSE(policy->VerifyIntegrity(data, 5, integrity));
@@ -62,7 +62,7 @@ TEST(SolidSyslogCrc16Policy, VerifyDetectsSingleBitFlip)
 
 TEST(SolidSyslogCrc16Policy, VerifyDetectsDataCorruption)
 {
-    uint8_t data[]       = "hello";
+    uint8_t data[] = "hello";
     uint8_t integrity[2] = {};
     policy->ComputeIntegrity(data, 5, integrity);
     data[0] ^= 0x01;

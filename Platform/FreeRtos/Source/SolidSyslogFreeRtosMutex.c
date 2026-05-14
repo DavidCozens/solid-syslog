@@ -15,22 +15,24 @@ typedef struct SolidSyslogFreeRtosMutex FreeRtosMutex;
 struct SolidSyslogFreeRtosMutex
 {
     struct SolidSyslogMutex base;
-    StaticSemaphore_t       buffer;
+    StaticSemaphore_t buffer;
 };
 
-SOLIDSYSLOG_STATIC_ASSERT(sizeof(FreeRtosMutex) <= SOLIDSYSLOG_FREERTOSMUTEX_SIZE,
-                          "SOLIDSYSLOG_FREERTOSMUTEX_SIZE is too small for SolidSyslogFreeRtosMutex layout");
+SOLIDSYSLOG_STATIC_ASSERT(
+    sizeof(FreeRtosMutex) <= SOLIDSYSLOG_FREERTOSMUTEX_SIZE,
+    "SOLIDSYSLOG_FREERTOSMUTEX_SIZE is too small for SolidSyslogFreeRtosMutex layout"
+);
 
-static void                     FreeRtosMutex_Lock(struct SolidSyslogMutex* self);
-static void                     FreeRtosMutex_Unlock(struct SolidSyslogMutex* self);
-static inline FreeRtosMutex*    FreeRtosMutex_From(struct SolidSyslogMutex* self);
+static void FreeRtosMutex_Lock(struct SolidSyslogMutex* self);
+static void FreeRtosMutex_Unlock(struct SolidSyslogMutex* self);
+static inline FreeRtosMutex* FreeRtosMutex_From(struct SolidSyslogMutex* self);
 static inline SemaphoreHandle_t FreeRtosMutex_AsHandle(FreeRtosMutex* self);
 
 struct SolidSyslogMutex* SolidSyslogFreeRtosMutex_Create(SolidSyslogFreeRtosMutexStorage* storage)
 {
     FreeRtosMutex* mutex = (FreeRtosMutex*) storage;
-    mutex->base.Lock     = FreeRtosMutex_Lock;
-    mutex->base.Unlock   = FreeRtosMutex_Unlock;
+    mutex->base.Lock = FreeRtosMutex_Lock;
+    mutex->base.Unlock = FreeRtosMutex_Unlock;
     (void) xSemaphoreCreateMutexStatic(&mutex->buffer);
     return &mutex->base;
 }
@@ -39,7 +41,7 @@ void SolidSyslogFreeRtosMutex_Destroy(struct SolidSyslogMutex* mutex)
 {
     FreeRtosMutex* self = FreeRtosMutex_From(mutex);
     vSemaphoreDelete(FreeRtosMutex_AsHandle(self));
-    self->base.Lock   = NULL;
+    self->base.Lock = NULL;
     self->base.Unlock = NULL;
 }
 

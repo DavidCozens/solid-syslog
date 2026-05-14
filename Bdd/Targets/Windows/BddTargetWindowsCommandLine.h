@@ -13,17 +13,17 @@ EXTERN_C_BEGIN
     {
         enum SolidSyslog_Facility facility;
         enum SolidSyslog_Severity severity;
-        const char*               transport; /* "udp" | "tcp" | "tls" | "mtls" — initial selector */
-        const char*               messageId;
-        const char*               msg;
-        const char*               appName;           /* --app-name (NULL: derive from argv[0]) */
-        const char*               store;             /* "null" (default) | "file" — block-store backend */
-        size_t                    maxBlocks;         /* --max-blocks */
-        size_t                    maxBlockSize;      /* --max-block-size */
-        const char*               discardPolicy;     /* "oldest" (default) | "newest" | "halt" */
-        size_t                    capacityThreshold; /* --capacity-threshold (bytes; 0 disables) */
-        bool                      haltExit;          /* --halt-exit */
-        bool                      noSd;              /* --no-sd (suppress structured data) */
+        const char* transport; /* "udp" | "tcp" | "tls" | "mtls" — initial selector */
+        const char* messageId;
+        const char* msg;
+        const char* appName; /* --app-name (NULL: derive from argv[0]) */
+        const char* store; /* "null" (default) | "file" — block-store backend */
+        size_t maxBlocks; /* --max-blocks */
+        size_t maxBlockSize; /* --max-block-size */
+        const char* discardPolicy; /* "oldest" (default) | "newest" | "halt" */
+        size_t capacityThreshold; /* --capacity-threshold (bytes; 0 disables) */
+        bool haltExit; /* --halt-exit */
+        bool noSd; /* --no-sd (suppress structured data) */
     };
 
     /* Minimal CLI parser — recognises the flags below. Unknown flags and

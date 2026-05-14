@@ -119,11 +119,11 @@
  * DHCP server is required. The destination address — 10.0.2.2, the slirp
  * gateway routed to the QEMU host — is the listener target driven into
  * the static resolver. */
-static const uint8_t TEST_IP_ADDRESS[ipIP_ADDRESS_LENGTH_BYTES]       = {10U, 0U, 2U, 15U};
-static const uint8_t TEST_NETMASK[ipIP_ADDRESS_LENGTH_BYTES]          = {255U, 255U, 255U, 0U};
-static const uint8_t TEST_GATEWAY[ipIP_ADDRESS_LENGTH_BYTES]          = {10U, 0U, 2U, 2U};
-static const uint8_t TEST_DNS[ipIP_ADDRESS_LENGTH_BYTES]              = {10U, 0U, 2U, 3U};
-static const uint8_t TEST_MAC[ipMAC_ADDRESS_LENGTH_BYTES]             = {0x02U, 0x00U, 0x00U, 0x00U, 0x00U, 0x01U};
+static const uint8_t TEST_IP_ADDRESS[ipIP_ADDRESS_LENGTH_BYTES] = {10U, 0U, 2U, 15U};
+static const uint8_t TEST_NETMASK[ipIP_ADDRESS_LENGTH_BYTES] = {255U, 255U, 255U, 0U};
+static const uint8_t TEST_GATEWAY[ipIP_ADDRESS_LENGTH_BYTES] = {10U, 0U, 2U, 2U};
+static const uint8_t TEST_DNS[ipIP_ADDRESS_LENGTH_BYTES] = {10U, 0U, 2U, 3U};
+static const uint8_t TEST_MAC[ipMAC_ADDRESS_LENGTH_BYTES] = {0x02U, 0x00U, 0x00U, 0x00U, 0x00U, 0x01U};
 static const uint8_t TEST_DESTINATION_IPV4[ipIP_ADDRESS_LENGTH_BYTES] = {10U, 0U, 2U, 2U};
 
 /* Mutable walking-skeleton state. Defaults populated at boot; the
@@ -135,29 +135,29 @@ static const uint8_t TEST_DESTINATION_IPV4[ipIP_ADDRESS_LENGTH_BYTES] = {10U, 0U
  * holds facility/severity (mutated in place) and the messageId/msg
  * pointers (which target the mutable storage so contents are seen on
  * each Log). */
-static char     appName[49]                       = "SolidSyslogBddTarget";
-static char     messageId[33]                     = "example";
-static char     msg[SOLIDSYSLOG_MAX_MESSAGE_SIZE] = "Hello from FreeRTOS";
-static char     host[16]                          = "10.0.2.2";
-static uint16_t port                              = (uint16_t) BDD_TARGET_UDP_PORT;
-static uint32_t endpointVersion                   = 0U;
+static char appName[49] = "SolidSyslogBddTarget";
+static char messageId[33] = "example";
+static char msg[SOLIDSYSLOG_MAX_MESSAGE_SIZE] = "Hello from FreeRTOS";
+static char host[16] = "10.0.2.2";
+static uint16_t port = (uint16_t) BDD_TARGET_UDP_PORT;
+static uint32_t endpointVersion = 0U;
 
 static struct SolidSyslogMessage testMessage = {
-    .facility  = SOLIDSYSLOG_FACILITY_LOCAL0,
-    .severity  = SOLIDSYSLOG_SEVERITY_INFO,
+    .facility = SOLIDSYSLOG_FACILITY_LOCAL0,
+    .severity = SOLIDSYSLOG_SEVERITY_INFO,
     .messageId = messageId,
-    .msg       = msg,
+    .msg = msg,
 };
 
 /* Plus-TCP requires the network interface descriptor and its endpoint(s)
  * to outlive the IP stack. */
 static NetworkInterface_t networkInterface;
-static NetworkEndPoint_t  networkEndPoint;
+static NetworkEndPoint_t networkEndPoint;
 
 static SolidSyslogFreeRtosStaticResolverStorage resolverStorage;
-static SolidSyslogFreeRtosDatagramStorage       datagramStorage;
-static SolidSyslogFreeRtosTcpStreamStorage      tcpStreamStorage;
-static SolidSyslogStreamSenderStorage           tcpSenderStorage;
+static SolidSyslogFreeRtosDatagramStorage datagramStorage;
+static SolidSyslogFreeRtosTcpStreamStorage tcpStreamStorage;
+static SolidSyslogStreamSenderStorage tcpSenderStorage;
 
 /* CircularBuffer + FreeRtosMutex composition for cross-task emission.
  * 8 max-sized messages is comfortably above the 3-message BDD scenarios
@@ -168,8 +168,9 @@ enum
     BDD_TARGET_BUFFER_MESSAGES = 8
 };
 
-static SolidSyslogCircularBufferStorage bufferStorage[SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE(BDD_TARGET_BUFFER_MESSAGES)];
-static SolidSyslogFreeRtosMutexStorage  mutexStorage;
+static SolidSyslogCircularBufferStorage
+    bufferStorage[SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE(BDD_TARGET_BUFFER_MESSAGES)];
+static SolidSyslogFreeRtosMutexStorage mutexStorage;
 
 /* Lifecycle mutex serialises SolidSyslog_Service against the rebuild path
  * (`set store file` swaps NullStore for the file-backed BlockStore by
@@ -177,8 +178,8 @@ static SolidSyslogFreeRtosMutexStorage  mutexStorage;
  * for one Service() call per iteration; the rebuild path holds it across
  * Destroy → BlockStore_Create → Create. */
 static SolidSyslogFreeRtosMutexStorage lifecycleMutexStorage;
-static struct SolidSyslogMutex*        lifecycleMutex = NULL;
-static volatile bool                   solidSyslogReady;
+static struct SolidSyslogMutex* lifecycleMutex = NULL;
+static volatile bool solidSyslogReady;
 /* Signals Service to self-delete BEFORE Teardown destroys the lifecycle
  * mutex. Without this, Service races against InteractiveTask: Teardown
  * destroys lifecycleMutex and NULLs it, but Service's next iteration
@@ -194,20 +195,20 @@ static volatile bool solidSyslogTeardown = false;
  * in our ffconf.h). */
 static const char STORE_PATH_PREFIX[] = "STORE";
 
-static SolidSyslogFatFsFileStorage       storeFileStorage;
+static SolidSyslogFatFsFileStorage storeFileStorage;
 static SolidSyslogFileBlockDeviceStorage blockDeviceStorage;
-static SolidSyslogBlockStoreStorage      blockStoreStorage;
+static SolidSyslogBlockStoreStorage blockStoreStorage;
 
 /* FATFS object lives in .bss because f_mount stores its address inside the
  * FatFs volume registry — the object must outlive every f_open / f_stat /
  * f_unlink. One per volume (FF_VOLUMES = 1). */
 static FATFS fatfs;
-static bool  fatfsMounted = false;
+static bool fatfsMounted = false;
 
-static struct SolidSyslogFile*        storeFile          = NULL;
-static struct SolidSyslogBlockDevice* storeBlockDevice   = NULL;
-static struct SolidSyslogStore*       currentStore       = NULL;
-static bool                           currentStoreIsFile = false;
+static struct SolidSyslogFile* storeFile = NULL;
+static struct SolidSyslogBlockDevice* storeBlockDevice = NULL;
+static struct SolidSyslogStore* currentStore = NULL;
+static bool currentStoreIsFile = false;
 
 /* Pending values populated by the four `set max-blocks` / `max-block-size`
  * / `discard-policy` / `halt-exit` commands and consumed by `set store
@@ -215,15 +216,15 @@ static bool                           currentStoreIsFile = false;
  * DEFAULT_MAX_BLOCK_SIZE=65536, discardPolicy="oldest", halt-exit=false). */
 enum
 {
-    DEFAULT_PENDING_MAX_BLOCKS     = 10,
+    DEFAULT_PENDING_MAX_BLOCKS = 10,
     DEFAULT_PENDING_MAX_BLOCK_SIZE = 65536,
 };
 
-static size_t        pendingMaxBlocks         = DEFAULT_PENDING_MAX_BLOCKS;
-static size_t        pendingMaxBlockSize      = DEFAULT_PENDING_MAX_BLOCK_SIZE;
-static const char*   pendingDiscardPolicy     = "oldest";
-static volatile bool pendingHaltExit          = false;
-static size_t        pendingCapacityThreshold = 0;
+static size_t pendingMaxBlocks = DEFAULT_PENDING_MAX_BLOCKS;
+static size_t pendingMaxBlockSize = DEFAULT_PENDING_MAX_BLOCK_SIZE;
+static const char* pendingDiscardPolicy = "oldest";
+static volatile bool pendingHaltExit = false;
+static size_t pendingCapacityThreshold = 0;
 /* When true, SolidSyslog gets only the meta SD (sequenceId / sysUpTime /
  * language) — timeQuality and origin are dropped. Mirrors Linux's
  * --no-sd. Consumed by the initial Setup and by RebuildWithFileStore. */
@@ -231,12 +232,12 @@ static volatile bool pendingNoSd = false;
 
 /* Holds the final SolidSyslog config so the rebuild path can rewrite
  * .store and pass the same struct back into SolidSyslog_Create. */
-static struct SolidSyslogConfig          solidSyslogConfig;
+static struct SolidSyslogConfig solidSyslogConfig;
 static struct SolidSyslogStructuredData* sdList[3];
-static struct SolidSyslogAtomicCounter*  atomicCounter = NULL;
-static struct SolidSyslogStructuredData* metaSd        = NULL;
+static struct SolidSyslogAtomicCounter* atomicCounter = NULL;
+static struct SolidSyslogStructuredData* metaSd = NULL;
 static struct SolidSyslogStructuredData* timeQualitySd = NULL;
-static struct SolidSyslogStructuredData* originSd      = NULL;
+static struct SolidSyslogStructuredData* originSd = NULL;
 
 /* Resources allocated in InteractiveTask's Setup phase and released by
  * TeardownAll. File-scope static so the two exit paths can reach the
@@ -244,12 +245,12 @@ static struct SolidSyslogStructuredData* originSd      = NULL;
  * BddTargetInteractive_Run and falls through to TeardownAll in the same
  * task), and `set shutdown 1` from the OnSet handler (which calls
  * TeardownAll then SemihostingExit). */
-static struct SolidSyslogResolver* resolver    = NULL;
-static struct SolidSyslogDatagram* datagram    = NULL;
-static struct SolidSyslogStream*   tcpStream   = NULL;
-static struct SolidSyslogSender*   tcpSender   = NULL;
-static struct SolidSyslogBuffer*   buffer      = NULL;
-static struct SolidSyslogMutex*    bufferMutex = NULL;
+static struct SolidSyslogResolver* resolver = NULL;
+static struct SolidSyslogDatagram* datagram = NULL;
+static struct SolidSyslogStream* tcpStream = NULL;
+static struct SolidSyslogSender* tcpSender = NULL;
+static struct SolidSyslogBuffer* buffer = NULL;
+static struct SolidSyslogMutex* bufferMutex = NULL;
 
 /* Ensures the interactive task is created exactly once even if the network
  * goes down and back up. */
@@ -261,16 +262,16 @@ static TaskHandle_t serviceTaskHandle = NULL;
 
 extern NetworkInterface_t* pxMPS2_FillInterfaceDescriptor(BaseType_t xEMACIndex, NetworkInterface_t* pxInterface);
 
-static bool                          TryUpdateString(char* storage, size_t storageSize, const char* value);
-static bool                          TryParseUInt(const char* value, unsigned long* out);
-static bool                          RebuildWithFileStore(void);
-static void                          DestroyCurrentStore(void);
-static void                          TeardownAll(void);
-static bool                          EnsureFatFsMounted(void);
+static bool TryUpdateString(char* storage, size_t storageSize, const char* value);
+static bool TryParseUInt(const char* value, unsigned long* out);
+static bool RebuildWithFileStore(void);
+static void DestroyCurrentStore(void);
+static void TeardownAll(void);
+static bool EnsureFatFsMounted(void);
 static enum SolidSyslogDiscardPolicy MapDiscardPolicy(const char* policy);
-static void                          OnStoreFull(void* context);
-static size_t                        GetCapacityThreshold(void* context);
-static void                          SemihostingExit(int status);
+static void OnStoreFull(void* context);
+static size_t GetCapacityThreshold(void* context);
+static void SemihostingExit(int status);
 
 static uint32_t MmioRead32(uintptr_t address)
 {
@@ -304,7 +305,7 @@ static void SetEthernetIrqPriority(void)
 {
     // NOLINTNEXTLINE(performance-no-int-to-ptr) -- writing the NVIC IPR byte for IRQ 13.
     volatile uint8_t* ipr = (volatile uint8_t*) (NVIC_IPR_BASE_ADDRESS + ETHERNET_IRQ_NUMBER);
-    *ipr                  = ETHERNET_IRQ_PRIORITY;
+    *ipr = ETHERNET_IRQ_PRIORITY;
 }
 
 static void GetHostname(struct SolidSyslogFormatter* formatter)
@@ -322,7 +323,7 @@ static void GetHostname(struct SolidSyslogFormatter* formatter)
      * 4) or supplies a hostname (rung 3) doesn't have to re-touch this
      * function — same callback, different rung satisfied by the stack. */
     uint32_t ipAddress = 0U;
-    char     ipBuffer[16];
+    char ipBuffer[16];
     FreeRTOS_GetEndPointConfiguration(&ipAddress, NULL, NULL, NULL, &networkEndPoint);
     FreeRTOS_inet_ntoa(ipAddress, ipBuffer);
     SolidSyslogFormatter_BoundedString(formatter, ipBuffer, strlen(ipBuffer));
@@ -347,8 +348,8 @@ static void ErrorHandler(void* context, enum SolidSyslog_Severity severity, cons
 
 static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
 {
-    timeQuality->tzKnown                  = false;
-    timeQuality->isSynced                 = false;
+    timeQuality->tzKnown = false;
+    timeQuality->isSynced = false;
     timeQuality->syncAccuracyMicroseconds = SOLIDSYSLOG_SYNC_ACCURACY_OMIT;
 }
 
@@ -460,7 +461,8 @@ static bool OnSet(const char* name, const char* value)
         }
         /* String literal storage — target_driver.py emits one of the three
          * literals above so the pointer stays valid (no copy needed). */
-        pendingDiscardPolicy = (strcmp(value, "newest") == 0) ? "newest" : ((strcmp(value, "halt") == 0) ? "halt" : "oldest");
+        pendingDiscardPolicy =
+            (strcmp(value, "newest") == 0) ? "newest" : ((strcmp(value, "halt") == 0) ? "halt" : "oldest");
         return true;
     }
     if (strcmp(name, "halt-exit") == 0)
@@ -585,23 +587,23 @@ static bool RebuildWithFileStore(void)
     /* Build a fresh FatFs-backed BlockStore. With the volume mounted above,
      * BlockSequence_Open's f_stat / f_open calls now hit a live filesystem
      * via disk_read / disk_write semihosting traps. */
-    storeFile        = SolidSyslogFatFsFile_Create(&storeFileStorage);
+    storeFile = SolidSyslogFatFsFile_Create(&storeFileStorage);
     storeBlockDevice = SolidSyslogFileBlockDevice_Create(&blockDeviceStorage, storeFile, STORE_PATH_PREFIX);
 
-    struct SolidSyslogSecurityPolicy*  policy      = SolidSyslogCrc16Policy_Create();
+    struct SolidSyslogSecurityPolicy* policy = SolidSyslogCrc16Policy_Create();
     struct SolidSyslogBlockStoreConfig storeConfig = {
-        .blockDevice          = storeBlockDevice,
-        .maxBlockSize         = pendingMaxBlockSize,
-        .maxBlocks            = pendingMaxBlocks,
-        .discardPolicy        = MapDiscardPolicy(pendingDiscardPolicy),
-        .securityPolicy       = policy,
-        .onStoreFull          = OnStoreFull,
-        .storeFullContext     = NULL,
+        .blockDevice = storeBlockDevice,
+        .maxBlockSize = pendingMaxBlockSize,
+        .maxBlocks = pendingMaxBlocks,
+        .discardPolicy = MapDiscardPolicy(pendingDiscardPolicy),
+        .securityPolicy = policy,
+        .onStoreFull = OnStoreFull,
+        .storeFullContext = NULL,
         .getCapacityThreshold = GetCapacityThreshold,
-        .onThresholdCrossed   = NULL,
-        .thresholdContext     = &pendingCapacityThreshold,
+        .onThresholdCrossed = NULL,
+        .thresholdContext = &pendingCapacityThreshold,
     };
-    currentStore       = SolidSyslogBlockStore_Create(&blockStoreStorage, &storeConfig);
+    currentStore = SolidSyslogBlockStore_Create(&blockStoreStorage, &storeConfig);
     currentStoreIsFile = true;
 
     solidSyslogConfig.store = currentStore;
@@ -646,7 +648,7 @@ static void TeardownAll(void)
 {
     SolidSyslogMutex_Lock(lifecycleMutex);
     solidSyslogTeardown = true;
-    solidSyslogReady    = false;
+    solidSyslogReady = false;
     SolidSyslog_Destroy();
     SolidSyslogOriginSd_Destroy();
     SolidSyslogTimeQualitySd_Destroy();
@@ -689,15 +691,19 @@ static bool EnsureFatFsMounted(void)
     {
         return true;
     }
-    FRESULT res = f_mount(&fatfs, "", 1); /* opt=1 → mount immediately, surface FR_NO_FILESYSTEM here rather than at first f_open */
+    FRESULT res = f_mount(
+        &fatfs,
+        "",
+        1
+    ); /* opt=1 → mount immediately, surface FR_NO_FILESYSTEM here rather than at first f_open */
     if (res == FR_NO_FILESYSTEM)
     {
         /* Fresh disk image — lay down a FAT and re-mount. FAT12 is the
          * natural choice for a 1 MiB volume (small enough that FAT32's
          * cluster overhead would dominate). */
-        static BYTE     workBuffer[FF_MAX_SS];
+        static BYTE workBuffer[FF_MAX_SS];
         const MKFS_PARM opts = {.fmt = FM_FAT | FM_SFD, .n_fat = 1, .align = 1, .n_root = 0, .au_size = 0};
-        res                  = f_mkfs("", &opts, workBuffer, sizeof(workBuffer));
+        res = f_mkfs("", &opts, workBuffer, sizeof(workBuffer));
         if (res == FR_OK)
         {
             res = f_mount(&fatfs, "", 1);
@@ -727,7 +733,7 @@ static void SemihostingExit(int status)
         uint32_t subcode;
     } args = {0x20026U, (uint32_t) status};
 
-    register int         r0 __asm("r0") = 0x20;
+    register int r0 __asm("r0") = 0x20;
     register const void* r1 __asm("r1") = &args;
     __asm volatile("bkpt 0xAB" : "+r"(r0) : "r"(r1) : "memory");
     for (;;)
@@ -753,7 +759,7 @@ static bool TryParseUInt(const char* value, unsigned long* out)
     {
         return false;
     }
-    char*         end    = NULL;
+    char* end = NULL;
     unsigned long parsed = strtoul(value, &end, 10);
     /* strtoul accepts a leading '-' and wraps to a huge unsigned. The port
      * call site bounds-checks against UINT16_MAX upstream; facility and
@@ -776,9 +782,9 @@ static void InteractiveTask(void* argument)
     datagram = SolidSyslogFreeRtosDatagram_Create(&datagramStorage);
 
     struct SolidSyslogUdpSenderConfig udpConfig = {
-        .resolver        = resolver,
-        .datagram        = datagram,
-        .endpoint        = GetEndpoint,
+        .resolver = resolver,
+        .datagram = datagram,
+        .endpoint = GetEndpoint,
         .endpointVersion = GetEndpointVersion,
     };
     struct SolidSyslogSender* udpSender = SolidSyslogUdpSender_Create(&udpConfig);
@@ -787,11 +793,11 @@ static void InteractiveTask(void* argument)
      * UDP endpoint callbacks because the BDD oracle (syslog-ng) listens on the
      * same host:port for both transports — the syslog-ng config in
      * Bdd/syslog-ng/syslog-ng.conf has a TCP listener on 5514 alongside UDP. */
-    tcpStream                                      = SolidSyslogFreeRtosTcpStream_Create(&tcpStreamStorage);
+    tcpStream = SolidSyslogFreeRtosTcpStream_Create(&tcpStreamStorage);
     struct SolidSyslogStreamSenderConfig tcpConfig = {
-        .resolver        = resolver,
-        .stream          = tcpStream,
-        .endpoint        = GetEndpoint,
+        .resolver = resolver,
+        .stream = tcpStream,
+        .endpoint = GetEndpoint,
         .endpointVersion = GetEndpointVersion,
     };
     tcpSender = SolidSyslogStreamSender_Create(&tcpSenderStorage, &tcpConfig);
@@ -801,12 +807,12 @@ static void InteractiveTask(void* argument)
      * `--transport tcp` flowing through the behave harness lands here as
      * `set transport tcp` over the UART and switches before the first send. */
     static struct SolidSyslogSender* inners[2];
-    inners[BDD_TARGET_SWITCH_UDP]                        = udpSender;
-    inners[BDD_TARGET_SWITCH_TCP]                        = tcpSender;
+    inners[BDD_TARGET_SWITCH_UDP] = udpSender;
+    inners[BDD_TARGET_SWITCH_TCP] = tcpSender;
     struct SolidSyslogSwitchingSenderConfig switchConfig = {
-        .senders     = inners,
+        .senders = inners,
         .senderCount = sizeof(inners) / sizeof(inners[0]),
-        .selector    = BddTargetSwitchConfig_Selector,
+        .selector = BddTargetSwitchConfig_Selector,
     };
     BddTargetSwitchConfig_SetByName("udp");
     struct SolidSyslogSender* sender = SolidSyslogSwitchingSender_Create(&switchConfig);
@@ -817,7 +823,7 @@ static void InteractiveTask(void* argument)
      * is the Service task; its Write side is whichever task calls
      * SolidSyslog_Log. */
     bufferMutex = SolidSyslogFreeRtosMutex_Create(&mutexStorage);
-    buffer      = SolidSyslogCircularBuffer_Create(bufferStorage, sizeof(bufferStorage), bufferMutex);
+    buffer = SolidSyslogCircularBuffer_Create(bufferStorage, sizeof(bufferStorage), bufferMutex);
 
     /* Lifecycle mutex created up front so the Service task can take it
      * from its very first iteration without a NULL check. */
@@ -825,42 +831,42 @@ static void InteractiveTask(void* argument)
 
     /* Default store is NullStore — flipped to FatFs/BlockStore by
      * `set store file` via RebuildWithFileStore(). */
-    currentStore       = SolidSyslogNullStore_Create();
+    currentStore = SolidSyslogNullStore_Create();
     currentStoreIsFile = false;
 
-    atomicCounter                             = SolidSyslogAtomicCounter_Create();
+    atomicCounter = SolidSyslogAtomicCounter_Create();
     struct SolidSyslogMetaSdConfig metaConfig = {
-        .counter      = atomicCounter,
+        .counter = atomicCounter,
         .getSysUpTime = SolidSyslogFreeRtosSysUpTime_Get,
-        .getLanguage  = BddTargetLanguage_Get,
+        .getLanguage = BddTargetLanguage_Get,
     };
-    metaSd                                        = SolidSyslogMetaSd_Create(&metaConfig);
-    timeQualitySd                                 = SolidSyslogTimeQualitySd_Create(GetTimeQuality);
+    metaSd = SolidSyslogMetaSd_Create(&metaConfig);
+    timeQualitySd = SolidSyslogTimeQualitySd_Create(GetTimeQuality);
     struct SolidSyslogOriginSdConfig originConfig = {
-        .software     = "SolidSyslogBddTarget",
-        .swVersion    = "0.7.0",
+        .software = "SolidSyslogBddTarget",
+        .swVersion = "0.7.0",
         .enterpriseId = BDD_TARGET_ENTERPRISE_ID,
-        .getIpCount   = BddTargetIps_Count,
-        .getIpAt      = BddTargetIps_At,
+        .getIpCount = BddTargetIps_Count,
+        .getIpAt = BddTargetIps_At,
     };
-    originSd  = SolidSyslogOriginSd_Create(&originConfig);
+    originSd = SolidSyslogOriginSd_Create(&originConfig);
     sdList[0] = metaSd;
     sdList[1] = timeQualitySd;
     sdList[2] = originSd;
 
     solidSyslogConfig = (struct SolidSyslogConfig) {
-        .buffer      = buffer,
-        .sender      = sender,
-        .clock       = NULL,
+        .buffer = buffer,
+        .sender = sender,
+        .clock = NULL,
         .getHostname = GetHostname,
-        .getAppName  = GetAppName,
+        .getAppName = GetAppName,
         /* PROCID — RFC 5424 §6.2.6 NILVALUE: FreeRTOS QEMU has no
          * process model. NULL drops through to the library's
          * NilStringFunction which yields an empty field; FormatStringField
          * (Core/Source/SolidSyslog.c) then emits "-" on the wire. */
         .getProcessId = NULL,
-        .store        = currentStore,
-        .sd           = sdList,
+        .store = currentStore,
+        .sd = sdList,
         /* pendingNoSd is normally false at this initial Setup call —
          * the `set no-sd 1` translation runs over the UART AFTER the
          * prompt is up. Slice 6's @store scenarios on FreeRTOS always
@@ -886,8 +892,12 @@ static void InteractiveTask(void* argument)
      * NULL handle after a Service xTaskCreate failure would silently
      * double-report the interactive task's HWM. */
     const UBaseType_t interactiveHwm = uxTaskGetStackHighWaterMark(NULL);
-    const UBaseType_t serviceHwm     = (serviceTaskHandle != NULL) ? uxTaskGetStackHighWaterMark(serviceTaskHandle) : 0U;
-    (void) printf("[stack-hwm] interactive=%lu words service=%lu words\n", (unsigned long) interactiveHwm, (unsigned long) serviceHwm);
+    const UBaseType_t serviceHwm = (serviceTaskHandle != NULL) ? uxTaskGetStackHighWaterMark(serviceTaskHandle) : 0U;
+    (void) printf(
+        "[stack-hwm] interactive=%lu words service=%lu words\n",
+        (unsigned long) interactiveHwm,
+        (unsigned long) serviceHwm
+    );
 
     TeardownAll();
     vTaskDelete(NULL);
@@ -937,9 +947,23 @@ void vApplicationIPNetworkEventHook_Multi(eIPCallbackEvent_t eNetworkEvent, stru
     (void) pxEndPoint;
     if ((eNetworkEvent == eNetworkUp) && (interactiveTaskCreated == pdFALSE))
     {
-        if (xTaskCreate(InteractiveTask, "interactive", INTERACTIVE_TASK_STACK_DEPTH, NULL, tskIDLE_PRIORITY + 1, NULL) == pdPASS)
+        if (xTaskCreate(
+                InteractiveTask,
+                "interactive",
+                INTERACTIVE_TASK_STACK_DEPTH,
+                NULL,
+                tskIDLE_PRIORITY + 1,
+                NULL
+            ) == pdPASS)
         {
-            (void) xTaskCreate(ServiceTask, "service", SERVICE_TASK_STACK_DEPTH, NULL, tskIDLE_PRIORITY + 1, &serviceTaskHandle);
+            (void) xTaskCreate(
+                ServiceTask,
+                "service",
+                SERVICE_TASK_STACK_DEPTH,
+                NULL,
+                tskIDLE_PRIORITY + 1,
+                &serviceTaskHandle
+            );
             interactiveTaskCreated = pdTRUE;
         }
     }
@@ -952,7 +976,15 @@ int main(void)
     SetEthernetIrqPriority();
 
     (void) pxMPS2_FillInterfaceDescriptor(0, &networkInterface);
-    FreeRTOS_FillEndPoint(&networkInterface, &networkEndPoint, TEST_IP_ADDRESS, TEST_NETMASK, TEST_GATEWAY, TEST_DNS, TEST_MAC);
+    FreeRTOS_FillEndPoint(
+        &networkInterface,
+        &networkEndPoint,
+        TEST_IP_ADDRESS,
+        TEST_NETMASK,
+        TEST_GATEWAY,
+        TEST_DNS,
+        TEST_MAC
+    );
 
     if (FreeRTOS_IPInit_Multi() != pdPASS)
     {
@@ -995,7 +1027,12 @@ BaseType_t xApplicationGetRandomNumber(uint32_t* pulValue)
     return pdPASS;
 }
 
-uint32_t ulApplicationGetNextSequenceNumber(uint32_t ulSourceAddress, uint16_t usSourcePort, uint32_t ulDestinationAddress, uint16_t usDestinationPort)
+uint32_t ulApplicationGetNextSequenceNumber(
+    uint32_t ulSourceAddress,
+    uint16_t usSourcePort,
+    uint32_t ulDestinationAddress,
+    uint16_t usDestinationPort
+)
 {
     (void) ulSourceAddress;
     (void) usSourcePort;

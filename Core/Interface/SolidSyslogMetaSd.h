@@ -16,12 +16,12 @@ EXTERN_C_BEGIN
     struct SolidSyslogMetaSdConfig
     {
         struct SolidSyslogAtomicCounter* counter;
-        SolidSyslogSysUpTimeFunction     getSysUpTime;
-        SolidSyslogStringFunction        getLanguage;
+        SolidSyslogSysUpTimeFunction getSysUpTime;
+        SolidSyslogStringFunction getLanguage;
     };
 
     struct SolidSyslogStructuredData* SolidSyslogMetaSd_Create(const struct SolidSyslogMetaSdConfig* config);
-    void                              SolidSyslogMetaSd_Destroy(void);
+    void SolidSyslogMetaSd_Destroy(void);
 
 EXTERN_C_END
 

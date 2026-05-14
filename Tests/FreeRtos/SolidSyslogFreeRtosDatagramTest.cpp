@@ -2,7 +2,7 @@
 #include "CppUTest/TestHarness.h"
 
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
-                               // macros
+    // macros
 
 #include "SolidSyslogAddress.h"
 #include "SolidSyslogDatagram.h"
@@ -22,9 +22,9 @@ static const uint16_t TEST_PORT = 514;
 TEST_GROUP(SolidSyslogFreeRtosDatagram)
 {
     SolidSyslogFreeRtosDatagramStorage storage{};
-    struct SolidSyslogDatagram*        datagram = nullptr;
-    SolidSyslogAddressStorage          addrStorage{};
-    struct SolidSyslogAddress*         addr = nullptr;
+    struct SolidSyslogDatagram* datagram = nullptr;
+    SolidSyslogAddressStorage addrStorage{};
+    struct SolidSyslogAddress* addr = nullptr;
 
     void setup() override
     {
@@ -34,9 +34,9 @@ TEST_GROUP(SolidSyslogFreeRtosDatagram)
         datagram = SolidSyslogFreeRtosDatagram_Create(&storage);
 
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) -- char-type aliasing into platform layout, storage is intptr_t-aligned
-        auto* sin                  = reinterpret_cast<struct freertos_sockaddr*>(&addrStorage);
-        sin->sin_family            = FREERTOS_AF_INET;
-        sin->sin_port              = FreeRTOS_htons(TEST_PORT);
+        auto* sin = reinterpret_cast<struct freertos_sockaddr*>(&addrStorage);
+        sin->sin_family = FREERTOS_AF_INET;
+        sin->sin_port = FreeRTOS_htons(TEST_PORT);
         sin->sin_address.ulIP_IPv4 = FreeRTOS_inet_addr_quick(127, 0, 0, 1);
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) -- platform-layout cast, see above
         addr = reinterpret_cast<struct SolidSyslogAddress*>(&addrStorage);
@@ -148,11 +148,12 @@ TEST(SolidSyslogFreeRtosDatagram, DestroyAfterCloseDoesNotCloseAgain)
 
 TEST(SolidSyslogFreeRtosDatagram, SendToSendsBufferToDestinationAfterOpen)
 {
-    static const char   TEST_MESSAGE[]   = "hello";
+    static const char TEST_MESSAGE[] = "hello";
     static const size_t TEST_MESSAGE_LEN = sizeof(TEST_MESSAGE) - 1;
 
     SolidSyslogDatagram_Open(datagram);
-    enum SolidSyslogDatagramSendResult result = SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr);
+    enum SolidSyslogDatagramSendResult result =
+        SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr);
 
     LONGS_EQUAL(SOLIDSYSLOG_DATAGRAM_SENT, result);
     CALLED_FAKE(FreeRtosSocketsFake_Sendto, ONCE);
@@ -161,7 +162,10 @@ TEST(SolidSyslogFreeRtosDatagram, SendToSendsBufferToDestinationAfterOpen)
     LONGS_EQUAL(TEST_MESSAGE_LEN, FreeRtosSocketsFake_LastSendtoLength());
     LONGS_EQUAL(0, FreeRtosSocketsFake_LastSendtoFlags());
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) -- platform-layout cast, see setup
-    POINTERS_EQUAL(reinterpret_cast<const struct freertos_sockaddr*>(addr), FreeRtosSocketsFake_LastSendtoDestination());
+    POINTERS_EQUAL(
+        reinterpret_cast<const struct freertos_sockaddr*>(addr),
+        FreeRtosSocketsFake_LastSendtoDestination()
+    );
     LONGS_EQUAL(sizeof(struct freertos_sockaddr), FreeRtosSocketsFake_LastSendtoDestinationLength());
 }
 

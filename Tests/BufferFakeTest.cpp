@@ -4,8 +4,8 @@
 #include "SolidSyslogBuffer.h"
 #include "CppUTest/TestHarness.h"
 
-static const char* const TEST_MESSAGE     = "hello";
-static const size_t      TEST_MESSAGE_LEN = 5;
+static const char* const TEST_MESSAGE = "hello";
+static const size_t TEST_MESSAGE_LEN = 5;
 
 // clang-format off
 TEST_GROUP(BufferFake)

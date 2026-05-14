@@ -21,10 +21,10 @@ static void Write(struct SolidSyslogBuffer* self, const void* data, size_t size)
 
 struct SolidSyslogPosixMessageQueueBuffer
 {
-    struct SolidSyslogBuffer    base;
-    mqd_t                       mq;
+    struct SolidSyslogBuffer base;
+    mqd_t mq;
     SolidSyslogFormatterStorage nameStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(MAX_NAME_SIZE)];
-    size_t                      maxMessageSize;
+    size_t maxMessageSize;
 };
 
 static struct SolidSyslogPosixMessageQueueBuffer instance;
@@ -44,13 +44,13 @@ struct SolidSyslogBuffer* SolidSyslogPosixMessageQueueBuffer_Create(size_t maxMe
     SolidSyslogPosixProcessId_Get(name);
 
     struct mq_attr attr = {0};
-    attr.mq_maxmsg      = maxMessages;
-    attr.mq_msgsize     = (long) maxMessageSize;
+    attr.mq_maxmsg = maxMessages;
+    attr.mq_msgsize = (long) maxMessageSize;
 
-    instance.mq             = mq_open(QueueName(), O_CREAT | O_RDWR | O_NONBLOCK, 0600, &attr);
+    instance.mq = mq_open(QueueName(), O_CREAT | O_RDWR | O_NONBLOCK, 0600, &attr);
     instance.maxMessageSize = maxMessageSize;
-    instance.base.Write     = Write;
-    instance.base.Read      = Read;
+    instance.base.Write = Write;
+    instance.base.Read = Read;
 
     return &instance.base;
 }
@@ -65,8 +65,8 @@ void SolidSyslogPosixMessageQueueBuffer_Destroy(void)
 static bool Read(struct SolidSyslogBuffer* self, void* data, size_t maxSize, size_t* bytesRead)
 {
     struct SolidSyslogPosixMessageQueueBuffer* mqBuffer = (struct SolidSyslogPosixMessageQueueBuffer*) self;
-    ssize_t                                    received = mq_receive(mqBuffer->mq, data, maxSize, NULL);
-    bool                                       success  = received >= 0;
+    ssize_t received = mq_receive(mqBuffer->mq, data, maxSize, NULL);
+    bool success = received >= 0;
 
     *bytesRead = success ? (size_t) received : 0;
 

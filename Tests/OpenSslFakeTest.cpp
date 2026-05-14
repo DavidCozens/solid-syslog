@@ -8,7 +8,7 @@
 #include "CppUTest/TestHarness.h"
 
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
-                               // macros
+    // macros
 
 // clang-format off
 TEST_GROUP(OpenSslFake)
@@ -96,36 +96,36 @@ TEST(OpenSslFake, BioNewReturnsNonNull)
 TEST(OpenSslFake, BioNewReturnValueIsSurfaced)
 {
     BIO_METHOD* method = BIO_meth_new(0, "fake");
-    BIO*        bio    = BIO_new(method);
+    BIO* bio = BIO_new(method);
     POINTERS_EQUAL(bio, OpenSslFake_LastBioReturned());
 }
 
 TEST(OpenSslFake, SetBioIncrementsCount)
 {
-    SSL_CTX*    ctx    = SSL_CTX_new(TLS_client_method());
-    SSL*        ssl    = SSL_new(ctx);
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL* ssl = SSL_new(ctx);
     BIO_METHOD* method = BIO_meth_new(0, "fake");
-    BIO*        bio    = BIO_new(method);
+    BIO* bio = BIO_new(method);
     SSL_set_bio(ssl, bio, bio);
     CALLED_FAKE(OpenSslFake_SetBio, ONCE);
 }
 
 TEST(OpenSslFake, SetBioCapturesSslArg)
 {
-    SSL_CTX*    ctx    = SSL_CTX_new(TLS_client_method());
-    SSL*        ssl    = SSL_new(ctx);
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL* ssl = SSL_new(ctx);
     BIO_METHOD* method = BIO_meth_new(0, "fake");
-    BIO*        bio    = BIO_new(method);
+    BIO* bio = BIO_new(method);
     SSL_set_bio(ssl, bio, bio);
     POINTERS_EQUAL(ssl, OpenSslFake_LastSetBioSslArg());
 }
 
 TEST(OpenSslFake, SetBioCapturesReadBioArg)
 {
-    SSL_CTX*    ctx    = SSL_CTX_new(TLS_client_method());
-    SSL*        ssl    = SSL_new(ctx);
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL* ssl = SSL_new(ctx);
     BIO_METHOD* method = BIO_meth_new(0, "fake");
-    BIO*        bio    = BIO_new(method);
+    BIO* bio = BIO_new(method);
     SSL_set_bio(ssl, bio, bio);
     POINTERS_EQUAL(bio, OpenSslFake_LastSetBioReadBioArg());
 }
@@ -133,7 +133,7 @@ TEST(OpenSslFake, SetBioCapturesReadBioArg)
 TEST(OpenSslFake, ConnectIncrementsCount)
 {
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
-    SSL*     ssl = SSL_new(ctx);
+    SSL* ssl = SSL_new(ctx);
     SSL_connect(ssl);
     CALLED_FAKE(OpenSslFake_Connect, ONCE);
 }
@@ -141,7 +141,7 @@ TEST(OpenSslFake, ConnectIncrementsCount)
 TEST(OpenSslFake, ConnectCapturesSslArg)
 {
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
-    SSL*     ssl = SSL_new(ctx);
+    SSL* ssl = SSL_new(ctx);
     SSL_connect(ssl);
     POINTERS_EQUAL(ssl, OpenSslFake_LastConnectSslArg());
 }
@@ -149,14 +149,14 @@ TEST(OpenSslFake, ConnectCapturesSslArg)
 TEST(OpenSslFake, ConnectDefaultsToSuccess)
 {
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
-    SSL*     ssl = SSL_new(ctx);
+    SSL* ssl = SSL_new(ctx);
     LONGS_EQUAL(1, SSL_connect(ssl));
 }
 
 TEST(OpenSslFake, SetTlsExtHostNameCapturesHostname)
 {
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
-    SSL*     ssl = SSL_new(ctx);
+    SSL* ssl = SSL_new(ctx);
     SSL_set_tlsext_host_name(ssl, "host.example");
     STRCMP_EQUAL("host.example", OpenSslFake_LastSniHostname());
 }
@@ -164,25 +164,25 @@ TEST(OpenSslFake, SetTlsExtHostNameCapturesHostname)
 TEST(OpenSslFake, Set1HostCapturesHostname)
 {
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
-    SSL*     ssl = SSL_new(ctx);
+    SSL* ssl = SSL_new(ctx);
     SSL_set1_host(ssl, "host.example");
     STRCMP_EQUAL("host.example", OpenSslFake_LastSet1Host());
 }
 
 TEST(OpenSslFake, BioSetDataCapturesData)
 {
-    BIO_METHOD* method   = BIO_meth_new(0, "fake");
-    BIO*        bio      = BIO_new(method);
-    int         sentinel = 0;
+    BIO_METHOD* method = BIO_meth_new(0, "fake");
+    BIO* bio = BIO_new(method);
+    int sentinel = 0;
     BIO_set_data(bio, &sentinel);
     POINTERS_EQUAL(&sentinel, OpenSslFake_LastSetDataArg());
 }
 
 TEST(OpenSslFake, BioGetDataReturnsPreviouslySetData)
 {
-    BIO_METHOD* method   = BIO_meth_new(0, "fake");
-    BIO*        bio      = BIO_new(method);
-    int         sentinel = 0;
+    BIO_METHOD* method = BIO_meth_new(0, "fake");
+    BIO* bio = BIO_new(method);
+    int sentinel = 0;
     BIO_set_data(bio, &sentinel);
     POINTERS_EQUAL(&sentinel, BIO_get_data(bio));
 }
@@ -190,10 +190,10 @@ TEST(OpenSslFake, BioGetDataReturnsPreviouslySetData)
 TEST(OpenSslFake, BioDataIsStoredPerInstance)
 {
     BIO_METHOD* method = BIO_meth_new(0, "fake");
-    BIO*        bio1   = BIO_new(method);
-    BIO*        bio2   = BIO_new(method);
-    int         a      = 0;
-    int         b      = 0;
+    BIO* bio1 = BIO_new(method);
+    BIO* bio2 = BIO_new(method);
+    int a = 0;
+    int b = 0;
     BIO_set_data(bio1, &a);
     BIO_set_data(bio2, &b);
     POINTERS_EQUAL(&a, BIO_get_data(bio1));
@@ -264,7 +264,7 @@ TEST(OpenSslFake, BioMethSetCreateCapturesCallback)
 TEST(OpenSslFake, WriteIncrementsCount)
 {
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
-    SSL*     ssl = SSL_new(ctx);
+    SSL* ssl = SSL_new(ctx);
     SSL_write(ssl, "x", 1);
     CALLED_FAKE(OpenSslFake_Write, ONCE);
 }
@@ -272,15 +272,15 @@ TEST(OpenSslFake, WriteIncrementsCount)
 TEST(OpenSslFake, WriteCapturesSslArg)
 {
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
-    SSL*     ssl = SSL_new(ctx);
+    SSL* ssl = SSL_new(ctx);
     SSL_write(ssl, "x", 1);
     POINTERS_EQUAL(ssl, OpenSslFake_LastWriteSslArg());
 }
 
 TEST(OpenSslFake, WriteCapturesBuffer)
 {
-    SSL_CTX*    ctx = SSL_CTX_new(TLS_client_method());
-    SSL*        ssl = SSL_new(ctx);
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL* ssl = SSL_new(ctx);
     const char* msg = "payload";
     SSL_write(ssl, msg, 7);
     POINTERS_EQUAL(msg, OpenSslFake_LastWriteBuf());
@@ -289,7 +289,7 @@ TEST(OpenSslFake, WriteCapturesBuffer)
 TEST(OpenSslFake, WriteCapturesSize)
 {
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
-    SSL*     ssl = SSL_new(ctx);
+    SSL* ssl = SSL_new(ctx);
     SSL_write(ssl, "payload", 7);
     LONGS_EQUAL(7, OpenSslFake_LastWriteSize());
 }
@@ -297,14 +297,14 @@ TEST(OpenSslFake, WriteCapturesSize)
 TEST(OpenSslFake, WriteDefaultsToEchoingSize)
 {
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
-    SSL*     ssl = SSL_new(ctx);
+    SSL* ssl = SSL_new(ctx);
     LONGS_EQUAL(7, SSL_write(ssl, "payload", 7));
 }
 
 TEST(OpenSslFake, ShutdownIncrementsCount)
 {
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
-    SSL*     ssl = SSL_new(ctx);
+    SSL* ssl = SSL_new(ctx);
     SSL_shutdown(ssl);
     CALLED_FAKE(OpenSslFake_Shutdown, ONCE);
 }
@@ -312,7 +312,7 @@ TEST(OpenSslFake, ShutdownIncrementsCount)
 TEST(OpenSslFake, FreeIncrementsCount)
 {
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
-    SSL*     ssl = SSL_new(ctx);
+    SSL* ssl = SSL_new(ctx);
     SSL_free(ssl);
     CALLED_FAKE(OpenSslFake_Free, ONCE);
 }
@@ -385,9 +385,9 @@ TEST(OpenSslFake, BioMethNewReturnValueIsSurfaced)
 
 TEST(OpenSslFake, BioSetDataCapturesBioArg)
 {
-    BIO_METHOD* method   = BIO_meth_new(0, "fake");
-    BIO*        bio      = BIO_new(method);
-    int         sentinel = 0;
+    BIO_METHOD* method = BIO_meth_new(0, "fake");
+    BIO* bio = BIO_new(method);
+    int sentinel = 0;
     BIO_set_data(bio, &sentinel);
     POINTERS_EQUAL(bio, OpenSslFake_LastSetDataBioArg());
 }
@@ -395,18 +395,18 @@ TEST(OpenSslFake, BioSetDataCapturesBioArg)
 TEST(OpenSslFake, BioGetDataCapturesBioArg)
 {
     BIO_METHOD* method = BIO_meth_new(0, "fake");
-    BIO*        bio    = BIO_new(method);
+    BIO* bio = BIO_new(method);
     BIO_get_data(bio);
     POINTERS_EQUAL(bio, OpenSslFake_LastGetDataBioArg());
 }
 
 TEST(OpenSslFake, SetBioCapturesWriteBioArg)
 {
-    SSL_CTX*    ctx    = SSL_CTX_new(TLS_client_method());
-    SSL*        ssl    = SSL_new(ctx);
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    SSL* ssl = SSL_new(ctx);
     BIO_METHOD* method = BIO_meth_new(0, "fake");
-    BIO*        rbio   = BIO_new(method);
-    BIO*        wbio   = BIO_new(method);
+    BIO* rbio = BIO_new(method);
+    BIO* wbio = BIO_new(method);
     SSL_set_bio(ssl, rbio, wbio);
     POINTERS_EQUAL(wbio, OpenSslFake_LastSetBioWriteBioArg());
 }
@@ -414,7 +414,7 @@ TEST(OpenSslFake, SetBioCapturesWriteBioArg)
 TEST(OpenSslFake, SetTlsExtHostNameCapturesSslArg)
 {
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
-    SSL*     ssl = SSL_new(ctx);
+    SSL* ssl = SSL_new(ctx);
     SSL_set_tlsext_host_name(ssl, "host.example");
     POINTERS_EQUAL(ssl, OpenSslFake_LastSslCtrlSslArg());
 }
@@ -422,7 +422,7 @@ TEST(OpenSslFake, SetTlsExtHostNameCapturesSslArg)
 TEST(OpenSslFake, Set1HostCapturesSslArg)
 {
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
-    SSL*     ssl = SSL_new(ctx);
+    SSL* ssl = SSL_new(ctx);
     SSL_set1_host(ssl, "host.example");
     POINTERS_EQUAL(ssl, OpenSslFake_LastSet1HostSslArg());
 }
@@ -430,7 +430,7 @@ TEST(OpenSslFake, Set1HostCapturesSslArg)
 TEST(OpenSslFake, ShutdownCapturesSslArg)
 {
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
-    SSL*     ssl = SSL_new(ctx);
+    SSL* ssl = SSL_new(ctx);
     SSL_shutdown(ssl);
     POINTERS_EQUAL(ssl, OpenSslFake_LastShutdownSslArg());
 }
@@ -438,7 +438,7 @@ TEST(OpenSslFake, ShutdownCapturesSslArg)
 TEST(OpenSslFake, FreeCapturesSslArg)
 {
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
-    SSL*     ssl = SSL_new(ctx);
+    SSL* ssl = SSL_new(ctx);
     SSL_free(ssl);
     POINTERS_EQUAL(ssl, OpenSslFake_LastFreeSslArg());
 }
@@ -458,7 +458,7 @@ TEST(OpenSslFake, SetConnectFailsMakesConnectReturnNegative)
 {
     OpenSslFake_SetConnectFails(true);
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
-    SSL*     ssl = SSL_new(ctx);
+    SSL* ssl = SSL_new(ctx);
     CHECK_TRUE(SSL_connect(ssl) <= 0);
 }
 
@@ -466,6 +466,6 @@ TEST(OpenSslFake, SetWriteFailsMakesWriteReturnNegative)
 {
     OpenSslFake_SetWriteFails(true);
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
-    SSL*     ssl = SSL_new(ctx);
+    SSL* ssl = SSL_new(ctx);
     CHECK_TRUE(SSL_write(ssl, "x", 1) <= 0);
 }

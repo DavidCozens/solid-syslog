@@ -15,17 +15,17 @@ struct SolidSyslogMetaSd
 {
     struct SolidSyslogStructuredData base;
     struct SolidSyslogAtomicCounter* counter;
-    SolidSyslogSysUpTimeFunction     getSysUpTime;
-    SolidSyslogStringFunction        getLanguage;
+    SolidSyslogSysUpTimeFunction getSysUpTime;
+    SolidSyslogStringFunction getLanguage;
 };
 
-static void        Format(struct SolidSyslogStructuredData* self, struct SolidSyslogFormatter* formatter);
-static void        NilMetaSdFormat(struct SolidSyslogStructuredData* self, struct SolidSyslogFormatter* formatter);
+static void Format(struct SolidSyslogStructuredData* self, struct SolidSyslogFormatter* formatter);
+static void NilMetaSdFormat(struct SolidSyslogStructuredData* self, struct SolidSyslogFormatter* formatter);
 static inline void EmitSequenceId(struct SolidSyslogMetaSd* meta, struct SolidSyslogFormatter* formatter);
 static inline void EmitSysUpTime(struct SolidSyslogMetaSd* meta, struct SolidSyslogFormatter* formatter);
 static inline void EmitLanguage(struct SolidSyslogMetaSd* meta, struct SolidSyslogFormatter* formatter);
 
-static struct SolidSyslogMetaSd         instance;
+static struct SolidSyslogMetaSd instance;
 static struct SolidSyslogStructuredData NilMetaSd = {.Format = NilMetaSdFormat};
 
 struct SolidSyslogStructuredData* SolidSyslogMetaSd_Create(const struct SolidSyslogMetaSdConfig* config)
@@ -41,21 +41,21 @@ struct SolidSyslogStructuredData* SolidSyslogMetaSd_Create(const struct SolidSys
     }
     else
     {
-        instance.base.Format  = Format;
-        instance.counter      = config->counter;
+        instance.base.Format = Format;
+        instance.counter = config->counter;
         instance.getSysUpTime = config->getSysUpTime;
-        instance.getLanguage  = config->getLanguage;
-        result                = &instance.base;
+        instance.getLanguage = config->getLanguage;
+        result = &instance.base;
     }
     return result;
 }
 
 void SolidSyslogMetaSd_Destroy(void)
 {
-    instance.base.Format  = NULL;
-    instance.counter      = NULL;
+    instance.base.Format = NULL;
+    instance.counter = NULL;
     instance.getSysUpTime = NULL;
-    instance.getLanguage  = NULL;
+    instance.getLanguage = NULL;
 }
 
 static void NilMetaSdFormat(struct SolidSyslogStructuredData* self, struct SolidSyslogFormatter* formatter)
@@ -64,10 +64,10 @@ static void NilMetaSdFormat(struct SolidSyslogStructuredData* self, struct Solid
     (void) formatter;
 }
 
-static const char SD_PREFIX[]      = "[meta";
+static const char SD_PREFIX[] = "[meta";
 static const char SEQUENCE_ID_SD[] = " sequenceId=\"";
 static const char SYS_UP_TIME_SD[] = " sysUpTime=\"";
-static const char LANGUAGE_SD[]    = " language=\"";
+static const char LANGUAGE_SD[] = " language=\"";
 
 static void Format(struct SolidSyslogStructuredData* self, struct SolidSyslogFormatter* formatter)
 {

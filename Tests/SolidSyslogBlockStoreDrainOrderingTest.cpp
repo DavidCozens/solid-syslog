@@ -47,9 +47,9 @@ static const char* const TEST_PATH_PREFIX = "/tmp/draintest_";
  * interleave. */
 struct SenderSpy
 {
-    struct SolidSyslogSender          base;
+    struct SolidSyslogSender base;
     std::vector<std::vector<uint8_t>> successfulSends;
-    bool                              outage;
+    bool outage;
 };
 
 static bool SenderSpy_Send(struct SolidSyslogSender* self, const void* buffer, size_t size)
@@ -71,16 +71,16 @@ static void SenderSpy_Disconnect(struct SolidSyslogSender* self)
 
 static void SenderSpy_Init(SenderSpy& spy)
 {
-    spy.base.Send       = SenderSpy_Send;
+    spy.base.Send = SenderSpy_Send;
     spy.base.Disconnect = SenderSpy_Disconnect;
-    spy.outage          = false;
+    spy.outage = false;
     spy.successfulSends.clear();
 }
 
 static uint32_t DecodeSequenceId(const std::vector<uint8_t>& payload)
 {
-    return static_cast<uint32_t>(payload[0]) | (static_cast<uint32_t>(payload[1]) << 8) | (static_cast<uint32_t>(payload[2]) << 16) |
-           (static_cast<uint32_t>(payload[3]) << 24);
+    return static_cast<uint32_t>(payload[0]) | (static_cast<uint32_t>(payload[1]) << 8) |
+           (static_cast<uint32_t>(payload[2]) << 16) | (static_cast<uint32_t>(payload[3]) << 24);
 }
 
 static std::vector<uint32_t> DecodeSequenceIds(const std::vector<std::vector<uint8_t>>& sends)
@@ -302,8 +302,12 @@ TEST(ServiceDrainInterleave, DiscardNewestDoesNotLetNewestBypassOldestOnRecovery
      * SOLIDSYSLOG_MAX_MESSAGE_SIZE tunable overrides. With maxBlocks=2
      * the store fits 2 records — small enough for the outage to overflow
      * with just a couple of messages. */
-    DrainTestConfig cfg = {/*maxBlocks=*/2, /*maxBlockSize=*/200 /*will clamp up*/, /*payloadSize=*/SOLIDSYSLOG_MAX_MESSAGE_SIZE - 100U,
-                           SOLIDSYSLOG_DISCARD_NEWEST};
+    DrainTestConfig cfg = {
+        /*maxBlocks=*/2,
+        /*maxBlockSize=*/200 /*will clamp up*/,
+        /*payloadSize=*/SOLIDSYSLOG_MAX_MESSAGE_SIZE - 100U,
+        SOLIDSYSLOG_DISCARD_NEWEST
+    };
     Setup(cfg);
 
     /* Pre-outage send: msg 1 flows buffer -> store -> sender successfully. */
@@ -326,8 +330,14 @@ TEST(ServiceDrainInterleave, DiscardNewestDoesNotLetNewestBypassOldestOnRecovery
     /* Oracle resumes. Drain by ticking Service repeatedly. */
     spy.outage = false;
     ServiceTickUntilQuiet(10);
-    CHECK_FALSE_TEXT(SolidSyslogStore_HasUnsent(store), "store still holds unsent records after recovery — ServiceTickUntilQuiet cap too small");
-    CHECK_TRUE_TEXT(spy.successfulSends.size() > 1U, "expected post-recovery successful sends; only the pre-outage send fired");
+    CHECK_FALSE_TEXT(
+        SolidSyslogStore_HasUnsent(store),
+        "store still holds unsent records after recovery — ServiceTickUntilQuiet cap too small"
+    );
+    CHECK_TRUE_TEXT(
+        spy.successfulSends.size() > 1U,
+        "expected post-recovery successful sends; only the pre-outage send fired"
+    );
 
     std::vector<uint32_t> ids = DecodeSequenceIds(spy.successfulSends);
 
@@ -341,7 +351,15 @@ TEST(ServiceDrainInterleave, DiscardNewestDoesNotLetNewestBypassOldestOnRecovery
         {
             char message[256] = {};
             // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg) -- snprintf is the lingua franca for building CppUTest FAIL messages
-            (void) snprintf(message, sizeof(message), "Send order descended: ids[%zu]=%u after ids[%zu]=%u", i, ids[i], i - 1, ids[i - 1]);
+            (void) snprintf(
+                message,
+                sizeof(message),
+                "Send order descended: ids[%zu]=%u after ids[%zu]=%u",
+                i,
+                ids[i],
+                i - 1,
+                ids[i - 1]
+            );
             FAIL(message);
         }
     }
@@ -385,8 +403,15 @@ TEST(BlockStoreDrainOrdering, OutageDrainProducesAscendingSequenceIds)
         {
             char message[256] = {};
             // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg) -- snprintf is the lingua franca for building CppUTest FAIL messages
-            (void) snprintf(message, sizeof(message), "Drain order not strictly ascending: drained[%zu]=%u after drained[%zu]=%u", i, drained[i], i - 1,
-                            drained[i - 1]);
+            (void) snprintf(
+                message,
+                sizeof(message),
+                "Drain order not strictly ascending: drained[%zu]=%u after drained[%zu]=%u",
+                i,
+                drained[i],
+                i - 1,
+                drained[i - 1]
+            );
             FAIL(message);
         }
     }
