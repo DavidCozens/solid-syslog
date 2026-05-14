@@ -486,6 +486,79 @@ jobs:
           path: build/cppcheck/cppcheck-report.xml
           retention-days: 1
 
+      # ----------------------------------------------------------------
+      # cppcheck-misra addon — S10.03, warning mode.
+      #
+      # Runs the MISRA C:2012 addon over Strict + Pragmatic tiers
+      # (Core/Source/ + Platform/*/Source/). --error-exitcode=0 keeps
+      # the step non-fatal: diagnostics print to the CI log and an XML
+      # artifact uploads, but the job continues regardless.
+      #
+      # S10.18 will collapse this and the non-MISRA pass above into a
+      # single invocation when both reach the same weight (error mode);
+      # the existing pass's scope will widen to Platform/*/Source/ at
+      # that point — see project_e10_accumulated_scope.md.
+      # ----------------------------------------------------------------
+
+      - name: Run cppcheck-misra (warning mode)
+        if: success() || failure()
+        run: >
+          cppcheck
+          --addon=misra
+          --suppressions-list=misra_suppressions.txt
+          --error-exitcode=0
+          --inline-suppr
+          --std=c11
+          -ICore/Interface
+          -IPlatform/Atomics/Interface
+          -IPlatform/Posix/Interface
+          -IPlatform/Windows/Interface
+          -IPlatform/OpenSsl/Interface
+          -IPlatform/FreeRtos/Interface
+          -IPlatform/FatFs/Interface
+          Core/Source/
+          Platform/Atomics/Source/
+          Platform/Posix/Source/
+          Platform/Windows/Source/
+          Platform/OpenSsl/Source/
+          Platform/FreeRtos/Source/
+          Platform/FatFs/Source/
+
+      - name: Generate cppcheck-misra XML report
+        if: success() || failure()
+        run: |
+          mkdir -p build/cppcheck-misra
+          cppcheck \
+            --addon=misra \
+            --suppressions-list=misra_suppressions.txt \
+            --error-exitcode=0 \
+            --inline-suppr \
+            --std=c11 \
+            -ICore/Interface \
+            -IPlatform/Atomics/Interface \
+            -IPlatform/Posix/Interface \
+            -IPlatform/Windows/Interface \
+            -IPlatform/OpenSsl/Interface \
+            -IPlatform/FreeRtos/Interface \
+            -IPlatform/FatFs/Interface \
+            --xml --xml-version=2 \
+            Core/Source/ \
+            Platform/Atomics/Source/ \
+            Platform/Posix/Source/ \
+            Platform/Windows/Source/ \
+            Platform/OpenSsl/Source/ \
+            Platform/FreeRtos/Source/ \
+            Platform/FatFs/Source/ \
+            2> build/cppcheck-misra/cppcheck-misra-report.xml
+
+      - name: Upload cppcheck-misra report
+        if: success() || failure()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: cppcheck-misra-report
+          path: build/cppcheck-misra/cppcheck-misra-report.xml
+          retention-days: 1
+
   build-windows-msvc:
     runs-on: windows-latest
     permissions:
