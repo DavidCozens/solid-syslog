@@ -6,6 +6,7 @@
 #include "SolidSyslogError.h"
 #include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogFormatter.h"
+#include "SolidSyslogPrival.h"
 #include "SolidSyslogUdpPayload.h"
 #include "SolidSyslogUdpSender.h"
 #include "SolidSyslogSenderDefinition.h"
@@ -13,6 +14,8 @@
 #include "SolidSyslogDatagram.h"
 #include "SolidSyslogResolver.h"
 #include "SolidSyslogTransport.h"
+
+struct SolidSyslogFormatter;
 
 struct SolidSyslogUdpSender
 {

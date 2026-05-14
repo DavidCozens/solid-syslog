@@ -21,6 +21,12 @@
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
                                // macros
 
+class TEST_SolidSyslogUdpSenderRetry_DoubleOversizeDoesNotSendThird_Test;
+class TEST_SolidSyslogUdpSenderRetry_NonOversizeFailureDoesNotRetry_Test;
+class TEST_SolidSyslogUdpSenderRetry_OversizeQueriesMaxPayloadAndRetries_Test;
+class TEST_SolidSyslogUdpSenderRetry_SuccessfulSendDoesNotQueryMaxPayload_Test;
+class TEST_SolidSyslogUdpSenderRetry_ZeroMaxPayloadSkipsRetrySend_Test;
+
 // clang-format off
 static const char* const TEST_MESSAGE          = "hello";
 static const size_t      TEST_MESSAGE_LEN      = 5;
