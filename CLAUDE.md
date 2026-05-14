@@ -386,18 +386,20 @@ Most application code only needs `SolidSyslog.h` — it never sees allocators, s
 
 ## Naming Conventions
 
-| Element | Convention | Example |
-|---|---|---|
-| C public functions | `PascalCase_PascalCase` | `LedDriver_TurnOn()` |
-| C static/private functions | `PascalCase` | `CalculateChecksum()` |
-| C++ methods | `camelCase` | `getValue()` |
-| Variables | `camelCase` | `sensorReading` |
-| Types / Classes / Structs | `PascalCase` | `MotorController` |
-| Macros / Constants | `UPPER_SNAKE_CASE` | `MAX_BUFFER_SIZE` |
-| Files | `PascalCase` | `LedDriver.c` |
+`docs/NAMING.md` is the source of truth — a per-tier naming scheme
+satisfying MISRA C:2012 rules 5.1–5.9 with clang-tidy enforcing shape
+and cppcheck-misra enforcing uniqueness. Read it before adding any new
+public identifier.
 
-No Hungarian notation. No member variable prefixes (`m_`, `_`, etc.).
-Names should be self-documenting — prefer clarity over brevity.
+One-line summary: public C functions `SolidSyslogClass_Function`, public
+types `SolidSyslogClass`, public macros `SOLIDSYSLOG_SCREAMING_SNAKE`,
+file-scope statics `Class_Function` / `CLASS_SCREAMING_SNAKE`,
+locals/parameters/members `lowerCamelCase`, files `PascalCase.c`. No
+Hungarian notation. No member-variable prefixes. No `typedef struct`
+for project-owned struct types.
+
+Deliberate deviations from the MISRA rule set are recorded in
+`docs/misra-deviations.md`.
 
 ---
 

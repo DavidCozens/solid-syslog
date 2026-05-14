@@ -1,5 +1,41 @@
 # Dev Log
 
+## 2026-05-14 — S10.01 NAMING.md + initial MISRA deviations doc (#357)
+
+First story of E10. Commits `docs/NAMING.md` (the already-drafted
+per-tier naming convention) and a new `docs/misra-deviations.md` whose
+founding entry **D.001** documents the project's relaxation of MISRA
+Rule 5.1 from C99's 31-character external-identifier window to 63
+characters. `CLAUDE.md`'s "Naming Conventions" section loses its
+inline rules table in favour of a one-line summary and a pointer to
+`docs/NAMING.md`; `SKILL.md`'s "Code style" section is updated the
+same way. No code, no tooling, no CI gates yet — those land in
+S10.02 / S10.03 / S10.06.
+
+### Decisions
+
+- **63 characters, not "unlimited."** Naming a concrete number keeps
+  the deviation auditable and matches C99's separate 63-character
+  minimum for internal identifiers, so a single number applies
+  project-wide. Every supported toolchain (gcc, clang, MSVC,
+  arm-none-eabi-gcc, IAR, Keil ARMCC 6+) comfortably exceeds it.
+- **Deviations doc is separate from `misra_suppressions.txt`.** The
+  suppressions file is cppcheck-readable line-level data; the
+  deviations doc is the human-audit narrative. Each suppression entry
+  will reference the deviation section that authorises it (populated
+  in S10.06).
+- **CLAUDE.md keeps a one-line naming summary** rather than just a
+  pointer, so a quick top-down read of `CLAUDE.md` still tells the
+  reader the rough shape without forcing a second-file hop.
+
+### Deferred
+
+- Populating `misra_suppressions.txt` with entries — landing with
+  S10.03 (cppcheck-misra wired into CI in warning mode) and S10.06
+  (rule subset curated, deviation set finalised).
+- Source-code rename sweeps to satisfy the new scheme — S10.07
+  onwards.
+
 ## 2026-05-14 — S12.05 UdpSender NULL guards (#116)
 
 Second pass at the E12 bad-setup contract, this time on the UDP sender.
