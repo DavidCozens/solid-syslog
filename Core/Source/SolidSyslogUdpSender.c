@@ -3,6 +3,8 @@
 #include <stdbool.h>
 
 #include "SolidSyslogEndpoint.h"
+#include "SolidSyslogError.h"
+#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogUdpPayload.h"
 #include "SolidSyslogUdpSender.h"
@@ -34,28 +36,48 @@ static inline struct SolidSyslogAddress*         Address(struct SolidSyslogUdpSe
 static inline void                               CloseSocket(struct SolidSyslogUdpSender* udp);
 static inline bool                               TransmitDatagram(struct SolidSyslogUdpSender* udp, const void* buffer, size_t size);
 static inline enum SolidSyslogDatagramSendResult RetryAfterOversize(struct SolidSyslogUdpSender* udp, const void* buffer, size_t size);
-static void                                      NilEndpoint(struct SolidSyslogEndpoint* endpoint);
 static uint32_t                                  NilEndpointVersion(void);
+static bool                                      NilUdpSenderSend(struct SolidSyslogSender* self, const void* buffer, size_t size);
+static void                                      NilUdpSenderDisconnect(struct SolidSyslogSender* self);
 
-static const struct SolidSyslogUdpSender DEFAULT_INSTANCE = {.config = {.endpoint = NilEndpoint, .endpointVersion = NilEndpointVersion}};
+static const struct SolidSyslogUdpSender DEFAULT_INSTANCE = {.config = {.endpointVersion = NilEndpointVersion}};
 static struct SolidSyslogUdpSender       instance;
+static struct SolidSyslogSender          NilUdpSender = {.Send = NilUdpSenderSend, .Disconnect = NilUdpSenderDisconnect};
 
 struct SolidSyslogSender* SolidSyslogUdpSender_Create(const struct SolidSyslogUdpSenderConfig* config)
 {
-    instance                 = DEFAULT_INSTANCE;
-    instance.config.resolver = config->resolver;
-    instance.config.datagram = config->datagram;
-    if (config->endpoint != NULL)
+    struct SolidSyslogSender* result = &NilUdpSender;
+    if (config == NULL)
     {
+        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERR, SOLIDSYSLOG_ERROR_MSG_UDPSENDER_CREATE_NULL_CONFIG);
+    }
+    else if (config->resolver == NULL)
+    {
+        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERR, SOLIDSYSLOG_ERROR_MSG_UDPSENDER_CREATE_NULL_RESOLVER);
+    }
+    else if (config->datagram == NULL)
+    {
+        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERR, SOLIDSYSLOG_ERROR_MSG_UDPSENDER_CREATE_NULL_DATAGRAM);
+    }
+    else if (config->endpoint == NULL)
+    {
+        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERR, SOLIDSYSLOG_ERROR_MSG_UDPSENDER_CREATE_NULL_ENDPOINT);
+    }
+    else
+    {
+        instance                 = DEFAULT_INSTANCE;
+        instance.config.resolver = config->resolver;
+        instance.config.datagram = config->datagram;
         instance.config.endpoint = config->endpoint;
+        if (config->endpointVersion != NULL)
+        {
+            instance.config.endpointVersion = config->endpointVersion;
+        }
+        instance.base.Send       = Send;
+        instance.base.Disconnect = Disconnect;
+        result                   = &instance.base;
     }
-    if (config->endpointVersion != NULL)
-    {
-        instance.config.endpointVersion = config->endpointVersion;
-    }
-    instance.base.Send       = Send;
-    instance.base.Disconnect = Disconnect;
-    return &instance.base;
+    return result;
 }
 
 void SolidSyslogUdpSender_Destroy(void)
@@ -185,13 +207,20 @@ static inline enum SolidSyslogDatagramSendResult RetryAfterOversize(struct Solid
     return result;
 }
 
-static void NilEndpoint(struct SolidSyslogEndpoint* endpoint)
-{
-    SolidSyslogFormatter_BoundedString(endpoint->host, "", 0);
-    endpoint->port = 0;
-}
-
 static uint32_t NilEndpointVersion(void)
 {
     return 0;
+}
+
+static bool NilUdpSenderSend(struct SolidSyslogSender* self, const void* buffer, size_t size)
+{
+    (void) self;
+    (void) buffer;
+    (void) size;
+    return true;
+}
+
+static void NilUdpSenderDisconnect(struct SolidSyslogSender* self)
+{
+    (void) self;
 }

@@ -5,6 +5,7 @@
 #include <cstdint>
 
 #include "DatagramFake.h"
+#include "ErrorHandlerFake.h"
 #include "SolidSyslogEndpoint.h"
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogGetAddrInfoResolver.h"
@@ -559,17 +560,6 @@ TEST(SolidSyslogUdpSenderFailure, SendRecoversAfterTransientResolveFailure)
     CHECK_TRUE(SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN));
 }
 
-TEST(SolidSyslogUdpSenderFailure, NoEndpointConfiguredSendsToPortZero)
-{
-    resolver                                           = SolidSyslogGetAddrInfoResolver_Create();
-    datagram                                           = SolidSyslogPosixDatagram_Create();
-    struct SolidSyslogUdpSenderConfig configNoEndpoint = {resolver, datagram, nullptr, nullptr};
-    sender                                             = SolidSyslogUdpSender_Create(&configNoEndpoint);
-    SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN);
-    CALLED_FAKE(SocketFake_Sendto, ONCE);
-    LONGS_EQUAL(0, SocketFake_LastPort());
-}
-
 // clang-format off
 TEST_GROUP(SolidSyslogUdpSenderRetry)
 {
@@ -723,4 +713,81 @@ TEST(SolidSyslogUdpSenderRetry, NonOversizeFailureReturnsFalse)
 {
     DatagramFake_SetSendResult(datagram, 0, SOLIDSYSLOG_DATAGRAM_FAILED);
     CHECK_FALSE(SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN));
+}
+
+// clang-format off
+TEST_GROUP(SolidSyslogUdpSenderBadSetup)
+{
+    struct SolidSyslogResolver* resolver = nullptr;
+    struct SolidSyslogDatagram* datagram = nullptr;
+    SolidSyslogUdpSenderConfig config{};
+    // cppcheck-suppress unreadVariable -- read via context-propagation through ErrorHandlerFake_Install
+    int sentinel = 0;
+
+    void setup() override
+    {
+        SocketFake_Reset();
+        ErrorHandlerFake_Install(&sentinel);
+        resolver = SolidSyslogGetAddrInfoResolver_Create();
+        datagram = SolidSyslogPosixDatagram_Create();
+        // cppcheck-suppress unreadVariable -- read by tests via TEST_GROUP fixture; cppcheck does not model CppUTest macros
+        config   = {resolver, datagram, TestEndpoint, TestEndpointVersion};
+    }
+
+    void teardown() override
+    {
+        SolidSyslogUdpSender_Destroy();
+        SolidSyslogPosixDatagram_Destroy();
+        SolidSyslogGetAddrInfoResolver_Destroy();
+        ErrorHandlerFake_Uninstall();
+    }
+};
+
+// clang-format on
+
+TEST(SolidSyslogUdpSenderBadSetup, CreateWithNullConfigReportsError)
+{
+    SolidSyslogUdpSender_Create(nullptr);
+    CHECK_REPORTED_ERROR("SolidSyslogUdpSender_Create called with NULL config");
+}
+
+TEST(SolidSyslogUdpSenderBadSetup, SendOnBadSetupSenderReturnsTrue)
+{
+    struct SolidSyslogSender* sender = SolidSyslogUdpSender_Create(nullptr);
+    CHECK_TRUE(SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN));
+}
+
+TEST(SolidSyslogUdpSenderBadSetup, DisconnectOnBadSetupSenderDoesNotCrash)
+{
+    struct SolidSyslogSender* sender = SolidSyslogUdpSender_Create(nullptr);
+    SolidSyslogSender_Disconnect(sender);
+}
+
+TEST(SolidSyslogUdpSenderBadSetup, CreateWithNullResolverReportsError)
+{
+    config.resolver = nullptr;
+    SolidSyslogUdpSender_Create(&config);
+    CHECK_REPORTED_ERROR("SolidSyslogUdpSender_Create config.resolver is NULL");
+}
+
+TEST(SolidSyslogUdpSenderBadSetup, CreateWithNullDatagramReportsError)
+{
+    config.datagram = nullptr;
+    SolidSyslogUdpSender_Create(&config);
+    CHECK_REPORTED_ERROR("SolidSyslogUdpSender_Create config.datagram is NULL");
+}
+
+TEST(SolidSyslogUdpSenderBadSetup, CreateWithNullEndpointReportsError)
+{
+    config.endpoint = nullptr;
+    SolidSyslogUdpSender_Create(&config);
+    CHECK_REPORTED_ERROR("SolidSyslogUdpSender_Create config.endpoint is NULL");
+}
+
+TEST(SolidSyslogUdpSenderBadSetup, NullEndpointVersionIsOptional)
+{
+    config.endpointVersion           = nullptr;
+    struct SolidSyslogSender* sender = SolidSyslogUdpSender_Create(&config);
+    CHECK_NOTHING_REPORTED();
+    CHECK_TRUE(SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN));
 }
