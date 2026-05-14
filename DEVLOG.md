@@ -50,26 +50,26 @@ NAMING.md needs to make at S10.06:
 | **Mixed** (per-site split during S10.06) | 11 |
 | **Investigate** (transitive header questions) | 4 |
 
-Six structural deviations together account for **531 of 575
-findings (92%)**:
+Six concentrated buckets account for **339 of 575 findings
+(59%)** — one named sweep (S10.08 on rule 5.9) and five
+structural deviations:
 
-- D.002 — opaque-impl + caller-supplied-storage pattern (covers
-  rules 11.3, 11.2, 11.5 — 109 findings)
-- D.003 — no-typedef-struct convention (rule 5.7 — 54 findings)
-- D.004 — pointer arithmetic on record buffers (rule 18.4 — 4
-  findings, RecordStore only)
-- D.005 — flexible array members (rule 18.7 — 2 findings,
-  Formatter and CircularBuffer)
-- D.006 — C11 `<stdatomic.h>` use (rule 1.4 — 2 findings)
-- 5.9 sweep (rule 5.9 — 168, the bulk; resolves once S10.08
-  renames Tier 2 statics to `Class_Function` form; any residuals
-  become a smaller deviation if needed)
+- 5.9 sweep — Tier 2 statics rename to `Class_Function` form (168 findings, S10.08)
+- D.002 — opaque-impl + caller-supplied-storage pattern (rules 11.3 + 11.2 + 11.5 = 109)
+- D.003 — no-typedef-struct convention (rule 5.7 = 54)
+- D.004 — pointer arithmetic on record buffers (rule 18.4 = 4)
+- D.005 — flexible array members (rule 18.7 = 2)
+- D.006 — C11 `<stdatomic.h>` use (rule 1.4 = 2)
 
-The remaining 44 fix-target findings are diffuse mechanical
-cleanups (add `U` suffix to literals, use return values, add
-trailing `else`, etc.) — surface during S10.06 as a candidate for
-a dedicated "mechanical MISRA sweep" story or fold into the per-component
-sweeps in S10.10–S10.17.
+The remaining **236 findings across 23 rules** are per-site
+cleanup, decomposed as **221 Fix** (mostly diffuse mechanical:
+add `U` suffix to literals, use return values, trailing `else`,
+explicit precedence parens) + **11 Mixed** (rule 11.8 needs
+per-site split in S10.06) + **4 Investigate** (rules 21.10 /
+21.6 likely transitive system-header includes). The 221 Fix
+findings span 16 rules and many files — candidate for a
+dedicated "mechanical MISRA sweep" story in S10.06 planning, or
+folded into the per-component sweeps S10.10–S10.17.
 
 ### Decisions
 

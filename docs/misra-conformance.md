@@ -27,6 +27,9 @@ rest of E10:
 
 ## Verdict definitions
 
+Each rule with non-zero findings carries exactly one of the
+following verdicts:
+
 - **Fix** — the violation is genuine; the code is wrong relative to
   the rule. Sweep target picked up by an S10.07+ story.
 - **Deviate** — the violation is structural to a project-wide
@@ -43,6 +46,15 @@ rest of E10:
   adjustment, not the code. (Example: vtable function-pointer
   members named in PascalCase to mirror the function they hold —
   a deliberate convention NAMING.md has not yet acknowledged.)
+- **Mixed** — some findings are **Fix**, others are **Deviate**.
+  The per-site split is deferred to S10.06 review rather than
+  forced into a single bucket here. (Example: rule 11.8 const-strip
+  casts — the Winsock platform-API site is Deviate; the Core
+  sites are Fix.)
+- **Investigate** — the addon report needs further inspection
+  before a verdict can be assigned. Usually a "is this a transitive
+  include we can't help vs a direct one we can?" question. S10.06
+  resolves to one of the verdicts above.
 
 ## Headline counts
 
@@ -60,7 +72,7 @@ rest of E10:
 |------|------:|-----------|---------|-----------|-------|
 | **enum constant** | 252 | `SolidSyslogPrival.h` (128 — `SOLIDSYSLOG_FACILITY_*`, `SOLIDSYSLOG_SEVERITY_*`), `SolidSyslogTransport.h` (24), `SolidSyslogBlockStore.h` (12) | **Fix** | `docs/NAMING.md` already specifies `SolidSyslogClass_Constant` form (e.g. `SolidSyslogSeverity_Emergency`). Current SCREAMING_SNAKE is the older convention. Rename sweep. | **S10.07** (already named in epic body) |
 | **member** | 128 | `SolidSyslogStoreDefinition.h` (32), `SolidSyslogFileDefinition.h`, `SolidSyslogBlockDeviceDefinition.h`, `SolidSyslogBufferDefinition.h`, `SolidSyslogSenderDefinition.h` etc. | **Re-categorise** | All flagged members are **vtable function-pointer** struct members (`Write`, `Read`, `Send`, `Close`, etc.). PascalCase deliberately mirrors the function name so call sites read like method invocations: `buffer->Send(...)`. NAMING.md must acknowledge this exception; `.clang-tidy` then carves it out via `MemberIgnoredRegexp` matching PascalCase tokens in `*Definition.h` files (or, simpler, just exempt PascalCase members globally). | **S10.06** (NAMING.md amendment + `.clang-tidy` carve-out) |
-| **global function** | 12 | `SolidSyslogError.h` (8 — `SolidSyslog_SetErrorHandler`, `SolidSyslog_Error`), `SolidSyslog.h` (2 — `SolidSyslog_Log`, `SolidSyslog_Service`), `SolidSyslogConfig.h` (2 — `SolidSyslog_Create`, `SolidSyslog_Destroy`) | **Re-categorise** | All six unique function names follow the form `SolidSyslog_<verb>` — the library-level API, not a `Class_Function` underneath. NAMING.md Tier 1 says `SolidSyslogClass_Function`, but here the *library itself* is the class. The check fires because `aNy_CasE` after the `SolidSyslog` prefix doesn't accept a leading underscore. NAMING.md should acknowledge the library-top-level pattern; `.clang-tidy` then accepts `^SolidSyslog(_[A-Z]\|[A-Z])` via `GlobalFunctionIgnoredRegexp` or a refined Prefix. | **S10.06** |
+| **global function** | 12 | `SolidSyslogError.h` (8 — `SolidSyslog_SetErrorHandler`, `SolidSyslog_Error`), `SolidSyslog.h` (2 — `SolidSyslog_Log`, `SolidSyslog_Service`), `SolidSyslogConfig.h` (2 — `SolidSyslog_Create`, `SolidSyslog_Destroy`) | **Re-categorise** | All six unique function names follow the form `SolidSyslog_<verb>` — the library-level API, not a `Class_Function` underneath. NAMING.md Tier 1 says `SolidSyslogClass_Function`, but here the *library itself* is the class. The check fires because `aNy_CasE` after the `SolidSyslog` prefix doesn't accept a leading underscore. NAMING.md should acknowledge the library-top-level pattern; `.clang-tidy` then accepts `^SolidSyslog(_[A-Z]|[A-Z])` via `GlobalFunctionIgnoredRegexp` or a refined Prefix. | **S10.06** |
 | **enum** | 8 | `SolidSyslogPrival.h` (8 — `SolidSyslog_Facility`, `SolidSyslog_Severity`) | **Fix** | Enum tag names should be `SolidSyslogFacility` and `SolidSyslogSeverity` (no underscore) per NAMING.md Tier 1 struct/enum rule. The underscore is residue. | **S10.07** (alongside the enum constant rename, same files) |
 | **struct** | 4 | `SolidSyslog.c` (`SolidSyslog`), `SolidSyslogFormatter.c` (`EscapedContext`), `BlockSequence.c` (`BlockPresence`), `SolidSyslogFileBlockDevice.c` (`OpenHandle`) | **Re-categorise** | All four are **file-scope (Tier 2) private** structs in `.c` files, not Tier 1 public tags. NAMING.md Tier 2 does **not** require the `SolidSyslog` prefix — the class part is the file basename. The check fires because clang-tidy can't distinguish file-scope from external linkage on struct tags. `.clang-tidy` should add `StructIgnoredRegexp` allowing PascalCase tags without prefix when the tag is file-scope (or, since clang-tidy can't see linkage on tags, just relax `StructPrefix` to a regex that allows either `SolidSyslog<X>` or `<X>` and accept the false-negative risk on missing prefixes). | **S10.06** |
 
@@ -144,7 +156,7 @@ Recurring themes that recur across many rules — useful for **S10.06** when wri
 
 6. **`Class_Function` static helpers across TUs** drive rule 5.9 (168 findings) — these are simultaneously the planned S10.08 sweep target *and* an instance of the project's MISRA Tier 2 Class-prefix convention. After S10.08 the count drops to whatever vtable-derived statics remain (probably <20), and those become a separate deviation if any.
 
-These six structural deviations are the bulk of the MISRA backlog — together they account for **531 of the 575 findings** (92%). The remainder (44 findings across many rules) is per-site cleanup distributed across the S10.10–S10.17 sweep stories.
+These six concentrated buckets together account for **339 of the 575 findings (59%)** — the named S10.08 sweep on rule 5.9 (168), plus the five structural deviations (D.002 covers 11.3/11.2/11.5 = 109, D.003 = 54, D.004 = 4, D.005 = 2, D.006 = 2). The remainder — **236 findings spread across the other 23 rules** — is per-site cleanup, decomposed as: **221 Fix** target (mostly diffuse mechanical: U-suffix on literals, return-value use, trailing-else, explicit precedence parens), **11 Mixed** (rule 11.8 needs per-site split in S10.06), and **4 Investigate** (rules 21.10 / 21.6 likely transitive system-header includes).
 
 ---
 
