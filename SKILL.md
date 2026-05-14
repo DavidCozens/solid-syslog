@@ -56,9 +56,10 @@ Test progression follows ZOMBIES order.
 
 - Formatting is enforced by clang-format — see `.clang-format`. This is the authoritative
   style rule; it overrides any conflicting guidance in this file or from Claude.ai briefings.
-- Public C functions: `PascalCase_PascalCase` (e.g. `SolidSyslog_Create`)
-- Variables/parameters: `camelCase`
-- Types and files: `PascalCase`
+- Naming is defined in `docs/NAMING.md` — the per-tier scheme covering Tier 1 (external API),
+  Tier 2 (file-scope statics), Tier 3 (locals/parameters), Tier 4 (struct members), tests, and
+  macros. Read it before adding any new public identifier.
+- MISRA C:2012 rule deviations are recorded in `docs/misra-deviations.md`.
 - Follows James Grenning's style (*TDD for Embedded C*) where consistent with clang-format
 - No dynamic memory allocation required — allocator is caller-injected. No unions, no anonymous structs, no `#ifdef` feature flags
 - C99 baseline
