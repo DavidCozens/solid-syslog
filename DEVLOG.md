@@ -1,5 +1,134 @@
 # Dev Log
 
+## 2026-05-14 — S10.05 conformance audit + Tier policy lock-ins (#365)
+
+First story of E10's audit/decide phase. Generates fresh snapshots
+of the naming + MISRA findings on `main` HEAD, commits
+`docs/misra-conformance.md` (the per-rule backlog with verdicts),
+and — after a per-question walk-through with the project owner —
+locks in four structural policy decisions that the original story
+plan had deferred to S10.06. The decisions update `docs/NAMING.md`
+and `.clang-tidy` directly so subsequent sweeps inherit them.
+
+### Headline data
+
+- **404** clang-tidy naming warnings on the input snapshot.
+- After the four S10.05 policy lock-ins applied:
+  **446 naming warnings** — net of −128 vtable + −12
+  library-top-level + −4 file-scope tag findings disabled, plus
+  +186 data-member findings newly surfaced by the Tier 4 PascalCase
+  re-statement.
+- **575** cppcheck-misra findings (unchanged in S10.05; MISRA
+  decisions are verdicts assigned, not rule changes).
+
+### Decisions locked in S10.05
+
+Six judgement questions answered with the project owner. Each
+applies directly to `docs/NAMING.md` and/or `.clang-tidy`:
+
+1. **Tier 4 (struct members) → all PascalCase, no member-kind
+   exception.** The previous lowerCamelCase rule with implicit
+   PascalCase tolerance for vtable function-pointer members
+   encoded the member's kind into its case — exactly the
+   implicit-semantic-encoding Clean Code argues against. Tier 4
+   now reads: "all struct members are PascalCase," full stop.
+   Vtable function-pointer access (`store->Write(...)`) and data
+   access (`config->BlockDevice`) read with the same shape.
+   - Knock-on: 186 lowerCamelCase data members across the tree
+     need renaming. New S10.07-sibling story planned (slotting in
+     S10.06).
+2. **Tier 1 (public API) → two stated shapes.**
+   `SolidSyslog<Class>_<Function>` for class-scoped operations
+   remains the primary shape. A second shape `SolidSyslog_<Function>`
+   (no `<Class>`) is recognised for whole-library API entry points
+   (`Create`, `Destroy`, `Log`, `Service`, `SetErrorHandler`,
+   `Error`). Both are first-class Tier 1; the second is not an
+   exception.
+3. **Tier 2 (file-scope statics) → tags use bare PascalCase.**
+   Tier 2 was previously silent on struct tags. It now states that
+   file-scope helper struct tags (`EscapedContext`, `BlockPresence`,
+   `OpenHandle`) use bare PascalCase, no `SolidSyslog` prefix —
+   same "no namespace at file scope" rule that applies to Tier 2
+   functions and variables. The opaque-impl case (`struct
+   SolidSyslog` shared between `SolidSyslog.h` opaque declaration
+   and `SolidSyslog.c` definition) is documented as the one place
+   where a Tier 2 tag site is bound by a Tier 1 public name.
+4. **Mechanical MISRA fixes split → hybrid.** The 221 Fix-target
+   MISRA findings across 16 rules split into ~126 tree-wide
+   mechanical fixes (rules 10.4 / 12.1 / 2.5 / 15.7 / 10.8 / 10.1 /
+   2.4 / 3.1 / 7.1 / 14.4) and ~95 per-site-judgement fixes (rules
+   8.9 / 17.7 / 17.8 / 15.5 / 5.6 / 8.4 / 22.10 / 8.6). The
+   mechanical sweep becomes a new dedicated story; the per-site
+   fixes distribute into S10.10–S10.17 with their owning
+   components.
+5. **Mechanical-sweep story slotting → deferred to S10.06.** The
+   new story exists in principle; S10.06 picks the number, slots
+   it in the cadence, and writes the issue.
+6. **Rule 11.8 (Mixed) + 21.10 / 21.6 (Investigate) per-site
+   review → deferred to S10.06.** The eleven 11.8 const-strip
+   sites need per-site Fix vs Deviate judgement; the four 21.10 /
+   21.6 banned-header findings need transitive-vs-direct
+   investigation. Both blocks of decisions land in S10.06.
+
+### `.clang-tidy` changes from the lock-ins
+
+- `MemberCase: camelBack` → `MemberCase: CamelCase` (decision 1).
+- New `GlobalFunctionIgnoredRegexp: '^SolidSyslog_[A-Z][A-Za-z0-9]*$'`
+  to accept the whole-library second shape (decision 2).
+- New `StructIgnoredRegexp:
+  '^(SolidSyslog|EscapedContext|BlockPresence|OpenHandle)$'`
+  whitelist for the opaque-impl tag and the three known Tier 2
+  helper tags (decision 3). clang-tidy uses POSIX extended regex
+  (no lookahead), so the whitelist is the simplest POSIX-clean
+  alternative. New Tier 2 helper structs join this list as they
+  are introduced — Tier 1 tags remain subject to the
+  `StructPrefix: SolidSyslog` rule.
+
+### `docs/NAMING.md` changes from the lock-ins
+
+- Tier 1 rewritten to state two shapes (decision 2).
+- Tier 2 extended to cover file-scope struct tags + the
+  opaque-impl exception (decision 3).
+- Tier 4 rewritten to PascalCase for all members (decision 1).
+- Worked example struct (`SolidSyslogBuffer`) updated to use
+  PascalCase data members.
+- Quick reference table updated.
+
+### MISRA verdict breakdown (unchanged in S10.05)
+
+| Verdict | Count |
+|---------|------:|
+| **Fix** — rule 5.9 (named target S10.08) | 168 |
+| **Fix** — other rules (sweeps S10.07+) | 221 |
+| **Deviate** — six structural deviations (D.002–D.006 land in S10.06) | 171 |
+| **Mixed** — rule 11.8 (per-site split in S10.06) | 11 |
+| **Investigate** — rules 21.10 / 21.6 (transitive-vs-direct in S10.06) | 4 |
+| **Total** | **575** |
+
+Six concentrated buckets account for **339 of 575 findings (59%)**
+— the named S10.08 sweep on rule 5.9 (168), plus the five
+structural deviations D.002–D.006 (109 + 54 + 4 + 2 + 2 = 171). The
+remainder (236 findings across 23 rules) is per-site cleanup split
+per the hybrid decision above.
+
+### Decisions deferred to S10.06
+
+- Writing D.002–D.006 deviation entries in
+  `docs/misra-deviations.md` with rationale and scope.
+- Naming and slotting the new "mechanical MISRA sweep" story.
+- Naming and slotting the new S10.07-sibling for the data-member
+  rename.
+- Per-site Fix-vs-Deviate split for rule 11.8 (11 findings).
+- Transitive-vs-direct investigation for rules 21.10 (3 findings)
+  and 21.6 (1 finding).
+- Owner-story refinement — the current per-rule owner-story
+  assignments are best-guesses; S10.06 reviews and revises.
+
+### Decisions deferred to S10.07 onwards
+
+- All 446 naming sweep targets and the 168 + 126 + 95 MISRA sweep
+  targets land in the per-component and per-pattern sweep stories.
+
 ## 2026-05-14 — S10.04 .clang-format tuning + tree-wide reformat (#363)
 
 Fourth foundation story of E10. Tunes `.clang-format` per the
