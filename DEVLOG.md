@@ -1,5 +1,104 @@
 # Dev Log
 
+## 2026-05-14 — S10.05 conformance audit + categorised backlog (#365)
+
+First story of E10's audit/decide phase. Generates fresh snapshots
+of the naming + MISRA findings on `main` HEAD and commits
+`docs/misra-conformance.md` — a concise per-rule backlog with a
+proposed verdict (Fix / Deviate / Disable / Re-categorise),
+rationale, and owner story for every rule with non-zero findings.
+
+### Headline data
+
+- **404** clang-tidy `readability-identifier-naming` warnings across
+  5 identifier kinds.
+- **575** cppcheck-misra findings across 29 MISRA C:2012 rules.
+
+### Verdict breakdown — naming
+
+| Verdict | Count |
+|---------|------:|
+| **Fix** (S10.07 sweep target) | 260 |
+| **Re-categorise** (NAMING.md amendments + `.clang-tidy` carve-outs in S10.06) | 144 |
+
+The biggest unit of naming work is the S10.07 enum-constant rename
+(SCREAMING_SNAKE → `Class_PascalCase`, plus the matching enum tag
+renames `SolidSyslog_Facility` → `SolidSyslogFacility`).
+
+The 144 re-categorisations are three distinct policy adjustments
+NAMING.md needs to make at S10.06:
+
+1. **Vtable function-pointer members** (128 of 144) — PascalCase
+   members like `buffer->Send(...)` are intentional; the convention
+   needs to be acknowledged.
+2. **Library-top-level functions** (12 — `SolidSyslog_Log`,
+   `SolidSyslog_Create`, etc.) — these don't fit `SolidSyslogClass_Function`
+   because the library itself is the class. NAMING.md needs to
+   describe the pattern.
+3. **File-scope (Tier 2) struct tags** (4 — `EscapedContext`,
+   `OpenHandle`, etc.) — NAMING.md Tier 2 does not require the
+   `SolidSyslog` prefix, but clang-tidy can't see linkage on
+   struct tags. `.clang-tidy` needs an IgnoredRegexp carve-out.
+
+### Verdict breakdown — MISRA
+
+| Verdict | Count |
+|---------|------:|
+| **Fix** — 5.9 (named target S10.08) | 168 |
+| **Fix** — other rules (sweeps S10.07+) | 221 |
+| **Deviate** — six structural deviations (D.002–D.006 + a single 5.9 residual deviation if needed) | 171 |
+| **Mixed** (per-site split during S10.06) | 11 |
+| **Investigate** (transitive header questions) | 4 |
+
+Six structural deviations together account for **531 of 575
+findings (92%)**:
+
+- D.002 — opaque-impl + caller-supplied-storage pattern (covers
+  rules 11.3, 11.2, 11.5 — 109 findings)
+- D.003 — no-typedef-struct convention (rule 5.7 — 54 findings)
+- D.004 — pointer arithmetic on record buffers (rule 18.4 — 4
+  findings, RecordStore only)
+- D.005 — flexible array members (rule 18.7 — 2 findings,
+  Formatter and CircularBuffer)
+- D.006 — C11 `<stdatomic.h>` use (rule 1.4 — 2 findings)
+- 5.9 sweep (rule 5.9 — 168, the bulk; resolves once S10.08
+  renames Tier 2 statics to `Class_Function` form; any residuals
+  become a smaller deviation if needed)
+
+The remaining 44 fix-target findings are diffuse mechanical
+cleanups (add `U` suffix to literals, use return values, add
+trailing `else`, etc.) — surface during S10.06 as a candidate for
+a dedicated "mechanical MISRA sweep" story or fold into the per-component
+sweeps in S10.10–S10.17.
+
+### Decisions
+
+- **The biggest piece of audit work isn't deciding fix-vs-deviate
+  on the headline rules**, which were predictable from project
+  conventions. It's the **144 naming re-categorisations** — three
+  places where NAMING.md is silent on patterns the code actually
+  uses (vtable members, library-top-level functions, private
+  Tier 2 structs). S10.06 has to amend NAMING.md before any sweep
+  can land cleanly.
+- **No raw-data commits.** Per the design discussion, snapshots
+  regenerate on demand. The doc is the human-audit view; the CI
+  artifacts (`cppcheck-misra-report.xml`) are the machine view.
+- **Top 2–3 noisiest sites per rule, not every file.** Keeps the
+  doc readable in a single sitting (~300 lines) vs an unsurveyable
+  per-file dump (~1000+).
+- **Sweep volume estimates are upper bounds.** Real fix counts will
+  shrink as S10.06 narrows Fix → Deviate during per-site review on
+  the mixed rules (11.8).
+
+### Deferred
+
+- All configuration changes (`.clang-tidy` carve-outs, deviations
+  in `docs/misra-deviations.md`, `misra_suppressions.txt` entries)
+  — land in S10.06.
+- All source-code changes — land in S10.07 onwards.
+- **NAMING.md amendments for the three re-categorisation
+  patterns** — land in S10.06 as a precondition for the sweeps.
+
 ## 2026-05-14 — S10.04 .clang-format tuning + tree-wide reformat (#363)
 
 Fourth foundation story of E10. Tunes `.clang-format` per the
