@@ -1,5 +1,93 @@
 # Dev Log
 
+## 2026-05-14 — S10.03 cppcheck-misra wired into CI (warning mode) (#361)
+
+Third foundation story of E10. Layers a cppcheck MISRA-addon pass on
+top of the existing `analyze-cppcheck` CI job in warning mode, so the
+rest of the epic (audit in S10.05, rule curation in S10.06) has
+diagnostics to work from.
+
+### Changes
+
+- **`.github/workflows/ci.yml`** — three new steps appended to the
+  `analyze-cppcheck` job:
+  1. `Run cppcheck-misra (warning mode)` — invokes
+     `cppcheck --addon=misra --suppressions-list=misra_suppressions.txt
+     --error-exitcode=0` over `Core/Source/` + `Platform/*/Source/`.
+     Diagnostics print to the CI log; the step is non-fatal.
+  2. `Generate cppcheck-misra XML report` — re-runs with
+     `--xml --xml-version=2` redirecting stderr to
+     `build/cppcheck-misra/cppcheck-misra-report.xml`.
+  3. `Upload cppcheck-misra report` — uploads the XML as the
+     `cppcheck-misra-report` artifact.
+- No CMake preset changes (the existing `cppcheck` preset stays as is).
+- No source-code changes. No suppression entries added —
+  `misra_suppressions.txt` stays empty, populated by S10.06.
+- No container bump — `misra.py` is already present at
+  `/usr/lib/x86_64-linux-gnu/cppcheck/addons/misra.py` in
+  `ghcr.io/davidcozens/cpputest:sha-18f19e1` (cppcheck 2.10).
+
+### Decisions
+
+- **Single job, two passes.** The existing non-MISRA cppcheck pass
+  stays in error mode (`--error-exitcode=1`); the new MISRA pass
+  runs alongside in warning mode (`--error-exitcode=0`). They
+  collapse to one invocation at S10.18 when MISRA flips back to
+  error mode and both passes have the same weight.
+- **No `--enable=warning` on the MISRA pass.** The misra addon
+  emits its findings regardless of enable flags; the non-MISRA pass
+  already owns the `warning` / `style` / `performance` / `portability`
+  diagnostics over `Core/Source/`. Including `--enable=warning` on
+  the MISRA pass would have created duplicate non-MISRA findings.
+- **Includes paths cover every `Platform/*/Interface/`.** Some are
+  shipped as INTERFACE libraries (FreeRtos, FatFs); cppcheck still
+  needs the headers on the include path to analyse the sources
+  meaningfully.
+- **No `summary`-job plumbing.** The `cppcheck-misra-report` artifact
+  uploads but is not surfaced via Quality Monitor — wiring 574
+  warnings into the PR-summary badge during a soft-freeze would
+  create misleading noise. The artifact is available on each run's
+  artifacts page for anyone investigating; that's enough for
+  warning mode.
+
+### Verification
+
+Ran the exact `cppcheck --addon=misra ...` invocation locally in the
+gcc container. **574 MISRA findings** surface across 29 distinct
+rules and 80 files, exit code 0, XML report writes cleanly (1728
+lines, 199 KB).
+
+Findings by directory: `Core/Source/` 260, `Platform/Windows/` 117,
+`Platform/Posix/` 112, `Platform/FreeRtos/` 38, `Core/Interface/` 20,
+`Platform/OpenSsl/` 14, `Platform/Atomics/` 7, `Platform/FatFs/` 6.
+
+Top rules: 5.9 (168, internal-linkage uniqueness, advisory — falls
+out of our cross-TU `Buffer_*` static-helper naming), 11.3 (95,
+unrelated-pointer-type casts — vtable / caller-supplied storage
+pattern), 10.4 (91, mixed essential-type operands — mostly `U`
+suffix territory), 8.9 (56, file-scope statics that should be
+block-scope), 5.7 (54, tag-name uniqueness — by design under our
+no-typedef-struct convention, deviation territory not fix territory).
+
+A meaningful slice of the 574 is structural (will deviate) rather
+than behavioural (will fix). The real fix-target population is
+probably 100–150; S10.05's audit triages.
+
+### Deferred
+
+- **Rule 5.1 63-character window.** The addon currently checks
+  against C99's 31-char window. Honouring deviation D.001 in
+  `misra.py` is a S10.06 task (custom `rule-texts.txt` override,
+  suppression entries, or whatever the curation story settles on).
+- **Suppressions file content.** `misra_suppressions.txt` stays
+  empty; S10.06 populates after the rule subset is curated.
+- **Widen existing non-MISRA cppcheck scope** from `Core/Source/`
+  alone to `Core/Source/ + Platform/*/Source/`. Tracked in
+  `project_e10_accumulated_scope` memory — lands at S10.18
+  alongside the flip-to-error / merge-the-passes work.
+- **Quality Monitor / PR-summary integration of MISRA findings.**
+  Deferred to whenever MISRA moves to error mode (S10.18).
+
 ## 2026-05-14 — S10.02 tier-model .clang-tidy files (warning mode) (#359)
 
 Stands up the per-tier `.clang-tidy` configuration described in
