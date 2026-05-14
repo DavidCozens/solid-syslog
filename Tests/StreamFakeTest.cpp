@@ -5,7 +5,7 @@
 #include "CppUTest/TestHarness.h"
 
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
-                               // macros
+    // macros
 
 // clang-format off
 TEST_GROUP(StreamFake)
@@ -27,16 +27,16 @@ TEST(StreamFake, CreateSucceeds)
 
 TEST(StreamFake, OpenIncrementsCount)
 {
-    SolidSyslogAddressStorage  storage = {0};
-    struct SolidSyslogAddress* addr    = SolidSyslogAddress_FromStorage(&storage);
+    SolidSyslogAddressStorage storage = {0};
+    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
     SolidSyslogStream_Open(stream, addr);
     CALLED_FAKE_ON(StreamFake_Open, stream, ONCE);
 }
 
 TEST(StreamFake, OpenCapturesAddr)
 {
-    SolidSyslogAddressStorage  storage = {0};
-    struct SolidSyslogAddress* addr    = SolidSyslogAddress_FromStorage(&storage);
+    SolidSyslogAddressStorage storage = {0};
+    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
     SolidSyslogStream_Open(stream, addr);
     POINTERS_EQUAL(addr, StreamFake_LastOpenAddr(stream));
 }
@@ -86,7 +86,7 @@ TEST(StreamFake, ReadCapturesSize)
 TEST(StreamFake, ReadReturnsConfiguredValue)
 {
     StreamFake_SetReadReturn(stream, 5);
-    char             buf[16];
+    char buf[16];
     SolidSyslogSsize n = SolidSyslogStream_Read(stream, buf, sizeof(buf));
     LONGS_EQUAL(5, n);
 }
@@ -99,15 +99,15 @@ TEST(StreamFake, CloseIncrementsCount)
 
 TEST(StreamFake, OpenDefaultsToSuccess)
 {
-    SolidSyslogAddressStorage  storage = {0};
-    struct SolidSyslogAddress* addr    = SolidSyslogAddress_FromStorage(&storage);
+    SolidSyslogAddressStorage storage = {0};
+    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
     CHECK_TRUE(SolidSyslogStream_Open(stream, addr));
 }
 
 TEST(StreamFake, SetOpenFailsMakesOpenReturnFalse)
 {
     StreamFake_SetOpenFails(stream, true);
-    SolidSyslogAddressStorage  storage = {0};
-    struct SolidSyslogAddress* addr    = SolidSyslogAddress_FromStorage(&storage);
+    SolidSyslogAddressStorage storage = {0};
+    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
 }

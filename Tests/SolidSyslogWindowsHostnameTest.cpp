@@ -12,7 +12,7 @@ enum
 };
 
 static const char* fakeHostname;
-static BOOL        fakeReturnValue;
+static BOOL fakeReturnValue;
 
 static BOOL WINAPI FakeGetComputerNameExA(COMPUTER_NAME_FORMAT nameType, LPSTR buffer, LPDWORD size)
 {
@@ -29,7 +29,7 @@ static BOOL WINAPI FakeGetComputerNameExA(COMPUTER_NAME_FORMAT nameType, LPSTR b
     }
     memcpy(buffer, fakeHostname, length);
     buffer[length] = '\0';
-    *size          = (DWORD) length;
+    *size = (DWORD) length;
     return TRUE;
 }
 
@@ -84,7 +84,7 @@ TEST(SolidSyslogWindowsHostname, HostnameTooLongForBufferProducesEmptyString)
     static char longName[261];
     memset(longName, 'x', 260);
     longName[260] = '\0';
-    fakeHostname  = longName;
+    fakeHostname = longName;
     SolidSyslogWindowsHostname_Get(formatter);
     STRCMP_EQUAL("", formatted());
 }

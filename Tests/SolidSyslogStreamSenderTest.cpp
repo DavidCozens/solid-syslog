@@ -15,7 +15,7 @@
 #include "CppUTest/TestHarness.h"
 
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
-                               // macros
+    // macros
 
 // clang-format off
 static const char* const TEST_HOST           = "127.0.0.1";
@@ -68,8 +68,8 @@ static const char* SpyGetHost()
 // per-test version reported by TestEndpointVersion; bump it between Sends to
 // drive fingerprint-reconnection tests.
 static const char* (*endpointGetHost)() = GetHost;
-static int (*endpointGetPort)()         = GetPort;
-static uint32_t endpointVersion         = 0;
+static int (*endpointGetPort)() = GetPort;
+static uint32_t endpointVersion = 0;
 
 static void TestEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
@@ -129,9 +129,9 @@ TEST(SolidSyslogStreamSender, CreateReturnsNonNull)
 
 TEST(SolidSyslogStreamSender, CreateReturnsHandleInsideCallerSuppliedStorage)
 {
-    SolidSyslogStreamSenderStorage       localStorage{};
+    SolidSyslogStreamSenderStorage localStorage{};
     struct SolidSyslogStreamSenderConfig localConfig = {resolver, stream, TestEndpoint, TestEndpointVersion};
-    struct SolidSyslogSender*            localSender = SolidSyslogStreamSender_Create(&localStorage, &localConfig);
+    struct SolidSyslogSender* localSender = SolidSyslogStreamSender_Create(&localStorage, &localConfig);
     POINTERS_EQUAL(&localStorage, localSender);
     SolidSyslogStreamSender_Destroy(localSender);
 }
@@ -630,7 +630,7 @@ TEST(SolidSyslogStreamSenderFailure, NoEndpointConfiguredConnectsToPortZero)
 {
     SolidSyslogStreamSender_Destroy(sender);
     struct SolidSyslogStreamSenderConfig configNoEndpoint = {resolver, stream, nullptr, nullptr};
-    struct SolidSyslogSender*            senderNoEndpoint = SolidSyslogStreamSender_Create(&senderStorage, &configNoEndpoint);
+    struct SolidSyslogSender* senderNoEndpoint = SolidSyslogStreamSender_Create(&senderStorage, &configNoEndpoint);
     SolidSyslogSender_Send(senderNoEndpoint, TEST_MESSAGE, TEST_MESSAGE_LEN);
     CALLED_FAKE(SocketFake_Connect, ONCE);
     LONGS_EQUAL(0, SocketFake_LastConnectPort());

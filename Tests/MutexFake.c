@@ -10,8 +10,8 @@ enum
 };
 
 static struct SolidSyslogMutex instance;
-static char                    sequence[SEQUENCE_CAPACITY];
-static size_t                  sequenceLength;
+static char sequence[SEQUENCE_CAPACITY];
+static size_t sequenceLength;
 
 static void Lock(struct SolidSyslogMutex* self);
 static void Unlock(struct SolidSyslogMutex* self);
@@ -20,7 +20,7 @@ static inline void Append(char marker)
 {
     if (sequenceLength + 1 < SEQUENCE_CAPACITY)
     {
-        sequence[sequenceLength]     = marker;
+        sequence[sequenceLength] = marker;
         sequence[sequenceLength + 1] = '\0';
         sequenceLength += 1;
     }
@@ -28,19 +28,19 @@ static inline void Append(char marker)
 
 struct SolidSyslogMutex* MutexFake_Create(void)
 {
-    instance.Lock   = Lock;
+    instance.Lock = Lock;
     instance.Unlock = Unlock;
-    sequence[0]     = '\0';
-    sequenceLength  = 0;
+    sequence[0] = '\0';
+    sequenceLength = 0;
     return &instance;
 }
 
 void MutexFake_Destroy(void)
 {
-    instance.Lock   = NULL;
+    instance.Lock = NULL;
     instance.Unlock = NULL;
-    sequence[0]     = '\0';
-    sequenceLength  = 0;
+    sequence[0] = '\0';
+    sequenceLength = 0;
 }
 
 const char* MutexFake_Sequence(void)

@@ -910,10 +910,12 @@ TEST(SolidSyslogFormatter, EscapedStringReplacesInvalidUtf8ByteWithReplacementCh
      * substitute it with U+FFFD via the shared UTF-8 core. The surrounding
      * ASCII rides through unescaped. The decoded budget must accommodate
      * the ASCII bytes plus U+FFFD's 3 decoded bytes. */
-    SolidSyslogFormatter_EscapedString(formatter,
-                                       "a\xC0"
-                                       "b",
-                                       5);
+    SolidSyslogFormatter_EscapedString(
+        formatter,
+        "a\xC0"
+        "b",
+        5
+    );
 
     CHECK_FORMATTED("a\xEF\xBF\xBD"
                     "b");
@@ -938,10 +940,12 @@ TEST(SolidSyslogFormatter, EscapedStringReplacementClaimsThreeBytesOfDecodedBudg
      * This pins both the 3-byte fit check and the += 3 advance for the
      * replacement branch; a regression to 1 in either would let the
      * trailing 'b' through. */
-    SolidSyslogFormatter_EscapedString(formatter,
-                                       "a\xC0"
-                                       "b",
-                                       4);
+    SolidSyslogFormatter_EscapedString(
+        formatter,
+        "a\xC0"
+        "b",
+        4
+    );
 
     CHECK_FORMATTED("a\xEF\xBF\xBD");
 }
@@ -985,30 +989,36 @@ TEST(SolidSyslogFormatter, PrintUsAsciiStringSubstitutesSpace)
 
 TEST(SolidSyslogFormatter, PrintUsAsciiStringSubstitutesControlCharacter)
 {
-    SolidSyslogFormatter_PrintUsAsciiString(formatter,
-                                            "a\x01"
-                                            "b",
-                                            3);
+    SolidSyslogFormatter_PrintUsAsciiString(
+        formatter,
+        "a\x01"
+        "b",
+        3
+    );
 
     CHECK_FORMATTED("a?b");
 }
 
 TEST(SolidSyslogFormatter, PrintUsAsciiStringSubstitutesDel)
 {
-    SolidSyslogFormatter_PrintUsAsciiString(formatter,
-                                            "a\x7F"
-                                            "b",
-                                            3);
+    SolidSyslogFormatter_PrintUsAsciiString(
+        formatter,
+        "a\x7F"
+        "b",
+        3
+    );
 
     CHECK_FORMATTED("a?b");
 }
 
 TEST(SolidSyslogFormatter, PrintUsAsciiStringSubstitutesHighBitByte)
 {
-    SolidSyslogFormatter_PrintUsAsciiString(formatter,
-                                            "a\xC3"
-                                            "b",
-                                            3);
+    SolidSyslogFormatter_PrintUsAsciiString(
+        formatter,
+        "a\xC3"
+        "b",
+        3
+    );
 
     CHECK_FORMATTED("a?b");
 }
@@ -1022,10 +1032,12 @@ TEST(SolidSyslogFormatter, PrintUsAsciiStringPassesBangAndTildeBoundariesThrough
 
 TEST(SolidSyslogFormatter, PrintUsAsciiStringTruncationBoundsSubstitution)
 {
-    SolidSyslogFormatter_PrintUsAsciiString(formatter,
-                                            "abc\x01"
-                                            "def",
-                                            3);
+    SolidSyslogFormatter_PrintUsAsciiString(
+        formatter,
+        "abc\x01"
+        "def",
+        3
+    );
 
     CHECK_FORMATTED("abc");
 }

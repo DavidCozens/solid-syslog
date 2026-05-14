@@ -2,7 +2,7 @@
 #include "CppUTest/TestHarness.h"
 
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
-                               // macros
+    // macros
 
 #include "SolidSyslogAddress.h"
 #include "SolidSyslogFreeRtosTcpStream.h"
@@ -16,11 +16,11 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 #include "FreeRTOS_IP.h"
 #include "FreeRTOS_Sockets.h"
 
-static const uint16_t   TEST_PORT              = 514;
-static const char       TEST_MESSAGE[]         = "hello";
-static const size_t     TEST_MESSAGE_LEN       = sizeof(TEST_MESSAGE) - 1U;
+static const uint16_t TEST_PORT = 514;
+static const char TEST_MESSAGE[] = "hello";
+static const size_t TEST_MESSAGE_LEN = sizeof(TEST_MESSAGE) - 1U;
 static const BaseType_t TEST_SHORT_WRITE_BYTES = 3;
-static const BaseType_t TEST_READ_BYTES        = 7;
+static const BaseType_t TEST_READ_BYTES = 7;
 
 // clang-format off
 TEST_GROUP(SolidSyslogFreeRtosTcpStream)

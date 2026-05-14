@@ -26,15 +26,15 @@ EXTERN_C_BEGIN
     typedef int(WSAAPI * WinsockTcpStreamSelectFn)(int, fd_set*, fd_set*, fd_set*, const struct timeval*);
     typedef int(WSAAPI * WinsockTcpStreamWSAGetLastErrorFn)(void);
 
-    extern WinsockTcpStreamSocketFn         WinsockTcpStream_socket;
-    extern WinsockTcpStreamConnectFn        WinsockTcpStream_connect;
-    extern WinsockTcpStreamSendFn           WinsockTcpStream_send;
-    extern WinsockTcpStreamRecvFn           WinsockTcpStream_recv;
-    extern WinsockTcpStreamSetSockOptFn     WinsockTcpStream_setsockopt;
-    extern WinsockTcpStreamGetSockOptFn     WinsockTcpStream_getsockopt;
-    extern WinsockTcpStreamCloseSocketFn    WinsockTcpStream_closesocket;
-    extern WinsockTcpStreamIoctlSocketFn    WinsockTcpStream_ioctlsocket;
-    extern WinsockTcpStreamSelectFn         WinsockTcpStream_select;
+    extern WinsockTcpStreamSocketFn WinsockTcpStream_socket;
+    extern WinsockTcpStreamConnectFn WinsockTcpStream_connect;
+    extern WinsockTcpStreamSendFn WinsockTcpStream_send;
+    extern WinsockTcpStreamRecvFn WinsockTcpStream_recv;
+    extern WinsockTcpStreamSetSockOptFn WinsockTcpStream_setsockopt;
+    extern WinsockTcpStreamGetSockOptFn WinsockTcpStream_getsockopt;
+    extern WinsockTcpStreamCloseSocketFn WinsockTcpStream_closesocket;
+    extern WinsockTcpStreamIoctlSocketFn WinsockTcpStream_ioctlsocket;
+    extern WinsockTcpStreamSelectFn WinsockTcpStream_select;
     extern WinsockTcpStreamWSAGetLastErrorFn WinsockTcpStream_WSAGetLastError;
 
 EXTERN_C_END

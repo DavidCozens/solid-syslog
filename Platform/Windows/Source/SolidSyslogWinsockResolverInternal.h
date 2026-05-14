@@ -15,7 +15,7 @@ EXTERN_C_BEGIN
     typedef int(WSAAPI * WinsockGetAddrInfoFn)(const char*, const char*, const struct addrinfo*, struct addrinfo**);
     typedef void(WSAAPI * WinsockFreeAddrInfoFn)(struct addrinfo*);
 
-    extern WinsockGetAddrInfoFn  Winsock_getaddrinfo;
+    extern WinsockGetAddrInfoFn Winsock_getaddrinfo;
     extern WinsockFreeAddrInfoFn Winsock_freeaddrinfo;
 
 EXTERN_C_END

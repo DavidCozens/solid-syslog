@@ -8,7 +8,7 @@ EXTERN_C_BEGIN
     struct SolidSyslogMutex;
 
     struct SolidSyslogMutex* SolidSyslogNullMutex_Create(void);
-    void                     SolidSyslogNullMutex_Destroy(void);
+    void SolidSyslogNullMutex_Destroy(void);
 
 EXTERN_C_END
 

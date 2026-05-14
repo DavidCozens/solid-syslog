@@ -19,10 +19,10 @@
 #include "CppUTest/TestHarness.h"
 
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
-                               // macros
+    // macros
 
-static int            SleepFakeCallCount;
-static int            lastSleepMs;
+static int SleepFakeCallCount;
+static int lastSleepMs;
 static volatile bool* sleepShutdownFlag;
 
 static void SleepFake(int milliseconds)
@@ -101,7 +101,7 @@ TEST(BddTargetServiceThread, DoesNotSendWhenBufferEmpty)
 
 TEST(BddTargetServiceThread, YieldsOneMillisecondAfterEachServiceTick)
 {
-    shutdown          = false;
+    shutdown = false;
     sleepShutdownFlag = &shutdown;
 
     BddTargetServiceThread_Run(&shutdown, SleepFake);

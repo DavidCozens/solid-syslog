@@ -19,8 +19,14 @@ enum
     GETADDRINFO_SUCCESS = 0
 };
 
-static bool Resolve(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, const char* host, uint16_t port, struct SolidSyslogAddress* result);
-static int  MapTransport(enum SolidSyslogTransport transport);
+static bool Resolve(
+    struct SolidSyslogResolver* self,
+    enum SolidSyslogTransport transport,
+    const char* host,
+    uint16_t port,
+    struct SolidSyslogAddress* result
+);
+static int MapTransport(enum SolidSyslogTransport transport);
 
 struct SolidSyslogGetAddrInfoResolver
 {
@@ -40,22 +46,28 @@ void SolidSyslogGetAddrInfoResolver_Destroy(void)
     instance.base.Resolve = NULL;
 }
 
-static bool Resolve(struct SolidSyslogResolver* self, enum SolidSyslogTransport transport, const char* host, uint16_t port, struct SolidSyslogAddress* result)
+static bool Resolve(
+    struct SolidSyslogResolver* self,
+    enum SolidSyslogTransport transport,
+    const char* host,
+    uint16_t port,
+    struct SolidSyslogAddress* result
+)
 {
     (void) self;
 
     struct addrinfo hints = {0};
-    hints.ai_family       = AF_INET;
-    hints.ai_socktype     = MapTransport(transport);
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = MapTransport(transport);
 
-    struct addrinfo* info     = NULL;
-    bool             resolved = false;
+    struct addrinfo* info = NULL;
+    bool resolved = false;
 
     if (getaddrinfo(host, NULL, &hints, &info) == GETADDRINFO_SUCCESS)
     {
         struct sockaddr_in* sin = SolidSyslogAddress_AsSockaddrIn(result);
-        *sin                    = *(struct sockaddr_in*) info->ai_addr;
-        sin->sin_port           = htons(port);
+        *sin = *(struct sockaddr_in*) info->ai_addr;
+        sin->sin_port = htons(port);
         freeaddrinfo(info);
         resolved = true;
     }

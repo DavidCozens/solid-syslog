@@ -2,7 +2,7 @@
 #include "CppUTest/TestHarness.h"
 
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
-                               // macros
+    // macros
 #include "WinsockFake.h"
 #include <cstring>
 #include <winsock2.h>
@@ -53,7 +53,14 @@ TEST(WinsockFake, SocketReturnsValidHandleOnSuccess)
 TEST(WinsockFake, SendtoRecordsBufferAndAddress)
 {
     SOCKET fd = WinsockFake_socket(AF_INET, SOCK_DGRAM, 0);
-    WinsockFake_sendto(fd, TEST_MESSAGE, TEST_MESSAGE_LEN, 0, (const struct sockaddr*) &destination, sizeof(destination));
+    WinsockFake_sendto(
+        fd,
+        TEST_MESSAGE,
+        TEST_MESSAGE_LEN,
+        0,
+        (const struct sockaddr*) &destination,
+        sizeof(destination)
+    );
     CALLED_FAKE(WinsockFake_Sendto, ONCE);
     STRCMP_EQUAL(TEST_MESSAGE, WinsockFake_LastBufAsString());
     LONGS_EQUAL(TEST_MESSAGE_LEN, (int) WinsockFake_LastLen());
@@ -65,13 +72,27 @@ TEST(WinsockFake, SendtoRecordsBufferAndAddress)
 TEST(WinsockFake, SendtoReturnsSocketErrorWhenFailing)
 {
     WinsockFake_SetSendtoFails(true);
-    int result = WinsockFake_sendto(INVALID_SOCKET, TEST_MESSAGE, TEST_MESSAGE_LEN, 0, (const struct sockaddr*) &destination, sizeof(destination));
+    int result = WinsockFake_sendto(
+        INVALID_SOCKET,
+        TEST_MESSAGE,
+        TEST_MESSAGE_LEN,
+        0,
+        (const struct sockaddr*) &destination,
+        sizeof(destination)
+    );
     LONGS_EQUAL(SOCKET_ERROR, result);
 }
 
 TEST(WinsockFake, SendtoReturnsLengthOnSuccess)
 {
-    int result = WinsockFake_sendto(INVALID_SOCKET, TEST_MESSAGE, TEST_MESSAGE_LEN, 0, (const struct sockaddr*) &destination, sizeof(destination));
+    int result = WinsockFake_sendto(
+        INVALID_SOCKET,
+        TEST_MESSAGE,
+        TEST_MESSAGE_LEN,
+        0,
+        (const struct sockaddr*) &destination,
+        sizeof(destination)
+    );
     LONGS_EQUAL(TEST_MESSAGE_LEN, result);
 }
 
@@ -86,8 +107,8 @@ TEST(WinsockFake, ClosesocketRecordsCall)
 TEST(WinsockFake, GetAddrInfoRecordsHostnameAndSocktype)
 {
     struct addrinfo hints = {0, 0, 0, 0, 0, nullptr, nullptr, nullptr};
-    hints.ai_socktype     = SOCK_DGRAM;
-    struct addrinfo* res  = nullptr;
+    hints.ai_socktype = SOCK_DGRAM;
+    struct addrinfo* res = nullptr;
     WinsockFake_getaddrinfo(TEST_HOST, nullptr, &hints, &res);
     CALLED_FAKE(WinsockFake_GetAddrInfo, ONCE);
     STRCMP_EQUAL(TEST_HOST, WinsockFake_LastGetAddrInfoHostname());
@@ -99,7 +120,7 @@ TEST(WinsockFake, GetAddrInfoReturnsFailureCode)
 {
     WinsockFake_SetGetAddrInfoFails(true);
     struct addrinfo* res = nullptr;
-    int              rc  = WinsockFake_getaddrinfo(TEST_HOST, nullptr, nullptr, &res);
+    int rc = WinsockFake_getaddrinfo(TEST_HOST, nullptr, nullptr, &res);
     LONGS_EQUAL(EAI_FAIL, rc);
 }
 
@@ -177,7 +198,7 @@ TEST(WinsockFake, SendAccessorsReturnEmptyForOutOfRangeIndex)
 
 TEST(WinsockFake, RecvRecordsCall)
 {
-    char   buf[16];
+    char buf[16];
     SOCKET fd = WinsockFake_socket(AF_INET, SOCK_STREAM, 0);
     WinsockFake_recv(fd, buf, sizeof(buf), 0);
     CALLED_FAKE(WinsockFake_Recv, ONCE);

@@ -14,9 +14,9 @@ enum
 /* Test CA / client identity for BDD. Paths are relative to the working
    directory the example is launched from (/workspaces/SolidSyslog in the
    BDD container). */
-static const char* const BDD_TARGET_MTLS_CA_BUNDLE_PATH         = "Bdd/syslog-ng/tls/ca.pem";
+static const char* const BDD_TARGET_MTLS_CA_BUNDLE_PATH = "Bdd/syslog-ng/tls/ca.pem";
 static const char* const BDD_TARGET_MTLS_CLIENT_CERT_CHAIN_PATH = "Bdd/syslog-ng/tls/client.pem";
-static const char* const BDD_TARGET_MTLS_CLIENT_KEY_PATH        = "Bdd/syslog-ng/tls/client.key";
+static const char* const BDD_TARGET_MTLS_CLIENT_KEY_PATH = "Bdd/syslog-ng/tls/client.key";
 
 static const char* mtlsHost = "syslog-ng";
 

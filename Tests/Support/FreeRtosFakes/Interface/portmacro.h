@@ -27,10 +27,10 @@
  * test never depends on these widths since it stores BaseType_t args verbatim
  * and forwards them to the fake, and all FreeRTOS socket constants are small
  * integers that fit any width. Real targets bring their own portmacro.h. */
-typedef long          BaseType_t;
+typedef long BaseType_t;
 typedef unsigned long UBaseType_t;
-typedef uint32_t      TickType_t;
-typedef uint32_t      StackType_t;
+typedef uint32_t TickType_t;
+typedef uint32_t StackType_t;
 
 /* Mandatory port constants referenced by FreeRTOS.h / list.h / task.h. */
 #define portMAX_DELAY ((TickType_t) 0xFFFFFFFFUL)

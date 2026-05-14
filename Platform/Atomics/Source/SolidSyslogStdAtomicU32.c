@@ -11,9 +11,14 @@ struct SolidSyslogAtomicU32
     _Atomic uint32_t value;
 };
 
-SOLIDSYSLOG_STATIC_ASSERT(sizeof(struct SolidSyslogAtomicU32) <= sizeof(SolidSyslogAtomicU32Storage), SolidSyslogAtomicU32Storage_too_small_for_StdAtomicU32);
-SOLIDSYSLOG_STATIC_ASSERT(_Alignof(struct SolidSyslogAtomicU32) <= _Alignof(SolidSyslogAtomicU32Storage),
-                          SolidSyslogAtomicU32Storage_misaligned_for_StdAtomicU32);
+SOLIDSYSLOG_STATIC_ASSERT(
+    sizeof(struct SolidSyslogAtomicU32) <= sizeof(SolidSyslogAtomicU32Storage),
+    SolidSyslogAtomicU32Storage_too_small_for_StdAtomicU32
+);
+SOLIDSYSLOG_STATIC_ASSERT(
+    _Alignof(struct SolidSyslogAtomicU32) <= _Alignof(SolidSyslogAtomicU32Storage),
+    SolidSyslogAtomicU32Storage_misaligned_for_StdAtomicU32
+);
 
 struct SolidSyslogAtomicU32* SolidSyslogAtomicU32_FromStorage(SolidSyslogAtomicU32Storage* storage)
 {
@@ -35,5 +40,11 @@ uint32_t SolidSyslogAtomicU32_Load(struct SolidSyslogAtomicU32* slot)
 bool SolidSyslogAtomicU32_CompareAndSwap(struct SolidSyslogAtomicU32* slot, uint32_t expected, uint32_t desired)
 {
     uint32_t expectedLocal = expected;
-    return atomic_compare_exchange_strong_explicit(&slot->value, &expectedLocal, desired, memory_order_relaxed, memory_order_relaxed);
+    return atomic_compare_exchange_strong_explicit(
+        &slot->value,
+        &expectedLocal,
+        desired,
+        memory_order_relaxed,
+        memory_order_relaxed
+    );
 }

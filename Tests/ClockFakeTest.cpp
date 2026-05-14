@@ -55,15 +55,15 @@ TEST(ClockFake, ClockGettimeFailureDoesNotModifyTimespec)
 
 TEST(ClockFake, GmtimeReturnsNonNullAfterReset)
 {
-    time_t    seconds = 0;
-    struct tm result  = {};
+    time_t seconds = 0;
+    struct tm result = {};
     CHECK(gmtime_r(&seconds, &result) != nullptr);
 }
 
 TEST(ClockFake, GmtimePopulatesResult)
 {
-    time_t    seconds = 1743552000;
-    struct tm result  = {};
+    time_t seconds = 1743552000;
+    struct tm result = {};
     gmtime_r(&seconds, &result);
     LONGS_EQUAL(2025 - 1900, result.tm_year);
 }
@@ -71,7 +71,7 @@ TEST(ClockFake, GmtimePopulatesResult)
 TEST(ClockFake, GmtimeFailureReturnsNull)
 {
     ClockFake_SetGmtimeReturn(nullptr);
-    time_t    seconds = 0;
-    struct tm result  = {};
+    time_t seconds = 0;
+    struct tm result = {};
     POINTERS_EQUAL(nullptr, gmtime_r(&seconds, &result));
 }

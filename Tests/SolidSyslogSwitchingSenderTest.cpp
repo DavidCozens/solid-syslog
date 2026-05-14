@@ -8,7 +8,7 @@
 #include "CppUTest/TestHarness.h"
 
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
-                               // macros
+    // macros
 
 /* Selector return values — named for the inner sender they select, so tests
  * read as `selectorReturn = INNER_B`. */
@@ -162,7 +162,7 @@ TEST(SolidSyslogSwitchingSender, DisconnectAfterSwitchForwardsToNewActive)
 
 TEST(SolidSyslogSwitchingSender, DisconnectAfterSelectorChangeWithoutSendForwardsToPreviouslyActive)
 {
-    Send("x", 1);             // currentSender becomes innerA
+    Send("x", 1); // currentSender becomes innerA
     selectorReturn = INNER_B; // selector flips, but no Send yet
     SolidSyslogSender_Disconnect(sender);
     // Disconnect does not re-consult the selector — it forwards to the

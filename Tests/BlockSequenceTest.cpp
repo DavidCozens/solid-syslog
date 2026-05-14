@@ -33,10 +33,10 @@ struct DeviceCall
 struct ScanFake
 {
     struct SolidSyslogBlockDevice base;
-    std::set<size_t>*             existing;
-    std::vector<DeviceCall>*      calls; /* optional — tests that don't care leave nullptr */
-    std::map<size_t, size_t>*     sizes; /* optional — tests that need realistic Size readings populate */
-    bool                          failNextDispose;
+    std::set<size_t>* existing;
+    std::vector<DeviceCall>* calls; /* optional — tests that don't care leave nullptr */
+    std::map<size_t, size_t>* sizes; /* optional — tests that need realistic Size readings populate */
+    bool failNextDispose;
 };
 
 inline ScanFake& ToFake(struct SolidSyslogBlockDevice* self)
@@ -125,7 +125,7 @@ bool FakeWriteAt(struct SolidSyslogBlockDevice* self, size_t blockIndex, size_t 
 size_t FakeSize(struct SolidSyslogBlockDevice* self, size_t blockIndex)
 {
     const ScanFake& fake = ToFake(self);
-    size_t          size = 0;
+    size_t size = 0;
 
     if (fake.sizes != nullptr)
     {
@@ -321,7 +321,7 @@ TEST(BlockSequenceRotation, RotationFailsWhenStaleBlockDisposeFails)
     fakeDevice.failNextDispose = true;
 
     bool readBlockChanged = false;
-    bool acquired         = BlockSequence_PrepareForWrite(&sequence, ROTATION_BLOCK_SIZE + 1, &readBlockChanged);
+    bool acquired = BlockSequence_PrepareForWrite(&sequence, ROTATION_BLOCK_SIZE + 1, &readBlockChanged);
 
     CHECK_FALSE(acquired);
     for (const auto& call : calls)

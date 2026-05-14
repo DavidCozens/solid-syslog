@@ -16,7 +16,7 @@ TEST(SolidSyslogAddress, FromStorageReturnsNonNull)
 
 TEST(SolidSyslogAddress, FromStorageReturnsSamePointerOnSuccessiveCalls)
 {
-    struct SolidSyslogAddress* first  = SolidSyslogAddress_FromStorage(&storage);
+    struct SolidSyslogAddress* first = SolidSyslogAddress_FromStorage(&storage);
     struct SolidSyslogAddress* second = SolidSyslogAddress_FromStorage(&storage);
     POINTERS_EQUAL(first, second);
 }

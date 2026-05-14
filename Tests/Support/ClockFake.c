@@ -7,22 +7,22 @@ struct timespec;
 struct tm;
 
 static time_t fakeSeconds;
-static long   fakeNanoseconds;
-static int    clockGettimeReturn;
-static int    gmtimeFailure;
+static long fakeNanoseconds;
+static int clockGettimeReturn;
+static int gmtimeFailure;
 
 void ClockFake_Reset(void)
 {
-    fakeSeconds        = 0;
-    fakeNanoseconds    = 0;
+    fakeSeconds = 0;
+    fakeNanoseconds = 0;
     clockGettimeReturn = 0;
-    gmtimeFailure      = 0;
+    gmtimeFailure = 0;
 }
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- mirrors POSIX timespec (seconds + nanoseconds)
 void ClockFake_SetTime(time_t seconds, long nanoseconds)
 {
-    fakeSeconds     = seconds;
+    fakeSeconds = seconds;
     fakeNanoseconds = nanoseconds;
 }
 
@@ -43,7 +43,7 @@ int clock_gettime(clockid_t clockId, struct timespec* tp)
     (void) clockId;
     if (clockGettimeReturn == 0)
     {
-        tp->tv_sec  = fakeSeconds;
+        tp->tv_sec = fakeSeconds;
         tp->tv_nsec = fakeNanoseconds;
     }
     return clockGettimeReturn;

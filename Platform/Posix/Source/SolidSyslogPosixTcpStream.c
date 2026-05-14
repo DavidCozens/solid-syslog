@@ -30,38 +30,40 @@ enum
        socket is idle. Worst case: 45 + 4 * 10 = 85 s before ETIMEDOUT.
        TCP_USER_TIMEOUT covers the pending-write case (where keepalive does
        not fire) by capping how long unacked data can sit in the send queue. */
-    KEEPALIVE_IDLE_SECONDS     = 45,
+    KEEPALIVE_IDLE_SECONDS = 45,
     KEEPALIVE_INTERVAL_SECONDS = 10,
-    KEEPALIVE_PROBE_COUNT      = 4,
-    USER_TIMEOUT_MILLISECONDS  = 30000
+    KEEPALIVE_PROBE_COUNT = 4,
+    USER_TIMEOUT_MILLISECONDS = 30000
 };
 
 struct SolidSyslogPosixTcpStream
 {
     struct SolidSyslogStream base;
-    int                      fd;
+    int fd;
 };
 
-static bool             Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr);
-static bool             Send(struct SolidSyslogStream* self, const void* buffer, size_t size);
+static bool Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr);
+static bool Send(struct SolidSyslogStream* self, const void* buffer, size_t size);
 static SolidSyslogSsize Read(struct SolidSyslogStream* self, void* buffer, size_t size);
-static void             Close(struct SolidSyslogStream* self);
+static void Close(struct SolidSyslogStream* self);
 
-static int         OpenAndConfigureSocket(void);
-static bool        ConfigureSocket(int fd);
-static void        EnableTcpNoDelay(int fd);
-static void        EnableKeepalive(int fd);
-static bool        SetNonBlocking(int fd);
+static int OpenAndConfigureSocket(void);
+static bool ConfigureSocket(int fd);
+static void EnableTcpNoDelay(int fd);
+static void EnableKeepalive(int fd);
+static bool SetNonBlocking(int fd);
 static inline bool IsFileDescriptorValid(int fd);
-static bool        ConnectOrCloseOnFailure(struct SolidSyslogPosixTcpStream* stream, const struct sockaddr_in* sin);
-static bool        Connect(int fd, const struct sockaddr_in* sin);
-static bool        WaitForConnectCompletion(int fd);
-static bool        ReadDeferredConnectError(int fd);
-static bool        WroteAllBytes(ssize_t sent, size_t expected);
+static bool ConnectOrCloseOnFailure(struct SolidSyslogPosixTcpStream* stream, const struct sockaddr_in* sin);
+static bool Connect(int fd, const struct sockaddr_in* sin);
+static bool WaitForConnectCompletion(int fd);
+static bool ReadDeferredConnectError(int fd);
+static bool WroteAllBytes(ssize_t sent, size_t expected);
 static inline bool WouldBlock(void);
 
-SOLIDSYSLOG_STATIC_ASSERT(sizeof(struct SolidSyslogPosixTcpStream) <= SOLIDSYSLOG_POSIX_TCP_STREAM_SIZE,
-                          "SOLIDSYSLOG_POSIX_TCP_STREAM_SIZE is too small for struct SolidSyslogPosixTcpStream");
+SOLIDSYSLOG_STATIC_ASSERT(
+    sizeof(struct SolidSyslogPosixTcpStream) <= SOLIDSYSLOG_POSIX_TCP_STREAM_SIZE,
+    "SOLIDSYSLOG_POSIX_TCP_STREAM_SIZE is too small for struct SolidSyslogPosixTcpStream"
+);
 
 static const struct SolidSyslogPosixTcpStream DEFAULT_INSTANCE = {
     {Open, Send, Read, Close},
@@ -76,7 +78,7 @@ static const struct SolidSyslogPosixTcpStream DESTROYED_INSTANCE = {
 struct SolidSyslogStream* SolidSyslogPosixTcpStream_Create(SolidSyslogPosixTcpStreamStorage* storage)
 {
     struct SolidSyslogPosixTcpStream* stream = (struct SolidSyslogPosixTcpStream*) storage;
-    *stream                                  = DEFAULT_INSTANCE;
+    *stream = DEFAULT_INSTANCE;
     return &stream->base;
 }
 
@@ -89,9 +91,9 @@ void SolidSyslogPosixTcpStream_Destroy(struct SolidSyslogStream* stream)
 
 static bool Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr)
 {
-    struct SolidSyslogPosixTcpStream* stream    = (struct SolidSyslogPosixTcpStream*) self;
-    const struct sockaddr_in*         sin       = SolidSyslogAddress_AsConstSockaddrIn(addr);
-    bool                              connected = false;
+    struct SolidSyslogPosixTcpStream* stream = (struct SolidSyslogPosixTcpStream*) self;
+    const struct sockaddr_in* sin = SolidSyslogAddress_AsConstSockaddrIn(addr);
+    bool connected = false;
 
     stream->fd = OpenAndConfigureSocket();
     if (IsFileDescriptorValid(stream->fd))
@@ -135,10 +137,10 @@ static void EnableTcpNoDelay(int fd)
  * other POSIX targets are out of scope until we actually port to one. */
 static void EnableKeepalive(int fd)
 {
-    int enable      = 1;
-    int idle        = KEEPALIVE_IDLE_SECONDS;
-    int interval    = KEEPALIVE_INTERVAL_SECONDS;
-    int count       = KEEPALIVE_PROBE_COUNT;
+    int enable = 1;
+    int idle = KEEPALIVE_IDLE_SECONDS;
+    int interval = KEEPALIVE_INTERVAL_SECONDS;
+    int count = KEEPALIVE_PROBE_COUNT;
     int userTimeout = USER_TIMEOUT_MILLISECONDS;
 
     setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &enable, sizeof(enable));
@@ -179,7 +181,7 @@ static bool ConnectOrCloseOnFailure(struct SolidSyslogPosixTcpStream* stream, co
 static bool Connect(int fd, const struct sockaddr_in* sin)
 {
     bool connected = false;
-    int  rc        = connect(fd, (const struct sockaddr*) sin, sizeof(*sin));
+    int rc = connect(fd, (const struct sockaddr*) sin, sizeof(*sin));
 
     if (rc == 0)
     {
@@ -210,17 +212,17 @@ static bool WaitForConnectCompletion(int fd)
 
 static bool ReadDeferredConnectError(int fd)
 {
-    int       err    = 0;
+    int err = 0;
     socklen_t errlen = (socklen_t) sizeof(err);
-    int       rc     = getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &errlen);
+    int rc = getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &errlen);
     return (rc == 0) && (err == 0);
 }
 
 static bool Send(struct SolidSyslogStream* self, const void* buffer, size_t size)
 {
     struct SolidSyslogPosixTcpStream* stream = (struct SolidSyslogPosixTcpStream*) self;
-    ssize_t                           sent   = send(stream->fd, buffer, size, MSG_NOSIGNAL);
-    bool                              ok     = WroteAllBytes(sent, size);
+    ssize_t sent = send(stream->fd, buffer, size, MSG_NOSIGNAL);
+    bool ok = WroteAllBytes(sent, size);
 
     if (!ok)
     {
@@ -239,8 +241,8 @@ static bool WroteAllBytes(ssize_t sent, size_t expected)
 static SolidSyslogSsize Read(struct SolidSyslogStream* self, void* buffer, size_t size)
 {
     struct SolidSyslogPosixTcpStream* stream = (struct SolidSyslogPosixTcpStream*) self;
-    ssize_t                           n      = recv(stream->fd, buffer, size, 0);
-    SolidSyslogSsize                  result = -1;
+    ssize_t n = recv(stream->fd, buffer, size, 0);
+    SolidSyslogSsize result = -1;
 
     if (n > 0)
     {

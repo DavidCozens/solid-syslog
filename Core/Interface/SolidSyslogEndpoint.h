@@ -15,7 +15,7 @@ EXTERN_C_BEGIN
     struct SolidSyslogEndpoint
     {
         struct SolidSyslogFormatter* host; /* library-provided; user writes destination host into it */
-        uint16_t                     port; /* user assigns destination port */
+        uint16_t port; /* user assigns destination port */
     };
 
     typedef void (*SolidSyslogEndpointFunction)(struct SolidSyslogEndpoint* endpoint);

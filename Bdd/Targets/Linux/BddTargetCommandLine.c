@@ -7,21 +7,21 @@
 
 enum
 {
-    DEFAULT_MAX_BLOCKS     = 10,
+    DEFAULT_MAX_BLOCKS = 10,
     DEFAULT_MAX_BLOCK_SIZE = 65536,
-    OPT_MAX_BLOCKS         = 256,
-    OPT_MAX_BLOCK_SIZE     = 257,
-    OPT_DISCARD_POLICY     = 258,
-    OPT_NO_SD              = 259,
-    OPT_HALT_EXIT          = 260,
+    OPT_MAX_BLOCKS = 256,
+    OPT_MAX_BLOCK_SIZE = 257,
+    OPT_DISCARD_POLICY = 258,
+    OPT_NO_SD = 259,
+    OPT_HALT_EXIT = 260,
     OPT_CAPACITY_THRESHOLD = 261,
-    OPT_APP_NAME           = 262
+    OPT_APP_NAME = 262
 };
 
 static bool ParsePositiveNumber(const char* str, size_t* result)
 {
-    char* end   = NULL;
-    long  value = strtol(str, &end, 10);
+    char* end = NULL;
+    long value = strtol(str, &end, 10);
 
     if ((*str == '\0') || (*end != '\0') || (value < 0))
     {
@@ -39,19 +39,19 @@ static bool IsValidDiscardPolicy(const char* policy)
 
 int BddTargetCommandLine_Parse(int argc, char* argv[], struct BddTargetOptions* options)
 {
-    options->facility          = SOLIDSYSLOG_FACILITY_LOCAL0;
-    options->severity          = SOLIDSYSLOG_SEVERITY_INFO;
-    options->messageId         = NULL;
-    options->msg               = NULL;
-    options->appName           = NULL;
-    options->transport         = "udp";
-    options->store             = "null";
-    options->maxBlocks         = DEFAULT_MAX_BLOCKS;
-    options->maxBlockSize      = DEFAULT_MAX_BLOCK_SIZE;
-    options->discardPolicy     = "oldest";
+    options->facility = SOLIDSYSLOG_FACILITY_LOCAL0;
+    options->severity = SOLIDSYSLOG_SEVERITY_INFO;
+    options->messageId = NULL;
+    options->msg = NULL;
+    options->appName = NULL;
+    options->transport = "udp";
+    options->store = "null";
+    options->maxBlocks = DEFAULT_MAX_BLOCKS;
+    options->maxBlockSize = DEFAULT_MAX_BLOCK_SIZE;
+    options->discardPolicy = "oldest";
     options->capacityThreshold = 0;
-    options->noSd              = false;
-    options->haltExit          = false;
+    options->noSd = false;
+    options->haltExit = false;
 
     static struct option longOptions[] = {
         {"facility", required_argument, NULL, 'f'},
@@ -88,7 +88,8 @@ int BddTargetCommandLine_Parse(int argc, char* argv[], struct BddTargetOptions* 
                 options->msg = optarg;
                 break;
             case 't':
-                if ((strcmp(optarg, "udp") != 0) && (strcmp(optarg, "tcp") != 0) && (strcmp(optarg, "tls") != 0) && (strcmp(optarg, "mtls") != 0))
+                if ((strcmp(optarg, "udp") != 0) && (strcmp(optarg, "tcp") != 0) && (strcmp(optarg, "tls") != 0) &&
+                    (strcmp(optarg, "mtls") != 0))
                 {
                     return 1;
                 }

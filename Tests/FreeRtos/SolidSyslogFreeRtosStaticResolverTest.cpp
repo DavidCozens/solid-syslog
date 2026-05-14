@@ -9,10 +9,10 @@
 #include "FreeRTOS_IP.h"
 #include "FreeRTOS_Sockets.h"
 
-static const uint8_t  TEST_OCTETS[4]      = {10, 0, 2, 2};
-static const uint16_t TEST_PORT           = 514;
+static const uint8_t TEST_OCTETS[4] = {10, 0, 2, 2};
+static const uint16_t TEST_PORT = 514;
 static const uint16_t TEST_ALTERNATE_PORT = 9999;
-static const char*    IGNORED_HOST        = "ignored.example.com";
+static const char* IGNORED_HOST = "ignored.example.com";
 
 // clang-format off
 TEST_GROUP(SolidSyslogFreeRtosStaticResolver)

@@ -12,10 +12,10 @@
 struct TlsTestServer
 {
     SSL_CTX* ctx;
-    SSL*     ssl;
-    BIO*     serverBio;
-    BIO*     clientBio;
-    bool     handshakeComplete;
+    SSL* ssl;
+    BIO* serverBio;
+    BIO* clientBio;
+    bool handshakeComplete;
 };
 
 struct TlsTestServer* TlsTestServer_Create(const struct TlsTestServerConfig* config)

@@ -12,37 +12,42 @@ struct SolidSyslogFormatter;
 struct SolidSyslogTimeQualitySd
 {
     struct SolidSyslogStructuredData base;
-    SolidSyslogTimeQualityFunction   getTimeQuality;
+    SolidSyslogTimeQualityFunction getTimeQuality;
 };
 
-static void        Format(struct SolidSyslogStructuredData* self, struct SolidSyslogFormatter* formatter);
-static inline void FormatBoolParam(struct SolidSyslogFormatter* formatter, const char* name, size_t nameLength, bool value);
+static void Format(struct SolidSyslogStructuredData* self, struct SolidSyslogFormatter* formatter);
+static inline void FormatBoolParam(
+    struct SolidSyslogFormatter* formatter,
+    const char* name,
+    size_t nameLength,
+    bool value
+);
 static inline void FormatSyncAccuracy(struct SolidSyslogFormatter* formatter, uint32_t value);
 
 static struct SolidSyslogTimeQualitySd instance;
 
 struct SolidSyslogStructuredData* SolidSyslogTimeQualitySd_Create(SolidSyslogTimeQualityFunction getTimeQuality)
 {
-    instance.base.Format    = Format;
+    instance.base.Format = Format;
     instance.getTimeQuality = getTimeQuality;
     return &instance.base;
 }
 
 void SolidSyslogTimeQualitySd_Destroy(void)
 {
-    instance.base.Format    = NULL;
+    instance.base.Format = NULL;
     instance.getTimeQuality = NULL;
 }
 
-static const char SD_PREFIX[]           = "[timeQuality";
-static const char PARAM_TZ_KNOWN[]      = " tzKnown";
-static const char PARAM_IS_SYNCED[]     = " isSynced";
+static const char SD_PREFIX[] = "[timeQuality";
+static const char PARAM_TZ_KNOWN[] = " tzKnown";
+static const char PARAM_IS_SYNCED[] = " isSynced";
 static const char PARAM_SYNC_ACCURACY[] = " syncAccuracy=\"";
 
 static void Format(struct SolidSyslogStructuredData* self, struct SolidSyslogFormatter* formatter)
 {
     struct SolidSyslogTimeQualitySd* tq = (struct SolidSyslogTimeQualitySd*) self;
-    struct SolidSyslogTimeQuality    q  = {0};
+    struct SolidSyslogTimeQuality q = {0};
 
     tq->getTimeQuality(&q);
 
@@ -53,7 +58,12 @@ static void Format(struct SolidSyslogStructuredData* self, struct SolidSyslogFor
     SolidSyslogFormatter_AsciiCharacter(formatter, ']');
 }
 
-static inline void FormatBoolParam(struct SolidSyslogFormatter* formatter, const char* name, size_t nameLength, bool value)
+static inline void FormatBoolParam(
+    struct SolidSyslogFormatter* formatter,
+    const char* name,
+    size_t nameLength,
+    bool value
+)
 {
     SolidSyslogFormatter_BoundedString(formatter, name, nameLength);
     SolidSyslogFormatter_AsciiCharacter(formatter, '=');

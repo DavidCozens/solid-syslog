@@ -10,7 +10,7 @@ static void NoOpErrorHandler(void* context, enum SolidSyslog_Severity severity, 
 }
 
 static SolidSyslogErrorHandler currentHandler = NoOpErrorHandler;
-static void*                   currentContext = NULL;
+static void* currentContext = NULL;
 
 void SolidSyslog_SetErrorHandler(SolidSyslogErrorHandler handler, void* context)
 {

@@ -10,13 +10,13 @@ struct SolidSyslogEndpoint;
 EXTERN_C_BEGIN
 
     const char* BddTargetMtlsConfig_GetHost(void);
-    uint16_t    BddTargetMtlsConfig_GetPort(void);
+    uint16_t BddTargetMtlsConfig_GetPort(void);
     const char* BddTargetMtlsConfig_GetCaBundlePath(void);
     const char* BddTargetMtlsConfig_GetServerName(void);
     const char* BddTargetMtlsConfig_GetClientCertChainPath(void);
     const char* BddTargetMtlsConfig_GetClientKeyPath(void);
-    void        BddTargetMtlsConfig_GetEndpoint(struct SolidSyslogEndpoint * endpoint);
-    uint32_t    BddTargetMtlsConfig_GetEndpointVersion(void);
+    void BddTargetMtlsConfig_GetEndpoint(struct SolidSyslogEndpoint * endpoint);
+    uint32_t BddTargetMtlsConfig_GetEndpointVersion(void);
 
     /* Override the default mTLS host ("syslog-ng" — Linux compose service
        name). Caller owns the string lifetime. Used by per-platform main.c

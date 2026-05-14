@@ -20,7 +20,7 @@ EXTERN_C_BEGIN
     } SolidSyslogWindowsMutexStorage;
 
     struct SolidSyslogMutex* SolidSyslogWindowsMutex_Create(SolidSyslogWindowsMutexStorage * storage);
-    void                     SolidSyslogWindowsMutex_Destroy(struct SolidSyslogMutex * mutex);
+    void SolidSyslogWindowsMutex_Destroy(struct SolidSyslogMutex * mutex);
 
 EXTERN_C_END
 

@@ -8,7 +8,10 @@ EXTERN_C_BEGIN
     struct SolidSyslogFormatter;
     struct SolidSyslogStructuredData;
 
-    void SolidSyslogStructuredData_Format(struct SolidSyslogStructuredData * sd, struct SolidSyslogFormatter * formatter);
+    void SolidSyslogStructuredData_Format(
+        struct SolidSyslogStructuredData * sd,
+        struct SolidSyslogFormatter * formatter
+    );
 
 EXTERN_C_END
 

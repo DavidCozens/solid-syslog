@@ -19,17 +19,34 @@ bool SolidSyslogBlockDevice_Exists(struct SolidSyslogBlockDevice* device, size_t
     return device->Exists(device, blockIndex);
 }
 
-bool SolidSyslogBlockDevice_Read(struct SolidSyslogBlockDevice* device, size_t blockIndex, size_t offset, void* buf, size_t count)
+bool SolidSyslogBlockDevice_Read(
+    struct SolidSyslogBlockDevice* device,
+    size_t blockIndex,
+    size_t offset,
+    void* buf,
+    size_t count
+)
 {
     return device->Read(device, blockIndex, offset, buf, count);
 }
 
-bool SolidSyslogBlockDevice_Append(struct SolidSyslogBlockDevice* device, size_t blockIndex, const void* buf, size_t count)
+bool SolidSyslogBlockDevice_Append(
+    struct SolidSyslogBlockDevice* device,
+    size_t blockIndex,
+    const void* buf,
+    size_t count
+)
 {
     return device->Append(device, blockIndex, buf, count);
 }
 
-bool SolidSyslogBlockDevice_WriteAt(struct SolidSyslogBlockDevice* device, size_t blockIndex, size_t offset, const void* buf, size_t count)
+bool SolidSyslogBlockDevice_WriteAt(
+    struct SolidSyslogBlockDevice* device,
+    size_t blockIndex,
+    size_t offset,
+    const void* buf,
+    size_t count
+)
 {
     return device->WriteAt(device, blockIndex, offset, buf, count);
 }

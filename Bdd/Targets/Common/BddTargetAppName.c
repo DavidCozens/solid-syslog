@@ -13,7 +13,7 @@ enum
 };
 
 static const char* appName;
-static size_t      appNameLength;
+static size_t appNameLength;
 
 static bool EndsWithDotExe(const char* name, size_t length)
 {
@@ -23,8 +23,8 @@ static bool EndsWithDotExe(const char* name, size_t length)
     }
 
     const char* suffix = name + length - EXE_SUFFIX_LENGTH;
-    return (suffix[0] == '.') && (tolower((unsigned char) suffix[1]) == 'e') && (tolower((unsigned char) suffix[2]) == 'x') &&
-           (tolower((unsigned char) suffix[3]) == 'e');
+    return (suffix[0] == '.') && (tolower((unsigned char) suffix[1]) == 'e') &&
+           (tolower((unsigned char) suffix[2]) == 'x') && (tolower((unsigned char) suffix[3]) == 'e');
 }
 
 void BddTargetAppName_Set(const char* argv0)
@@ -32,8 +32,8 @@ void BddTargetAppName_Set(const char* argv0)
     /* Avoid relational compare on a NULL pointer (UB in ISO C) by handling
        NULL separators explicitly before picking the rightmost. */
     const char* forwardSlash = strrchr(argv0, '/');
-    const char* backSlash    = strrchr(argv0, '\\');
-    const char* separator    = NULL;
+    const char* backSlash = strrchr(argv0, '\\');
+    const char* separator = NULL;
 
     if (forwardSlash == NULL)
     {
@@ -48,7 +48,7 @@ void BddTargetAppName_Set(const char* argv0)
         separator = (forwardSlash > backSlash) ? forwardSlash : backSlash;
     }
 
-    appName       = (separator != NULL) ? separator + 1 : argv0;
+    appName = (separator != NULL) ? separator + 1 : argv0;
     appNameLength = strlen(appName);
 
     if (EndsWithDotExe(appName, appNameLength))

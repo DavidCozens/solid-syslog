@@ -30,7 +30,7 @@ TEST(SolidSyslogNullStore, HasUnsentReturnsFalse)
 
 TEST(SolidSyslogNullStore, ReadNextUnsentReturnsFalse)
 {
-    char   data[512];
+    char data[512];
     size_t bytesRead = 0;
     CHECK_FALSE(SolidSyslogStore_ReadNextUnsent(store, data, sizeof(data), &bytesRead));
 }

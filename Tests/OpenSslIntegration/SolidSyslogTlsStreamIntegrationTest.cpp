@@ -130,8 +130,8 @@ static const char* const LOCALHOST_SANS[] = {"localhost", nullptr};
 TEST(TlsStreamIntegration, HandshakeSucceedsAgainstTrustedServerCert)
 {
     struct TlsTestCertConfig certConfig = {};
-    certConfig.commonName               = "localhost";
-    certConfig.subjectAltDnsNames       = LOCALHOST_SANS;
+    certConfig.commonName = "localhost";
+    certConfig.subjectAltDnsNames = LOCALHOST_SANS;
     buildScenario(certConfig);
 
     CHECK_TRUE(SolidSyslogStream_Open(tlsStream, addr));
@@ -140,10 +140,10 @@ TEST(TlsStreamIntegration, HandshakeSucceedsAgainstTrustedServerCert)
 TEST(TlsStreamIntegration, HandshakeRejectedWhenServerCertIsExpired)
 {
     struct TlsTestCertConfig certConfig = {};
-    certConfig.commonName               = "localhost";
-    certConfig.subjectAltDnsNames       = LOCALHOST_SANS;
-    certConfig.notBefore                = std::time(nullptr) - 7200;
-    certConfig.notAfter                 = std::time(nullptr) - 3600;
+    certConfig.commonName = "localhost";
+    certConfig.subjectAltDnsNames = LOCALHOST_SANS;
+    certConfig.notBefore = std::time(nullptr) - 7200;
+    certConfig.notAfter = std::time(nullptr) - 3600;
     buildScenario(certConfig);
 
     CHECK_FALSE(SolidSyslogStream_Open(tlsStream, addr));
@@ -152,9 +152,9 @@ TEST(TlsStreamIntegration, HandshakeRejectedWhenServerCertIsExpired)
 TEST(TlsStreamIntegration, HandshakeRejectedWhenServerCertHostnameDoesNotMatch)
 {
     static const char* const otherSans[] = {"someone-else.example", nullptr};
-    struct TlsTestCertConfig certConfig  = {};
-    certConfig.commonName                = "someone-else.example";
-    certConfig.subjectAltDnsNames        = otherSans;
+    struct TlsTestCertConfig certConfig = {};
+    certConfig.commonName = "someone-else.example";
+    certConfig.subjectAltDnsNames = otherSans;
     buildScenario(certConfig); /* client.serverName defaults to "localhost" */
 
     CHECK_FALSE(SolidSyslogStream_Open(tlsStream, addr));
@@ -163,8 +163,8 @@ TEST(TlsStreamIntegration, HandshakeRejectedWhenServerCertHostnameDoesNotMatch)
 TEST(TlsStreamIntegration, HandshakeRejectedWhenClientDoesNotTrustServerCert)
 {
     struct TlsTestCertConfig certConfig = {};
-    certConfig.commonName               = "localhost";
-    certConfig.subjectAltDnsNames       = LOCALHOST_SANS;
+    certConfig.commonName = "localhost";
+    certConfig.subjectAltDnsNames = LOCALHOST_SANS;
     buildScenario(certConfig);
 
     /* Overwrite the client's trust file with an unrelated self-signed cert
@@ -172,8 +172,8 @@ TEST(TlsStreamIntegration, HandshakeRejectedWhenClientDoesNotTrustServerCert)
      * file is loaded on Open, so this replacement takes effect for the next
      * handshake attempt. */
     struct TlsTestCertConfig untrustedConfig = {};
-    untrustedConfig.commonName               = "some-other-entity.example";
-    struct TlsTestCert untrusted             = {};
+    untrustedConfig.commonName = "some-other-entity.example";
+    struct TlsTestCert untrusted = {};
     TlsTestCert_Create(&untrustedConfig, &untrusted);
     TlsTestCert_WritePemToFile(&untrusted, caPath);
 
@@ -185,9 +185,9 @@ TEST(TlsStreamIntegration, HandshakeRejectedWhenClientDoesNotTrustServerCert)
 TEST(TlsStreamIntegration, HandshakeRejectedWhenCipherListIsUnsupported)
 {
     struct TlsTestCertConfig certConfig = {};
-    certConfig.commonName               = "localhost";
-    certConfig.subjectAltDnsNames       = LOCALHOST_SANS;
-    tlsConfig.cipherList                = "NOT-A-REAL-CIPHER";
+    certConfig.commonName = "localhost";
+    certConfig.subjectAltDnsNames = LOCALHOST_SANS;
+    tlsConfig.cipherList = "NOT-A-REAL-CIPHER";
     buildScenario(certConfig);
 
     CHECK_FALSE(SolidSyslogStream_Open(tlsStream, addr));
@@ -203,8 +203,8 @@ TEST(TlsStreamIntegration, MutualTlsHandshakeSucceedsWithClientCertSignedByTrust
     stageClientIdentity(&clientCa);
 
     struct TlsTestCertConfig serverCertConfig = {};
-    serverCertConfig.commonName               = "localhost";
-    serverCertConfig.subjectAltDnsNames       = LOCALHOST_SANS;
+    serverCertConfig.commonName = "localhost";
+    serverCertConfig.subjectAltDnsNames = LOCALHOST_SANS;
     buildScenario(serverCertConfig, "localhost", &clientCa);
 
     bool opened = SolidSyslogStream_Open(tlsStream, addr);
@@ -221,8 +221,8 @@ TEST(TlsStreamIntegration, MutualTlsHandshakeRejectedWhenClientSendsNoCert)
     /* Client config intentionally leaves clientCertChainPath / clientKeyPath NULL. */
 
     struct TlsTestCertConfig serverCertConfig = {};
-    serverCertConfig.commonName               = "localhost";
-    serverCertConfig.subjectAltDnsNames       = LOCALHOST_SANS;
+    serverCertConfig.commonName = "localhost";
+    serverCertConfig.subjectAltDnsNames = LOCALHOST_SANS;
     buildScenario(serverCertConfig, "localhost", &clientCa);
 
     CHECK_FALSE(SolidSyslogStream_Open(tlsStream, addr));
@@ -237,14 +237,14 @@ TEST(TlsStreamIntegration, MutualTlsOpenFailsLocallyWhenClientKeyDoesNotMatchCer
      * SSL_CTX_check_private_key should reject the pairing before any bytes
      * hit the server. */
     struct TlsTestCertConfig strayConfig = {};
-    strayConfig.commonName               = "unrelated";
-    struct TlsTestCert strayCert         = {};
+    strayConfig.commonName = "unrelated";
+    struct TlsTestCert strayCert = {};
     TlsTestCert_Create(&strayConfig, &strayCert);
     TlsTestCert_WritePrivateKeyPemToFile(&strayCert, clientKeyPath);
 
     struct TlsTestCertConfig serverCertConfig = {};
-    serverCertConfig.commonName               = "localhost";
-    serverCertConfig.subjectAltDnsNames       = LOCALHOST_SANS;
+    serverCertConfig.commonName = "localhost";
+    serverCertConfig.subjectAltDnsNames = LOCALHOST_SANS;
     buildScenario(serverCertConfig, "localhost", &clientCa);
 
     CHECK_FALSE(SolidSyslogStream_Open(tlsStream, addr));
@@ -258,14 +258,14 @@ TEST(TlsStreamIntegration, MutualTlsHandshakeRejectedWhenClientCertSignedByUntru
     /* Client cert is signed by a throwaway CA that the server never learns
      * about — the server's trust store only has `clientCa`. */
     struct TlsTestCertConfig untrustedCaConfig = {};
-    untrustedCaConfig.commonName               = "Untrusted Client CA";
-    struct TlsTestCert untrustedCa             = {};
+    untrustedCaConfig.commonName = "Untrusted Client CA";
+    struct TlsTestCert untrustedCa = {};
     TlsTestCert_Create(&untrustedCaConfig, &untrustedCa);
     stageClientIdentity(&untrustedCa);
 
     struct TlsTestCertConfig serverCertConfig = {};
-    serverCertConfig.commonName               = "localhost";
-    serverCertConfig.subjectAltDnsNames       = LOCALHOST_SANS;
+    serverCertConfig.commonName = "localhost";
+    serverCertConfig.subjectAltDnsNames = LOCALHOST_SANS;
     buildScenario(serverCertConfig, "localhost", &clientCa);
 
     CHECK_FALSE(SolidSyslogStream_Open(tlsStream, addr));

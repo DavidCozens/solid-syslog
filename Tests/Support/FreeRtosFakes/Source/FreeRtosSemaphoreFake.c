@@ -1,16 +1,16 @@
 #include "FreeRtosSemaphoreFake.h"
 
 static unsigned createMutexStaticCallCount = 0;
-static unsigned semaphoreTakeCallCount     = 0;
-static unsigned semaphoreGiveCallCount     = 0;
-static unsigned semaphoreDeleteCallCount   = 0;
+static unsigned semaphoreTakeCallCount = 0;
+static unsigned semaphoreGiveCallCount = 0;
+static unsigned semaphoreDeleteCallCount = 0;
 
 void FreeRtosSemaphoreFake_Reset(void)
 {
     createMutexStaticCallCount = 0;
-    semaphoreTakeCallCount     = 0;
-    semaphoreGiveCallCount     = 0;
-    semaphoreDeleteCallCount   = 0;
+    semaphoreTakeCallCount = 0;
+    semaphoreGiveCallCount = 0;
+    semaphoreDeleteCallCount = 0;
 }
 
 unsigned FreeRtosSemaphoreFake_CreateMutexStaticCallCount(void)
@@ -48,7 +48,12 @@ BaseType_t xQueueSemaphoreTake(QueueHandle_t xQueue, TickType_t xTicksToWait)
     return pdTRUE;
 }
 
-BaseType_t xQueueGenericSend(QueueHandle_t xQueue, const void* const pvItemToQueue, TickType_t xTicksToWait, const BaseType_t xCopyPosition)
+BaseType_t xQueueGenericSend(
+    QueueHandle_t xQueue,
+    const void* const pvItemToQueue,
+    TickType_t xTicksToWait,
+    const BaseType_t xCopyPosition
+)
 {
     (void) xQueue;
     (void) pvItemToQueue;

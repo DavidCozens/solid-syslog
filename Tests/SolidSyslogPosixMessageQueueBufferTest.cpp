@@ -4,7 +4,7 @@
 #include "CppUTest/TestHarness.h"
 
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
-                               // macros
+    // macros
 #include "SolidSyslogBuffer.h"
 #include "SolidSyslogPosixMessageQueueBuffer.h"
 #include "SolidSyslog.h"
@@ -16,8 +16,8 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 
 struct SolidSyslogStore;
 
-static const char* const TEST_MESSAGE     = "hello";
-static const size_t      TEST_MESSAGE_LEN = 5;
+static const char* const TEST_MESSAGE = "hello";
+static const size_t TEST_MESSAGE_LEN = 5;
 
 // clang-format off
 TEST_GROUP(SolidSyslogPosixMessageQueueBuffer)
@@ -101,8 +101,8 @@ TEST(SolidSyslogPosixMessageQueueBuffer, SecondReadAfterSingleWriteReturnsFalse)
 TEST(SolidSyslogPosixMessageQueueBuffer, ServiceSendsMessageWrittenViaLog)
 {
     struct SolidSyslogSender* fakeSender = SenderFake_Create();
-    SolidSyslogStore*         nullStore  = SolidSyslogNullStore_Create();
-    SolidSyslogConfig         config     = {buffer, fakeSender, nullptr, nullptr, nullptr, nullptr, nullStore, nullptr, 0};
+    SolidSyslogStore* nullStore = SolidSyslogNullStore_Create();
+    SolidSyslogConfig config = {buffer, fakeSender, nullptr, nullptr, nullptr, nullptr, nullStore, nullptr, 0};
     SolidSyslog_Create(&config);
 
     SolidSyslogMessage message = {SOLIDSYSLOG_FACILITY_LOCAL0, SOLIDSYSLOG_SEVERITY_INFO, nullptr, nullptr};

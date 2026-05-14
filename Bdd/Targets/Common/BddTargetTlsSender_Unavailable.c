@@ -13,7 +13,10 @@ static bool NilSend(struct SolidSyslogSender* self, const void* buffer, size_t s
     (void) size;
     if (!warned)
     {
-        (void) fprintf(stderr, "BddTargetTlsSender: TLS support not compiled in — messages routed to the TLS slot will be dropped\n");
+        (void) fprintf(
+            stderr,
+            "BddTargetTlsSender: TLS support not compiled in — messages routed to the TLS slot will be dropped\n"
+        );
         warned = true;
     }
     return false;

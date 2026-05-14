@@ -15,23 +15,23 @@
 static struct
 {
     uintptr_t base;
-    uint32_t  data;
-    uint32_t  state;
-    uint32_t  ctrl;
-    uint32_t  intStatusOrClear;
-    uint32_t  bauddiv;
-    int       readsBeforeTxReadyDefault;
-    int       readsRemainingBeforeTxReady;
-    bool      txOverrunOccurred;
-    int       sleepCallCount;
-    uint32_t  receivedByte;
-    int       readsBeforeRxReadyDefault;
-    int       readsRemainingBeforeRxReady;
+    uint32_t data;
+    uint32_t state;
+    uint32_t ctrl;
+    uint32_t intStatusOrClear;
+    uint32_t bauddiv;
+    int readsBeforeTxReadyDefault;
+    int readsRemainingBeforeTxReady;
+    bool txOverrunOccurred;
+    int sleepCallCount;
+    uint32_t receivedByte;
+    int readsBeforeRxReadyDefault;
+    int readsRemainingBeforeRxReady;
 } fake;
 
 static uint32_t Fake_Read32(uintptr_t address)
 {
-    uint32_t  result = 0;
+    uint32_t result = 0;
     uintptr_t offset = address - fake.base;
     if (offset == STATE_OFFSET)
     {
@@ -120,18 +120,18 @@ static const CmsdkUartMemoryAccess FAKE_ACCESS = {Fake_Read32, Fake_Write32, Fak
 
 void CmsdkUartFake_Reset(uintptr_t baseAddress)
 {
-    fake.base                        = baseAddress;
-    fake.data                        = 0U;
-    fake.state                       = 0U;
-    fake.ctrl                        = 0U;
-    fake.intStatusOrClear            = 0U;
-    fake.bauddiv                     = 0U;
-    fake.readsBeforeTxReadyDefault   = 2;
+    fake.base = baseAddress;
+    fake.data = 0U;
+    fake.state = 0U;
+    fake.ctrl = 0U;
+    fake.intStatusOrClear = 0U;
+    fake.bauddiv = 0U;
+    fake.readsBeforeTxReadyDefault = 2;
     fake.readsRemainingBeforeTxReady = 0;
-    fake.txOverrunOccurred           = false;
-    fake.sleepCallCount              = 0;
-    fake.receivedByte                = 0U;
-    fake.readsBeforeRxReadyDefault   = 0;
+    fake.txOverrunOccurred = false;
+    fake.sleepCallCount = 0;
+    fake.receivedByte = 0U;
+    fake.readsBeforeRxReadyDefault = 0;
     fake.readsRemainingBeforeRxReady = 0;
 }
 

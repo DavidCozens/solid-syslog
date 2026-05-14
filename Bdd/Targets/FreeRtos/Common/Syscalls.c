@@ -24,7 +24,7 @@
  * FreeRTOS heap_4 manages the kernel/task heap separately. */
 #define SYSCALL_HEAP_SIZE 4096U
 
-static char  syscallHeap[SYSCALL_HEAP_SIZE];
+static char syscallHeap[SYSCALL_HEAP_SIZE];
 static char* syscallHeapBreak = syscallHeap;
 
 static inline bool IsWithinSyscallHeap(const char* candidateBreak);
@@ -32,12 +32,12 @@ static inline bool IsWithinSyscallHeap(const char* candidateBreak);
 void* _sbrk(int increment)
 {
     char* previousBreak = syscallHeapBreak;
-    char* nextBreak     = syscallHeapBreak + increment;
-    void* result        = (void*) -1;
+    char* nextBreak = syscallHeapBreak + increment;
+    void* result = (void*) -1;
     if (IsWithinSyscallHeap(nextBreak))
     {
         syscallHeapBreak = nextBreak;
-        result           = previousBreak;
+        result = previousBreak;
     }
     else
     {

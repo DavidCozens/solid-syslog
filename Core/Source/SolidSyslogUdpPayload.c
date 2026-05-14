@@ -5,11 +5,11 @@ enum
 {
     IPV4_HEADER_BYTES = 20,
     IPV6_HEADER_BYTES = 40,
-    UDP_HEADER_BYTES  = 8
+    UDP_HEADER_BYTES = 8
 };
 
 static inline size_t FindLastCodepointStart(const uint8_t* buffer, size_t length);
-static inline bool   LastCodepointExtendsPastCut(const uint8_t* buffer, size_t length, size_t lastCodepointStart);
+static inline bool LastCodepointExtendsPastCut(const uint8_t* buffer, size_t length, size_t lastCodepointStart);
 static inline size_t ExpectedSequenceLength(uint8_t startByte);
 
 size_t SolidSyslogUdpPayload_FromMtu(size_t mtu, bool isIpv6)
@@ -50,7 +50,7 @@ static inline bool LastCodepointExtendsPastCut(const uint8_t* buffer, size_t len
  * because the formatter (S12.10) guarantees valid UTF-8 upstream. */
 static inline size_t ExpectedSequenceLength(uint8_t startByte)
 {
-    char   b      = (char) startByte;
+    char b = (char) startByte;
     size_t length = 0;
     if (SolidSyslogUtf8_IsAsciiByte(b))
     {

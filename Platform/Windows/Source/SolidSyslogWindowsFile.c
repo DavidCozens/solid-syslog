@@ -18,29 +18,31 @@
 
 enum
 {
-    INVALID_FD             = -1,
+    INVALID_FD = -1,
     ACCESS_EXISTENCE_CHECK = 0 /* equivalent to POSIX F_OK; <io.h> does not define an alias */
 };
 
-static bool   Open(struct SolidSyslogFile* self, const char* path);
-static void   Close(struct SolidSyslogFile* self);
-static bool   IsOpen(struct SolidSyslogFile* self);
-static bool   Read(struct SolidSyslogFile* self, void* buf, size_t count);
-static bool   Write(struct SolidSyslogFile* self, const void* buf, size_t count);
-static void   SeekTo(struct SolidSyslogFile* self, size_t offset);
+static bool Open(struct SolidSyslogFile* self, const char* path);
+static void Close(struct SolidSyslogFile* self);
+static bool IsOpen(struct SolidSyslogFile* self);
+static bool Read(struct SolidSyslogFile* self, void* buf, size_t count);
+static bool Write(struct SolidSyslogFile* self, const void* buf, size_t count);
+static void SeekTo(struct SolidSyslogFile* self, size_t offset);
 static size_t Size(struct SolidSyslogFile* self);
-static void   Truncate(struct SolidSyslogFile* self);
-static bool   Exists(struct SolidSyslogFile* self, const char* path);
-static bool   Delete(struct SolidSyslogFile* self, const char* path);
+static void Truncate(struct SolidSyslogFile* self);
+static bool Exists(struct SolidSyslogFile* self, const char* path);
+static bool Delete(struct SolidSyslogFile* self, const char* path);
 
 struct SolidSyslogWindowsFile
 {
     struct SolidSyslogFile base;
-    int                    fd;
+    int fd;
 };
 
-SOLIDSYSLOG_STATIC_ASSERT(sizeof(struct SolidSyslogWindowsFile) <= sizeof(SolidSyslogWindowsFileStorage),
-                          "SOLIDSYSLOG_WINDOWS_FILE_SIZE is too small for struct SolidSyslogWindowsFile");
+SOLIDSYSLOG_STATIC_ASSERT(
+    sizeof(struct SolidSyslogWindowsFile) <= sizeof(SolidSyslogWindowsFileStorage),
+    "SOLIDSYSLOG_WINDOWS_FILE_SIZE is too small for struct SolidSyslogWindowsFile"
+);
 
 static const struct SolidSyslogWindowsFile DEFAULT_INSTANCE = {
     {Open, Close, IsOpen, Read, Write, SeekTo, Size, Truncate, Exists, Delete},
@@ -55,7 +57,7 @@ static const struct SolidSyslogWindowsFile DESTROYED_INSTANCE = {
 struct SolidSyslogFile* SolidSyslogWindowsFile_Create(SolidSyslogWindowsFileStorage* storage)
 {
     struct SolidSyslogWindowsFile* windows = (struct SolidSyslogWindowsFile*) storage;
-    *windows                               = DEFAULT_INSTANCE;
+    *windows = DEFAULT_INSTANCE;
     return &windows->base;
 }
 
@@ -78,7 +80,7 @@ static bool Open(struct SolidSyslogFile* self, const char* path)
      * _CRT_SECURE_NO_WARNINGS is forbidden by the project's banned-API
      * policy. _SH_DENYNO matches POSIX open()'s default of no share mode. */
     struct SolidSyslogWindowsFile* windows = (struct SolidSyslogWindowsFile*) self;
-    errno_t                        err     = _sopen_s(&windows->fd, path, DEFAULT_OPEN_FLAGS, _SH_DENYNO, DEFAULT_FILE_PERMISSIONS);
+    errno_t err = _sopen_s(&windows->fd, path, DEFAULT_OPEN_FLAGS, _SH_DENYNO, DEFAULT_FILE_PERMISSIONS);
     if (err != 0)
     {
         windows->fd = INVALID_FD;
@@ -124,7 +126,7 @@ static void SeekTo(struct SolidSyslogFile* self, size_t offset)
 static size_t Size(struct SolidSyslogFile* self)
 {
     struct SolidSyslogWindowsFile* windows = (struct SolidSyslogWindowsFile*) self;
-    __int64                        size    = _lseeki64(windows->fd, 0, SEEK_END);
+    __int64 size = _lseeki64(windows->fd, 0, SEEK_END);
     return (size >= 0) ? (size_t) size : 0;
 }
 

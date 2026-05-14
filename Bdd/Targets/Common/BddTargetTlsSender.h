@@ -11,7 +11,7 @@ EXTERN_C_BEGIN
     struct SolidSyslogSender;
 
     struct SolidSyslogSender* BddTargetTlsSender_Create(struct SolidSyslogResolver * resolver, bool mtls);
-    void                      BddTargetTlsSender_Destroy(void);
+    void BddTargetTlsSender_Destroy(void);
 
 EXTERN_C_END
 

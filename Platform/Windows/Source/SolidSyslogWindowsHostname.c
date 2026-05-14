@@ -22,7 +22,7 @@ enum
 
 void SolidSyslogWindowsHostname_Get(struct SolidSyslogFormatter* formatter)
 {
-    char  hostname[MAX_HOSTNAME_SIZE];
+    char hostname[MAX_HOSTNAME_SIZE];
     DWORD size = sizeof(hostname);
 
     if (WindowsHostname_GetComputerNameExA(ComputerNamePhysicalDnsHostname, hostname, &size))

@@ -7,13 +7,13 @@
 
 enum
 {
-    MAGIC_SIZE         = 2,
-    MAGIC_BYTE_0       = 0xA5,
-    MAGIC_BYTE_1       = 0x5A,
+    MAGIC_SIZE = 2,
+    MAGIC_BYTE_0 = 0xA5,
+    MAGIC_BYTE_1 = 0x5A,
     RECORD_LENGTH_SIZE = 2,
-    SENT_FLAG_SIZE     = 1,
-    SENT_FLAG_UNSENT   = 0xFF,
-    SENT_FLAG_SENT     = 0x00
+    SENT_FLAG_SIZE = 1,
+    SENT_FLAG_UNSENT = 0xFF,
+    SENT_FLAG_SENT = 0x00
 };
 
 /* Each record in the buffer is laid out as
@@ -69,23 +69,35 @@ static inline size_t SentFlagOffset(const struct RecordStore* recordStore, size_
 
 void RecordStore_Init(struct RecordStore* recordStore, struct SolidSyslogSecurityPolicy* securityPolicy)
 {
-    recordStore->securityPolicy     = securityPolicy;
-    recordStore->hasReadRecord      = false;
+    recordStore->securityPolicy = securityPolicy;
+    recordStore->hasReadRecord = false;
     recordStore->lastReadBlockIndex = 0;
     recordStore->lastSentFlagOffset = 0;
 }
 
 size_t RecordStore_RecordSize(const struct RecordStore* recordStore, uint16_t dataLength)
 {
-    return (size_t) MAGIC_SIZE + RECORD_LENGTH_SIZE + dataLength + recordStore->securityPolicy->integritySize + SENT_FLAG_SIZE;
+    return (size_t) MAGIC_SIZE + RECORD_LENGTH_SIZE + dataLength + recordStore->securityPolicy->integritySize +
+           SENT_FLAG_SIZE;
 }
 
 static inline void AssembleRecord(struct RecordStore* recordStore, const void* data, size_t size);
 
-bool RecordStore_Append(struct RecordStore* recordStore, struct SolidSyslogBlockDevice* blockDevice, size_t blockIndex, const void* data, size_t dataSize)
+bool RecordStore_Append(
+    struct RecordStore* recordStore,
+    struct SolidSyslogBlockDevice* blockDevice,
+    size_t blockIndex,
+    const void* data,
+    size_t dataSize
+)
 {
     AssembleRecord(recordStore, data, dataSize);
-    return SolidSyslogBlockDevice_Append(blockDevice, blockIndex, recordStore->buffer, RecordStore_RecordSize(recordStore, (uint16_t) dataSize));
+    return SolidSyslogBlockDevice_Append(
+        blockDevice,
+        blockIndex,
+        recordStore->buffer,
+        RecordStore_RecordSize(recordStore, (uint16_t) dataSize)
+    );
 }
 
 static inline void AssembleRecord(struct RecordStore* recordStore, const void* data, size_t size)
@@ -97,22 +109,51 @@ static inline void AssembleRecord(struct RecordStore* recordStore, const void* d
     memcpy(LengthAddress(recordStore), &length, RECORD_LENGTH_SIZE);
     memcpy(MessageAddress(recordStore), data, size);
 
-    recordStore->securityPolicy->ComputeIntegrity(IntegrityRegionAddress(recordStore), IntegrityRegionSize(size), IntegrityChecksumAddress(recordStore, size));
+    recordStore->securityPolicy->ComputeIntegrity(
+        IntegrityRegionAddress(recordStore),
+        IntegrityRegionSize(size),
+        IntegrityChecksumAddress(recordStore, size)
+    );
 
     *SentFlagAddress(recordStore, size) = SENT_FLAG_UNSENT;
 }
 
-static bool        ReadAndValidateRecord(struct RecordStore* recordStore, struct SolidSyslogBlockDevice* blockDevice, size_t blockIndex, size_t offset,
-                                         uint16_t* length);
-static inline void CopyRecordData(struct RecordStore* recordStore, uint16_t length, void* dst, size_t maxSize, size_t* bytesRead);
-// NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- blockIndex / offset are positional fields of the just-read record; distinct semantics
-static inline void RememberCurrentRecord(struct RecordStore* recordStore, size_t blockIndex, size_t offset, uint16_t length);
+static bool ReadAndValidateRecord(
+    struct RecordStore* recordStore,
+    struct SolidSyslogBlockDevice* blockDevice,
+    size_t blockIndex,
+    size_t offset,
+    uint16_t* length
+);
+static inline void CopyRecordData(
+    struct RecordStore* recordStore,
+    uint16_t length,
+    void* dst,
+    size_t maxSize,
+    size_t* bytesRead
+);
+// NOLINTBEGIN(bugprone-easily-swappable-parameters) -- blockIndex / offset are positional fields of the just-read record; distinct semantics
+static inline void RememberCurrentRecord(
+    struct RecordStore* recordStore,
+    size_t blockIndex,
+    size_t offset,
+    uint16_t length
+);
 
-bool RecordStore_Read(struct RecordStore* recordStore, struct SolidSyslogBlockDevice* blockDevice, size_t blockIndex, size_t offset, void* dst, size_t maxSize,
-                      size_t* bytesRead)
+// NOLINTEND(bugprone-easily-swappable-parameters)
+
+bool RecordStore_Read(
+    struct RecordStore* recordStore,
+    struct SolidSyslogBlockDevice* blockDevice,
+    size_t blockIndex,
+    size_t offset,
+    void* dst,
+    size_t maxSize,
+    size_t* bytesRead
+)
 {
     uint16_t length = 0;
-    bool     read   = false;
+    bool read = false;
 
     *bytesRead = 0;
 
@@ -126,25 +167,57 @@ bool RecordStore_Read(struct RecordStore* recordStore, struct SolidSyslogBlockDe
     return read;
 }
 
-static inline bool ReadRecordHeader(struct RecordStore* recordStore, struct SolidSyslogBlockDevice* blockDevice, size_t blockIndex, size_t offset);
+static inline bool ReadRecordHeader(
+    struct RecordStore* recordStore,
+    struct SolidSyslogBlockDevice* blockDevice,
+    size_t blockIndex,
+    size_t offset
+);
 static inline bool ValidateHeader(struct RecordStore* recordStore, uint16_t* length);
-static inline bool ReadRecordBody(struct RecordStore* recordStore, struct SolidSyslogBlockDevice* blockDevice, size_t blockIndex, size_t offset,
-                                  uint16_t length);
-static inline bool ReadIntegrityChecksum(struct RecordStore* recordStore, struct SolidSyslogBlockDevice* blockDevice, size_t blockIndex, size_t recordStart,
-                                         uint16_t dataLength);
+static inline bool ReadRecordBody(
+    struct RecordStore* recordStore,
+    struct SolidSyslogBlockDevice* blockDevice,
+    size_t blockIndex,
+    size_t offset,
+    uint16_t length
+);
+static inline bool ReadIntegrityChecksum(
+    struct RecordStore* recordStore,
+    struct SolidSyslogBlockDevice* blockDevice,
+    size_t blockIndex,
+    size_t recordStart,
+    uint16_t dataLength
+);
 static inline bool VerifyIntegrity(struct RecordStore* recordStore, uint16_t length);
 
-static bool ReadAndValidateRecord(struct RecordStore* recordStore, struct SolidSyslogBlockDevice* blockDevice, size_t blockIndex, size_t offset,
-                                  uint16_t* length)
+static bool ReadAndValidateRecord(
+    struct RecordStore* recordStore,
+    struct SolidSyslogBlockDevice* blockDevice,
+    size_t blockIndex,
+    size_t offset,
+    uint16_t* length
+)
 {
     return ReadRecordHeader(recordStore, blockDevice, blockIndex, offset) && ValidateHeader(recordStore, length) &&
            ReadRecordBody(recordStore, blockDevice, blockIndex, offset, *length) &&
-           ReadIntegrityChecksum(recordStore, blockDevice, blockIndex, offset, *length) && VerifyIntegrity(recordStore, *length);
+           ReadIntegrityChecksum(recordStore, blockDevice, blockIndex, offset, *length) &&
+           VerifyIntegrity(recordStore, *length);
 }
 
-static inline bool ReadRecordHeader(struct RecordStore* recordStore, struct SolidSyslogBlockDevice* blockDevice, size_t blockIndex, size_t offset)
+static inline bool ReadRecordHeader(
+    struct RecordStore* recordStore,
+    struct SolidSyslogBlockDevice* blockDevice,
+    size_t blockIndex,
+    size_t offset
+)
 {
-    return SolidSyslogBlockDevice_Read(blockDevice, blockIndex, offset, IntegrityRegionAddress(recordStore), MAGIC_SIZE + RECORD_LENGTH_SIZE);
+    return SolidSyslogBlockDevice_Read(
+        blockDevice,
+        blockIndex,
+        offset,
+        IntegrityRegionAddress(recordStore),
+        MAGIC_SIZE + RECORD_LENGTH_SIZE
+    );
 }
 
 static inline bool IsMagicValid(struct RecordStore* recordStore)
@@ -171,30 +244,56 @@ static inline bool ValidateHeader(struct RecordStore* recordStore, uint16_t* len
     if (valid)
     {
         *length = RecordLength(recordStore);
-        valid   = IsValidLength(*length);
+        valid = IsValidLength(*length);
     }
 
     return valid;
 }
 
-// NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- offset is a block position, length is a data size; distinct semantics
-static inline bool ReadRecordBody(struct RecordStore* recordStore, struct SolidSyslogBlockDevice* blockDevice, size_t blockIndex, size_t offset,
-                                  uint16_t length)
+// NOLINTBEGIN(bugprone-easily-swappable-parameters) -- offset is a block position, length is a data size; distinct semantics
+static inline bool ReadRecordBody(
+    struct RecordStore* recordStore,
+    struct SolidSyslogBlockDevice* blockDevice,
+    size_t blockIndex,
+    size_t offset,
+    uint16_t length
+)
 {
-    return SolidSyslogBlockDevice_Read(blockDevice, blockIndex, offset + MAGIC_SIZE + RECORD_LENGTH_SIZE, MessageAddress(recordStore), length);
+    return SolidSyslogBlockDevice_Read(
+        blockDevice,
+        blockIndex,
+        offset + MAGIC_SIZE + RECORD_LENGTH_SIZE,
+        MessageAddress(recordStore),
+        length
+    );
 }
 
-static inline bool ReadIntegrityChecksum(struct RecordStore* recordStore, struct SolidSyslogBlockDevice* blockDevice, size_t blockIndex, size_t recordStart,
-                                         uint16_t dataLength)
+// NOLINTEND(bugprone-easily-swappable-parameters)
+
+static inline bool ReadIntegrityChecksum(
+    struct RecordStore* recordStore,
+    struct SolidSyslogBlockDevice* blockDevice,
+    size_t blockIndex,
+    size_t recordStart,
+    uint16_t dataLength
+)
 {
-    return SolidSyslogBlockDevice_Read(blockDevice, blockIndex, IntegrityChecksumOffset(recordStart, dataLength),
-                                       IntegrityChecksumAddress(recordStore, dataLength), recordStore->securityPolicy->integritySize);
+    return SolidSyslogBlockDevice_Read(
+        blockDevice,
+        blockIndex,
+        IntegrityChecksumOffset(recordStart, dataLength),
+        IntegrityChecksumAddress(recordStore, dataLength),
+        recordStore->securityPolicy->integritySize
+    );
 }
 
 static inline bool VerifyIntegrity(struct RecordStore* recordStore, uint16_t length)
 {
-    return recordStore->securityPolicy->VerifyIntegrity(IntegrityRegionAddress(recordStore), IntegrityRegionSize(length),
-                                                        IntegrityChecksumAddress(recordStore, length));
+    return recordStore->securityPolicy->VerifyIntegrity(
+        IntegrityRegionAddress(recordStore),
+        IntegrityRegionSize(length),
+        IntegrityChecksumAddress(recordStore, length)
+    );
 }
 
 static inline size_t BoundedSize(uint16_t length, size_t maxSize)
@@ -202,32 +301,49 @@ static inline size_t BoundedSize(uint16_t length, size_t maxSize)
     return (length < maxSize) ? length : maxSize;
 }
 
-static inline void CopyRecordData(struct RecordStore* recordStore, uint16_t length, void* dst, size_t maxSize, size_t* bytesRead)
+static inline void CopyRecordData(
+    struct RecordStore* recordStore,
+    uint16_t length,
+    void* dst,
+    size_t maxSize,
+    size_t* bytesRead
+)
 {
     size_t copySize = BoundedSize(length, maxSize);
     memcpy(dst, MessageAddress(recordStore), copySize);
     *bytesRead = copySize;
 }
 
-// NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- blockIndex / offset are positional fields of the just-read record; distinct semantics
-static inline void RememberCurrentRecord(struct RecordStore* recordStore, size_t blockIndex, size_t offset, uint16_t length)
+// NOLINTBEGIN(bugprone-easily-swappable-parameters) -- blockIndex / offset are positional fields of the just-read record; distinct semantics
+static inline void RememberCurrentRecord(
+    struct RecordStore* recordStore,
+    size_t blockIndex,
+    size_t offset,
+    uint16_t length
+)
 {
     recordStore->lastReadBlockIndex = blockIndex;
     recordStore->lastSentFlagOffset = SentFlagOffset(recordStore, offset, length);
-    recordStore->hasReadRecord      = true;
+    recordStore->hasReadRecord = true;
 }
+
+// NOLINTEND(bugprone-easily-swappable-parameters)
 
 static inline bool WriteSentFlag(struct RecordStore* recordStore, struct SolidSyslogBlockDevice* blockDevice);
 
-bool RecordStore_MarkLastReadAsSent(struct RecordStore* recordStore, struct SolidSyslogBlockDevice* blockDevice, size_t* nextCursor)
+bool RecordStore_MarkLastReadAsSent(
+    struct RecordStore* recordStore,
+    struct SolidSyslogBlockDevice* blockDevice,
+    size_t* nextCursor
+)
 {
     bool marked = false;
 
     if (recordStore->hasReadRecord && WriteSentFlag(recordStore, blockDevice))
     {
-        *nextCursor                = recordStore->lastSentFlagOffset + SENT_FLAG_SIZE;
+        *nextCursor = recordStore->lastSentFlagOffset + SENT_FLAG_SIZE;
         recordStore->hasReadRecord = false;
-        marked                     = true;
+        marked = true;
     }
 
     return marked;
@@ -236,7 +352,13 @@ bool RecordStore_MarkLastReadAsSent(struct RecordStore* recordStore, struct Soli
 static inline bool WriteSentFlag(struct RecordStore* recordStore, struct SolidSyslogBlockDevice* blockDevice)
 {
     uint8_t flag = SENT_FLAG_SENT;
-    return SolidSyslogBlockDevice_WriteAt(blockDevice, recordStore->lastReadBlockIndex, recordStore->lastSentFlagOffset, &flag, SENT_FLAG_SIZE);
+    return SolidSyslogBlockDevice_WriteAt(
+        blockDevice,
+        recordStore->lastReadBlockIndex,
+        recordStore->lastSentFlagOffset,
+        &flag,
+        SENT_FLAG_SIZE
+    );
 }
 
 void RecordStore_ForgetLastRead(struct RecordStore* recordStore)
@@ -244,18 +366,34 @@ void RecordStore_ForgetLastRead(struct RecordStore* recordStore)
     recordStore->hasReadRecord = false;
 }
 
-static bool        AdvancePastSentRecord(struct RecordStore* recordStore, struct SolidSyslogBlockDevice* blockDevice, size_t blockIndex, size_t* cursor,
-                                         size_t blockSize, bool* corrupt);
-static inline bool IsRecordSent(const struct RecordStore* recordStore, struct SolidSyslogBlockDevice* blockDevice, size_t blockIndex, size_t recordStart,
-                                uint16_t length);
+static bool AdvancePastSentRecord(
+    struct RecordStore* recordStore,
+    struct SolidSyslogBlockDevice* blockDevice,
+    size_t blockIndex,
+    size_t* cursor,
+    size_t blockSize,
+    bool* corrupt
+);
+static inline bool IsRecordSent(
+    const struct RecordStore* recordStore,
+    struct SolidSyslogBlockDevice* blockDevice,
+    size_t blockIndex,
+    size_t recordStart,
+    uint16_t length
+);
 static inline void SkipRecord(const struct RecordStore* recordStore, size_t* cursor, uint16_t length);
 
-size_t RecordStore_FindFirstUnsent(struct RecordStore* recordStore, struct SolidSyslogBlockDevice* blockDevice, size_t blockIndex, size_t blockSize,
-                                   bool* corrupt)
+size_t RecordStore_FindFirstUnsent(
+    struct RecordStore* recordStore,
+    struct SolidSyslogBlockDevice* blockDevice,
+    size_t blockIndex,
+    size_t blockSize,
+    bool* corrupt
+)
 {
-    size_t cursor   = 0;
-    bool   scanning = true;
-    *corrupt        = false;
+    size_t cursor = 0;
+    bool scanning = true;
+    *corrupt = false;
 
     while (scanning && (cursor < blockSize))
     {
@@ -265,11 +403,17 @@ size_t RecordStore_FindFirstUnsent(struct RecordStore* recordStore, struct Solid
     return cursor;
 }
 
-static bool AdvancePastSentRecord(struct RecordStore* recordStore, struct SolidSyslogBlockDevice* blockDevice, size_t blockIndex, size_t* cursor,
-                                  size_t blockSize, bool* corrupt)
+static bool AdvancePastSentRecord(
+    struct RecordStore* recordStore,
+    struct SolidSyslogBlockDevice* blockDevice,
+    size_t blockIndex,
+    size_t* cursor,
+    size_t blockSize,
+    bool* corrupt
+)
 {
-    uint16_t length   = 0;
-    bool     advanced = false;
+    uint16_t length = 0;
+    bool advanced = false;
 
     if (ReadAndValidateRecord(recordStore, blockDevice, blockIndex, *cursor, &length))
     {
@@ -281,7 +425,7 @@ static bool AdvancePastSentRecord(struct RecordStore* recordStore, struct SolidS
     }
     else
     {
-        *cursor  = blockSize;
+        *cursor = blockSize;
         *corrupt = true;
     }
 
@@ -296,11 +440,22 @@ static bool AdvancePastSentRecord(struct RecordStore* recordStore, struct SolidS
  * downstream as a sequenceId gap (RFC 5424 §6.3.1), which the receiver
  * can detect; an integrator-supplied error reporter will surface
  * persistent media errors directly when that path lands. */
-static inline bool IsRecordSent(const struct RecordStore* recordStore, struct SolidSyslogBlockDevice* blockDevice, size_t blockIndex, size_t recordStart,
-                                uint16_t length)
+static inline bool IsRecordSent(
+    const struct RecordStore* recordStore,
+    struct SolidSyslogBlockDevice* blockDevice,
+    size_t blockIndex,
+    size_t recordStart,
+    uint16_t length
+)
 {
     uint8_t flag = SENT_FLAG_SENT;
-    SolidSyslogBlockDevice_Read(blockDevice, blockIndex, SentFlagOffset(recordStore, recordStart, length), &flag, SENT_FLAG_SIZE);
+    SolidSyslogBlockDevice_Read(
+        blockDevice,
+        blockIndex,
+        SentFlagOffset(recordStore, recordStart, length),
+        &flag,
+        SENT_FLAG_SIZE
+    );
     return flag == SENT_FLAG_SENT;
 }
 

@@ -11,13 +11,13 @@ EXTERN_C_BEGIN
 
     struct TlsTestServerConfig
     {
-        const struct TlsTestCert* serverCert;   /* includes matching private key */
-        const char*               cipherList;   /* NULL = server default */
+        const struct TlsTestCert* serverCert; /* includes matching private key */
+        const char* cipherList; /* NULL = server default */
         const struct TlsTestCert* clientCaCert; /* NULL = no mTLS; set to require & verify client cert */
     };
 
     struct TlsTestServer* TlsTestServer_Create(const struct TlsTestServerConfig* config);
-    void                  TlsTestServer_Destroy(struct TlsTestServer * self);
+    void TlsTestServer_Destroy(struct TlsTestServer * self);
 
     /* Returns the client-facing end of the internal BIO pair. Pass to
      * BioPairStream_Create and use as the transport for SolidSyslogTlsStream. */

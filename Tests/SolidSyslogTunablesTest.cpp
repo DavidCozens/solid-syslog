@@ -8,7 +8,10 @@
  * the compiler. The default build leaves the macro undefined and this
  * assertion is compiled out. */
 #ifdef SOLIDSYSLOG_TEST_EXPECTED_MAX_MESSAGE_SIZE
-static_assert(SOLIDSYSLOG_MAX_MESSAGE_SIZE == SOLIDSYSLOG_TEST_EXPECTED_MAX_MESSAGE_SIZE, "SOLIDSYSLOG_USER_TUNABLES_FILE override did not reach the compiler");
+static_assert(
+    SOLIDSYSLOG_MAX_MESSAGE_SIZE == SOLIDSYSLOG_TEST_EXPECTED_MAX_MESSAGE_SIZE,
+    "SOLIDSYSLOG_USER_TUNABLES_FILE override did not reach the compiler"
+);
 #endif
 
 TEST_GROUP(SolidSyslogTunables){};

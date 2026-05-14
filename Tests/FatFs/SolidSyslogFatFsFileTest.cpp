@@ -107,7 +107,7 @@ TEST(SolidSyslogFatFsFile, CloseIsNoOpWhenAlreadyClosed)
 TEST(SolidSyslogFatFsFile, DestroyClosesOpenFile)
 {
     SolidSyslogFatFsFileStorage localStorage = {};
-    struct SolidSyslogFile*     localFile    = SolidSyslogFatFsFile_Create(&localStorage);
+    struct SolidSyslogFile* localFile = SolidSyslogFatFsFile_Create(&localStorage);
     SolidSyslogFile_Open(localFile, TEST_PATH);
     SolidSyslogFatFsFile_Destroy(localFile);
     CALLED_FAKE(FatFsFake_Close, ONCE);

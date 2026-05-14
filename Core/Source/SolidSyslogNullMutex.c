@@ -11,14 +11,14 @@ static struct SolidSyslogMutex instance;
 
 struct SolidSyslogMutex* SolidSyslogNullMutex_Create(void)
 {
-    instance.Lock   = Lock;
+    instance.Lock = Lock;
     instance.Unlock = Unlock;
     return &instance;
 }
 
 void SolidSyslogNullMutex_Destroy(void)
 {
-    instance.Lock   = NULL;
+    instance.Lock = NULL;
     instance.Unlock = NULL;
 }
 

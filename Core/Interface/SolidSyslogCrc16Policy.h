@@ -6,7 +6,7 @@
 EXTERN_C_BEGIN
 
     struct SolidSyslogSecurityPolicy* SolidSyslogCrc16Policy_Create(void);
-    void                              SolidSyslogCrc16Policy_Destroy(void);
+    void SolidSyslogCrc16Policy_Destroy(void);
 
 EXTERN_C_END
 

@@ -19,7 +19,7 @@
 #include "CppUTest/TestHarness.h"
 
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
-                               // macros
+    // macros
 
 class TEST_SolidSyslogUdpSenderRetry_DoubleOversizeDoesNotSendThird_Test;
 class TEST_SolidSyslogUdpSenderRetry_NonOversizeFailureDoesNotRetry_Test;
@@ -72,8 +72,8 @@ static int SpyGetPort()
 // between Sends to drive endpoint-changed and callback-spy scenarios; the
 // TEST_BASE resets them in setup so groups don't leak state between tests.
 static const char* (*endpointGetHost)() = GetDefaultHost;
-static int (*endpointGetPort)()         = GetDefaultPort;
-static uint32_t endpointVersion         = 0;
+static int (*endpointGetPort)() = GetDefaultPort;
+static uint32_t endpointVersion = 0;
 
 static void TestEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
@@ -769,7 +769,7 @@ TEST(SolidSyslogUdpSenderBadSetup, CreateWithNullEndpointReportsError)
 TEST(SolidSyslogUdpSenderBadSetup, NullEndpointVersionIsOptional)
 {
     config.endpointVersion = nullptr;
-    sender                 = SolidSyslogUdpSender_Create(&config);
+    sender = SolidSyslogUdpSender_Create(&config);
     CHECK_NOTHING_REPORTED();
     CHECK_TRUE(Send());
 }

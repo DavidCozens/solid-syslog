@@ -6,7 +6,7 @@
 EXTERN_C_BEGIN
 
     struct SolidSyslogStore* SolidSyslogNullStore_Create(void);
-    void                     SolidSyslogNullStore_Destroy(void);
+    void SolidSyslogNullStore_Destroy(void);
 
 EXTERN_C_END
 

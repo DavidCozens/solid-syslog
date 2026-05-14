@@ -18,7 +18,7 @@
 
 #include <stdlib.h> /* with POSIX API */
 
-void* ff_memalloc(           /* Returns pointer to the allocated memory block (null if not enough core) */
+void* ff_memalloc(/* Returns pointer to the allocated memory block (null if not enough core) */
                   UINT msize /* Number of bytes to allocate */
 )
 {
@@ -72,7 +72,7 @@ static osMutexId Mutex[FF_VOLUMES + 1]; /* Table of mutex ID */
 /  fails with FR_INT_ERR.
 */
 
-int ff_mutex_create(        /* Returns 1:Function succeeded or 0:Could not create the mutex */
+int ff_mutex_create(/* Returns 1:Function succeeded or 0:Could not create the mutex */
                     int vol /* Mutex ID: Volume mutex (0 to FF_VOLUMES - 1) or system mutex (FF_VOLUMES) */
 )
 {
@@ -112,7 +112,7 @@ int ff_mutex_create(        /* Returns 1:Function succeeded or 0:Could not creat
 /  semaphore of the volume created with ff_mutex_create function.
 */
 
-void ff_mutex_delete(        /* Returns 1:Function succeeded or 0:Could not delete due to an error */
+void ff_mutex_delete(/* Returns 1:Function succeeded or 0:Could not delete due to an error */
                      int vol /* Mutex ID: Volume mutex (0 to FF_VOLUMES - 1) or system mutex (FF_VOLUMES) */
 )
 {
@@ -143,7 +143,7 @@ void ff_mutex_delete(        /* Returns 1:Function succeeded or 0:Could not dele
 /  When a 0 is returned, the file function fails with FR_TIMEOUT.
 */
 
-int ff_mutex_take(        /* Returns 1:Succeeded or 0:Timeout */
+int ff_mutex_take(/* Returns 1:Succeeded or 0:Timeout */
                   int vol /* Mutex ID: Volume mutex (0 to FF_VOLUMES - 1) or system mutex (FF_VOLUMES) */
 )
 {

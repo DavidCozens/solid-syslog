@@ -41,7 +41,7 @@ static uint32_t FakeSysUpTime_Get()
 }
 
 static const char* fakeLanguageContent;
-static size_t      fakeLanguageMaxLength;
+static size_t fakeLanguageMaxLength;
 
 static void FakeLanguage_Get(struct SolidSyslogFormatter* formatter)
 {
@@ -49,9 +49,15 @@ static void FakeLanguage_Get(struct SolidSyslogFormatter* formatter)
 }
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage) -- macros preserve __FILE__/__LINE__ in test failure output
-#define CHECK_SEQUENCEID(expected) STRCMP_EQUAL("[meta sequenceId=\"" expected "\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter))
-#define CHECK_SYSUPTIME(expected) STRCMP_EQUAL("[meta sequenceId=\"1\" sysUpTime=\"" expected "\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter))
-#define CHECK_LANGUAGE(expected) STRCMP_EQUAL("[meta sequenceId=\"1\" language=\"" expected "\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter))
+#define CHECK_SEQUENCEID(expected) \
+    STRCMP_EQUAL("[meta sequenceId=\"" expected "\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter))
+#define CHECK_SYSUPTIME(expected)                             \
+    STRCMP_EQUAL(                                             \
+        "[meta sequenceId=\"1\" sysUpTime=\"" expected "\"]", \
+        SolidSyslogFormatter_AsFormattedBuffer(formatter)     \
+    )
+#define CHECK_LANGUAGE(expected) \
+    STRCMP_EQUAL("[meta sequenceId=\"1\" language=\"" expected "\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter))
 
 // NOLINTEND(cppcoreguidelines-macro-usage)
 
@@ -237,7 +243,10 @@ TEST(SolidSyslogMetaSd, FormatWithAllThreeParamsEmitsAllThree)
     useSysUpTime(12345);
     useLanguage("en-GB");
     format();
-    STRCMP_EQUAL("[meta sequenceId=\"1\" sysUpTime=\"12345\" language=\"en-GB\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter));
+    STRCMP_EQUAL(
+        "[meta sequenceId=\"1\" sysUpTime=\"12345\" language=\"en-GB\"]",
+        SolidSyslogFormatter_AsFormattedBuffer(formatter)
+    );
 }
 
 TEST(SolidSyslogMetaSd, FormatEmitsNothingWhenConfigCounterIsNullEvenIfOtherFieldsPresent)

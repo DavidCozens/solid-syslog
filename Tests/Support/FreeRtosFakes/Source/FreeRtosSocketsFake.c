@@ -2,57 +2,57 @@
 
 #include "FreeRtosSocketsFake.h"
 
-static unsigned   socketCallCount    = 0;
-static BaseType_t lastSocketDomain   = 0;
-static BaseType_t lastSocketType     = 0;
-static BaseType_t lastSocketProto    = 0;
-static Socket_t   lastSocketReturned = NULL;
-static bool       socketFails        = false;
+static unsigned socketCallCount = 0;
+static BaseType_t lastSocketDomain = 0;
+static BaseType_t lastSocketType = 0;
+static BaseType_t lastSocketProto = 0;
+static Socket_t lastSocketReturned = NULL;
+static bool socketFails = false;
 
-static unsigned                        sendtoCallCount             = 0;
-static Socket_t                        lastSendtoSocket            = NULL;
-static const void*                     lastSendtoBuffer            = NULL;
-static size_t                          lastSendtoLength            = 0;
-static BaseType_t                      lastSendtoFlags             = 0;
-static const struct freertos_sockaddr* lastSendtoDestination       = NULL;
-static socklen_t                       lastSendtoDestinationLength = 0;
-static bool                            sendtoFails                 = false;
+static unsigned sendtoCallCount = 0;
+static Socket_t lastSendtoSocket = NULL;
+static const void* lastSendtoBuffer = NULL;
+static size_t lastSendtoLength = 0;
+static BaseType_t lastSendtoFlags = 0;
+static const struct freertos_sockaddr* lastSendtoDestination = NULL;
+static socklen_t lastSendtoDestinationLength = 0;
+static bool sendtoFails = false;
 
-static unsigned                        connectCallCount         = 0;
-static Socket_t                        lastConnectSocket        = NULL;
-static const struct freertos_sockaddr* lastConnectAddress       = NULL;
-static socklen_t                       lastConnectAddressLength = 0;
-static bool                            connectFails             = false;
+static unsigned connectCallCount = 0;
+static Socket_t lastConnectSocket = NULL;
+static const struct freertos_sockaddr* lastConnectAddress = NULL;
+static socklen_t lastConnectAddressLength = 0;
+static bool connectFails = false;
 
-static unsigned    sendCallCount   = 0;
-static Socket_t    lastSendSocket  = NULL;
-static const void* lastSendBuffer  = NULL;
-static size_t      lastSendLength  = 0;
-static BaseType_t  lastSendFlags   = 0;
-static bool        sendFails       = false;
-static bool        sendReturnSet   = false;
-static BaseType_t  sendReturnValue = 0;
+static unsigned sendCallCount = 0;
+static Socket_t lastSendSocket = NULL;
+static const void* lastSendBuffer = NULL;
+static size_t lastSendLength = 0;
+static BaseType_t lastSendFlags = 0;
+static bool sendFails = false;
+static bool sendReturnSet = false;
+static BaseType_t sendReturnValue = 0;
 
-static unsigned   recvCallCount   = 0;
-static Socket_t   lastRecvSocket  = NULL;
-static void*      lastRecvBuffer  = NULL;
-static size_t     lastRecvLength  = 0;
-static BaseType_t lastRecvFlags   = 0;
-static bool       recvFails       = false;
-static bool       recvReturnSet   = false;
+static unsigned recvCallCount = 0;
+static Socket_t lastRecvSocket = NULL;
+static void* lastRecvBuffer = NULL;
+static size_t lastRecvLength = 0;
+static BaseType_t lastRecvFlags = 0;
+static bool recvFails = false;
+static bool recvReturnSet = false;
 static BaseType_t recvReturnValue = 0;
 
-static TickType_t lastSndTimeoSet            = 0;
-static TickType_t lastRcvTimeoSet            = 0;
-static unsigned   rcvTimeoSetCallCount       = 0;
-static Socket_t   lastSetsockoptSocket       = NULL;
-static int32_t    lastSetsockoptLevel        = 0;
-static int32_t    lastSetsockoptOptionName   = 0;
-static size_t     lastSetsockoptOptionLength = 0;
-static TickType_t sndTimeoAtConnect          = 0;
-static TickType_t rcvTimeoAtConnect          = 0;
+static TickType_t lastSndTimeoSet = 0;
+static TickType_t lastRcvTimeoSet = 0;
+static unsigned rcvTimeoSetCallCount = 0;
+static Socket_t lastSetsockoptSocket = NULL;
+static int32_t lastSetsockoptLevel = 0;
+static int32_t lastSetsockoptOptionName = 0;
+static size_t lastSetsockoptOptionLength = 0;
+static TickType_t sndTimeoAtConnect = 0;
+static TickType_t rcvTimeoAtConnect = 0;
 
-static unsigned closesocketCallCount  = 0;
+static unsigned closesocketCallCount = 0;
 static Socket_t lastClosesocketSocket = NULL;
 
 /* Sentinel used as a "valid" Socket_t return — non-NULL and not
@@ -63,57 +63,57 @@ static int fakeSocketHandleAnchor = 0;
 
 void FreeRtosSocketsFake_Reset(void)
 {
-    socketCallCount    = 0;
-    lastSocketDomain   = 0;
-    lastSocketType     = 0;
-    lastSocketProto    = 0;
+    socketCallCount = 0;
+    lastSocketDomain = 0;
+    lastSocketType = 0;
+    lastSocketProto = 0;
     lastSocketReturned = NULL;
-    socketFails        = false;
+    socketFails = false;
 
-    sendtoCallCount             = 0;
-    lastSendtoSocket            = NULL;
-    lastSendtoBuffer            = NULL;
-    lastSendtoLength            = 0;
-    lastSendtoFlags             = 0;
-    lastSendtoDestination       = NULL;
+    sendtoCallCount = 0;
+    lastSendtoSocket = NULL;
+    lastSendtoBuffer = NULL;
+    lastSendtoLength = 0;
+    lastSendtoFlags = 0;
+    lastSendtoDestination = NULL;
     lastSendtoDestinationLength = 0;
-    sendtoFails                 = false;
+    sendtoFails = false;
 
-    connectCallCount         = 0;
-    lastConnectSocket        = NULL;
-    lastConnectAddress       = NULL;
+    connectCallCount = 0;
+    lastConnectSocket = NULL;
+    lastConnectAddress = NULL;
     lastConnectAddressLength = 0;
-    connectFails             = false;
+    connectFails = false;
 
-    sendCallCount   = 0;
-    lastSendSocket  = NULL;
-    lastSendBuffer  = NULL;
-    lastSendLength  = 0;
-    lastSendFlags   = 0;
-    sendFails       = false;
-    sendReturnSet   = false;
+    sendCallCount = 0;
+    lastSendSocket = NULL;
+    lastSendBuffer = NULL;
+    lastSendLength = 0;
+    lastSendFlags = 0;
+    sendFails = false;
+    sendReturnSet = false;
     sendReturnValue = 0;
 
-    recvCallCount   = 0;
-    lastRecvSocket  = NULL;
-    lastRecvBuffer  = NULL;
-    lastRecvLength  = 0;
-    lastRecvFlags   = 0;
-    recvFails       = false;
-    recvReturnSet   = false;
+    recvCallCount = 0;
+    lastRecvSocket = NULL;
+    lastRecvBuffer = NULL;
+    lastRecvLength = 0;
+    lastRecvFlags = 0;
+    recvFails = false;
+    recvReturnSet = false;
     recvReturnValue = 0;
 
-    lastSndTimeoSet            = 0;
-    lastRcvTimeoSet            = 0;
-    rcvTimeoSetCallCount       = 0;
-    lastSetsockoptSocket       = NULL;
-    lastSetsockoptLevel        = 0;
-    lastSetsockoptOptionName   = 0;
+    lastSndTimeoSet = 0;
+    lastRcvTimeoSet = 0;
+    rcvTimeoSetCallCount = 0;
+    lastSetsockoptSocket = NULL;
+    lastSetsockoptLevel = 0;
+    lastSetsockoptOptionName = 0;
     lastSetsockoptOptionLength = 0;
-    sndTimeoAtConnect          = 0;
-    rcvTimeoAtConnect          = 0;
+    sndTimeoAtConnect = 0;
+    rcvTimeoAtConnect = 0;
 
-    closesocketCallCount  = 0;
+    closesocketCallCount = 0;
     lastClosesocketSocket = NULL;
 }
 
@@ -139,7 +139,7 @@ void FreeRtosSocketsFake_SetSendFails(bool fails)
 
 void FreeRtosSocketsFake_SetSendReturn(BaseType_t value)
 {
-    sendReturnSet   = true;
+    sendReturnSet = true;
     sendReturnValue = value;
 }
 
@@ -150,7 +150,7 @@ void FreeRtosSocketsFake_SetRecvFails(bool fails)
 
 void FreeRtosSocketsFake_SetRecvReturn(BaseType_t value)
 {
-    recvReturnSet   = true;
+    recvReturnSet = true;
     recvReturnValue = value;
 }
 
@@ -217,22 +217,28 @@ socklen_t FreeRtosSocketsFake_LastSendtoDestinationLength(void)
 Socket_t FreeRTOS_socket(BaseType_t xDomain, BaseType_t xType, BaseType_t xProtocol)
 {
     ++socketCallCount;
-    lastSocketDomain   = xDomain;
-    lastSocketType     = xType;
-    lastSocketProto    = xProtocol;
+    lastSocketDomain = xDomain;
+    lastSocketType = xType;
+    lastSocketProto = xProtocol;
     lastSocketReturned = socketFails ? FREERTOS_INVALID_SOCKET : FAKE_VALID_SOCKET;
     return lastSocketReturned;
 }
 
-int32_t FreeRTOS_sendto(Socket_t xSocket, const void* pvBuffer, size_t uxTotalDataLength, BaseType_t xFlags,
-                        const struct freertos_sockaddr* pxDestinationAddress, socklen_t xDestinationAddressLength)
+int32_t FreeRTOS_sendto(
+    Socket_t xSocket,
+    const void* pvBuffer,
+    size_t uxTotalDataLength,
+    BaseType_t xFlags,
+    const struct freertos_sockaddr* pxDestinationAddress,
+    socklen_t xDestinationAddressLength
+)
 {
     ++sendtoCallCount;
-    lastSendtoSocket            = xSocket;
-    lastSendtoBuffer            = pvBuffer;
-    lastSendtoLength            = uxTotalDataLength;
-    lastSendtoFlags             = xFlags;
-    lastSendtoDestination       = pxDestinationAddress;
+    lastSendtoSocket = xSocket;
+    lastSendtoBuffer = pvBuffer;
+    lastSendtoLength = uxTotalDataLength;
+    lastSendtoFlags = xFlags;
+    lastSendtoDestination = pxDestinationAddress;
     lastSendtoDestinationLength = xDestinationAddressLength;
     return sendtoFails ? -pdFREERTOS_ERRNO_ENOBUFS : (int32_t) uxTotalDataLength;
 }
@@ -282,11 +288,17 @@ size_t FreeRtosSocketsFake_LastSetsockoptOptionLength(void)
     return lastSetsockoptOptionLength;
 }
 
-BaseType_t FreeRTOS_setsockopt(Socket_t xSocket, int32_t lLevel, int32_t lOptionName, const void* pvOptionValue, size_t uxOptionLength)
+BaseType_t FreeRTOS_setsockopt(
+    Socket_t xSocket,
+    int32_t lLevel,
+    int32_t lOptionName,
+    const void* pvOptionValue,
+    size_t uxOptionLength
+)
 {
-    lastSetsockoptSocket       = xSocket;
-    lastSetsockoptLevel        = lLevel;
-    lastSetsockoptOptionName   = lOptionName;
+    lastSetsockoptSocket = xSocket;
+    lastSetsockoptLevel = lLevel;
+    lastSetsockoptOptionName = lOptionName;
     lastSetsockoptOptionLength = uxOptionLength;
     if (lOptionName == FREERTOS_SO_SNDTIMEO)
     {
@@ -303,11 +315,11 @@ BaseType_t FreeRTOS_setsockopt(Socket_t xSocket, int32_t lLevel, int32_t lOption
 BaseType_t FreeRTOS_connect(Socket_t xClientSocket, const struct freertos_sockaddr* pxAddress, socklen_t xAddressLength)
 {
     ++connectCallCount;
-    lastConnectSocket        = xClientSocket;
-    lastConnectAddress       = pxAddress;
+    lastConnectSocket = xClientSocket;
+    lastConnectAddress = pxAddress;
     lastConnectAddressLength = xAddressLength;
-    sndTimeoAtConnect        = lastSndTimeoSet;
-    rcvTimeoAtConnect        = lastRcvTimeoSet;
+    sndTimeoAtConnect = lastSndTimeoSet;
+    rcvTimeoAtConnect = lastRcvTimeoSet;
     return connectFails ? -pdFREERTOS_ERRNO_ENOTCONN : 0;
 }
 
@@ -337,7 +349,7 @@ BaseType_t FreeRTOS_send(Socket_t xSocket, const void* pvBuffer, size_t uxDataLe
     lastSendSocket = xSocket;
     lastSendBuffer = pvBuffer;
     lastSendLength = uxDataLength;
-    lastSendFlags  = xFlags;
+    lastSendFlags = xFlags;
     if (sendFails)
     {
         return -pdFREERTOS_ERRNO_ENOTCONN;
@@ -380,7 +392,7 @@ BaseType_t FreeRTOS_recv(Socket_t xSocket, void* pvBuffer, size_t uxBufferLength
     lastRecvSocket = xSocket;
     lastRecvBuffer = pvBuffer;
     lastRecvLength = uxBufferLength;
-    lastRecvFlags  = xFlags;
+    lastRecvFlags = xFlags;
     if (recvFails)
     {
         return -pdFREERTOS_ERRNO_ENOTCONN;

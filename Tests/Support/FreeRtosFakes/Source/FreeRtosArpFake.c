@@ -3,20 +3,20 @@
 #include "FreeRTOS_ARP.h"
 
 static unsigned isIpInArpCacheCallCount = 0;
-static uint32_t lastIsIpInArpCacheArg   = 0;
-static bool     cacheHit                = false;
+static uint32_t lastIsIpInArpCacheArg = 0;
+static bool cacheHit = false;
 
 static unsigned outputArpRequestCallCount = 0;
-static uint32_t lastOutputArpRequestArg   = 0;
+static uint32_t lastOutputArpRequestArg = 0;
 
 void FreeRtosArpFake_Reset(void)
 {
     isIpInArpCacheCallCount = 0;
-    lastIsIpInArpCacheArg   = 0;
-    cacheHit                = false;
+    lastIsIpInArpCacheArg = 0;
+    cacheHit = false;
 
     outputArpRequestCallCount = 0;
-    lastOutputArpRequestArg   = 0;
+    lastOutputArpRequestArg = 0;
 }
 
 void FreeRtosArpFake_SetCacheHit(bool hit)

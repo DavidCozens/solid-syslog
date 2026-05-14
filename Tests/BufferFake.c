@@ -17,18 +17,18 @@ static void Write(struct SolidSyslogBuffer* self, const void* data, size_t size)
 struct BufferFake
 {
     struct SolidSyslogBuffer base;
-    char                     stored[BUFFERFAKE_MAX_SIZE];
-    size_t                   storedSize;
-    bool                     pending;
+    char stored[BUFFERFAKE_MAX_SIZE];
+    size_t storedSize;
+    bool pending;
 };
 
 static struct BufferFake instance;
 
 struct SolidSyslogBuffer* BufferFake_Create(void)
 {
-    instance            = (struct BufferFake) {0};
+    instance = (struct BufferFake) {0};
     instance.base.Write = Write;
-    instance.base.Read  = Read;
+    instance.base.Read = Read;
     return &instance.base;
 }
 
@@ -39,14 +39,14 @@ void BufferFake_Destroy(void)
 
 static bool Read(struct SolidSyslogBuffer* self, void* data, size_t maxSize, size_t* bytesRead)
 {
-    struct BufferFake* fake    = (struct BufferFake*) self;
-    bool               success = fake->pending;
+    struct BufferFake* fake = (struct BufferFake*) self;
+    bool success = fake->pending;
 
     if (success)
     {
         size_t copySize = MinSize(fake->storedSize, maxSize);
         memcpy(data, fake->stored, copySize);
-        *bytesRead    = copySize;
+        *bytesRead = copySize;
         fake->pending = false;
     }
 
@@ -60,5 +60,5 @@ static void Write(struct SolidSyslogBuffer* self, const void* data, size_t size)
     size_t copySize = MinSize(size, sizeof(fake->stored));
     memcpy(fake->stored, data, copySize);
     fake->storedSize = copySize;
-    fake->pending    = true;
+    fake->pending = true;
 }

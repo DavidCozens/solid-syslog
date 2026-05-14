@@ -277,8 +277,8 @@ TEST(FileFake, TwoInstancesShareFilesystem)
      * test is the shared in-memory filesystem, not concurrent opens. */
     SolidSyslogFile_Close(api);
 
-    struct FileFakeStorage  storage2 = {};
-    struct SolidSyslogFile* reader   = FileFake_Create(&storage2);
+    struct FileFakeStorage storage2 = {};
+    struct SolidSyslogFile* reader = FileFake_Create(&storage2);
 
     SolidSyslogFile_Open(reader, "shared.dat");
     char buf[16] = {};
@@ -295,8 +295,8 @@ TEST(FileFake, OpenWhileAnotherInstanceHoldsPathOpenAsserts)
 {
     SolidSyslogFile_Open(api, "shared.dat");
 
-    struct FileFakeStorage  storage2 = {};
-    struct SolidSyslogFile* second   = FileFake_Create(&storage2);
+    struct FileFakeStorage storage2 = {};
+    struct SolidSyslogFile* second = FileFake_Create(&storage2);
 
     CHECK_THROWS(std::runtime_error, SolidSyslogFile_Open(second, "shared.dat"));
 

@@ -8,7 +8,7 @@
 
 enum
 {
-    STOREFAKE_MAX_MESSAGES     = 8,
+    STOREFAKE_MAX_MESSAGES = 8,
     STOREFAKE_MAX_MESSAGE_SIZE = 1024
 };
 
@@ -22,26 +22,26 @@ static bool IsTransient(struct SolidSyslogStore* self);
 struct StoreFake
 {
     struct SolidSyslogStore base;
-    char                    entries[STOREFAKE_MAX_MESSAGES][STOREFAKE_MAX_MESSAGE_SIZE];
-    size_t                  sizes[STOREFAKE_MAX_MESSAGES];
-    size_t                  count;
-    int                     writeCount;
-    bool                    failNextWrite;
-    bool                    failNextRead;
-    bool                    halted;
+    char entries[STOREFAKE_MAX_MESSAGES][STOREFAKE_MAX_MESSAGE_SIZE];
+    size_t sizes[STOREFAKE_MAX_MESSAGES];
+    size_t count;
+    int writeCount;
+    bool failNextWrite;
+    bool failNextRead;
+    bool halted;
 };
 
 static struct StoreFake instance;
 
 struct SolidSyslogStore* StoreFake_Create(void)
 {
-    instance                     = (struct StoreFake) {0};
-    instance.base.Write          = Write;
+    instance = (struct StoreFake) {0};
+    instance.base.Write = Write;
     instance.base.ReadNextUnsent = ReadNextUnsent;
-    instance.base.MarkSent       = MarkSent;
-    instance.base.HasUnsent      = HasUnsent;
-    instance.base.IsHalted       = IsHalted;
-    instance.base.IsTransient    = IsTransient;
+    instance.base.MarkSent = MarkSent;
+    instance.base.HasUnsent = HasUnsent;
+    instance.base.IsHalted = IsHalted;
+    instance.base.IsTransient = IsTransient;
     return &instance.base;
 }
 
@@ -98,7 +98,7 @@ static bool ReadNextUnsent(struct SolidSyslogStore* self, void* data, size_t max
     if (fake->failNextRead)
     {
         fake->failNextRead = false;
-        *bytesRead         = 0;
+        *bytesRead = 0;
         return false;
     }
 

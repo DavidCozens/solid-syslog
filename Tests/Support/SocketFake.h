@@ -17,16 +17,16 @@ EXTERN_C_BEGIN
     void SocketFake_FailNextSendtoWithErrno(int errnoValue);
 
     /* sendto accessors */
-    int         SocketFake_SendtoCallCount(void);
+    int SocketFake_SendtoCallCount(void);
     const void* SocketFake_LastBuf(void);
     const char* SocketFake_LastBufAsString(void);
-    size_t      SocketFake_LastLen(void);
-    int         SocketFake_LastFlags(void);
-    int         SocketFake_LastAddrFamily(void);
+    size_t SocketFake_LastLen(void);
+    int SocketFake_LastFlags(void);
+    int SocketFake_LastAddrFamily(void);
     const char* SocketFake_LastAddrAsString(void);
-    int         SocketFake_LastPort(void);
-    socklen_t   SocketFake_LastAddrLen(void);
-    int         SocketFake_LastSendtoFd(void);
+    int SocketFake_LastPort(void);
+    socklen_t SocketFake_LastAddrLen(void);
+    int SocketFake_LastSendtoFd(void);
 
     /* socket configuration */
     void SocketFake_SetSocketFails(bool fails);
@@ -44,11 +44,11 @@ EXTERN_C_BEGIN
     void SocketFake_FailNextSendWithErrno(int errnoValue);
 
     /* send accessors */
-    int         SocketFake_SendCallCount(void);
+    int SocketFake_SendCallCount(void);
     const char* SocketFake_SendBufAsString(int callIndex);
-    size_t      SocketFake_SendLen(int callIndex);
-    int         SocketFake_LastSendFd(void);
-    int         SocketFake_SendFlags(int callIndex);
+    size_t SocketFake_SendLen(int callIndex);
+    int SocketFake_LastSendFd(void);
+    int SocketFake_SendFlags(int callIndex);
 
     /* connect configuration */
     void SocketFake_SetConnectFails(bool fails);
@@ -57,15 +57,15 @@ EXTERN_C_BEGIN
     void SocketFake_SetConnectFailsWithErrno(int errnoValue);
 
     /* connect accessors */
-    int         SocketFake_ConnectCallCount(void);
-    int         SocketFake_LastConnectFd(void);
-    int         SocketFake_LastConnectPort(void);
+    int SocketFake_ConnectCallCount(void);
+    int SocketFake_LastConnectFd(void);
+    int SocketFake_LastConnectPort(void);
     const char* SocketFake_LastConnectAddrAsString(void);
 
     /* setsockopt accessors */
-    int  SocketFake_SetSockOptCallCount(void);
-    int  SocketFake_LastSetSockOptLevel(void);
-    int  SocketFake_LastSetSockOptOptname(void);
+    int SocketFake_SetSockOptCallCount(void);
+    int SocketFake_LastSetSockOptLevel(void);
+    int SocketFake_LastSetSockOptOptname(void);
     bool SocketFake_HasSetSockOpt(int level, int optname);
     /* Returns the int optval recorded for the most recent setsockopt call
        matching (level, optname). Captures only int-sized options (optlen ==
@@ -90,9 +90,9 @@ EXTERN_C_BEGIN
     void SocketFake_SetFcntlGetFlReturn(int flags);
 
     /* fcntl accessors */
-    int  SocketFake_FcntlCallCount(void);
-    int  SocketFake_LastFcntlCmd(void);
-    int  SocketFake_LastFcntlSetFlags(void);
+    int SocketFake_FcntlCallCount(void);
+    int SocketFake_LastFcntlCmd(void);
+    int SocketFake_LastFcntlSetFlags(void);
     bool SocketFake_FcntlSetFlSetNonBlocking(void);
 
     /* select configuration — three independent simulations:
@@ -112,7 +112,7 @@ EXTERN_C_BEGIN
     void SocketFake_SetSelectReturn(int value);
 
     /* select accessors */
-    int  SocketFake_SelectCallCount(void);
+    int SocketFake_SelectCallCount(void);
     long SocketFake_LastSelectTimeoutSec(void);
     long SocketFake_LastSelectTimeoutUsec(void);
 
@@ -125,19 +125,19 @@ EXTERN_C_BEGIN
     void SocketFake_FailNextRecvWithErrno(int errnoValue);
 
     /* recv accessors */
-    int         SocketFake_RecvCallCount(void);
-    int         SocketFake_LastRecvFd(void);
+    int SocketFake_RecvCallCount(void);
+    int SocketFake_LastRecvFd(void);
     const void* SocketFake_LastRecvBuf(void);
-    size_t      SocketFake_LastRecvLen(void);
-    int         SocketFake_LastRecvFlags(void);
+    size_t SocketFake_LastRecvLen(void);
+    int SocketFake_LastRecvFlags(void);
 
     /* getaddrinfo configuration */
     void SocketFake_SetGetAddrInfoFails(bool fails);
 
     /* getaddrinfo accessors */
-    int         SocketFake_GetAddrInfoCallCount(void);
+    int SocketFake_GetAddrInfoCallCount(void);
     const char* SocketFake_LastGetAddrInfoHostname(void);
-    int         SocketFake_LastGetAddrInfoSocktype(void);
+    int SocketFake_LastGetAddrInfoSocktype(void);
 
     /* freeaddrinfo accessors */
     int SocketFake_FreeAddrInfoCallCount(void);
