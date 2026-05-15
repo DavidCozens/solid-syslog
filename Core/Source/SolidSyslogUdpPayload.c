@@ -9,7 +9,11 @@ enum
 };
 
 static inline size_t UdpPayload_FindLastCodepointStart(const uint8_t* buffer, size_t length);
-static inline bool UdpPayload_LastCodepointExtendsPastCut(const uint8_t* buffer, size_t length, size_t lastCodepointStart);
+static inline bool UdpPayload_LastCodepointExtendsPastCut(
+    const uint8_t* buffer,
+    size_t length,
+    size_t lastCodepointStart
+);
 static inline size_t UdpPayload_ExpectedSequenceLength(uint8_t startByte);
 
 size_t SolidSyslogUdpPayload_FromMtu(size_t mtu, bool isIpv6)
@@ -41,7 +45,11 @@ static inline size_t UdpPayload_FindLastCodepointStart(const uint8_t* buffer, si
     return startIndex;
 }
 
-static inline bool UdpPayload_LastCodepointExtendsPastCut(const uint8_t* buffer, size_t length, size_t lastCodepointStart)
+static inline bool UdpPayload_LastCodepointExtendsPastCut(
+    const uint8_t* buffer,
+    size_t length,
+    size_t lastCodepointStart
+)
 {
     return (lastCodepointStart + UdpPayload_ExpectedSequenceLength(buffer[lastCodepointStart])) > length;
 }

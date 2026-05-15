@@ -45,7 +45,16 @@ SOLIDSYSLOG_STATIC_ASSERT(
 );
 
 static const struct SolidSyslogWindowsFile DEFAULT_INSTANCE = {
-    {WindowsFile_Open, WindowsFile_Close, WindowsFile_IsOpen, WindowsFile_Read, WindowsFile_Write, WindowsFile_SeekTo, WindowsFile_Size, WindowsFile_Truncate, WindowsFile_Exists, WindowsFile_Delete},
+    {WindowsFile_Open,
+     WindowsFile_Close,
+     WindowsFile_IsOpen,
+     WindowsFile_Read,
+     WindowsFile_Write,
+     WindowsFile_SeekTo,
+     WindowsFile_Size,
+     WindowsFile_Truncate,
+     WindowsFile_Exists,
+     WindowsFile_Delete},
     INVALID_FD,
 };
 

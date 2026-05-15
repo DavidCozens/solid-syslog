@@ -36,7 +36,10 @@ static enum SolidSyslogDatagramSendResult PosixDatagram_SendTo(
 );
 static size_t PosixDatagram_MaxPayload(struct SolidSyslogDatagram* self);
 static void PosixDatagram_Close(struct SolidSyslogDatagram* self);
-static inline bool PosixDatagram_ConnectIfNeeded(struct SolidSyslogPosixDatagram* datagram, const struct SolidSyslogAddress* addr);
+static inline bool PosixDatagram_ConnectIfNeeded(
+    struct SolidSyslogPosixDatagram* datagram,
+    const struct SolidSyslogAddress* addr
+);
 static inline bool PosixDatagram_IsFileDescriptorValid(int fd);
 
 static struct SolidSyslogPosixDatagram instance = {.fd = INVALID_FD};
@@ -96,7 +99,10 @@ static enum SolidSyslogDatagramSendResult PosixDatagram_SendTo(
     return result;
 }
 
-static inline bool PosixDatagram_ConnectIfNeeded(struct SolidSyslogPosixDatagram* datagram, const struct SolidSyslogAddress* addr)
+static inline bool PosixDatagram_ConnectIfNeeded(
+    struct SolidSyslogPosixDatagram* datagram,
+    const struct SolidSyslogAddress* addr
+)
 {
     if (!datagram->connected)
     {

@@ -53,7 +53,10 @@ static void PosixTcpStream_EnableTcpNoDelay(int fd);
 static void PosixTcpStream_EnableKeepalive(int fd);
 static bool PosixTcpStream_SetNonBlocking(int fd);
 static inline bool PosixTcpStream_IsFileDescriptorValid(int fd);
-static bool PosixTcpStream_ConnectOrCloseOnFailure(struct SolidSyslogPosixTcpStream* stream, const struct sockaddr_in* sin);
+static bool PosixTcpStream_ConnectOrCloseOnFailure(
+    struct SolidSyslogPosixTcpStream* stream,
+    const struct sockaddr_in* sin
+);
 static bool PosixTcpStream_Connect(int fd, const struct sockaddr_in* sin);
 static bool PosixTcpStream_WaitForConnectCompletion(int fd);
 static bool PosixTcpStream_ReadDeferredConnectError(int fd);
@@ -161,7 +164,10 @@ static inline bool PosixTcpStream_IsFileDescriptorValid(int fd)
     return (fd >= 0);
 }
 
-static bool PosixTcpStream_ConnectOrCloseOnFailure(struct SolidSyslogPosixTcpStream* stream, const struct sockaddr_in* sin)
+static bool PosixTcpStream_ConnectOrCloseOnFailure(
+    struct SolidSyslogPosixTcpStream* stream,
+    const struct sockaddr_in* sin
+)
 {
     bool connected = PosixTcpStream_Connect(stream->fd, sin);
     if (!connected)

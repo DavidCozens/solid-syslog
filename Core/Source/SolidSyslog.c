@@ -91,14 +91,21 @@ static inline uint8_t SolidSyslog_CombineFacilityAndSeverity(uint8_t facility, u
 static inline bool SolidSyslog_FacilityIsValid(uint8_t facility);
 static inline void SolidSyslog_DrainBufferIntoStore(void);
 static inline void SolidSyslog_SendOneFromStore(void);
-static inline void SolidSyslog_FormatCapturedTimestamp(struct SolidSyslogFormatter* f, const struct SolidSyslogTimestamp* ts);
+static inline void SolidSyslog_FormatCapturedTimestamp(
+    struct SolidSyslogFormatter* f,
+    const struct SolidSyslogTimestamp* ts
+);
 static inline void SolidSyslog_FormatMessage(struct SolidSyslogFormatter* f, const struct SolidSyslogMessage* message);
 static inline void SolidSyslog_FormatMsg(struct SolidSyslogFormatter* f, const char* msg);
 static inline void SolidSyslog_FormatMsgId(struct SolidSyslogFormatter* f, const char* messageId);
 static inline void SolidSyslog_FormatNilvalue(struct SolidSyslogFormatter* f);
 static inline void SolidSyslog_FormatNonZeroUtcOffset(struct SolidSyslogFormatter* f, int16_t offsetMinutes);
 static inline void SolidSyslog_FormatPrival(struct SolidSyslogFormatter* f, uint8_t prival);
-static inline void SolidSyslog_FormatStringField(struct SolidSyslogFormatter* f, SolidSyslogStringFunction fn, size_t maxSize);
+static inline void SolidSyslog_FormatStringField(
+    struct SolidSyslogFormatter* f,
+    SolidSyslogStringFunction fn,
+    size_t maxSize
+);
 static inline void SolidSyslog_FormatStructuredData(
     struct SolidSyslogFormatter* f,
     struct SolidSyslogStructuredData** sd,
@@ -405,7 +412,10 @@ static inline bool SolidSyslog_TimestampIsValid(const struct SolidSyslogTimestam
     return valid;
 }
 
-static inline void SolidSyslog_FormatCapturedTimestamp(struct SolidSyslogFormatter* f, const struct SolidSyslogTimestamp* ts)
+static inline void SolidSyslog_FormatCapturedTimestamp(
+    struct SolidSyslogFormatter* f,
+    const struct SolidSyslogTimestamp* ts
+)
 {
     SolidSyslogFormatter_FourDigit(f, ts->year);
     SolidSyslogFormatter_AsciiCharacter(f, '-');
@@ -457,7 +467,11 @@ static inline int16_t SolidSyslog_AbsoluteInt16(int16_t value)
     return result;
 }
 
-static inline void SolidSyslog_FormatStringField(struct SolidSyslogFormatter* f, SolidSyslogStringFunction fn, size_t maxSize)
+static inline void SolidSyslog_FormatStringField(
+    struct SolidSyslogFormatter* f,
+    SolidSyslogStringFunction fn,
+    size_t maxSize
+)
 {
     SolidSyslogFormatterStorage fieldStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(SOLIDSYSLOG_MAX_HOSTNAME_SIZE)];
     struct SolidSyslogFormatter* field = SolidSyslogFormatter_Create(fieldStorage, maxSize);
@@ -636,7 +650,12 @@ static bool SolidSyslog_NilStoreWrite(struct SolidSyslogStore* self, const void*
     return false;
 }
 
-static bool SolidSyslog_NilStoreReadNextUnsent(struct SolidSyslogStore* self, void* data, size_t maxSize, size_t* bytesRead)
+static bool SolidSyslog_NilStoreReadNextUnsent(
+    struct SolidSyslogStore* self,
+    void* data,
+    size_t maxSize,
+    size_t* bytesRead
+)
 {
     (void) self;
     (void) data;

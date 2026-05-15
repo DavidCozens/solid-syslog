@@ -197,7 +197,8 @@ static inline size_t Formatter_Utf8CodepointLength(const char* source)
     {
         length = 2;
     }
-    else if ((source[1] != '\0') && (source[2] != '\0') && Formatter_IsValidUtf8ThreeByte(source[0], source[1], source[2]))
+    else if ((source[1] != '\0') && (source[2] != '\0') &&
+             Formatter_IsValidUtf8ThreeByte(source[0], source[1], source[2]))
     {
         length = 3;
     }
@@ -224,7 +225,8 @@ static inline bool Formatter_IsOverlongTwoByteLead(char byte)
 static inline bool Formatter_IsValidUtf8ThreeByte(char lead, char continuation1, char continuation2)
 {
     return SolidSyslogUtf8_IsThreeByteLead(lead) && SolidSyslogUtf8_IsContinuationByte(continuation1) &&
-           SolidSyslogUtf8_IsContinuationByte(continuation2) && !Formatter_IsOverlongThreeByteEncoding(lead, continuation1) &&
+           SolidSyslogUtf8_IsContinuationByte(continuation2) &&
+           !Formatter_IsOverlongThreeByteEncoding(lead, continuation1) &&
            !Formatter_IsUtf16SurrogateEncoding(lead, continuation1);
 }
 
@@ -242,7 +244,8 @@ static inline bool Formatter_IsValidUtf8FourByte(char lead, char continuation1, 
 {
     return SolidSyslogUtf8_IsFourByteLead(lead) && SolidSyslogUtf8_IsContinuationByte(continuation1) &&
            SolidSyslogUtf8_IsContinuationByte(continuation2) && SolidSyslogUtf8_IsContinuationByte(continuation3) &&
-           !Formatter_IsOverlongFourByteEncoding(lead, continuation1) && !Formatter_IsAboveUnicodeMaxEncoding(lead, continuation1);
+           !Formatter_IsOverlongFourByteEncoding(lead, continuation1) &&
+           !Formatter_IsAboveUnicodeMaxEncoding(lead, continuation1);
 }
 
 static inline bool Formatter_IsOverlongFourByteEncoding(char lead, char continuation1)
@@ -350,7 +353,13 @@ static inline void Formatter_WriteCodepoint(struct EscapedContext* context)
     size_t codepointLength = Formatter_Utf8CodepointLength(&context->source[context->sourcePos]);
     if (Formatter_Fits(context, codepointLength))
     {
-        Formatter_WriteContext(context, &context->source[context->sourcePos], codepointLength, codepointLength, codepointLength);
+        Formatter_WriteContext(
+            context,
+            &context->source[context->sourcePos],
+            codepointLength,
+            codepointLength,
+            codepointLength
+        );
         return;
     }
     Formatter_WriteReplacement(context);
@@ -360,7 +369,13 @@ static inline void Formatter_WriteReplacement(struct EscapedContext* context)
 {
     if (Formatter_Fits(context, sizeof(REPLACEMENT_CHARACTER)))
     {
-        Formatter_WriteContext(context, REPLACEMENT_CHARACTER, sizeof(REPLACEMENT_CHARACTER), 1, sizeof(REPLACEMENT_CHARACTER));
+        Formatter_WriteContext(
+            context,
+            REPLACEMENT_CHARACTER,
+            sizeof(REPLACEMENT_CHARACTER),
+            1,
+            sizeof(REPLACEMENT_CHARACTER)
+        );
         return;
     }
     Formatter_Exhaust(context);

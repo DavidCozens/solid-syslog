@@ -47,7 +47,10 @@ static inline bool FreeRtosDatagram_FreeRtosDatagram_IsOpen(const FreeRtosDatagr
 static inline void FreeRtosDatagram_PrimeArpIfMissing(uint32_t ip);
 
 static const FreeRtosDatagram DEFAULT_INSTANCE = {
-    {FreeRtosDatagram_FreeRtosDatagram_Open, FreeRtosDatagram_FreeRtosDatagram_SendTo, FreeRtosDatagram_FreeRtosDatagram_MaxPayload, FreeRtosDatagram_FreeRtosDatagram_Close},
+    {FreeRtosDatagram_FreeRtosDatagram_Open,
+     FreeRtosDatagram_FreeRtosDatagram_SendTo,
+     FreeRtosDatagram_FreeRtosDatagram_MaxPayload,
+     FreeRtosDatagram_FreeRtosDatagram_Close},
     FREERTOS_INVALID_SOCKET,
 };
 

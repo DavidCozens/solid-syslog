@@ -39,7 +39,9 @@ SOLIDSYSLOG_STATIC_ASSERT(
 static const struct SolidSyslogBlockStore DEFAULT_INSTANCE = {0};
 
 static inline struct SolidSyslogBlockStore* BlockStore_AsBlockStore(struct SolidSyslogStore* store);
-static inline struct SolidSyslogSecurityPolicy* BlockStore_ResolveSecurityPolicy(struct SolidSyslogSecurityPolicy* configured);
+static inline struct SolidSyslogSecurityPolicy* BlockStore_ResolveSecurityPolicy(
+    struct SolidSyslogSecurityPolicy* configured
+);
 static inline struct BlockSequenceConfig BlockStore_BuildBlockSequenceConfig(
     const struct SolidSyslogBlockStoreConfig* config,
     const struct RecordStore* recordStore
@@ -79,7 +81,9 @@ static inline struct SolidSyslogBlockStore* BlockStore_AsBlockStore(struct Solid
     return (struct SolidSyslogBlockStore*) store;
 }
 
-static inline struct SolidSyslogSecurityPolicy* BlockStore_ResolveSecurityPolicy(struct SolidSyslogSecurityPolicy* configured)
+static inline struct SolidSyslogSecurityPolicy* BlockStore_ResolveSecurityPolicy(
+    struct SolidSyslogSecurityPolicy* configured
+)
 {
     struct SolidSyslogSecurityPolicy* resolved = configured;
 
@@ -233,7 +237,12 @@ static bool BlockStore_IsTransient(struct SolidSyslogStore* self)
  * BlockStore_ReadNextUnsent
  * ----------------------------------------------------------------*/
 
-static bool BlockStore_ReadCurrent(struct SolidSyslogBlockStore* blockStore, void* data, size_t maxSize, size_t* bytesRead);
+static bool BlockStore_ReadCurrent(
+    struct SolidSyslogBlockStore* blockStore,
+    void* data,
+    size_t maxSize,
+    size_t* bytesRead
+);
 
 static bool BlockStore_ReadNextUnsent(struct SolidSyslogStore* self, void* data, size_t maxSize, size_t* bytesRead)
 {
@@ -256,7 +265,12 @@ static bool BlockStore_ReadNextUnsent(struct SolidSyslogStore* self, void* data,
     return read;
 }
 
-static bool BlockStore_ReadCurrent(struct SolidSyslogBlockStore* blockStore, void* data, size_t maxSize, size_t* bytesRead)
+static bool BlockStore_ReadCurrent(
+    struct SolidSyslogBlockStore* blockStore,
+    void* data,
+    size_t maxSize,
+    size_t* bytesRead
+)
 {
     return RecordStore_Read(
         &blockStore->recordStore,

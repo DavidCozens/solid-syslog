@@ -32,9 +32,18 @@ static const char SD_IP_SD[] = " ip=\"";
 
 static void OriginSd_Format(struct SolidSyslogStructuredData* self, struct SolidSyslogFormatter* formatter);
 static inline void OriginSd_PreFormatStaticPrefix(const struct SolidSyslogOriginSdConfig* config);
-static inline void OriginSd_EmitSoftware(struct SolidSyslogFormatter* f, const struct SolidSyslogOriginSdConfig* config);
-static inline void OriginSd_EmitSwVersion(struct SolidSyslogFormatter* f, const struct SolidSyslogOriginSdConfig* config);
-static inline void OriginSd_EmitEnterpriseId(struct SolidSyslogFormatter* f, const struct SolidSyslogOriginSdConfig* config);
+static inline void OriginSd_EmitSoftware(
+    struct SolidSyslogFormatter* f,
+    const struct SolidSyslogOriginSdConfig* config
+);
+static inline void OriginSd_EmitSwVersion(
+    struct SolidSyslogFormatter* f,
+    const struct SolidSyslogOriginSdConfig* config
+);
+static inline void OriginSd_EmitEnterpriseId(
+    struct SolidSyslogFormatter* f,
+    const struct SolidSyslogOriginSdConfig* config
+);
 static inline void OriginSd_EmitIps(struct SolidSyslogFormatter* formatter, const struct SolidSyslogOriginSd* origin);
 static inline void OriginSd_EmitIp(
     struct SolidSyslogFormatter* formatter,
@@ -95,7 +104,10 @@ static inline void OriginSd_EmitSoftware(struct SolidSyslogFormatter* f, const s
     }
 }
 
-static inline void OriginSd_EmitSwVersion(struct SolidSyslogFormatter* f, const struct SolidSyslogOriginSdConfig* config)
+static inline void OriginSd_EmitSwVersion(
+    struct SolidSyslogFormatter* f,
+    const struct SolidSyslogOriginSdConfig* config
+)
 {
     if (config->swVersion != NULL)
     {
@@ -105,7 +117,10 @@ static inline void OriginSd_EmitSwVersion(struct SolidSyslogFormatter* f, const 
     }
 }
 
-static inline void OriginSd_EmitEnterpriseId(struct SolidSyslogFormatter* f, const struct SolidSyslogOriginSdConfig* config)
+static inline void OriginSd_EmitEnterpriseId(
+    struct SolidSyslogFormatter* f,
+    const struct SolidSyslogOriginSdConfig* config
+)
 {
     if (config->enterpriseId != NULL)
     {

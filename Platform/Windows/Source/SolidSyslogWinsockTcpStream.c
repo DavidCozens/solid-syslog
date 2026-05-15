@@ -129,7 +129,10 @@ static bool WinsockTcpStream_ConfigureSocket(SOCKET fd);
 static void WinsockTcpStream_EnableTcpNoDelay(SOCKET fd);
 static void WinsockTcpStream_EnableKeepalive(SOCKET fd);
 static inline bool WinsockTcpStream_IsSocketValid(SOCKET fd);
-static bool WinsockTcpStream_ConnectOrCloseOnFailure(struct SolidSyslogWinsockTcpStream* stream, const struct sockaddr_in* sin);
+static bool WinsockTcpStream_ConnectOrCloseOnFailure(
+    struct SolidSyslogWinsockTcpStream* stream,
+    const struct sockaddr_in* sin
+);
 static bool WinsockTcpStream_Connect(SOCKET fd, const struct sockaddr_in* sin);
 static bool WinsockTcpStream_SetNonBlocking(SOCKET fd);
 static bool WinsockTcpStream_WaitForConnectCompletion(SOCKET fd);
@@ -228,7 +231,10 @@ static inline bool WinsockTcpStream_IsSocketValid(SOCKET fd)
     return fd != INVALID_SOCKET;
 }
 
-static bool WinsockTcpStream_ConnectOrCloseOnFailure(struct SolidSyslogWinsockTcpStream* stream, const struct sockaddr_in* sin)
+static bool WinsockTcpStream_ConnectOrCloseOnFailure(
+    struct SolidSyslogWinsockTcpStream* stream,
+    const struct sockaddr_in* sin
+)
 {
     bool connected = WinsockTcpStream_Connect(stream->fd, sin);
     if (!connected)

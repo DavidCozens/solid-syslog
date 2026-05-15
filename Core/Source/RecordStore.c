@@ -62,7 +62,11 @@ static inline size_t RecordStore_IntegrityChecksumOffset(size_t recordStart, uin
     return recordStart + MAGIC_SIZE + RECORD_LENGTH_SIZE + dataLength;
 }
 
-static inline size_t RecordStore_SentFlagOffset(const struct RecordStore* recordStore, size_t recordStart, uint16_t dataLength)
+static inline size_t RecordStore_SentFlagOffset(
+    const struct RecordStore* recordStore,
+    size_t recordStart,
+    uint16_t dataLength
+)
 {
     return RecordStore_IntegrityChecksumOffset(recordStart, dataLength) + recordStore->securityPolicy->integritySize;
 }
@@ -198,7 +202,8 @@ static bool RecordStore_ReadAndValidateRecord(
     uint16_t* length
 )
 {
-    return RecordStore_ReadRecordHeader(recordStore, blockDevice, blockIndex, offset) && RecordStore_ValidateHeader(recordStore, length) &&
+    return RecordStore_ReadRecordHeader(recordStore, blockDevice, blockIndex, offset) &&
+           RecordStore_ValidateHeader(recordStore, length) &&
            RecordStore_ReadRecordBody(recordStore, blockDevice, blockIndex, offset, *length) &&
            RecordStore_ReadIntegrityChecksum(recordStore, blockDevice, blockIndex, offset, *length) &&
            RecordStore_VerifyIntegrity(recordStore, *length);
@@ -222,7 +227,8 @@ static inline bool RecordStore_ReadRecordHeader(
 
 static inline bool RecordStore_IsMagicValid(struct RecordStore* recordStore)
 {
-    return (RecordStore_MagicAddress(recordStore)[0] == MAGIC_BYTE_0) && (RecordStore_MagicAddress(recordStore)[1] == MAGIC_BYTE_1);
+    return (RecordStore_MagicAddress(recordStore)[0] == MAGIC_BYTE_0) &&
+           (RecordStore_MagicAddress(recordStore)[1] == MAGIC_BYTE_1);
 }
 
 static inline uint16_t RecordStore_RecordLength(struct RecordStore* recordStore)
@@ -329,7 +335,10 @@ static inline void RecordStore_RememberCurrentRecord(
 
 // NOLINTEND(bugprone-easily-swappable-parameters)
 
-static inline bool RecordStore_WriteSentFlag(struct RecordStore* recordStore, struct SolidSyslogBlockDevice* blockDevice);
+static inline bool RecordStore_WriteSentFlag(
+    struct RecordStore* recordStore,
+    struct SolidSyslogBlockDevice* blockDevice
+);
 
 bool RecordStore_MarkLastReadAsSent(
     struct RecordStore* recordStore,
@@ -349,7 +358,10 @@ bool RecordStore_MarkLastReadAsSent(
     return marked;
 }
 
-static inline bool RecordStore_WriteSentFlag(struct RecordStore* recordStore, struct SolidSyslogBlockDevice* blockDevice)
+static inline bool RecordStore_WriteSentFlag(
+    struct RecordStore* recordStore,
+    struct SolidSyslogBlockDevice* blockDevice
+)
 {
     uint8_t flag = SENT_FLAG_SENT;
     return SolidSyslogBlockDevice_WriteAt(

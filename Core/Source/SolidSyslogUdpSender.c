@@ -35,7 +35,10 @@ static inline void UdpSender_DisconnectIfStale(struct SolidSyslogUdpSender* udp)
 static inline bool UdpSender_EnsureConnected(struct SolidSyslogUdpSender* udp);
 static inline bool UdpSender_Connected(struct SolidSyslogUdpSender* udp);
 static bool UdpSender_Connect(struct SolidSyslogUdpSender* udp);
-static inline uint16_t UdpSender_QueryEndpointPort(struct SolidSyslogUdpSender* udp, struct SolidSyslogFormatter* hostFormatter);
+static inline uint16_t UdpSender_QueryEndpointPort(
+    struct SolidSyslogUdpSender* udp,
+    struct SolidSyslogFormatter* hostFormatter
+);
 static inline bool UdpSender_OpenSocket(struct SolidSyslogUdpSender* udp);
 static bool UdpSender_ResolveDestination(struct SolidSyslogUdpSender* udp, const char* host, uint16_t port);
 static inline struct SolidSyslogAddress* UdpSender_Address(struct SolidSyslogUdpSender* udp);
@@ -50,9 +53,14 @@ static uint32_t UdpSender_NilEndpointVersion(void);
 static bool UdpSender_NilUdpSenderSend(struct SolidSyslogSender* self, const void* buffer, size_t size);
 static void UdpSender_NilUdpSenderDisconnect(struct SolidSyslogSender* self);
 
-static const struct SolidSyslogUdpSender DEFAULT_INSTANCE = {.config = {.endpointVersion = UdpSender_NilEndpointVersion}};
+static const struct SolidSyslogUdpSender DEFAULT_INSTANCE = {
+    .config = {.endpointVersion = UdpSender_NilEndpointVersion}
+};
 static struct SolidSyslogUdpSender instance;
-static struct SolidSyslogSender NilUdpSender = {.Send = UdpSender_NilUdpSenderSend, .Disconnect = UdpSender_NilUdpSenderDisconnect};
+static struct SolidSyslogSender NilUdpSender = {
+    .Send = UdpSender_NilUdpSenderSend,
+    .Disconnect = UdpSender_NilUdpSenderDisconnect
+};
 
 struct SolidSyslogSender* SolidSyslogUdpSender_Create(const struct SolidSyslogUdpSenderConfig* config)
 {
@@ -179,7 +187,10 @@ static bool UdpSender_Connect(struct SolidSyslogUdpSender* udp)
     return UdpSender_Connected(udp);
 }
 
-static inline uint16_t UdpSender_QueryEndpointPort(struct SolidSyslogUdpSender* udp, struct SolidSyslogFormatter* hostFormatter)
+static inline uint16_t UdpSender_QueryEndpointPort(
+    struct SolidSyslogUdpSender* udp,
+    struct SolidSyslogFormatter* hostFormatter
+)
 {
     struct SolidSyslogEndpoint endpoint = {.host = hostFormatter, .port = 0};
     udp->config.endpoint(&endpoint);
@@ -193,7 +204,13 @@ static inline bool UdpSender_OpenSocket(struct SolidSyslogUdpSender* udp)
 
 static bool UdpSender_ResolveDestination(struct SolidSyslogUdpSender* udp, const char* host, uint16_t port)
 {
-    return SolidSyslogResolver_Resolve(udp->config.resolver, SolidSyslogTransport_Udp, host, port, UdpSender_Address(udp));
+    return SolidSyslogResolver_Resolve(
+        udp->config.resolver,
+        SolidSyslogTransport_Udp,
+        host,
+        port,
+        UdpSender_Address(udp)
+    );
 }
 
 static inline struct SolidSyslogAddress* UdpSender_Address(struct SolidSyslogUdpSender* udp)

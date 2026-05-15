@@ -42,7 +42,10 @@ static bool StreamSender_ResolveDestination(struct SolidSyslogStreamSender* send
 static void StreamSender_Disconnect(struct SolidSyslogSender* self);
 static inline void StreamSender_CloseStream(struct SolidSyslogStreamSender* sender);
 static bool StreamSender_TransmitFramed(struct SolidSyslogStreamSender* sender, const void* buffer, size_t size);
-static struct SolidSyslogFormatter* StreamSender_FormatOctetCountingPrefix(SolidSyslogFormatterStorage* storage, size_t messageSize);
+static struct SolidSyslogFormatter* StreamSender_FormatOctetCountingPrefix(
+    SolidSyslogFormatterStorage* storage,
+    size_t messageSize
+);
 static bool StreamSender_SendBytes(struct SolidSyslogStreamSender* sender, const void* data, size_t len);
 static void StreamSender_NilEndpoint(struct SolidSyslogEndpoint* endpoint);
 static uint32_t StreamSender_NilEndpointVersion(void);
@@ -177,11 +180,18 @@ static bool StreamSender_TransmitFramed(struct SolidSyslogStreamSender* sender, 
     SolidSyslogFormatterStorage prefixStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(OCTET_COUNTING_PREFIX_CAPACITY)];
     struct SolidSyslogFormatter* prefix = StreamSender_FormatOctetCountingPrefix(prefixStorage, size);
 
-    return StreamSender_SendBytes(sender, SolidSyslogFormatter_AsFormattedBuffer(prefix), SolidSyslogFormatter_Length(prefix)) &&
+    return StreamSender_SendBytes(
+               sender,
+               SolidSyslogFormatter_AsFormattedBuffer(prefix),
+               SolidSyslogFormatter_Length(prefix)
+           ) &&
            StreamSender_SendBytes(sender, buffer, size);
 }
 
-static struct SolidSyslogFormatter* StreamSender_FormatOctetCountingPrefix(SolidSyslogFormatterStorage* storage, size_t messageSize)
+static struct SolidSyslogFormatter* StreamSender_FormatOctetCountingPrefix(
+    SolidSyslogFormatterStorage* storage,
+    size_t messageSize
+)
 {
     struct SolidSyslogFormatter* f = SolidSyslogFormatter_Create(storage, OCTET_COUNTING_PREFIX_CAPACITY);
     SolidSyslogFormatter_Uint32(f, (uint32_t) messageSize);

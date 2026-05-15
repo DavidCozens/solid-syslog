@@ -20,7 +20,10 @@ static inline bool SwitchingSender_SenderChanged(
     const struct SolidSyslogSwitchingSender* self,
     const struct SolidSyslogSender* requestedSender
 );
-static inline void SwitchingSender_SwitchTo(struct SolidSyslogSwitchingSender* self, struct SolidSyslogSender* newCurrent);
+static inline void SwitchingSender_SwitchTo(
+    struct SolidSyslogSwitchingSender* self,
+    struct SolidSyslogSender* newCurrent
+);
 static inline struct SolidSyslogSender* SwitchingSender_RequestedSender(const struct SolidSyslogSwitchingSender* self);
 static bool SwitchingSender_NilSend(struct SolidSyslogSender* sender, const void* buffer, size_t size);
 static void SwitchingSender_NilDisconnect(struct SolidSyslogSender* sender);
@@ -74,7 +77,10 @@ static inline bool SwitchingSender_SenderChanged(
     return requestedSender != self->currentSender;
 }
 
-static inline void SwitchingSender_SwitchTo(struct SolidSyslogSwitchingSender* self, struct SolidSyslogSender* newCurrent)
+static inline void SwitchingSender_SwitchTo(
+    struct SolidSyslogSwitchingSender* self,
+    struct SolidSyslogSender* newCurrent
+)
 {
     SolidSyslogSender_Disconnect(self->currentSender);
     self->currentSender = newCurrent;

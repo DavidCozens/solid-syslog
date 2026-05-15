@@ -13,7 +13,8 @@
    isn't a compile-time constant); forwarding through a static function whose
    address IS a compile-time constant avoids the warning without a suppression. */
 static SOCKET WSAAPI WinsockDatagram_CallSocket(int af, int type, int protocol);
-static int WSAAPI WinsockDatagram_CallSendTo(SOCKET s, const char* buf, int len, int flags, const struct sockaddr* to, int tolen);
+static int WSAAPI
+WinsockDatagram_CallSendTo(SOCKET s, const char* buf, int len, int flags, const struct sockaddr* to, int tolen);
 static int WSAAPI WinsockDatagram_CallCloseSocket(SOCKET s);
 static int WSAAPI WinsockDatagram_CallConnect(SOCKET s, const struct sockaddr* name, int namelen);
 static int WSAAPI WinsockDatagram_CallSetSockOpt(SOCKET s, int level, int optname, const char* optval, int optlen);
@@ -31,7 +32,8 @@ static SOCKET WSAAPI WinsockDatagram_CallSocket(int af, int type, int protocol)
     return socket(af, type, protocol);
 }
 
-static int WSAAPI WinsockDatagram_CallSendTo(SOCKET s, const char* buf, int len, int flags, const struct sockaddr* to, int tolen)
+static int WSAAPI
+WinsockDatagram_CallSendTo(SOCKET s, const char* buf, int len, int flags, const struct sockaddr* to, int tolen)
 {
     return sendto(s, buf, len, flags, to, tolen);
 }
@@ -72,7 +74,10 @@ static enum SolidSyslogDatagramSendResult WinsockDatagram_SendTo(
 );
 static size_t WinsockDatagram_MaxPayload(struct SolidSyslogDatagram* self);
 static void WinsockDatagram_Close(struct SolidSyslogDatagram* self);
-static inline bool WinsockDatagram_ConnectIfNeeded(struct SolidSyslogWinsockDatagram* datagram, const struct SolidSyslogAddress* addr);
+static inline bool WinsockDatagram_ConnectIfNeeded(
+    struct SolidSyslogWinsockDatagram* datagram,
+    const struct SolidSyslogAddress* addr
+);
 static inline bool WinsockDatagram_IsSocketValid(SOCKET fd);
 
 static struct SolidSyslogWinsockDatagram instance = {.fd = INVALID_SOCKET};
@@ -139,7 +144,10 @@ static enum SolidSyslogDatagramSendResult WinsockDatagram_SendTo(
     return result;
 }
 
-static inline bool WinsockDatagram_ConnectIfNeeded(struct SolidSyslogWinsockDatagram* datagram, const struct SolidSyslogAddress* addr)
+static inline bool WinsockDatagram_ConnectIfNeeded(
+    struct SolidSyslogWinsockDatagram* datagram,
+    const struct SolidSyslogAddress* addr
+)
 {
     if (!datagram->connected)
     {

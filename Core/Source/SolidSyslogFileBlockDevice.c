@@ -61,8 +61,19 @@ static bool FileBlockDevice_Acquire(struct SolidSyslogBlockDevice* self, size_t 
 static bool FileBlockDevice_Dispose(struct SolidSyslogBlockDevice* self, size_t blockIndex);
 static bool FileBlockDevice_Exists(struct SolidSyslogBlockDevice* self, size_t blockIndex);
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- vtable signature: blockIndex / offset are positional, distinct semantics
-static bool FileBlockDevice_Read(struct SolidSyslogBlockDevice* self, size_t blockIndex, size_t offset, void* buf, size_t count);
-static bool FileBlockDevice_Append(struct SolidSyslogBlockDevice* self, size_t blockIndex, const void* buf, size_t count);
+static bool FileBlockDevice_Read(
+    struct SolidSyslogBlockDevice* self,
+    size_t blockIndex,
+    size_t offset,
+    void* buf,
+    size_t count
+);
+static bool FileBlockDevice_Append(
+    struct SolidSyslogBlockDevice* self,
+    size_t blockIndex,
+    const void* buf,
+    size_t count
+);
 // NOLINTBEGIN(bugprone-easily-swappable-parameters) -- vtable signature: blockIndex / offset are positional, distinct semantics
 static bool FileBlockDevice_WriteAt(
     struct SolidSyslogBlockDevice* self,
@@ -74,7 +85,8 @@ static bool FileBlockDevice_WriteAt(
 // NOLINTEND(bugprone-easily-swappable-parameters)
 static size_t FileBlockDevice_Size(struct SolidSyslogBlockDevice* self, size_t blockIndex);
 
-static inline struct SolidSyslogFileBlockDevice* FileBlockDevice_AsFileBlockDevice(struct SolidSyslogBlockDevice* device);
+static inline struct SolidSyslogFileBlockDevice* FileBlockDevice_AsFileBlockDevice(struct SolidSyslogBlockDevice* device
+);
 static inline void FileBlockDevice_InitialiseVtable(struct SolidSyslogFileBlockDevice* device);
 
 /* ------------------------------------------------------------------
@@ -96,7 +108,8 @@ struct SolidSyslogBlockDevice* SolidSyslogFileBlockDevice_Create(
     return &device->base;
 }
 
-static inline struct SolidSyslogFileBlockDevice* FileBlockDevice_AsFileBlockDevice(struct SolidSyslogBlockDevice* device)
+static inline struct SolidSyslogFileBlockDevice* FileBlockDevice_AsFileBlockDevice(struct SolidSyslogBlockDevice* device
+)
 {
     return (struct SolidSyslogFileBlockDevice*) device;
 }
@@ -295,7 +308,13 @@ static bool FileBlockDevice_Exists(struct SolidSyslogBlockDevice* self, size_t b
  * ----------------------------------------------------------------*/
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- vtable signature: blockIndex / offset are positional, distinct semantics
-static bool FileBlockDevice_Read(struct SolidSyslogBlockDevice* self, size_t blockIndex, size_t offset, void* buf, size_t count)
+static bool FileBlockDevice_Read(
+    struct SolidSyslogBlockDevice* self,
+    size_t blockIndex,
+    size_t offset,
+    void* buf,
+    size_t count
+)
 {
     bool read = false;
 
@@ -312,7 +331,12 @@ static bool FileBlockDevice_Read(struct SolidSyslogBlockDevice* self, size_t blo
     return read;
 }
 
-static bool FileBlockDevice_Append(struct SolidSyslogBlockDevice* self, size_t blockIndex, const void* buf, size_t count)
+static bool FileBlockDevice_Append(
+    struct SolidSyslogBlockDevice* self,
+    size_t blockIndex,
+    const void* buf,
+    size_t count
+)
 {
     bool written = false;
 

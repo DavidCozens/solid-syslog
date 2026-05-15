@@ -41,7 +41,16 @@ SOLIDSYSLOG_STATIC_ASSERT(
 );
 
 static const struct SolidSyslogPosixFile DEFAULT_INSTANCE = {
-    {PosixFile_Open, PosixFile_Close, PosixFile_IsOpen, PosixFile_Read, PosixFile_Write, PosixFile_SeekTo, PosixFile_Size, PosixFile_Truncate, PosixFile_Exists, PosixFile_Delete},
+    {PosixFile_Open,
+     PosixFile_Close,
+     PosixFile_IsOpen,
+     PosixFile_Read,
+     PosixFile_Write,
+     PosixFile_SeekTo,
+     PosixFile_Size,
+     PosixFile_Truncate,
+     PosixFile_Exists,
+     PosixFile_Delete},
     INVALID_FD,
 };
 
