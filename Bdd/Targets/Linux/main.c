@@ -58,9 +58,9 @@ static struct SolidSyslogSender* plainTcpSender;
 
 static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
 {
-    timeQuality->tzKnown = true;
-    timeQuality->isSynced = true;
-    timeQuality->syncAccuracyMicroseconds = SOLIDSYSLOG_SYNC_ACCURACY_OMIT;
+    timeQuality->TzKnown = true;
+    timeQuality->IsSynced = true;
+    timeQuality->SyncAccuracyMicroseconds = SOLIDSYSLOG_SYNC_ACCURACY_OMIT;
 }
 
 static volatile bool shutdown_flag;
@@ -74,7 +74,7 @@ static void* ServiceThreadEntry(void* arg)
 
 static struct SolidSyslogSender* CreateSender(const struct BddTargetOptions* options)
 {
-    bool mtlsModeActive = (strcmp(options->transport, "mtls") == 0);
+    bool mtlsModeActive = (strcmp(options->Transport, "mtls") == 0);
 
     struct SolidSyslogResolver* resolver = SolidSyslogGetAddrInfoResolver_Create();
 
@@ -105,7 +105,7 @@ static struct SolidSyslogSender* CreateSender(const struct BddTargetOptions* opt
     switchConfig.SenderCount = BDD_TARGET_SWITCH_COUNT;
     switchConfig.Selector = BddTargetSwitchConfig_Selector;
 
-    BddTargetSwitchConfig_SetByName(options->transport);
+    BddTargetSwitchConfig_SetByName(options->Transport);
     return SolidSyslogSwitchingSender_Create(&switchConfig);
 }
 
@@ -151,7 +151,7 @@ static void OnThresholdCrossed(void* context)
 
 static struct SolidSyslogStore* CreateStore(const struct BddTargetOptions* options)
 {
-    bool useFile = (strcmp(options->store, "file") == 0);
+    bool useFile = (strcmp(options->Store, "file") == 0);
 
     if (useFile)
     {
@@ -162,12 +162,12 @@ static struct SolidSyslogStore* CreateStore(const struct BddTargetOptions* optio
         storeBlockDevice = SolidSyslogFileBlockDevice_Create(&blockDeviceStorage, storeFile, STORE_PATH_PREFIX);
 
         static size_t capacityThreshold;
-        capacityThreshold = options->capacityThreshold;
+        capacityThreshold = options->CapacityThreshold;
         static struct SolidSyslogBlockStoreConfig storeConfig = {0};
         storeConfig.BlockDevice = storeBlockDevice;
-        storeConfig.MaxBlockSize = options->maxBlockSize;
-        storeConfig.MaxBlocks = options->maxBlocks;
-        storeConfig.DiscardPolicy = MapDiscardPolicy(options->discardPolicy);
+        storeConfig.MaxBlockSize = options->MaxBlockSize;
+        storeConfig.MaxBlocks = options->MaxBlocks;
+        storeConfig.DiscardPolicy = MapDiscardPolicy(options->DiscardPolicy);
         storeConfig.SecurityPolicy = SolidSyslogCrc16Policy_Create();
         storeConfig.OnStoreFull = OnStoreFull;
         storeConfig.GetCapacityThreshold = GetCapacityThreshold;
@@ -194,7 +194,7 @@ static void DestroySender(void)
 
 static void DestroyStore(struct SolidSyslogStore* store, const struct BddTargetOptions* options)
 {
-    bool useFile = (strcmp(options->store, "file") == 0);
+    bool useFile = (strcmp(options->Store, "file") == 0);
 
     if (useFile)
     {
@@ -227,7 +227,7 @@ int main(int argc, char* argv[])
 
     /* Honour --app-name when supplied (BDD scenarios pin it for record-size
        parity across runners); otherwise derive from argv[0] as before. */
-    BddTargetAppName_Set((options.appName != NULL) ? options.appName : argv[0]);
+    BddTargetAppName_Set((options.AppName != NULL) ? options.AppName : argv[0]);
 
     struct SolidSyslogSender* sender = CreateSender(&options);
     struct SolidSyslogStore* store = CreateStore(&options);
@@ -252,32 +252,32 @@ int main(int argc, char* argv[])
     struct SolidSyslogStructuredData* originSd = SolidSyslogOriginSd_Create(&originConfig);
 
     struct SolidSyslogStructuredData* sdList[3] = {metaSd, timeQuality, originSd};
-    size_t sdCount = options.noSd ? 1 : 3;
+    size_t sdCount = options.NoSd ? 1 : 3;
 
     struct SolidSyslogConfig config = {
-        .buffer = buffer,
-        .sender = sender,
-        .clock = SolidSyslogPosixClock_GetTimestamp,
-        .getHostname = SolidSyslogPosixHostname_Get,
-        .getAppName = BddTargetAppName_Get,
-        .getProcessId = SolidSyslogPosixProcessId_Get,
-        .store = store,
-        .sd = sdList,
-        .sdCount = sdCount,
+        .Buffer = buffer,
+        .Sender = sender,
+        .Clock = SolidSyslogPosixClock_GetTimestamp,
+        .GetHostname = SolidSyslogPosixHostname_Get,
+        .GetAppName = BddTargetAppName_Get,
+        .GetProcessId = SolidSyslogPosixProcessId_Get,
+        .Store = store,
+        .Sd = sdList,
+        .SdCount = sdCount,
     };
     SolidSyslog_Create(&config);
 
     shutdown_flag = false;
-    haltExit = options.haltExit;
+    haltExit = options.HaltExit;
 
     pthread_t serviceThread = 0;
     pthread_create(&serviceThread, NULL, ServiceThreadEntry, (void*) &shutdown_flag);
 
     struct SolidSyslogMessage message = {
-        .facility = options.facility,
-        .severity = options.severity,
-        .messageId = options.messageId,
-        .msg = options.msg,
+        .Facility = options.Facility,
+        .Severity = options.Severity,
+        .MessageId = options.MessageId,
+        .Msg = options.Msg,
     };
 
     BddTargetInteractive_Run(&message, stdin, BddTargetSwitchConfig_SetByName, NULL);

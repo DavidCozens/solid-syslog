@@ -146,7 +146,7 @@ static bool StreamSender_ResolveDestination(struct SolidSyslogStreamSender* send
 {
     SolidSyslogFormatterStorage hostStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(SOLIDSYSLOG_MAX_HOST_SIZE)];
     struct SolidSyslogFormatter* hostFormatter = SolidSyslogFormatter_Create(hostStorage, SOLIDSYSLOG_MAX_HOST_SIZE);
-    struct SolidSyslogEndpoint endpoint = {.host = hostFormatter, .port = 0};
+    struct SolidSyslogEndpoint endpoint = {.Host = hostFormatter, .Port = 0};
 
     sender->Config.Endpoint(&endpoint);
 
@@ -154,7 +154,7 @@ static bool StreamSender_ResolveDestination(struct SolidSyslogStreamSender* send
         sender->Config.Resolver,
         SolidSyslogTransport_Tcp,
         SolidSyslogFormatter_AsFormattedBuffer(hostFormatter),
-        endpoint.port,
+        endpoint.Port,
         addr
     );
 }
@@ -213,8 +213,8 @@ static bool StreamSender_SendBytes(struct SolidSyslogStreamSender* sender, const
 
 static void StreamSender_NilEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
-    SolidSyslogFormatter_BoundedString(endpoint->host, "", 0);
-    endpoint->port = 0;
+    SolidSyslogFormatter_BoundedString(endpoint->Host, "", 0);
+    endpoint->Port = 0;
 }
 
 static uint32_t StreamSender_NilEndpointVersion(void)

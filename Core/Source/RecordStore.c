@@ -44,7 +44,7 @@ static inline uint8_t* RecordStore_IntegrityChecksumAddress(struct RecordStore* 
 
 static inline uint8_t* RecordStore_SentFlagAddress(struct RecordStore* recordStore, size_t dataSize)
 {
-    return RecordStore_IntegrityChecksumAddress(recordStore, dataSize) + recordStore->SecurityPolicy->integritySize;
+    return RecordStore_IntegrityChecksumAddress(recordStore, dataSize) + recordStore->SecurityPolicy->IntegritySize;
 }
 
 static inline uint8_t* RecordStore_IntegrityRegionAddress(struct RecordStore* recordStore)
@@ -68,7 +68,7 @@ static inline size_t RecordStore_SentFlagOffset(
     uint16_t dataLength
 )
 {
-    return RecordStore_IntegrityChecksumOffset(recordStart, dataLength) + recordStore->SecurityPolicy->integritySize;
+    return RecordStore_IntegrityChecksumOffset(recordStart, dataLength) + recordStore->SecurityPolicy->IntegritySize;
 }
 
 void RecordStore_Init(struct RecordStore* recordStore, struct SolidSyslogSecurityPolicy* securityPolicy)
@@ -81,7 +81,7 @@ void RecordStore_Init(struct RecordStore* recordStore, struct SolidSyslogSecurit
 
 size_t RecordStore_RecordSize(const struct RecordStore* recordStore, uint16_t dataLength)
 {
-    return (size_t) MAGIC_SIZE + RECORD_LENGTH_SIZE + dataLength + recordStore->SecurityPolicy->integritySize +
+    return (size_t) MAGIC_SIZE + RECORD_LENGTH_SIZE + dataLength + recordStore->SecurityPolicy->IntegritySize +
            SENT_FLAG_SIZE;
 }
 
@@ -289,7 +289,7 @@ static inline bool RecordStore_ReadIntegrityChecksum(
         blockIndex,
         RecordStore_IntegrityChecksumOffset(recordStart, dataLength),
         RecordStore_IntegrityChecksumAddress(recordStore, dataLength),
-        recordStore->SecurityPolicy->integritySize
+        recordStore->SecurityPolicy->IntegritySize
     );
 }
 

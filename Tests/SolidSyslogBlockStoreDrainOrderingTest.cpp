@@ -263,9 +263,9 @@ TEST_GROUP_BASE(ServiceDrainInterleave, DrainTestFixtureBase)
         store                                       = SolidSyslogBlockStore_Create(&storeStorage, &storeCfg);
 
         struct SolidSyslogConfig sysCfg = {};
-        sysCfg.buffer                   = buffer;
-        sysCfg.sender                   = &spy.Base;
-        sysCfg.store                    = store;
+        sysCfg.Buffer                   = buffer;
+        sysCfg.Sender                   = &spy.Base;
+        sysCfg.Store                    = store;
         SolidSyslog_Create(&sysCfg);
     }
 

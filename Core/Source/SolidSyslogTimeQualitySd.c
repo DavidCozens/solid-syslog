@@ -52,9 +52,9 @@ static void TimeQualitySd_Format(struct SolidSyslogStructuredData* self, struct 
     tq->GetTimeQuality(&q);
 
     SolidSyslogFormatter_BoundedString(formatter, SD_PREFIX, sizeof(SD_PREFIX) - 1);
-    TimeQualitySd_FormatBoolParam(formatter, PARAM_TZ_KNOWN, sizeof(PARAM_TZ_KNOWN) - 1, q.tzKnown);
-    TimeQualitySd_FormatBoolParam(formatter, PARAM_IS_SYNCED, sizeof(PARAM_IS_SYNCED) - 1, q.isSynced);
-    TimeQualitySd_FormatSyncAccuracy(formatter, q.syncAccuracyMicroseconds);
+    TimeQualitySd_FormatBoolParam(formatter, PARAM_TZ_KNOWN, sizeof(PARAM_TZ_KNOWN) - 1, q.TzKnown);
+    TimeQualitySd_FormatBoolParam(formatter, PARAM_IS_SYNCED, sizeof(PARAM_IS_SYNCED) - 1, q.IsSynced);
+    TimeQualitySd_FormatSyncAccuracy(formatter, q.SyncAccuracyMicroseconds);
     SolidSyslogFormatter_AsciiCharacter(formatter, ']');
 }
 

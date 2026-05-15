@@ -87,7 +87,7 @@ static inline struct SolidSyslogSecurityPolicy* BlockStore_ResolveSecurityPolicy
 {
     struct SolidSyslogSecurityPolicy* resolved = configured;
 
-    if ((resolved == NULL) || (resolved->integritySize > SOLIDSYSLOG_MAX_INTEGRITY_SIZE))
+    if ((resolved == NULL) || (resolved->IntegritySize > SOLIDSYSLOG_MAX_INTEGRITY_SIZE))
     {
         resolved = SolidSyslogNullSecurityPolicy_Create();
     }

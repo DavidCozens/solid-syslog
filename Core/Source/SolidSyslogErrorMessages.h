@@ -2,9 +2,9 @@
 #define SOLIDSYSLOGERRORMESSAGES_H
 
 #define SOLIDSYSLOG_ERROR_MSG_CREATE_NULL_CONFIG "SolidSyslog_Create called with NULL config"
-#define SOLIDSYSLOG_ERROR_MSG_CREATE_NULL_BUFFER "SolidSyslog_Create config.buffer is NULL"
-#define SOLIDSYSLOG_ERROR_MSG_CREATE_NULL_SENDER "SolidSyslog_Create config.sender is NULL"
-#define SOLIDSYSLOG_ERROR_MSG_CREATE_NULL_STORE "SolidSyslog_Create config.store is NULL"
+#define SOLIDSYSLOG_ERROR_MSG_CREATE_NULL_BUFFER "SolidSyslog_Create config.Buffer is NULL"
+#define SOLIDSYSLOG_ERROR_MSG_CREATE_NULL_SENDER "SolidSyslog_Create config.Sender is NULL"
+#define SOLIDSYSLOG_ERROR_MSG_CREATE_NULL_STORE "SolidSyslog_Create config.Store is NULL"
 #define SOLIDSYSLOG_ERROR_MSG_CREATE_ALREADY_INITIALISED \
     "SolidSyslog_Create called while already initialised - call _Destroy first"
 #define SOLIDSYSLOG_ERROR_MSG_LOG_NULL_MESSAGE "SolidSyslog_Log called with NULL message"

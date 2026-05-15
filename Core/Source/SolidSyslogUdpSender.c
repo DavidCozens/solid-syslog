@@ -192,9 +192,9 @@ static inline uint16_t UdpSender_QueryEndpointPort(
     struct SolidSyslogFormatter* hostFormatter
 )
 {
-    struct SolidSyslogEndpoint endpoint = {.host = hostFormatter, .port = 0};
+    struct SolidSyslogEndpoint endpoint = {.Host = hostFormatter, .Port = 0};
     udp->Config.Endpoint(&endpoint);
-    return endpoint.port;
+    return endpoint.Port;
 }
 
 static inline bool UdpSender_OpenSocket(struct SolidSyslogUdpSender* udp)
