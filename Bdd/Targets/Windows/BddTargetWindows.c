@@ -182,18 +182,18 @@ static struct SolidSyslogSender* CreateSender(const struct BddTargetWindowsOptio
 
     udpDatagram = SolidSyslogWinsockDatagram_Create();
     static struct SolidSyslogUdpSenderConfig udpConfig = {0};
-    udpConfig.resolver = resolver;
-    udpConfig.datagram = udpDatagram;
-    udpConfig.endpoint = GetEndpoint;
-    udpConfig.endpointVersion = GetEndpointVersion;
+    udpConfig.Resolver = resolver;
+    udpConfig.Datagram = udpDatagram;
+    udpConfig.Endpoint = GetEndpoint;
+    udpConfig.EndpointVersion = GetEndpointVersion;
     struct SolidSyslogSender* udpSender = SolidSyslogUdpSender_Create(&udpConfig);
 
     plainTcpStream = SolidSyslogWinsockTcpStream_Create(&tcpStreamStorage);
     static struct SolidSyslogStreamSenderConfig tcpConfig = {0};
-    tcpConfig.resolver = resolver;
-    tcpConfig.stream = plainTcpStream;
-    tcpConfig.endpoint = GetEndpoint;
-    tcpConfig.endpointVersion = GetEndpointVersion;
+    tcpConfig.Resolver = resolver;
+    tcpConfig.Stream = plainTcpStream;
+    tcpConfig.Endpoint = GetEndpoint;
+    tcpConfig.EndpointVersion = GetEndpointVersion;
     plainTcpSender = SolidSyslogStreamSender_Create(&tcpSenderStorage, &tcpConfig);
 
     struct SolidSyslogSender* tlsSender = BddTargetTlsSender_Create(resolver, mtlsModeActive);
@@ -204,9 +204,9 @@ static struct SolidSyslogSender* CreateSender(const struct BddTargetWindowsOptio
     inners[BDD_TARGET_SWITCH_TLS] = tlsSender;
 
     static struct SolidSyslogSwitchingSenderConfig switchConfig = {0};
-    switchConfig.senders = inners;
-    switchConfig.senderCount = BDD_TARGET_SWITCH_COUNT;
-    switchConfig.selector = BddTargetSwitchConfig_Selector;
+    switchConfig.Senders = inners;
+    switchConfig.SenderCount = BDD_TARGET_SWITCH_COUNT;
+    switchConfig.Selector = BddTargetSwitchConfig_Selector;
 
     BddTargetSwitchConfig_SetByName(options->transport);
     return SolidSyslogSwitchingSender_Create(&switchConfig);

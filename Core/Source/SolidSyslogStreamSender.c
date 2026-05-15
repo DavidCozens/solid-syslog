@@ -76,15 +76,15 @@ struct SolidSyslogSender* SolidSyslogStreamSender_Create(
 {
     struct SolidSyslogStreamSender* sender = (struct SolidSyslogStreamSender*) storage;
     *sender = DEFAULT_INSTANCE;
-    sender->Config.resolver = config->resolver;
-    sender->Config.stream = config->stream;
-    if (config->endpoint != NULL)
+    sender->Config.Resolver = config->Resolver;
+    sender->Config.Stream = config->Stream;
+    if (config->Endpoint != NULL)
     {
-        sender->Config.endpoint = config->endpoint;
+        sender->Config.Endpoint = config->Endpoint;
     }
-    if (config->endpointVersion != NULL)
+    if (config->EndpointVersion != NULL)
     {
-        sender->Config.endpointVersion = config->endpointVersion;
+        sender->Config.EndpointVersion = config->EndpointVersion;
     }
     return &sender->Base;
 }
@@ -110,7 +110,7 @@ static inline bool StreamSender_Reconcile(struct SolidSyslogStreamSender* sender
 
 static inline void StreamSender_DisconnectIfStale(struct SolidSyslogStreamSender* sender)
 {
-    uint32_t version = sender->Config.endpointVersion();
+    uint32_t version = sender->Config.EndpointVersion();
 
     if (version != sender->LastEndpointVersion)
     {
@@ -136,7 +136,7 @@ static bool StreamSender_Connect(struct SolidSyslogStreamSender* sender)
 
     if (StreamSender_ResolveDestination(sender, addr))
     {
-        sender->Connected = SolidSyslogStream_Open(sender->Config.stream, addr);
+        sender->Connected = SolidSyslogStream_Open(sender->Config.Stream, addr);
     }
 
     return StreamSender_Connected(sender);
@@ -148,10 +148,10 @@ static bool StreamSender_ResolveDestination(struct SolidSyslogStreamSender* send
     struct SolidSyslogFormatter* hostFormatter = SolidSyslogFormatter_Create(hostStorage, SOLIDSYSLOG_MAX_HOST_SIZE);
     struct SolidSyslogEndpoint endpoint = {.host = hostFormatter, .port = 0};
 
-    sender->Config.endpoint(&endpoint);
+    sender->Config.Endpoint(&endpoint);
 
     return SolidSyslogResolver_Resolve(
-        sender->Config.resolver,
+        sender->Config.Resolver,
         SolidSyslogTransport_Tcp,
         SolidSyslogFormatter_AsFormattedBuffer(hostFormatter),
         endpoint.port,
@@ -171,7 +171,7 @@ static void StreamSender_Disconnect(struct SolidSyslogSender* self)
 
 static inline void StreamSender_CloseStream(struct SolidSyslogStreamSender* sender)
 {
-    SolidSyslogStream_Close(sender->Config.stream);
+    SolidSyslogStream_Close(sender->Config.Stream);
     sender->Connected = false;
 }
 
@@ -201,7 +201,7 @@ static struct SolidSyslogFormatter* StreamSender_FormatOctetCountingPrefix(
 
 static bool StreamSender_SendBytes(struct SolidSyslogStreamSender* sender, const void* data, size_t len)
 {
-    bool sent = SolidSyslogStream_Send(sender->Config.stream, data, len);
+    bool sent = SolidSyslogStream_Send(sender->Config.Stream, data, len);
 
     if (!sent)
     {

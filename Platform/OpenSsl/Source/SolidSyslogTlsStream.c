@@ -133,7 +133,7 @@ static inline void TlsStream_ReleaseSslContext(struct SolidSyslogTlsStream* stre
 static inline bool TlsStream_Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr)
 {
     struct SolidSyslogTlsStream* stream = (struct SolidSyslogTlsStream*) self;
-    return SolidSyslogStream_Open(stream->Config.transport, addr) && TlsStream_InitSslContext(stream) &&
+    return SolidSyslogStream_Open(stream->Config.Transport, addr) && TlsStream_InitSslContext(stream) &&
            TlsStream_InitSslSession(stream) && TlsStream_AttachTransportBio(stream) &&
            TlsStream_ConfigureExpectedHostname(stream) && TlsStream_PerformHandshake(stream);
 }
@@ -157,15 +157,15 @@ static inline SSL_CTX* TlsStream_CreateSslContext(const struct SolidSyslogTlsStr
 
 static inline bool TlsStream_ConfigureSslContext(SSL_CTX* ctx, const struct SolidSyslogTlsStreamConfig* config)
 {
-    return TlsStream_ConfigureTrustAnchors(ctx, config->caBundlePath) &&
+    return TlsStream_ConfigureTrustAnchors(ctx, config->CaBundlePath) &&
            TlsStream_ConfigureClientIdentity(ctx, config) && TlsStream_ConfigureProtocolFloor(ctx) &&
-           TlsStream_ConfigureCipherList(ctx, config->cipherList);
+           TlsStream_ConfigureCipherList(ctx, config->CipherList);
 }
 
 static inline bool TlsStream_ConfigureClientIdentity(SSL_CTX* ctx, const struct SolidSyslogTlsStreamConfig* config)
 {
-    bool hasCert = config->clientCertChainPath != NULL;
-    bool hasKey = config->clientKeyPath != NULL;
+    bool hasCert = config->ClientCertChainPath != NULL;
+    bool hasKey = config->ClientKeyPath != NULL;
     bool ok = true;
     if (hasCert != hasKey)
     {
@@ -173,8 +173,8 @@ static inline bool TlsStream_ConfigureClientIdentity(SSL_CTX* ctx, const struct 
     }
     else if (hasCert)
     {
-        ok = (SSL_CTX_use_certificate_chain_file(ctx, config->clientCertChainPath) == 1) &&
-             (SSL_CTX_use_PrivateKey_file(ctx, config->clientKeyPath, SSL_FILETYPE_PEM) == 1) &&
+        ok = (SSL_CTX_use_certificate_chain_file(ctx, config->ClientCertChainPath) == 1) &&
+             (SSL_CTX_use_PrivateKey_file(ctx, config->ClientKeyPath, SSL_FILETYPE_PEM) == 1) &&
              (SSL_CTX_check_private_key(ctx) == 1);
     }
     return ok;
@@ -217,7 +217,7 @@ static inline bool TlsStream_AttachTransportBio(struct SolidSyslogTlsStream* str
     bool ok = bio != NULL;
     if (ok)
     {
-        BIO_set_data(bio, stream->Config.transport);
+        BIO_set_data(bio, stream->Config.Transport);
         SSL_set_bio(stream->Ssl, bio, bio);
     }
     return ok;
@@ -331,10 +331,10 @@ static inline long TlsStream_TransportBioCtrl(BIO* bio, int cmd, long larg, void
 static inline bool TlsStream_ConfigureExpectedHostname(struct SolidSyslogTlsStream* stream)
 {
     bool ok = true;
-    if (stream->Config.serverName != NULL)
+    if (stream->Config.ServerName != NULL)
     {
-        ok = (SSL_set_tlsext_host_name(stream->Ssl, stream->Config.serverName) == 1) &&
-             (SSL_set1_host(stream->Ssl, stream->Config.serverName) == 1);
+        ok = (SSL_set_tlsext_host_name(stream->Ssl, stream->Config.ServerName) == 1) &&
+             (SSL_set1_host(stream->Ssl, stream->Config.ServerName) == 1);
     }
     return ok;
 }
@@ -377,7 +377,7 @@ static inline bool TlsStream_PerformHandshake(struct SolidSyslogTlsStream* strea
             }
             else
             {
-                stream->Config.sleep(HANDSHAKE_POLL_INTERVAL_MILLISECONDS);
+                stream->Config.Sleep(HANDSHAKE_POLL_INTERVAL_MILLISECONDS);
                 totalSleptMs += HANDSHAKE_POLL_INTERVAL_MILLISECONDS;
             }
         }
@@ -439,5 +439,5 @@ static inline void TlsStream_Close(struct SolidSyslogStream* self)
         SSL_shutdown(stream->Ssl);
         TlsStream_ReleaseHandshakeState(stream);
     }
-    SolidSyslogStream_Close(stream->Config.transport);
+    SolidSyslogStream_Close(stream->Config.Transport);
 }

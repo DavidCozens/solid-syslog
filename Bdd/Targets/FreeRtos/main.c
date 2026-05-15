@@ -782,10 +782,10 @@ static void InteractiveTask(void* argument)
     datagram = SolidSyslogFreeRtosDatagram_Create(&datagramStorage);
 
     struct SolidSyslogUdpSenderConfig udpConfig = {
-        .resolver = resolver,
-        .datagram = datagram,
-        .endpoint = GetEndpoint,
-        .endpointVersion = GetEndpointVersion,
+        .Resolver = resolver,
+        .Datagram = datagram,
+        .Endpoint = GetEndpoint,
+        .EndpointVersion = GetEndpointVersion,
     };
     struct SolidSyslogSender* udpSender = SolidSyslogUdpSender_Create(&udpConfig);
 
@@ -795,10 +795,10 @@ static void InteractiveTask(void* argument)
      * Bdd/syslog-ng/syslog-ng.conf has a TCP listener on 5514 alongside UDP. */
     tcpStream = SolidSyslogFreeRtosTcpStream_Create(&tcpStreamStorage);
     struct SolidSyslogStreamSenderConfig tcpConfig = {
-        .resolver = resolver,
-        .stream = tcpStream,
-        .endpoint = GetEndpoint,
-        .endpointVersion = GetEndpointVersion,
+        .Resolver = resolver,
+        .Stream = tcpStream,
+        .Endpoint = GetEndpoint,
+        .EndpointVersion = GetEndpointVersion,
     };
     tcpSender = SolidSyslogStreamSender_Create(&tcpSenderStorage, &tcpConfig);
 
@@ -810,9 +810,9 @@ static void InteractiveTask(void* argument)
     inners[BDD_TARGET_SWITCH_UDP] = udpSender;
     inners[BDD_TARGET_SWITCH_TCP] = tcpSender;
     struct SolidSyslogSwitchingSenderConfig switchConfig = {
-        .senders = inners,
-        .senderCount = sizeof(inners) / sizeof(inners[0]),
-        .selector = BddTargetSwitchConfig_Selector,
+        .Senders = inners,
+        .SenderCount = sizeof(inners) / sizeof(inners[0]),
+        .Selector = BddTargetSwitchConfig_Selector,
     };
     BddTargetSwitchConfig_SetByName("udp");
     struct SolidSyslogSender* sender = SolidSyslogSwitchingSender_Create(&switchConfig);

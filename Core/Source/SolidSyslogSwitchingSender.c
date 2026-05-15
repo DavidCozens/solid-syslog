@@ -91,12 +91,12 @@ static inline void SwitchingSender_SwitchTo(
  * violation of an invalid selector without corrupting memory or crashing. */
 static inline struct SolidSyslogSender* SwitchingSender_RequestedSender(const struct SolidSyslogSwitchingSender* self)
 {
-    uint8_t index = self->Config.selector();
+    uint8_t index = self->Config.Selector();
     struct SolidSyslogSender* result = &NIL_SENDER;
 
-    if (index < self->Config.senderCount)
+    if (index < self->Config.SenderCount)
     {
-        result = self->Config.senders[index];
+        result = self->Config.Senders[index];
     }
 
     return result;

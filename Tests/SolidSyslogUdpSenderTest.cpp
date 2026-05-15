@@ -68,7 +68,7 @@ static int SpyGetPort()
 }
 
 // Endpoint stubs — file-scope because TestEndpoint is a free function that
-// the sender invokes via udp->config.endpoint(). Tests mutate these globals
+// the sender invokes via udp->config.Endpoint(). Tests mutate these globals
 // between Sends to drive endpoint-changed and callback-spy scenarios; the
 // TEST_BASE resets them in setup so groups don't leak state between tests.
 static const char* (*endpointGetHost)() = GetDefaultHost;
@@ -747,28 +747,28 @@ TEST(SolidSyslogUdpSenderBadSetup, DisconnectOnBadSetupSenderDoesNotCrash)
 
 TEST(SolidSyslogUdpSenderBadSetup, CreateWithNullResolverReportsError)
 {
-    config.resolver = nullptr;
+    config.Resolver = nullptr;
     SolidSyslogUdpSender_Create(&config);
-    CHECK_REPORTED_ERROR("SolidSyslogUdpSender_Create config.resolver is NULL");
+    CHECK_REPORTED_ERROR("SolidSyslogUdpSender_Create config.Resolver is NULL");
 }
 
 TEST(SolidSyslogUdpSenderBadSetup, CreateWithNullDatagramReportsError)
 {
-    config.datagram = nullptr;
+    config.Datagram = nullptr;
     SolidSyslogUdpSender_Create(&config);
-    CHECK_REPORTED_ERROR("SolidSyslogUdpSender_Create config.datagram is NULL");
+    CHECK_REPORTED_ERROR("SolidSyslogUdpSender_Create config.Datagram is NULL");
 }
 
 TEST(SolidSyslogUdpSenderBadSetup, CreateWithNullEndpointReportsError)
 {
-    config.endpoint = nullptr;
+    config.Endpoint = nullptr;
     SolidSyslogUdpSender_Create(&config);
-    CHECK_REPORTED_ERROR("SolidSyslogUdpSender_Create config.endpoint is NULL");
+    CHECK_REPORTED_ERROR("SolidSyslogUdpSender_Create config.Endpoint is NULL");
 }
 
 TEST(SolidSyslogUdpSenderBadSetup, NullEndpointVersionIsOptional)
 {
-    config.endpointVersion = nullptr;
+    config.EndpointVersion = nullptr;
     sender = SolidSyslogUdpSender_Create(&config);
     CHECK_NOTHING_REPORTED();
     CHECK_TRUE(Send());

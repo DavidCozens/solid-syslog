@@ -79,18 +79,18 @@ static struct SolidSyslogSender* CreateSender(const struct BddTargetOptions* opt
     struct SolidSyslogResolver* resolver = SolidSyslogGetAddrInfoResolver_Create();
 
     static struct SolidSyslogUdpSenderConfig udpConfig = {0};
-    udpConfig.resolver = resolver;
-    udpConfig.datagram = SolidSyslogPosixDatagram_Create();
-    udpConfig.endpoint = BddTargetUdpConfig_GetEndpoint;
-    udpConfig.endpointVersion = BddTargetUdpConfig_GetEndpointVersion;
+    udpConfig.Resolver = resolver;
+    udpConfig.Datagram = SolidSyslogPosixDatagram_Create();
+    udpConfig.Endpoint = BddTargetUdpConfig_GetEndpoint;
+    udpConfig.EndpointVersion = BddTargetUdpConfig_GetEndpointVersion;
     struct SolidSyslogSender* udpSender = SolidSyslogUdpSender_Create(&udpConfig);
 
     plainTcpStream = SolidSyslogPosixTcpStream_Create(&plainTcpStreamStorage);
     static struct SolidSyslogStreamSenderConfig tcpConfig = {0};
-    tcpConfig.resolver = resolver;
-    tcpConfig.stream = plainTcpStream;
-    tcpConfig.endpoint = BddTargetTcpConfig_GetEndpoint;
-    tcpConfig.endpointVersion = BddTargetTcpConfig_GetEndpointVersion;
+    tcpConfig.Resolver = resolver;
+    tcpConfig.Stream = plainTcpStream;
+    tcpConfig.Endpoint = BddTargetTcpConfig_GetEndpoint;
+    tcpConfig.EndpointVersion = BddTargetTcpConfig_GetEndpointVersion;
     plainTcpSender = SolidSyslogStreamSender_Create(&plainTcpSenderStorage, &tcpConfig);
 
     struct SolidSyslogSender* tlsSender = BddTargetTlsSender_Create(resolver, mtlsModeActive);
@@ -101,9 +101,9 @@ static struct SolidSyslogSender* CreateSender(const struct BddTargetOptions* opt
     inners[BDD_TARGET_SWITCH_TLS] = tlsSender;
 
     static struct SolidSyslogSwitchingSenderConfig switchConfig = {0};
-    switchConfig.senders = inners;
-    switchConfig.senderCount = BDD_TARGET_SWITCH_COUNT;
-    switchConfig.selector = BddTargetSwitchConfig_Selector;
+    switchConfig.Senders = inners;
+    switchConfig.SenderCount = BDD_TARGET_SWITCH_COUNT;
+    switchConfig.Selector = BddTargetSwitchConfig_Selector;
 
     BddTargetSwitchConfig_SetByName(options->transport);
     return SolidSyslogSwitchingSender_Create(&switchConfig);
