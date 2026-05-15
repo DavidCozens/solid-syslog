@@ -31,23 +31,23 @@ SOLIDSYSLOG_STATIC_ASSERT(
  * 50 ms is generous against typical sub-millisecond LAN ARP RTT but short
  * enough that the first send latency stays tolerable. If the reply hasn't
  * arrived in time the sendto is allowed to fail or be dropped — UDP semantics. */
-static const TickType_t ARP_RESOLUTION_WAIT_TICKS = pdMS_TO_TICKS(50);
+static const TickType_t ARP_RESOLUTION_WAIT_TICKS = FreeRtosDatagram_pdMS_TO_TICKS(50);
 
-static bool FreeRtosDatagram_Open(struct SolidSyslogDatagram* self);
-static enum SolidSyslogDatagramSendResult FreeRtosDatagram_SendTo(
+static bool FreeRtosDatagram_FreeRtosDatagram_Open(struct SolidSyslogDatagram* self);
+static enum SolidSyslogDatagramSendResult FreeRtosDatagram_FreeRtosDatagram_SendTo(
     struct SolidSyslogDatagram* self,
     const void* buffer,
     size_t size,
     const struct SolidSyslogAddress* addr
 );
-static size_t FreeRtosDatagram_MaxPayload(struct SolidSyslogDatagram* self);
-static void FreeRtosDatagram_Close(struct SolidSyslogDatagram* self);
-static inline FreeRtosDatagram* FreeRtosDatagram_From(struct SolidSyslogDatagram* self);
-static inline bool FreeRtosDatagram_IsOpen(const FreeRtosDatagram* datagram);
-static inline void PrimeArpIfMissing(uint32_t ip);
+static size_t FreeRtosDatagram_FreeRtosDatagram_MaxPayload(struct SolidSyslogDatagram* self);
+static void FreeRtosDatagram_FreeRtosDatagram_Close(struct SolidSyslogDatagram* self);
+static inline FreeRtosDatagram* FreeRtosDatagram_FreeRtosDatagram_From(struct SolidSyslogDatagram* self);
+static inline bool FreeRtosDatagram_FreeRtosDatagram_IsOpen(const FreeRtosDatagram* datagram);
+static inline void FreeRtosDatagram_PrimeArpIfMissing(uint32_t ip);
 
 static const FreeRtosDatagram DEFAULT_INSTANCE = {
-    {FreeRtosDatagram_Open, FreeRtosDatagram_SendTo, FreeRtosDatagram_MaxPayload, FreeRtosDatagram_Close},
+    {FreeRtosDatagram_FreeRtosDatagram_Open, FreeRtosDatagram_FreeRtosDatagram_SendTo, FreeRtosDatagram_FreeRtosDatagram_MaxPayload, FreeRtosDatagram_FreeRtosDatagram_Close},
     FREERTOS_INVALID_SOCKET,
 };
 
@@ -65,39 +65,39 @@ struct SolidSyslogDatagram* SolidSyslogFreeRtosDatagram_Create(SolidSyslogFreeRt
 
 void SolidSyslogFreeRtosDatagram_Destroy(struct SolidSyslogDatagram* datagram)
 {
-    FreeRtosDatagram* self = FreeRtosDatagram_From(datagram);
-    FreeRtosDatagram_Close(datagram);
+    FreeRtosDatagram* self = FreeRtosDatagram_FreeRtosDatagram_From(datagram);
+    FreeRtosDatagram_FreeRtosDatagram_Close(datagram);
     *self = DESTROYED_INSTANCE;
 }
 
-static inline FreeRtosDatagram* FreeRtosDatagram_From(struct SolidSyslogDatagram* self)
+static inline FreeRtosDatagram* FreeRtosDatagram_FreeRtosDatagram_From(struct SolidSyslogDatagram* self)
 {
     return (FreeRtosDatagram*) self;
 }
 
-static bool FreeRtosDatagram_Open(struct SolidSyslogDatagram* self)
+static bool FreeRtosDatagram_FreeRtosDatagram_Open(struct SolidSyslogDatagram* self)
 {
-    FreeRtosDatagram* datagram = FreeRtosDatagram_From(self);
-    if (!FreeRtosDatagram_IsOpen(datagram))
+    FreeRtosDatagram* datagram = FreeRtosDatagram_FreeRtosDatagram_From(self);
+    if (!FreeRtosDatagram_FreeRtosDatagram_IsOpen(datagram))
     {
         datagram->socket = FreeRTOS_socket(FREERTOS_AF_INET, FREERTOS_SOCK_DGRAM, FREERTOS_IPPROTO_UDP);
     }
-    return FreeRtosDatagram_IsOpen(datagram);
+    return FreeRtosDatagram_FreeRtosDatagram_IsOpen(datagram);
 }
 
-static enum SolidSyslogDatagramSendResult FreeRtosDatagram_SendTo(
+static enum SolidSyslogDatagramSendResult FreeRtosDatagram_FreeRtosDatagram_SendTo(
     struct SolidSyslogDatagram* self,
     const void* buffer,
     size_t size,
     const struct SolidSyslogAddress* addr
 )
 {
-    FreeRtosDatagram* datagram = FreeRtosDatagram_From(self);
+    FreeRtosDatagram* datagram = FreeRtosDatagram_FreeRtosDatagram_From(self);
     enum SolidSyslogDatagramSendResult result = SolidSyslogDatagramSendResult_Failed;
-    if (FreeRtosDatagram_IsOpen(datagram))
+    if (FreeRtosDatagram_FreeRtosDatagram_IsOpen(datagram))
     {
         const struct freertos_sockaddr* dest = SolidSyslogAddress_AsConstFreertosSockaddr(addr);
-        PrimeArpIfMissing(dest->sin_address.ulIP_IPv4);
+        FreeRtosDatagram_PrimeArpIfMissing(dest->sin_address.ulIP_IPv4);
         int32_t sent = FreeRTOS_sendto(datagram->socket, buffer, size, 0, dest, sizeof(*dest));
         if (sent > 0)
         {
@@ -113,7 +113,7 @@ static enum SolidSyslogDatagramSendResult FreeRtosDatagram_SendTo(
  * probe and yield once for the reply to land. If the reply hasn't arrived in
  * time the sendto is allowed to fail or be dropped — UDP is best-effort and
  * retry belongs in the store-and-forward layer above, not here. */
-static inline void PrimeArpIfMissing(uint32_t ip)
+static inline void FreeRtosDatagram_PrimeArpIfMissing(uint32_t ip)
 {
     if (xIsIPInARPCache(ip) == pdFALSE)
     {
@@ -122,21 +122,21 @@ static inline void PrimeArpIfMissing(uint32_t ip)
     }
 }
 
-static inline bool FreeRtosDatagram_IsOpen(const FreeRtosDatagram* datagram)
+static inline bool FreeRtosDatagram_FreeRtosDatagram_IsOpen(const FreeRtosDatagram* datagram)
 {
     return datagram->socket != FREERTOS_INVALID_SOCKET;
 }
 
-static size_t FreeRtosDatagram_MaxPayload(struct SolidSyslogDatagram* self)
+static size_t FreeRtosDatagram_FreeRtosDatagram_MaxPayload(struct SolidSyslogDatagram* self)
 {
     (void) self;
     return SOLIDSYSLOG_UDP_IPV6_SAFE_PAYLOAD;
 }
 
-static void FreeRtosDatagram_Close(struct SolidSyslogDatagram* self)
+static void FreeRtosDatagram_FreeRtosDatagram_Close(struct SolidSyslogDatagram* self)
 {
-    FreeRtosDatagram* datagram = FreeRtosDatagram_From(self);
-    if (FreeRtosDatagram_IsOpen(datagram))
+    FreeRtosDatagram* datagram = FreeRtosDatagram_FreeRtosDatagram_From(self);
+    if (FreeRtosDatagram_FreeRtosDatagram_IsOpen(datagram))
     {
         (void) FreeRTOS_closesocket(datagram->socket);
         datagram->socket = FREERTOS_INVALID_SOCKET;
