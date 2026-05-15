@@ -143,7 +143,7 @@ static uint16_t port = (uint16_t) BDD_TARGET_UDP_PORT;
 static uint32_t endpointVersion = 0U;
 
 static struct SolidSyslogMessage testMessage = {
-    .facility = SOLIDSYSLOG_FACILITY_LOCAL0,
+    .facility = SolidSyslogFacility_Local0,
     .severity = SolidSyslogSeverity_Informational,
     .messageId = messageId,
     .msg = msg,
@@ -410,7 +410,7 @@ static bool OnSet(const char* name, const char* value)
         {
             return false;
         }
-        testMessage.facility = (enum SolidSyslog_Facility) parsed;
+        testMessage.facility = (enum SolidSyslogFacility) parsed;
         return true;
     }
     if (strcmp(name, "severity") == 0)

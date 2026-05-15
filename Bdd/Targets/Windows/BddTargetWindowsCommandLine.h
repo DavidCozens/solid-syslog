@@ -11,7 +11,7 @@ EXTERN_C_BEGIN
 
     struct BddTargetWindowsOptions
     {
-        enum SolidSyslog_Facility facility;
+        enum SolidSyslogFacility facility;
         enum SolidSyslogSeverity severity;
         const char* transport; /* "udp" | "tcp" | "tls" | "mtls" — initial selector */
         const char* messageId;
