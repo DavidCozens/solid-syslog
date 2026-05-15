@@ -49,7 +49,7 @@ across `Core/Source/` + `Platform/*/Source/`. Cleared all 168 MISRA
   - Pass 1: per-file extract static-function names, then
     `s/\b<name>\b/<Prefix>_<name>/g` for each.
   - Pass 2: un-mangle vtable-member accesses that Pass 1 also
-    renamed — `s/\.<X>_<Y>\b/.<Y>/g` and `s/->.<X>_<Y>\b/->\<Y>/g`.
+    renamed — `s/\.<X>_<Y>\b/.<Y>/g` and `s/-><X>_<Y>\b/-><Y>/g`.
   - Designated-initialiser pattern `.Open = Open` lands correctly:
     Pass 1 renames both sides; Pass 2 un-renames the left.
   - Positional vtable init `{Open, Send, Read, Close}` also lands

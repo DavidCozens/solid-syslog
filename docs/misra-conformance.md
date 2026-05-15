@@ -158,7 +158,7 @@ Recurring themes that recur across many rules — useful for **S10.06** when wri
 
 5. **C11 `<stdatomic.h>` use** drives rule 1.4 (2 findings — Atomics adapters). One deviation.
 
-6. **`Class_Function` static helpers across TUs** drive rule 5.9 (168 findings) — these are simultaneously the planned S10.08 sweep target *and* an instance of the project's MISRA Tier 2 Class-prefix convention. After S10.08 the count drops to whatever vtable-derived statics remain (probably <20), and those become a separate deviation if any.
+6. **`Class_Function` static helpers across TUs** drive rule 5.9 (168 findings) — these were the named S10.08 sweep target *and* an instance of the project's MISRA Tier 2 Class-prefix convention. **S10.08 landed wide** — applied the prefix to all ~811 statics across `Core/Source/` + `Platform/*/Source/` per the strip-only-`SolidSyslog` rule (and the `SolidSyslog_<Function>` exception for `Core/Source/SolidSyslog.c`), clearing 5.9 to **0**. No residual vtable-derived 5.9 findings; no follow-up deviation needed.
 
 These six concentrated buckets together account for **339 of the 575 findings (59%)** — the named S10.08 sweep on rule 5.9 (168), plus the five structural deviations (D.002 covers 11.3/11.2/11.5 = 109, D.003 = 54, D.004 = 4, D.005 = 2, D.006 = 2). The remainder — **236 findings spread across the other 23 rules** — is per-site cleanup, decomposed as: **221 Fix** target (mostly diffuse mechanical: U-suffix on literals, return-value use, trailing-else, explicit precedence parens), **11 Mixed** (rule 11.8 needs per-site split in S10.06), and **4 Investigate** (rules 21.10 / 21.6 likely transitive system-header includes).
 
