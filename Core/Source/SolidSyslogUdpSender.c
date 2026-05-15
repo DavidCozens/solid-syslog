@@ -193,7 +193,7 @@ static inline bool OpenSocket(struct SolidSyslogUdpSender* udp)
 
 static bool ResolveDestination(struct SolidSyslogUdpSender* udp, const char* host, uint16_t port)
 {
-    return SolidSyslogResolver_Resolve(udp->config.resolver, SOLIDSYSLOG_TRANSPORT_UDP, host, port, Address(udp));
+    return SolidSyslogResolver_Resolve(udp->config.resolver, SolidSyslogTransport_Udp, host, port, Address(udp));
 }
 
 static inline struct SolidSyslogAddress* Address(struct SolidSyslogUdpSender* udp)
