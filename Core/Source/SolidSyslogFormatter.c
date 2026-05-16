@@ -219,7 +219,7 @@ static inline bool Formatter_IsValidUtf8TwoByte(char lead, char continuation1)
 
 static inline bool Formatter_IsOverlongTwoByteLead(char byte)
 {
-    return (byte & 0xFE) == 0xC0;
+    return ((unsigned char) byte & 0xFEU) == 0xC0U;
 }
 
 static inline bool Formatter_IsValidUtf8ThreeByte(char lead, char continuation1, char continuation2)
@@ -232,12 +232,12 @@ static inline bool Formatter_IsValidUtf8ThreeByte(char lead, char continuation1,
 
 static inline bool Formatter_IsOverlongThreeByteEncoding(char lead, char continuation1)
 {
-    return (lead == '\xE0') && ((continuation1 & 0xE0) == 0x80);
+    return ((unsigned char) lead == 0xE0U) && (((unsigned char) continuation1 & 0xE0U) == 0x80U);
 }
 
 static inline bool Formatter_IsUtf16SurrogateEncoding(char lead, char continuation1)
 {
-    return (lead == '\xED') && ((continuation1 & 0xE0) == 0xA0);
+    return ((unsigned char) lead == 0xEDU) && (((unsigned char) continuation1 & 0xE0U) == 0xA0U);
 }
 
 static inline bool Formatter_IsValidUtf8FourByte(char lead, char continuation1, char continuation2, char continuation3)
@@ -250,13 +250,13 @@ static inline bool Formatter_IsValidUtf8FourByte(char lead, char continuation1, 
 
 static inline bool Formatter_IsOverlongFourByteEncoding(char lead, char continuation1)
 {
-    return (lead == '\xF0') && ((continuation1 & 0xF0) == 0x80);
+    return ((unsigned char) lead == 0xF0U) && (((unsigned char) continuation1 & 0xF0U) == 0x80U);
 }
 
 static inline bool Formatter_IsAboveUnicodeMaxEncoding(char lead, char continuation1)
 {
-    bool f4WithCont1Above8F = (lead == '\xF4') && ((continuation1 & 0xF0) != 0x80);
     unsigned char uLead = (unsigned char) lead;
+    bool f4WithCont1Above8F = (uLead == 0xF4U) && (((unsigned char) continuation1 & 0xF0U) != 0x80U);
     bool f5OrHigherLead = (uLead >= 0xF5U) && (uLead <= 0xF7U);
     return f4WithCont1Above8F || f5OrHigherLead;
 }

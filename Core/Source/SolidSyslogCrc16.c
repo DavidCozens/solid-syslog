@@ -10,10 +10,10 @@
 
 enum
 {
-    CRC16_CCITT_INIT = 0xFFFF,
-    CRC16_CCITT_POLY = 0x1021,
-    BITS_PER_BYTE = 8,
-    MSB_MASK = 0x8000
+    CRC16_CCITT_INIT = 0xFFFFU,
+    CRC16_CCITT_POLY = 0x1021U,
+    BITS_PER_BYTE = 8U,
+    MSB_MASK = 0x8000U
 };
 
 uint16_t SolidSyslogCrc16_Compute(const uint8_t* data, uint16_t length)
@@ -22,7 +22,7 @@ uint16_t SolidSyslogCrc16_Compute(const uint8_t* data, uint16_t length)
 
     for (uint16_t i = 0; i < length; i++)
     {
-        crc ^= (uint16_t) ((uint16_t) data[i] << BITS_PER_BYTE);
+        crc ^= (uint16_t) ((uint16_t) data[i] << 8U);
 
         for (int bit = 0; bit < BITS_PER_BYTE; bit++)
         {
