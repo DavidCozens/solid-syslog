@@ -7971,3 +7971,58 @@ MISRA rule — different category, doesn't set precedent.
 
 - None. Sweep landed, all sweep-target rules at 0, full local CI
   battery green.
+
+## 2026-05-16 — S10.21 abbreviation rule softened (docs-only)
+
+### Decisions
+
+- **Raised S10.21** as the descoped successor to the deferred
+  S10.XX abbreviation purge. The original brief (rename
+  `buf` / `len` / `cfg` / `msg` across the tree) didn't survive
+  the ~140-site audit: the bulk of "offenders" are either
+  universally idiomatic in C (`buf`, `len`, `msg`, `err`, `rc`)
+  or third-party-API mirrors (`cmd` in `BIO_ctrl`, `attr` for
+  `struct mq_attr`, `info` for `addrinfo`, `buf`/`len` in
+  `send` / `recv` wrappers). Renaming them would hurt
+  readability against the standard signatures they shadow, not
+  help it.
+- **No `SolidSyslogMessage.Msg` → `.Message` rename.** The
+  original sizing exercise flagged the field as a readability
+  smell (member name `Msg` shadowing the struct name
+  `SolidSyslogMessage`, sitting next to its long-form
+  neighbour `.MessageId`). On closer inspection, `Msg` is
+  taken directly from **RFC 5424's MSG field label** —
+  alongside `MSGID`, `PRIVAL`, `BOM`, `SD`, `PROCID`. The
+  internal helpers `SolidSyslog_FormatMsg` /
+  `SolidSyslog_FormatMsgId` mirror the same spec labels.
+  Renaming the field would have broken the direct C-to-spec
+  mapping and forced an awkward `FormatMessageBody` /
+  `FormatRecord` rename to avoid colliding with the existing
+  `SolidSyslog_FormatMessage` (which formats the whole syslog
+  record).
+- **NAMING.md amendment instead.** Two related edits:
+    - Tier 3 (locals/parameters): the existing one-line
+      "lazy abbreviation vs domain term" bullet grew a
+      categorised list — RFC field names, protocol /
+      technology shorthands, POSIX / Win32 idioms — with a
+      cross-reference to the existing Pragmatic-tier
+      scope-table exemption for adapter-wrapper locals
+      (`buf` / `len` in `send` / `recv`, `attr` for
+      `mq_attr`).
+    - Tier 4 (struct members): one paragraph noting the
+      domain-term exemption applies at Tier 4 too, with
+      `SolidSyslogMessage.MessageId` + `.Msg` as the worked
+      example for full-English and RFC-abbreviation forms
+      legitimately co-existing within one struct.
+- **Issue / epic bodies updated** to reflect the descoped
+  scope (#379 and #12).
+
+### Deferred
+
+- Nothing — the story self-completes in one PR. E10 is now down
+  to S10.20 (enforcement flip) as the remaining cross-cutting
+  story before close.
+
+### Open questions
+
+- None.
