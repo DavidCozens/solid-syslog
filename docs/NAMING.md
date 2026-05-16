@@ -256,7 +256,16 @@ Constraints:
 - **No lazy abbreviations.** `buffer` not `buf`, `message` not `msg`,
   `configuration` not `cfg`, `pointer` not `ptr`. Distinguish lazy
   abbreviations from domain terms — the latter are the real names of
-  things and should be used unmodified (e.g. `mq`, `crc`, `tls`).
+  things and should be used unmodified. Domain terms include:
+    - RFC field names from specs the library implements (RFC 5424
+      `MSG` / `MSGID` / `PRIVAL` / `BOM` / `SD` / `PROCID`).
+    - Protocol and technology shorthands (`mq`, `crc`, `tls`, `tcp`,
+      `udp`, `ip`, `dns`).
+    - POSIX / Win32 idioms that mirror third-party signatures (`fd`,
+      `errno`, `pid`, `sock`) — see also the Pragmatic-tier exemption
+      in the Scope table for parameter locals in adapter wrappers
+      (`buf` / `len` in `send` / `recv` wrappers, `attr` for
+      `struct mq_attr`, etc.).
 - **No pointer Hungarian.** Never prefix pointer variables with `p`/`P`
   or suffix with `Ptr`. Pointer-ness is visible from the declaration.
 - **Booleans.** Predicates and boolean variables use `isX`, `hasX`,
@@ -372,6 +381,12 @@ the same shape. The boolean and no-Hungarian conventions from Tier 3
 do **not** apply at this tier — PascalCase carries the visual signal that
 "this is a named, persistent piece of state" without needing an `is`/`has`
 prefix to convey "this is a boolean."
+
+The domain-term exemption from Tier 3 applies equally at Tier 4 —
+`struct SolidSyslogMessage`'s members `MessageId` (the full English
+word) and `Msg` (RFC 5424's spec label for the body field) are an
+example of how the two forms legitimately co-exist when one is an
+RFC abbreviation and the other is not.
 
 ```c
 struct SolidSyslogSecurityPolicy
