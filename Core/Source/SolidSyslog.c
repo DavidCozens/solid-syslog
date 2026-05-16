@@ -369,12 +369,12 @@ static inline bool SolidSyslog_PrivalComponentsAreValid(uint8_t facility, uint8_
 
 static inline bool SolidSyslog_FacilityIsValid(uint8_t facility)
 {
-    return facility <= SolidSyslogFacility_Local7;
+    return facility <= (uint8_t) SolidSyslogFacility_Local7;
 }
 
 static inline bool SolidSyslog_SeverityIsValid(uint8_t severity)
 {
-    return severity <= SolidSyslogSeverity_Debug;
+    return severity <= (uint8_t) SolidSyslogSeverity_Debug;
 }
 
 static inline void SolidSyslog_FormatTimestamp(struct SolidSyslogFormatter* f, SolidSyslogClockFunction clock)
@@ -447,12 +447,12 @@ static inline void SolidSyslog_FormatUtcOffset(struct SolidSyslogFormatter* f, i
 
 static inline void SolidSyslog_FormatNonZeroUtcOffset(struct SolidSyslogFormatter* f, int16_t offsetMinutes)
 {
-    int16_t absoluteMinutes = SolidSyslog_AbsoluteInt16(offsetMinutes);
+    uint32_t absoluteMinutes = (uint32_t) SolidSyslog_AbsoluteInt16(offsetMinutes);
 
     SolidSyslogFormatter_AsciiCharacter(f, (offsetMinutes > 0) ? '+' : '-');
-    SolidSyslogFormatter_TwoDigit(f, (uint32_t) (absoluteMinutes / 60));
+    SolidSyslogFormatter_TwoDigit(f, absoluteMinutes / 60U);
     SolidSyslogFormatter_AsciiCharacter(f, ':');
-    SolidSyslogFormatter_TwoDigit(f, (uint32_t) (absoluteMinutes % 60));
+    SolidSyslogFormatter_TwoDigit(f, absoluteMinutes % 60U);
 }
 
 static inline int16_t SolidSyslog_AbsoluteInt16(int16_t value)
@@ -480,7 +480,7 @@ static inline void SolidSyslog_FormatStringField(
 
     size_t fieldLength = SolidSyslogFormatter_Length(field);
 
-    if (fieldLength > 0)
+    if (fieldLength > 0U)
     {
         SolidSyslogFormatter_PrintUsAsciiString(f, SolidSyslogFormatter_AsFormattedBuffer(field), fieldLength);
     }
@@ -544,7 +544,8 @@ static inline void SolidSyslog_FormatMsg(struct SolidSyslogFormatter* f, const c
  * so the wire frame contains exactly one. */
 static inline const char* SolidSyslog_SkipLeadingBom(const char* msg)
 {
-    if ((msg[0] == '\xEF') && (msg[1] == '\xBB') && (msg[2] == '\xBF'))
+    const unsigned char* bytes = (const unsigned char*) msg;
+    if ((bytes[0] == 0xEFU) && (bytes[1] == 0xBBU) && (bytes[2] == 0xBFU))
     {
         return msg + 3;
     }

@@ -13,27 +13,27 @@ EXTERN_C_BEGIN
 
     static inline bool SolidSyslogUtf8_IsAsciiByte(char byte)
     {
-        return (byte & 0x80) == 0;
+        return ((unsigned char) byte & 0x80U) == 0U;
     }
 
     static inline bool SolidSyslogUtf8_IsContinuationByte(char byte)
     {
-        return (byte & 0xC0) == 0x80;
+        return ((unsigned char) byte & 0xC0U) == 0x80U;
     }
 
     static inline bool SolidSyslogUtf8_IsTwoByteLead(char byte)
     {
-        return (byte & 0xE0) == 0xC0;
+        return ((unsigned char) byte & 0xE0U) == 0xC0U;
     }
 
     static inline bool SolidSyslogUtf8_IsThreeByteLead(char byte)
     {
-        return (byte & 0xF0) == 0xE0;
+        return ((unsigned char) byte & 0xF0U) == 0xE0U;
     }
 
     static inline bool SolidSyslogUtf8_IsFourByteLead(char byte)
     {
-        return (byte & 0xF8) == 0xF0;
+        return ((unsigned char) byte & 0xF8U) == 0xF0U;
     }
 
 EXTERN_C_END

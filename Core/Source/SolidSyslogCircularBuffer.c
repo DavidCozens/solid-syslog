@@ -28,7 +28,7 @@ struct SolidSyslogCircularBuffer
 
 SOLIDSYSLOG_STATIC_ASSERT(
     sizeof(struct SolidSyslogCircularBuffer) ==
-        SOLIDSYSLOG_CIRCULARBUFFER_OVERHEAD * sizeof(SolidSyslogCircularBufferStorage),
+        (SOLIDSYSLOG_CIRCULARBUFFER_OVERHEAD * sizeof(SolidSyslogCircularBufferStorage)),
     "SOLIDSYSLOG_CIRCULARBUFFER_OVERHEAD does not match struct layout"
 );
 
@@ -174,9 +174,9 @@ static inline bool CircularBuffer_RecordFitsAtTail(const struct SolidSyslogCircu
 {
     if (CircularBuffer_IsWrapped(circular))
     {
-        return circular->Tail + recordBytes < circular->Head;
+        return (circular->Tail + recordBytes) < circular->Head;
     }
-    return circular->Tail + recordBytes <= circular->Capacity;
+    return (circular->Tail + recordBytes) <= circular->Capacity;
 }
 
 static inline bool CircularBuffer_RecordFitsAfterWrap(
@@ -184,7 +184,7 @@ static inline bool CircularBuffer_RecordFitsAfterWrap(
     size_t recordBytes
 )
 {
-    return (!CircularBuffer_IsWrapped(circular)) && recordBytes < circular->Head;
+    return (!CircularBuffer_IsWrapped(circular)) && (recordBytes < circular->Head);
 }
 
 static inline void CircularBuffer_ResetToStart(struct SolidSyslogCircularBuffer* circular)

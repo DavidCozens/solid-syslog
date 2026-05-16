@@ -147,7 +147,7 @@ static inline bool TlsStream_InitSslContext(struct SolidSyslogTlsStream* stream)
 static inline SSL_CTX* TlsStream_CreateSslContext(const struct SolidSyslogTlsStreamConfig* config)
 {
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
-    if (ctx != NULL && !TlsStream_ConfigureSslContext(ctx, config))
+    if ((ctx != NULL) && !TlsStream_ConfigureSslContext(ctx, config))
     {
         SSL_CTX_free(ctx);
         ctx = NULL;
@@ -176,6 +176,10 @@ static inline bool TlsStream_ConfigureClientIdentity(SSL_CTX* ctx, const struct 
         ok = (SSL_CTX_use_certificate_chain_file(ctx, config->ClientCertChainPath) == 1) &&
              (SSL_CTX_use_PrivateKey_file(ctx, config->ClientKeyPath, SSL_FILETYPE_PEM) == 1) &&
              (SSL_CTX_check_private_key(ctx) == 1);
+    }
+    else
+    {
+        /* neither cert nor key supplied — server-auth-only TLS, ok stays true */
     }
     return ok;
 }

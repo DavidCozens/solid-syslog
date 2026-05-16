@@ -13,7 +13,7 @@ struct SolidSyslogFormatter
 };
 
 SOLIDSYSLOG_STATIC_ASSERT(
-    sizeof(struct SolidSyslogFormatter) == SOLIDSYSLOG_FORMATTER_OVERHEAD * sizeof(SolidSyslogFormatterStorage),
+    sizeof(struct SolidSyslogFormatter) == (SOLIDSYSLOG_FORMATTER_OVERHEAD * sizeof(SolidSyslogFormatterStorage)),
     "SOLIDSYSLOG_FORMATTER_OVERHEAD does not match struct layout"
 );
 
@@ -99,7 +99,7 @@ struct SolidSyslogFormatter* SolidSyslogFormatter_Create(SolidSyslogFormatterSto
 
 static inline void Formatter_NullTerminate(struct SolidSyslogFormatter* formatter)
 {
-    if (formatter->Size > 0)
+    if (formatter->Size > 0U)
     {
         formatter->Buffer[formatter->Position] = '\0';
     }
@@ -137,7 +137,7 @@ static inline void Formatter_WriteChar(struct SolidSyslogFormatter* formatter, c
 
 static inline bool Formatter_HasCapacity(const struct SolidSyslogFormatter* formatter)
 {
-    return (formatter->Size > 0) && (formatter->Position < formatter->Size - 1);
+    return (formatter->Size > 0U) && (formatter->Position < (formatter->Size - 1U));
 }
 
 /*
@@ -174,7 +174,7 @@ void SolidSyslogFormatter_BoundedString(struct SolidSyslogFormatter* formatter, 
         else
         {
             Formatter_WriteBytes(formatter, REPLACEMENT_CHARACTER, sizeof(REPLACEMENT_CHARACTER));
-            len += 1;
+            len += 1U;
         }
     }
     Formatter_NullTerminate(formatter);
@@ -182,7 +182,7 @@ void SolidSyslogFormatter_BoundedString(struct SolidSyslogFormatter* formatter, 
 
 static inline bool Formatter_CodepointFits(size_t codepointLength, size_t remainingDecodedLength)
 {
-    return (codepointLength > 0) && (codepointLength <= remainingDecodedLength);
+    return (codepointLength > 0U) && (codepointLength <= remainingDecodedLength);
 }
 
 static inline size_t Formatter_Utf8CodepointLength(const char* source)
@@ -207,6 +207,10 @@ static inline size_t Formatter_Utf8CodepointLength(const char* source)
     {
         length = 4;
     }
+    else
+    {
+        /* lead does not start a valid 1-/2-/3-/4-byte UTF-8 sequence — length stays 0 */
+    }
 
     return length;
 }
@@ -219,7 +223,7 @@ static inline bool Formatter_IsValidUtf8TwoByte(char lead, char continuation1)
 
 static inline bool Formatter_IsOverlongTwoByteLead(char byte)
 {
-    return (byte & 0xFE) == 0xC0;
+    return ((unsigned char) byte & 0xFEU) == 0xC0U;
 }
 
 static inline bool Formatter_IsValidUtf8ThreeByte(char lead, char continuation1, char continuation2)
@@ -232,12 +236,12 @@ static inline bool Formatter_IsValidUtf8ThreeByte(char lead, char continuation1,
 
 static inline bool Formatter_IsOverlongThreeByteEncoding(char lead, char continuation1)
 {
-    return (lead == '\xE0') && ((continuation1 & 0xE0) == 0x80);
+    return ((unsigned char) lead == 0xE0U) && (((unsigned char) continuation1 & 0xE0U) == 0x80U);
 }
 
 static inline bool Formatter_IsUtf16SurrogateEncoding(char lead, char continuation1)
 {
-    return (lead == '\xED') && ((continuation1 & 0xE0) == 0xA0);
+    return ((unsigned char) lead == 0xEDU) && (((unsigned char) continuation1 & 0xE0U) == 0xA0U);
 }
 
 static inline bool Formatter_IsValidUtf8FourByte(char lead, char continuation1, char continuation2, char continuation3)
@@ -250,15 +254,19 @@ static inline bool Formatter_IsValidUtf8FourByte(char lead, char continuation1, 
 
 static inline bool Formatter_IsOverlongFourByteEncoding(char lead, char continuation1)
 {
-    return (lead == '\xF0') && ((continuation1 & 0xF0) == 0x80);
+    return ((unsigned char) lead == 0xF0U) && (((unsigned char) continuation1 & 0xF0U) == 0x80U);
 }
 
+/* NOLINTBEGIN(bugprone-easily-swappable-parameters) -- lead and continuation1 are byte values with distinct semantic roles, swap would not even compile a different result given the lead's value constraint */
 static inline bool Formatter_IsAboveUnicodeMaxEncoding(char lead, char continuation1)
 {
-    bool f4WithCont1Above8F = (lead == '\xF4') && ((continuation1 & 0xF0) != 0x80);
-    bool f5OrHigherLead = (lead == '\xF5') || (lead == '\xF6') || (lead == '\xF7');
+    unsigned char uLead = (unsigned char) lead;
+    bool f4WithCont1Above8F = (uLead == 0xF4U) && (((unsigned char) continuation1 & 0xF0U) != 0x80U);
+    bool f5OrHigherLead = (uLead >= 0xF5U) && (uLead <= 0xF7U);
     return f4WithCont1Above8F || f5OrHigherLead;
 }
+
+/* NOLINTEND(bugprone-easily-swappable-parameters) */
 
 static inline void Formatter_WriteBytes(struct SolidSyslogFormatter* formatter, const char* bytes, size_t count)
 {
@@ -304,7 +312,7 @@ static inline bool Formatter_NeedsEscape(char value)
 
 static inline bool Formatter_IsExhausted(const struct EscapedContext* context)
 {
-    return context->Exhausted || (context->Source[context->SourcePos] == '\0');
+    return context->Exhausted || (context->Source[context->SourcePos] == (char) '\0');
 }
 
 static inline void Formatter_WriteEscaped(struct EscapedContext* context)
@@ -320,7 +328,7 @@ static inline void Formatter_WriteEscaped(struct EscapedContext* context)
 
 static inline bool Formatter_Fits(const struct EscapedContext* context, size_t decodedAdvance)
 {
-    return (decodedAdvance > 0) && (decodedAdvance <= context->MaxDecodedLength - context->DecodedLength);
+    return (decodedAdvance > 0U) && (decodedAdvance <= (context->MaxDecodedLength - context->DecodedLength));
 }
 
 /* NOLINTBEGIN(bugprone-easily-swappable-parameters) -- see forward declaration */
@@ -490,19 +498,24 @@ static inline void Formatter_TrimTruncatedMultiByteTail(struct SolidSyslogFormat
     size_t p = formatter->Position;
     size_t trimFrom = p;
 
-    if ((p >= 1) && (SolidSyslogUtf8_IsTwoByteLead(buffer[p - 1]) || SolidSyslogUtf8_IsThreeByteLead(buffer[p - 1]) ||
-                     SolidSyslogUtf8_IsFourByteLead(buffer[p - 1])))
+    if ((p >= 1U) &&
+        (SolidSyslogUtf8_IsTwoByteLead(buffer[p - 1U]) || SolidSyslogUtf8_IsThreeByteLead(buffer[p - 1U]) ||
+         SolidSyslogUtf8_IsFourByteLead(buffer[p - 1U])))
     {
-        trimFrom = p - 1;
+        trimFrom = p - 1U;
     }
-    else if ((p >= 2) &&
-             (SolidSyslogUtf8_IsThreeByteLead(buffer[p - 2]) || SolidSyslogUtf8_IsFourByteLead(buffer[p - 2])))
+    else if ((p >= 2U) &&
+             (SolidSyslogUtf8_IsThreeByteLead(buffer[p - 2U]) || SolidSyslogUtf8_IsFourByteLead(buffer[p - 2U])))
     {
-        trimFrom = p - 2;
+        trimFrom = p - 2U;
     }
-    else if ((p >= 3) && SolidSyslogUtf8_IsFourByteLead(buffer[p - 3]))
+    else if ((p >= 3U) && SolidSyslogUtf8_IsFourByteLead(buffer[p - 3U]))
     {
-        trimFrom = p - 3;
+        trimFrom = p - 3U;
+    }
+    else
+    {
+        /* tail does not look like a truncated multi-byte sequence — trim nothing */
     }
     for (size_t i = trimFrom; i < p; i++)
     {
