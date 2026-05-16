@@ -19,7 +19,12 @@ static inline size_t UdpPayload_ExpectedSequenceLength(uint8_t startByte);
 size_t SolidSyslogUdpPayload_FromMtu(size_t mtu, bool isIpv6)
 {
     size_t overhead = (isIpv6 ? IPV6_HEADER_BYTES : IPV4_HEADER_BYTES) + UDP_HEADER_BYTES;
-    return mtu > overhead ? mtu - overhead : 0U;
+    size_t payload = 0U;
+    if (mtu > overhead)
+    {
+        payload = mtu - overhead;
+    }
+    return payload;
 }
 
 size_t SolidSyslogUdpPayload_TrimToCodepointBoundary(const uint8_t* buffer, size_t length)

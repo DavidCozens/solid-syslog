@@ -137,7 +137,7 @@ static inline void Formatter_WriteChar(struct SolidSyslogFormatter* formatter, c
 
 static inline bool Formatter_HasCapacity(const struct SolidSyslogFormatter* formatter)
 {
-    return (formatter->Size > 0U) && (formatter->Position < formatter->Size - 1U);
+    return (formatter->Size > 0U) && (formatter->Position < (formatter->Size - 1U));
 }
 
 /*
@@ -325,7 +325,7 @@ static inline void Formatter_WriteEscaped(struct EscapedContext* context)
 
 static inline bool Formatter_Fits(const struct EscapedContext* context, size_t decodedAdvance)
 {
-    return (decodedAdvance > 0U) && (decodedAdvance <= context->MaxDecodedLength - context->DecodedLength);
+    return (decodedAdvance > 0U) && (decodedAdvance <= (context->MaxDecodedLength - context->DecodedLength));
 }
 
 /* NOLINTBEGIN(bugprone-easily-swappable-parameters) -- see forward declaration */

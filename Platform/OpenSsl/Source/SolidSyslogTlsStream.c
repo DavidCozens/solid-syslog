@@ -147,7 +147,7 @@ static inline bool TlsStream_InitSslContext(struct SolidSyslogTlsStream* stream)
 static inline SSL_CTX* TlsStream_CreateSslContext(const struct SolidSyslogTlsStreamConfig* config)
 {
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
-    if (ctx != NULL && !TlsStream_ConfigureSslContext(ctx, config))
+    if ((ctx != NULL) && !TlsStream_ConfigureSslContext(ctx, config))
     {
         SSL_CTX_free(ctx);
         ctx = NULL;

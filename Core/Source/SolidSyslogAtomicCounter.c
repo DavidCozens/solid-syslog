@@ -20,7 +20,7 @@ static struct SolidSyslogAtomicCounter instance;
 
 static inline uint32_t AtomicCounter_NextSequenceId(uint32_t current)
 {
-    return (current >= SEQUENCE_ID_MAX) ? 1U : current + 1U;
+    return (current >= SEQUENCE_ID_MAX) ? 1U : (current + 1U);
 }
 
 static inline bool AtomicCounter_TryAdvance(struct SolidSyslogAtomicU32* slot, uint32_t* nextOut)
