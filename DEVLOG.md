@@ -1,5 +1,62 @@
 # Dev Log
 
+## 2026-05-17 — S10.14 Configuration types + Platform helpers conformance (#385)
+
+Third per-group conformance story in E10, applying the S10.12 pilot recipe
+to the Configuration types + Platform helpers group. Cleared all
+warning-mode findings raised by `analyze-tidy` and `analyze-cppcheck`
+(with the cppcheck-misra addon) against ~28 files in scope:
+
+- Core: `SolidSyslogEndpoint.h`, `SolidSyslogTransport.h`,
+  `SolidSyslogTunables.h`, `SolidSyslogTunablesDefaults.h`,
+  `SolidSyslogStringFunction.h`, `SolidSyslogError.{h,c}`,
+  `SolidSyslogErrorMessages.h`, `SolidSyslogTimestamp.h`,
+  `SolidSyslogTimeQuality.h`.
+- Platform/Posix: Clock, Hostname, ProcessId, SysUpTime (.h + .c each).
+- Platform/Windows: Clock, Hostname, ProcessId, SysUpTime (.h + .c each,
+  plus the four `*Internal.h` from the S10.11 self/base sweep).
+- Platform/FreeRtos: FreeRtosSysUpTime (.h + .c).
+
+### MISRA fixes — one new finding
+
+- 1× rule 17.8 (advisory) in `SolidSyslog_SetErrorHandler` — the `handler`
+  function parameter was reassigned to `Error_NoOpErrorHandler` when
+  `NULL` was passed, then read downstream. 17.8 says function parameters
+  should not be modified. Restructured to an if/else that writes the
+  destination (`currentHandler`) directly in each branch, leaving the
+  parameter immutable.
+
+No new deviations. No new `cppcheck-suppress` comments. No count bumps
+to existing deviations — the existing D.003 / 5.7, D.008 / 21.10, and
+D.010 / 2.4 sites in scope are unchanged.
+
+This is the lightest per-group story so far: the cross-cutting sweeps
+S10.07–S10.11 + the S10.21 NAMING amendment had already done most of
+the heavy lifting on this cluster (string-callback signatures, vtable
+casts, opaque-storage shapes), so warning mode only had this one
+substantive finding to surface.
+
+### Gates
+
+- `cmake --preset tidy && cmake --build --preset tidy` — clean
+  (0 findings tree-wide).
+- `cmake --preset debug && cmake --build --preset debug --target junit`
+  — 1122 tests, 0 failures.
+- `cmake --preset clang-debug && cmake --build --preset clang-debug --target junit`
+  — 1122 tests, 0 failures.
+- `cmake --preset sanitize && cmake --build --preset sanitize --target junit`
+  — 1122 tests, 0 failures.
+- `cmake --preset coverage && cmake --build --preset coverage --target coverage`
+  — 100% line coverage on `SolidSyslogError.c` (the only file touched).
+  Tree overall: 99.6% lines / 99.0% functions, well above the 90% gate.
+- Standalone non-MISRA `cppcheck Core/Source/` — clean (0 findings).
+- Standalone `cppcheck --addon=misra` full tree — zero findings on
+  S10.14 scope files post-fix.
+- `clang-format --dry-run --Werror Core/Source/SolidSyslogError.c` — clean.
+
+Windows / BDD / OpenSSL integration are CI's responsibility per the
+CLAUDE.md workflow note.
+
 ## 2026-05-17 — S10.13 Security policies + CRC + Sync primitives conformance (#383)
 
 Second per-group conformance story in E10, applying the S10.12 pilot
