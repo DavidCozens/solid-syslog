@@ -87,7 +87,8 @@ static inline struct SolidSyslogOriginSd* OriginSd_SelfFromBase(struct SolidSysl
 static inline void OriginSd_PreFormatStaticPrefix(const struct SolidSyslogOriginSdConfig* config)
 {
     static const char sdPrefix[] = "[origin";
-    struct SolidSyslogFormatter* f = SolidSyslogFormatter_Create(OriginSd_Instance.FormattedStorage, ORIGIN_FORMATTED_MAX);
+    struct SolidSyslogFormatter* f =
+        SolidSyslogFormatter_Create(OriginSd_Instance.FormattedStorage, ORIGIN_FORMATTED_MAX);
 
     SolidSyslogFormatter_BoundedString(f, sdPrefix, sizeof(sdPrefix) - 1U);
     OriginSd_EmitSoftware(f, config);
