@@ -22,22 +22,10 @@ struct Slot
 
 static bool Fallback_Read(struct SolidSyslogBuffer* base, void* data, size_t maxSize, size_t* bytesRead);
 static void Fallback_Write(struct SolidSyslogBuffer* base, const void* data, size_t size);
+static struct SolidSyslogBuffer* CircularBuffer_AcquireIfFree(size_t i);
 
 static struct Slot Pool[SOLIDSYSLOG_CIRCULAR_BUFFER_POOL_SIZE];
 static struct SolidSyslogBuffer Fallback = {Fallback_Write, Fallback_Read};
-
-static struct SolidSyslogBuffer* CircularBuffer_AcquireIfFree(size_t i)
-{
-    struct SolidSyslogBuffer* handle = &Fallback;
-    SolidSyslog_LockConfig();
-    if (!Pool[i].InUse)
-    {
-        Pool[i].InUse = true;
-        handle = &Pool[i].Object.Base;
-    }
-    SolidSyslog_UnlockConfig();
-    return handle;
-}
 
 struct SolidSyslogBuffer* SolidSyslogCircularBuffer_Create(
     struct SolidSyslogMutex* mutex,
@@ -62,6 +50,19 @@ struct SolidSyslogBuffer* SolidSyslogCircularBuffer_Create(
     {
         SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_CIRCULARBUFFER_POOL_EXHAUSTED);
     }
+    return handle;
+}
+
+static struct SolidSyslogBuffer* CircularBuffer_AcquireIfFree(size_t i)
+{
+    struct SolidSyslogBuffer* handle = &Fallback;
+    SolidSyslog_LockConfig();
+    if (!Pool[i].InUse)
+    {
+        Pool[i].InUse = true;
+        handle = &Pool[i].Object.Base;
+    }
+    SolidSyslog_UnlockConfig();
     return handle;
 }
 
