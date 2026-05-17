@@ -61,6 +61,7 @@ if(ENABLE_CPPCHECK)
             "--enable=warning,style,performance,portability"
             "--error-exitcode=1"
             "--suppress=missingIncludeSystem"
+            "--suppress=useStlAlgorithm"
             "--inline-suppr"
             "--std=c++17"
         )

@@ -1,14 +1,30 @@
 #include "SolidSyslogCircularBuffer.h"
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
 #include "SolidSyslogBufferDefinition.h"
 #include "SolidSyslogCircularBufferPrivate.h"
+#include "SolidSyslogConfigLock.h"
+#include "SolidSyslogError.h"
+#include "SolidSyslogErrorMessages.h"
+#include "SolidSyslogPrival.h"
+#include "SolidSyslogTunables.h"
 
 struct SolidSyslogMutex;
 
-static struct SolidSyslogCircularBuffer Instance;
+struct Slot
+{
+    struct SolidSyslogCircularBuffer Object;
+    bool                             InUse;
+};
+
+static bool Fallback_Read(struct SolidSyslogBuffer* base, void* data, size_t maxSize, size_t* bytesRead);
+static void Fallback_Write(struct SolidSyslogBuffer* base, const void* data, size_t size);
+
+static struct Slot              Pool[SOLIDSYSLOG_CIRCULAR_BUFFER_POOL_SIZE];
+static struct SolidSyslogBuffer Fallback = { Fallback_Write, Fallback_Read };
 
 struct SolidSyslogBuffer* SolidSyslogCircularBuffer_Create(
     struct SolidSyslogMutex* mutex,
@@ -16,15 +32,54 @@ struct SolidSyslogBuffer* SolidSyslogCircularBuffer_Create(
     size_t                   ringBytes
 )
 {
-    CircularBuffer_Initialise(&Instance, mutex, ring, ringBytes);
-    return &Instance.Base;
+    struct SolidSyslogBuffer* result = &Fallback;
+    SolidSyslog_LockConfig();
+    for (size_t i = 0; i < SOLIDSYSLOG_CIRCULAR_BUFFER_POOL_SIZE; i++)
+    {
+        if (!Pool[i].InUse)
+        {
+            Pool[i].InUse = true;
+            CircularBuffer_Initialise(&Pool[i].Object, mutex, ring, ringBytes);
+            result = &Pool[i].Object.Base;
+            break;
+        }
+    }
+    SolidSyslog_UnlockConfig();
+    if (result == &Fallback)
+    {
+        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_CIRCULARBUFFER_POOL_EXHAUSTED);
+    }
+    return result;
 }
 
-/* cppcheck-suppress constParameter -- public API is non-const (mutating Destroy); next commit's pool ownership check exercises base for identity comparison and Cleanup mutates through it. */
+/* cppcheck-suppress constParameter -- public API is non-const for symmetry with every other SolidSyslog*_Destroy(struct SolidSyslogX* base); this TU's pool walk only compares the pointer, but callers pass the handle they own (and may free elsewhere). */
 void SolidSyslogCircularBuffer_Destroy(struct SolidSyslogBuffer* base)
 {
-    if (base == &Instance.Base)
+    SolidSyslog_LockConfig();
+    for (size_t i = 0; i < SOLIDSYSLOG_CIRCULAR_BUFFER_POOL_SIZE; i++)
     {
-        CircularBuffer_Cleanup(&Instance);
+        if (Pool[i].InUse && (base == &Pool[i].Object.Base))
+        {
+            CircularBuffer_Cleanup(&Pool[i].Object);
+            Pool[i].InUse = false;
+            break;
+        }
     }
+    SolidSyslog_UnlockConfig();
+}
+
+static bool Fallback_Read(struct SolidSyslogBuffer* base, void* data, size_t maxSize, size_t* bytesRead)
+{
+    (void) base;
+    (void) data;
+    (void) maxSize;
+    *bytesRead = 0;
+    return false;
+}
+
+static void Fallback_Write(struct SolidSyslogBuffer* base, const void* data, size_t size)
+{
+    (void) base;
+    (void) data;
+    (void) size;
 }

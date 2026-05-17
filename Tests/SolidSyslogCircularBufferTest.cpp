@@ -1,11 +1,17 @@
 #include <cstring>
 
 #include "CppUTest/TestHarness.h"
+
+#include "ConfigLockFake.h"
+#include "ErrorHandlerFake.h"
 #include "MutexFake.h"
 #include "SolidSyslogBuffer.h"
 #include "SolidSyslogCircularBuffer.h"
 #include "SolidSyslogNullMutex.h"
 #include "SolidSyslogTunables.h"
+#include "TestUtils.h"
+
+using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings ONCE/NEVER into scope for CALLED_FAKE
 
 enum
 {
@@ -327,4 +333,99 @@ TEST(SolidSyslogCircularBufferSmallRing, WrappedBufferReadsAllRecordsInOrder)
     CHECK_TRUE(Read());
     MEMCMP_EQUAL(d, readData, sizeof(d));
     CHECK_FALSE(Read());
+}
+
+// clang-format off
+TEST_GROUP(SolidSyslogCircularBufferPool)
+{
+    uint8_t                   ring[SOLIDSYSLOG_CIRCULAR_BUFFER_RING_BYTES(1)];
+    struct SolidSyslogMutex*  mutex                                           = nullptr;
+    struct SolidSyslogBuffer* pooled[SOLIDSYSLOG_CIRCULAR_BUFFER_POOL_SIZE]   = {};
+    struct SolidSyslogBuffer* overflow                                        = nullptr;
+
+    void setup() override
+    {
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+        mutex = SolidSyslogNullMutex_Create();
+    }
+
+    void teardown() override
+    {
+        for (auto* buffer : pooled)
+        {
+            SolidSyslogCircularBuffer_Destroy(buffer);
+        }
+        SolidSyslogCircularBuffer_Destroy(overflow);
+        SolidSyslogNullMutex_Destroy();
+        ConfigLockFake_Uninstall();
+        ErrorHandlerFake_Uninstall();
+    }
+
+    void FillPool()
+    {
+        for (auto*& slot : pooled)
+        {
+            slot = SolidSyslogCircularBuffer_Create(mutex, ring, sizeof(ring));
+        }
+    }
+};
+
+// clang-format on
+
+TEST(SolidSyslogCircularBufferPool, FillingPoolThenOverflowReturnsDistinctFallback)
+{
+    FillPool();
+    overflow = SolidSyslogCircularBuffer_Create(mutex, ring, sizeof(ring));
+
+    CHECK(overflow != nullptr);
+    for (auto* slot : pooled)
+    {
+        CHECK(slot != nullptr);
+        CHECK(overflow != slot);
+    }
+}
+
+TEST(SolidSyslogCircularBufferPool, ExhaustedCreateReportsError)
+{
+    ErrorHandlerFake_Install(nullptr);
+    FillPool();
+
+    overflow = SolidSyslogCircularBuffer_Create(mutex, ring, sizeof(ring));
+
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+}
+
+TEST(SolidSyslogCircularBufferPool, FallbackWriteAndReadAreNoOps)
+{
+    FillPool();
+    overflow = SolidSyslogCircularBuffer_Create(mutex, ring, sizeof(ring));
+
+    SolidSyslogBuffer_Write(overflow, "hello", 5);
+
+    char   readBuffer[16] = {};
+    size_t bytesRead      = 99;
+    CHECK_FALSE(SolidSyslogBuffer_Read(overflow, readBuffer, sizeof(readBuffer), &bytesRead));
+    LONGS_EQUAL(0, bytesRead);
+}
+
+TEST(SolidSyslogCircularBufferPool, CreateAcquiresAndReleasesConfigLock)
+{
+    ConfigLockFake_Install();
+
+    pooled[0] = SolidSyslogCircularBuffer_Create(mutex, ring, sizeof(ring));
+
+    CALLED_FAKE(ConfigLockFake_Lock, ONCE);
+    CALLED_FAKE(ConfigLockFake_Unlock, ONCE);
+}
+
+TEST(SolidSyslogCircularBufferPool, DestroyAcquiresAndReleasesConfigLock)
+{
+    pooled[0] = SolidSyslogCircularBuffer_Create(mutex, ring, sizeof(ring));
+    ConfigLockFake_Install();
+
+    SolidSyslogCircularBuffer_Destroy(pooled[0]);
+
+    CALLED_FAKE(ConfigLockFake_Lock, ONCE);
+    CALLED_FAKE(ConfigLockFake_Unlock, ONCE);
 }
