@@ -69,7 +69,7 @@ The Tier 1 naming scheme in `docs/NAMING.md` (form
 30–40 character range — `SolidSyslogFreeRtosStaticResolver_Create` is
 40, `SolidSyslogFreeRtosTcpStream_Destroy` is 36 — and a few public
 storage-size enums sit just below 40 (e.g.
-`SOLIDSYSLOG_FREERTOSSTATICRESOLVER_SIZE`, 39). Strict 31-character
+`SOLIDSYSLOG_FREE_RTOS_STATIC_RESOLVER_SIZE`, 39). Strict 31-character
 distinctness would either collapse identifier pairs that read
 identically up to a trailing word
 (`SolidSyslogFreeRtosStaticResolver_Create` vs `_Destroy`) into a
@@ -793,8 +793,8 @@ Project owner — David Cozens. Recorded under
 ### Deviation
 
 `Core/Interface/SolidSyslogCircularBuffer.h` declares two function-like
-macros — `SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE_BYTES` and
-`SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE` — that integrator code uses
+macros — `SOLIDSYSLOG_CIRCULAR_BUFFER_STORAGE_SIZE_BYTES` and
+`SOLIDSYSLOG_CIRCULAR_BUFFER_STORAGE_SIZE` — that integrator code uses
 to size caller-supplied storage. cppcheck-misra runs only over the
 Strict tier (`Core/Source/`) and Pragmatic tier (`Platform/*/Source/`);
 the actual consumers live under `Tests/` (Consistency-only tier) and

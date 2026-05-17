@@ -1542,7 +1542,7 @@ TEST_GROUP(SolidSyslogServiceEagerDrain)
     void setup() override
     {
         static SolidSyslogCircularBufferStorage bufferStorage[
-            SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE_BYTES(BUFFER_BYTES)];
+            SOLIDSYSLOG_CIRCULAR_BUFFER_STORAGE_SIZE_BYTES(BUFFER_BYTES)];
 
         fakeSender     = SenderFake_Create();
         circularBuffer = SolidSyslogCircularBuffer_Create(

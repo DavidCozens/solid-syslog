@@ -11,12 +11,12 @@ EXTERN_C_BEGIN
 
     enum
     {
-        SOLIDSYSLOG_FREERTOSSTATICRESOLVER_SIZE = sizeof(intptr_t) * 4U
+        SOLIDSYSLOG_FREE_RTOS_STATIC_RESOLVER_SIZE = sizeof(intptr_t) * 4U
     };
 
     typedef struct
     {
-        intptr_t slots[(SOLIDSYSLOG_FREERTOSSTATICRESOLVER_SIZE + sizeof(intptr_t) - 1U) / sizeof(intptr_t)];
+        intptr_t slots[(SOLIDSYSLOG_FREE_RTOS_STATIC_RESOLVER_SIZE + sizeof(intptr_t) - 1U) / sizeof(intptr_t)];
     } SolidSyslogFreeRtosStaticResolverStorage;
 
     struct SolidSyslogResolver* SolidSyslogFreeRtosStaticResolver_Create(

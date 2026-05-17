@@ -553,14 +553,14 @@ anonymous enum is a macro replacement, not a public type.
 /* Public, in a header — Tier 1 macro-equivalent */
 enum
 {
-    SOLIDSYSLOG_CIRCULARBUFFER_OVERHEAD = 7,
-    SOLIDSYSLOG_CIRCULARBUFFER_HEADER_BYTES = sizeof(uint16_t)
+    SOLIDSYSLOG_CIRCULAR_BUFFER_OVERHEAD = 7,
+    SOLIDSYSLOG_CIRCULAR_BUFFER_HEADER_BYTES = sizeof(uint16_t)
 };
 
 /* File-scope, in a .c — Tier 2 macro-equivalent */
 enum
 {
-    HEADER_BYTES = SOLIDSYSLOG_CIRCULARBUFFER_HEADER_BYTES
+    HEADER_BYTES = SOLIDSYSLOG_CIRCULAR_BUFFER_HEADER_BYTES
 };
 ```
 
@@ -643,7 +643,7 @@ struct SolidSyslogBuffer
 
 /* Core/Interface/SolidSyslogCircularBuffer.h ---------------------------- */
 
-#define SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE_BYTES(bytes) /* ... */
+#define SOLIDSYSLOG_CIRCULAR_BUFFER_STORAGE_SIZE_BYTES(bytes) /* ... */
 
 typedef size_t SolidSyslogCircularBufferStorage;
 

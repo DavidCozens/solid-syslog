@@ -22,8 +22,8 @@ struct SolidSyslogFreeRtosDatagram
 };
 
 SOLIDSYSLOG_STATIC_ASSERT(
-    sizeof(FreeRtosDatagram) <= SOLIDSYSLOG_FREERTOSDATAGRAM_SIZE,
-    "SOLIDSYSLOG_FREERTOSDATAGRAM_SIZE is too small for SolidSyslogFreeRtosDatagram layout"
+    sizeof(FreeRtosDatagram) <= SOLIDSYSLOG_FREE_RTOS_DATAGRAM_SIZE,
+    "SOLIDSYSLOG_FREE_RTOS_DATAGRAM_SIZE is too small for SolidSyslogFreeRtosDatagram layout"
 );
 
 /* Time the calling task yields after issuing an ARP probe so the IP task can

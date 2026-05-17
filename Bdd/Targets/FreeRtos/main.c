@@ -170,7 +170,7 @@ enum
 };
 
 static SolidSyslogCircularBufferStorage
-    bufferStorage[SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE(BDD_TARGET_BUFFER_MESSAGES)];
+    bufferStorage[SOLIDSYSLOG_CIRCULAR_BUFFER_STORAGE_SIZE(BDD_TARGET_BUFFER_MESSAGES)];
 static SolidSyslogFreeRtosMutexStorage mutexStorage;
 
 /* Lifecycle mutex serialises SolidSyslog_Service against the rebuild path

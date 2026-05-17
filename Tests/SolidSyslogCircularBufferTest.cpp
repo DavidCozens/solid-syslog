@@ -15,7 +15,7 @@ enum
 // clang-format off
 TEST_GROUP(SolidSyslogCircularBuffer)
 {
-    SolidSyslogCircularBufferStorage storage[SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE(TEST_MAX_MESSAGES)];
+    SolidSyslogCircularBufferStorage storage[SOLIDSYSLOG_CIRCULAR_BUFFER_STORAGE_SIZE(TEST_MAX_MESSAGES)];
     struct SolidSyslogBuffer* buffer = nullptr;
     char                      readData[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
     // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
@@ -170,7 +170,7 @@ TEST(SolidSyslogCircularBuffer, WriteExceedingMaxMessageSizeIsDropped)
 // clang-format off
 TEST_GROUP(SolidSyslogCircularBufferMutex)
 {
-    SolidSyslogCircularBufferStorage storage[SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE(TEST_MAX_MESSAGES)];
+    SolidSyslogCircularBufferStorage storage[SOLIDSYSLOG_CIRCULAR_BUFFER_STORAGE_SIZE(TEST_MAX_MESSAGES)];
     struct SolidSyslogBuffer* buffer = nullptr;
     char                      readData[SOLIDSYSLOG_MAX_MESSAGE_SIZE];
     // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
@@ -217,7 +217,7 @@ enum
 // clang-format off
 TEST_GROUP(SolidSyslogCircularBufferSmallRing)
 {
-    SolidSyslogCircularBufferStorage storage[SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE_BYTES(SMALL_RING_BYTES)];
+    SolidSyslogCircularBufferStorage storage[SOLIDSYSLOG_CIRCULAR_BUFFER_STORAGE_SIZE_BYTES(SMALL_RING_BYTES)];
     struct SolidSyslogBuffer*        buffer = nullptr;
     char                             readData[SMALL_RING_BYTES];
     // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
