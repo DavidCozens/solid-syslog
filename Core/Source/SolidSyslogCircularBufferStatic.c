@@ -26,6 +26,19 @@ static void Fallback_Write(struct SolidSyslogBuffer* base, const void* data, siz
 static struct Slot Pool[SOLIDSYSLOG_CIRCULAR_BUFFER_POOL_SIZE];
 static struct SolidSyslogBuffer Fallback = {Fallback_Write, Fallback_Read};
 
+static struct SolidSyslogBuffer* CircularBuffer_TryClaimSlot(size_t i)
+{
+    struct SolidSyslogBuffer* claimed = &Fallback;
+    SolidSyslog_LockConfig();
+    if (!Pool[i].InUse)
+    {
+        Pool[i].InUse = true;
+        claimed = &Pool[i].Object.Base;
+    }
+    SolidSyslog_UnlockConfig();
+    return claimed;
+}
+
 struct SolidSyslogBuffer* SolidSyslogCircularBuffer_Create(
     struct SolidSyslogMutex* mutex,
     uint8_t* ring,
@@ -35,13 +48,7 @@ struct SolidSyslogBuffer* SolidSyslogCircularBuffer_Create(
     struct SolidSyslogBuffer* claimed = &Fallback;
     for (size_t i = 0; i < SOLIDSYSLOG_CIRCULAR_BUFFER_POOL_SIZE; i++)
     {
-        SolidSyslog_LockConfig();
-        if (!Pool[i].InUse)
-        {
-            Pool[i].InUse = true;
-            claimed = &Pool[i].Object.Base;
-        }
-        SolidSyslog_UnlockConfig();
+        claimed = CircularBuffer_TryClaimSlot(i);
         if (claimed != &Fallback)
         {
             break;
