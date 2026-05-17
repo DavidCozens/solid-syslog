@@ -23,6 +23,7 @@ struct Slot
 static bool Fallback_Read(struct SolidSyslogBuffer* base, void* data, size_t maxSize, size_t* bytesRead);
 static void Fallback_Write(struct SolidSyslogBuffer* base, const void* data, size_t size);
 static struct SolidSyslogBuffer* CircularBuffer_AcquireIfFree(size_t i);
+static inline bool CircularBuffer_HandleIsValid(const struct SolidSyslogBuffer* handle);
 
 static struct Slot Pool[SOLIDSYSLOG_CIRCULAR_BUFFER_POOL_SIZE];
 static struct SolidSyslogBuffer Fallback = {Fallback_Write, Fallback_Read};
@@ -37,12 +38,12 @@ struct SolidSyslogBuffer* SolidSyslogCircularBuffer_Create(
     for (size_t i = 0; i < SOLIDSYSLOG_CIRCULAR_BUFFER_POOL_SIZE; i++)
     {
         handle = CircularBuffer_AcquireIfFree(i);
-        if (handle != &Fallback)
+        if (CircularBuffer_HandleIsValid(handle))
         {
             break;
         }
     }
-    if (handle != &Fallback)
+    if (CircularBuffer_HandleIsValid(handle))
     {
         CircularBuffer_Initialise(handle, mutex, ring, ringBytes);
     }
@@ -66,9 +67,14 @@ static struct SolidSyslogBuffer* CircularBuffer_AcquireIfFree(size_t i)
     return handle;
 }
 
+static inline bool CircularBuffer_HandleIsValid(const struct SolidSyslogBuffer* handle)
+{
+    return handle != &Fallback;
+}
+
 void SolidSyslogCircularBuffer_Destroy(struct SolidSyslogBuffer* base)
 {
-    if (base != &Fallback)
+    if (CircularBuffer_HandleIsValid(base))
     {
         bool released = false;
         for (size_t i = 0; (i < SOLIDSYSLOG_CIRCULAR_BUFFER_POOL_SIZE) && !released; i++)
