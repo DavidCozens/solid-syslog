@@ -20,7 +20,7 @@
 #include "BddTargetTlsSender.h"
 #include "BddTargetUdpConfig.h"
 #include "SolidSyslog.h"
-#include "SolidSyslogAtomicCounter.h"
+#include "SolidSyslogStdAtomicCounter.h"
 #include "SolidSyslogTunables.h"
 #include "SolidSyslogConfig.h"
 #include "SolidSyslogCrc16Policy.h"
@@ -233,7 +233,8 @@ int main(int argc, char* argv[])
     struct SolidSyslogStore* store = CreateStore(&options);
 
     struct SolidSyslogBuffer* buffer = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
-    struct SolidSyslogAtomicCounter* counter = SolidSyslogAtomicCounter_Create();
+    SolidSyslogStdAtomicCounterStorage counterStorage;
+    struct SolidSyslogAtomicCounter* counter = SolidSyslogStdAtomicCounter_Create(&counterStorage);
     struct SolidSyslogMetaSdConfig metaConfig = {
         .Counter = counter,
         .GetSysUpTime = SolidSyslogPosixSysUpTime_Get,
@@ -289,7 +290,7 @@ int main(int argc, char* argv[])
     SolidSyslogOriginSd_Destroy();
     SolidSyslogTimeQualitySd_Destroy();
     SolidSyslogMetaSd_Destroy();
-    SolidSyslogAtomicCounter_Destroy();
+    SolidSyslogStdAtomicCounter_Destroy(counter);
     DestroyStore(store, &options);
     SolidSyslogPosixMessageQueueBuffer_Destroy();
     DestroySender();

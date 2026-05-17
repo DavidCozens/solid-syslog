@@ -30,6 +30,7 @@
 #include "BddTargetSwitchConfig.h"
 #include "SolidSyslog.h"
 #include "SolidSyslogAtomicCounter.h"
+#include "SolidSyslogStdAtomicCounter.h"
 #include "SolidSyslogBlockStore.h"
 #include "SolidSyslogTunables.h"
 #include "SolidSyslogCircularBuffer.h"
@@ -234,6 +235,7 @@ static volatile bool pendingNoSd = false;
  * .Store and pass the same struct back into SolidSyslog_Create. */
 static struct SolidSyslogConfig solidSyslogConfig;
 static struct SolidSyslogStructuredData* sdList[3];
+static SolidSyslogStdAtomicCounterStorage atomicCounterStorage;
 static struct SolidSyslogAtomicCounter* atomicCounter = NULL;
 static struct SolidSyslogStructuredData* metaSd = NULL;
 static struct SolidSyslogStructuredData* timeQualitySd = NULL;
@@ -653,7 +655,7 @@ static void TeardownAll(void)
     SolidSyslogOriginSd_Destroy();
     SolidSyslogTimeQualitySd_Destroy();
     SolidSyslogMetaSd_Destroy();
-    SolidSyslogAtomicCounter_Destroy();
+    SolidSyslogStdAtomicCounter_Destroy(atomicCounter);
     DestroyCurrentStore();
     if (fatfsMounted)
     {
@@ -834,7 +836,7 @@ static void InteractiveTask(void* argument)
     currentStore = SolidSyslogNullStore_Create();
     currentStoreIsFile = false;
 
-    atomicCounter = SolidSyslogAtomicCounter_Create();
+    atomicCounter = SolidSyslogStdAtomicCounter_Create(&atomicCounterStorage);
     struct SolidSyslogMetaSdConfig metaConfig = {
         .Counter = atomicCounter,
         .GetSysUpTime = SolidSyslogFreeRtosSysUpTime_Get,

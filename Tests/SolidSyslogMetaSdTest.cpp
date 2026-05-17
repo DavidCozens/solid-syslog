@@ -2,7 +2,7 @@
 #include <cstring>
 
 #include "ErrorHandlerFake.h"
-#include "SolidSyslogAtomicCounter.h"
+#include "SolidSyslogAtomicCounterTestHelper.h"
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogMetaSd.h"
 #include "SolidSyslogPrival.h"
@@ -65,6 +65,8 @@ static void FakeLanguage_Get(struct SolidSyslogFormatter* formatter)
 TEST_GROUP(SolidSyslogMetaSd)
 {
     // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
+    TestAtomicCounterStorage counterStorage;
+    // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
     SolidSyslogAtomicCounter* counter;
     // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
     SolidSyslogStructuredData* sd;
@@ -79,7 +81,7 @@ TEST_GROUP(SolidSyslogMetaSd)
     {
         ErrorHandlerFake_Install(&sentinel);
         formatter = SolidSyslogFormatter_Create(storage, TEST_BUFFER_SIZE);
-        counter = SolidSyslogAtomicCounter_Create();
+        counter = TestAtomicCounter_Create(&counterStorage);
         fakeSysUpTimeValue = 0;
         fakeLanguageContent = nullptr;
         fakeLanguageMaxLength = 0;
@@ -91,7 +93,7 @@ TEST_GROUP(SolidSyslogMetaSd)
     void teardown() override
     {
         SolidSyslogMetaSd_Destroy();
-        SolidSyslogAtomicCounter_Destroy();
+        TestAtomicCounter_Destroy(counter);
         ErrorHandlerFake_Uninstall();
     }
 

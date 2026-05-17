@@ -1,5 +1,198 @@
 # Dev Log
 
+## 2026-05-17 — S10.15 Structured Data conformance (#387)
+
+Fourth per-group conformance story in E10. Cleared all warning-mode
+findings raised by `analyze-tidy` and `analyze-cppcheck` (with the
+cppcheck-misra addon) against the Structured Data group:
+
+- Core: `SolidSyslogStructuredData.{c,h}`, `SolidSyslogStructuredDataDefinition.h`,
+  `SolidSyslogMetaSd.{c,h}`, `SolidSyslogOriginSd.{c,h}`,
+  `SolidSyslogTimeQualitySd.{c,h}`, `SolidSyslogAtomicCounter.{c,h}`.
+- Platform: `SolidSyslogStdAtomicU32.c`, `SolidSyslogWindowsAtomicU32.c`.
+
+### MISRA fixes — 5.9 renames + 8.9 scope moves
+
+- 4× rule 5.9 (multiple internal-linkage identifiers with same name) —
+  bare `instance` collided across TUs. Renamed:
+  `AtomicCounter_Instance`, `MetaSd_Instance`, `OriginSd_Instance`,
+  `TimeQualitySd_Instance` per the S10.08 `<Class>_Instance` convention.
+  Each is read in >1 function so couldn't move into `_Create`.
+- 14× rule 8.9 (advisory: define at block scope if used in only one
+  function) — file-scope `static` objects whose identifier appears in
+  exactly one function. Moved into the function as block-scope statics,
+  matching the S10.12 `QUEUE_NAME_PREFIX` recipe. Names converted to
+  lowerCamelCase per Tier 3.
+  - `AtomicCounter.c`: `SEQUENCE_ID_MAX` → `sequenceIdMax` inside
+    `_NextSequenceId`.
+  - `MetaSd.c`: nil-object + 4 SD-field labels.
+  - `OriginSd.c`: 5 SD-field labels.
+  - `TimeQualitySd.c`: 4 SD-field labels.
+
+The 5.9 rename of `OriginSd_Instance` pushed one line in
+`OriginSd_PreFormatStaticPrefix` over the column limit; clang-format
+wrapped it (a separate style commit so the rename diff stays clean).
+
+### Atomics architectural pivot — AtomicCounter moves to Platform, AtomicU32 retired
+
+The original S10.15 work added a D.013 deviation for cppcheck-misra
+8.4 / 8.6 false-positives on the AtomicU32 platform impls. The
+deviation's rationale (cppcheck can't model CMake target-private
+includes + can't model link-time selection of one of multiple impls)
+was honest but the *shape* — "the tool can't see the truth, so we
+suppress" — was uncomfortable. David's diagnosis after sitting with
+it: the layering was the cause. AtomicCounter and AtomicU32 had been
+placed in Core, but they're platform-dependent (the same monotonic-
+counter service could be implemented via stdatomic, Win32 Interlocked,
+FreeRTOS critical sections, or a mutex-protected uint32 — different
+platforms need different impls). Putting the abstraction in Core forced
+the implementation contract to live in `Core/Source/SolidSyslogAtomicU32.h`,
+which cppcheck-misra couldn't see — D.013 was the symptom.
+
+Pivoted to a wholesale architectural rework, executed via TDD in
+parallel with the old impl, then a merged cut-over commit.
+
+**Phase 1 — TDD a new `SolidSyslogStdAtomicCounter` from scratch.**
+Built the Std impl in parallel with the existing AtomicCounter,
+following the SKILL.md TDD pairing contract + ZOMBIES order. Six
+behavioural tests drove the design: Create returns non-NULL, First
+increment returns 1, Sequential 1/2/3, Independence (two counters in
+separate storage are independent), Init+Increment (drove the test
+seam), IncrementAtMaxWrapsToOne. Refactored under green to use
+`_Atomic uint32_t` + atomic CAS loop (initial impl was plain `uint32_t`;
+the type doesn't change the tests but is correct-by-design for the
+class). Storage tightened to a single `intptr_t` slot with
+`_Static_assert` safety net. `self`/`base` naming per NAMING.md
+§This-pointer (David caught the violation during Phase 1).
+
+**Init as static + whitebox-include test pattern.** Tests need a way
+to position the counter near `INT32_MAX` for the wraparound test. Two
+approaches considered: expose `_Init` in the public platform API
+(creates an 8.7 "external linkage, single TU caller" finding because
+cppcheck can't see the test helper as a caller), or keep `_Init`
+static and use a whitebox-include from the test helper. Chose the
+latter — same pattern as the existing `SolidSyslogAtomicCounterTest.cpp`,
+documented by static-archive object-on-demand resolution preventing
+duplicate-symbol conflicts.
+
+**Test-helper architecture: one common test, per-platform `.c` helper.**
+`Tests/SolidSyslogAtomicCounterContractTest.cpp` describes the
+behaviour contract; `Tests/SolidSyslogStdAtomicCounterTestHelper.c`
+and `Tests/SolidSyslogWindowsAtomicCounterTestHelper.c` each
+whitebox-include their respective impl and expose a uniform
+`TestAtomicCounter_*` API. CMake selects exactly one helper based on
+`HAVE_STDATOMIC_H` / `HAVE_WINDOWS_INTERLOCKED` (prefer Std when both
+are available). One test file, two platforms get identical coverage
+automatically.
+
+**Phase 2/3/4 — merged commit, public vtable + Std/Windows + retire OLD.**
+The original phase split (cut over → Windows → retire) didn't work:
+Phase 2 alone left the public `SolidSyslogAtomicCounter_Increment` with
+hard-coded knowledge of the OLD impl's struct shape, so callers using
+the new Std `_Create` would crash inside `_Increment` (verified via
+`MetaSdAndTimeQualitySdCoexistInSdArray` segfault — different struct
+layout at offset 0). The three phases had to land together:
+
+- Added `Core/Interface/SolidSyslogAtomicCounterDefinition.h` — vtable
+  struct (`Increment` fn pointer). Mutex-shape precedent.
+- Rewrote `Core/Source/SolidSyslogAtomicCounter.c` as a one-line
+  vtable dispatcher.
+- Updated `SolidSyslogStdAtomicCounter.c` to the `Base + Value` shape
+  with `SelfFromBase` / `SelfFromStorage` downcast helpers.
+- Created `Platform/Windows/{Interface,Source}/SolidSyslogWindowsAtomicCounter.{h,c}`
+  by copy-rename from Std, swapping `_Atomic uint32_t` + stdatomic for
+  `volatile LONG` + `InterlockedCompareExchange`.
+- Cut over callers (`Tests/SolidSyslogMetaSdTest.cpp`,
+  `Tests/SolidSyslogTest.cpp` × 4 bodies, `Bdd/Targets/Linux/main.c`,
+  `Bdd/Targets/FreeRtos/main.c`) from the OLD singleton
+  `SolidSyslogAtomicCounter_Create()` to the new
+  `SolidSyslogStdAtomicCounter_Create(&storage)`.
+- Deleted `Core/Source/SolidSyslogAtomicU32.h`,
+  `Platform/Atomics/Source/SolidSyslogStdAtomicU32.c`,
+  `Platform/Windows/Source/SolidSyslogWindowsAtomicU32.c`,
+  `Tests/SolidSyslogAtomicCounterTest.cpp` (whitebox-included the OLD
+  impl), `Tests/SolidSyslogAtomicU32Test.cpp`.
+- Removed D.013 from `docs/misra-deviations.md` and all 16 D.013
+  suppressions from `misra_suppressions.txt`. Also removed obsolete
+  D.002 / D.003 / D.006 entries for the deleted AtomicU32 files.
+- Updated CLAUDE.md AtomicCounter row + added rows for
+  `SolidSyslogAtomicCounterDefinition.h`,
+  `SolidSyslogStdAtomicCounter.h`,
+  `SolidSyslogWindowsAtomicCounter.h`.
+
+**`SOLIDSYSLOG_SEQUENCE_ID_MAX` extracted to the public header.** The
+RFC 5424 §7.3.1 max value (2147483647) had been duplicated as a
+private `SEQUENCE_ID_MAX` enum in both platform impls. Promoted to
+`Core/Interface/SolidSyslogAtomicCounter.h` with the public Tier 1
+name — single source of truth for the RFC constraint, visible to
+future implementors. Both impls reference the public constant.
+Domain-aligned name (the value is the *sequenceId*'s max, not an
+AtomicCounter implementation detail).
+
+**Doc sweep — stale OLD AtomicU32 references.** Per David's request,
+swept all `*.md` files for `SolidSyslogAtomicU32` references after the
+deletion. README, CHANGELOG, SKILL, LICENSE, CLAUDE.md: clean (already
+updated as part of the architectural commit). DEVLOG.md: historical
+entries left as-is (snapshot of past state). `docs/misra-deviations.md`
+D.006 narrowed scope to the one remaining `<stdatomic.h>` site
+(`SolidSyslogStdAtomicCounter.c`); the Windows sibling now uses Win32
+APIs and stays C99-compatible. `docs/rfc-compliance.md` §6.3.5/7.3.1
+entry rewritten to describe the vtable abstraction model.
+`docs/misra-conformance.md` left as-is — frozen audit doc, slated for
+S10.20 deletion.
+
+### Decisions
+
+- **Storage NULL-check policy.** Storage `_Create` does NOT NULL-check
+  its storage parameter, matching the Mutex / Buffer / Stream /
+  BlockStore / Formatter precedent. Bad-Setup contract (S12.06)
+  applies to config-struct ambiguity (MetaSd / OriginSd / TimeQualitySd
+  with optional fields), not to caller-supplied storage where NULL is
+  a flat-out programmer error caught at setup time.
+- **Init function signature: storage takes value, no separate Init.**
+  Discussed and rejected — kept `_Create` taking storage with implicit
+  0 initialisation; the `_Init` test seam is private (static) and
+  reached via the whitebox-include pattern. Avoids API bloat for a
+  test-only convenience.
+- **Out-of-scope D.013 side effects no longer relevant.** The original
+  S10.15 D.013 work surfaced 8.6 findings on
+  `Platform/*/Source/SolidSyslogAddress.c` that would have needed
+  S10.17's attention. After the architectural pivot deleted D.013
+  entirely, those findings are gone (they only existed because of the
+  AtomicU32 unmasking interaction with cppcheck-misra; the new
+  AtomicCounter has no such interaction).
+
+### Line-shift housekeeping
+
+Multiple rounds of line shifts during the work (8.9 scope moves in the
+SD `Format` helpers, then again after the storage-pattern refactor,
+then again after clang-format auto-wraps, then again after extracting
+`SOLIDSYSLOG_SEQUENCE_ID_MAX`). Each round updated the line-anchored
+suppressions for the affected files.
+
+### Gates
+
+- `cmake --preset tidy && cmake --build --preset tidy` — 0 errors,
+  1 warning (pre-existing `slots` lowercase, treated-as-warning under
+  `WarningsAsErrors: '*,-readability-identifier-naming'`).
+- `cmake --preset debug && cmake --build --preset debug --target junit`
+  — 1115 tests pass (down 13 net from baseline: −7 OLD AtomicCounterTest,
+  −6 OLD AtomicU32Test, +6 new contract tests).
+- `cmake --preset clang-debug && cmake --build --preset clang-debug --target junit`
+  — 1115 tests pass.
+- `cmake --preset sanitize && cmake --build --preset sanitize --target junit`
+  — 1115 tests pass.
+- `cmake --preset coverage && cmake --build --preset coverage --target coverage`
+  — 99.6% lines / 99.0% functions, well above the 90% gate. 100% on
+  every Linux-buildable production file in scope.
+- Standalone non-MISRA `cppcheck Core/Source/` — 0 findings.
+- Full-tree `cppcheck --addon=misra` — zero unsuppressed AtomicCounter
+  findings; D.013 deviation eliminated.
+- `clang-format --dry-run --Werror` on edited files — clean.
+
+Windows / BDD / OpenSSL integration are CI's responsibility per the
+CLAUDE.md workflow note.
+
 ## 2026-05-17 — S10.14 Configuration types + Platform helpers conformance (#385)
 
 Third per-group conformance story in E10, applying the S10.12 pilot recipe

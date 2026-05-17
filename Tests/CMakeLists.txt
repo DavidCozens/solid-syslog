@@ -66,8 +66,21 @@ endif()
 
 if(HAVE_ATOMIC_COUNTER)
     list(APPEND TEST_SOURCES
-        SolidSyslogAtomicCounterTest.cpp
-        SolidSyslogAtomicU32Test.cpp
+        SolidSyslogAtomicCounterContractTest.cpp
+    )
+endif()
+
+# Pick exactly one AtomicCounter platform helper to whitebox-include the
+# matching impl's .c. Prefer stdatomic when available; fall back to
+# Windows Interlocked. Both flags can be true on MSVC 2022+; the elseif
+# ensures only one helper is compiled, so there are no duplicate symbols.
+if(HAVE_STDATOMIC_H)
+    list(APPEND TEST_SOURCES
+        SolidSyslogStdAtomicCounterTestHelper.c
+    )
+elseif(HAVE_WINDOWS_INTERLOCKED)
+    list(APPEND TEST_SOURCES
+        SolidSyslogWindowsAtomicCounterTestHelper.c
     )
 endif()
 
@@ -126,6 +139,12 @@ add_executable(${PROJECT_NAME}Tests ${TEST_SOURCES})
 
 target_link_libraries(${PROJECT_NAME}Tests PRIVATE ${PROJECT_NAME} ErrorHandlerFake CppUTest CppUTestExt Threads::Threads)
 target_include_directories(${PROJECT_NAME}Tests PRIVATE ${CMAKE_SOURCE_DIR}/Core/Source ${CMAKE_CURRENT_SOURCE_DIR}/Support)
+
+if(HAVE_STDATOMIC_H)
+    target_include_directories(${PROJECT_NAME}Tests PRIVATE ${CMAKE_SOURCE_DIR}/Platform/Atomics/Source)
+elseif(HAVE_WINDOWS_INTERLOCKED)
+    target_include_directories(${PROJECT_NAME}Tests PRIVATE ${CMAKE_SOURCE_DIR}/Platform/Windows/Source)
+endif()
 
 # Drives the static_assert in SolidSyslogTunablesTest.cpp when a tunable-override
 # preset is active. Default builds leave it undefined; the assertion compiles out.

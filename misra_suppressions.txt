@@ -29,15 +29,16 @@ misra-c2012-11.3:Core/Source/SolidSyslogCircularBuffer.c:89
 misra-c2012-11.3:Core/Source/SolidSyslogFileBlockDevice.c:118
 misra-c2012-11.3:Core/Source/SolidSyslogFileBlockDevice.c:146
 misra-c2012-11.3:Core/Source/SolidSyslogFormatter.c:93
-misra-c2012-11.3:Core/Source/SolidSyslogMetaSd.c:87
+misra-c2012-11.3:Core/Source/SolidSyslogMetaSd.c:83
 misra-c2012-11.3:Core/Source/SolidSyslogNullBuffer.c:54
-misra-c2012-11.3:Core/Source/SolidSyslogOriginSd.c:90
+misra-c2012-11.3:Core/Source/SolidSyslogOriginSd.c:84
 misra-c2012-11.3:Core/Source/SolidSyslogStreamSender.c:98
 misra-c2012-11.3:Core/Source/SolidSyslogStreamSender.c:110
 misra-c2012-11.3:Core/Source/SolidSyslogSwitchingSender.c:66
-misra-c2012-11.3:Core/Source/SolidSyslogTimeQualitySd.c:65
+misra-c2012-11.3:Core/Source/SolidSyslogTimeQualitySd.c:63
 misra-c2012-11.3:Core/Source/SolidSyslogUdpSender.c:149
-misra-c2012-11.3:Platform/Atomics/Source/SolidSyslogStdAtomicU32.c:26
+misra-c2012-11.3:Platform/Atomics/Source/SolidSyslogStdAtomicCounter.c:67
+misra-c2012-11.3:Platform/Atomics/Source/SolidSyslogStdAtomicCounter.c:74
 misra-c2012-11.3:Platform/FatFs/Source/SolidSyslogFatFsFile.c:63
 misra-c2012-11.3:Platform/FatFs/Source/SolidSyslogFatFsFile.c:81
 misra-c2012-11.3:Platform/FreeRtos/Source/SolidSyslogAddress.c:5
@@ -67,7 +68,8 @@ misra-c2012-11.3:Platform/Posix/Source/SolidSyslogPosixTcpStream.c:107
 misra-c2012-11.3:Platform/Windows/Source/SolidSyslogAddress.c:5
 misra-c2012-11.3:Platform/Windows/Source/SolidSyslogAddressInternal.h:18
 misra-c2012-11.3:Platform/Windows/Source/SolidSyslogAddressInternal.h:24
-misra-c2012-11.3:Platform/Windows/Source/SolidSyslogWindowsAtomicU32.c:26
+misra-c2012-11.3:Platform/Windows/Source/SolidSyslogWindowsAtomicCounter.c:72
+misra-c2012-11.3:Platform/Windows/Source/SolidSyslogWindowsAtomicCounter.c:79
 misra-c2012-11.3:Platform/Windows/Source/SolidSyslogWindowsFile.c:78
 misra-c2012-11.3:Platform/Windows/Source/SolidSyslogWindowsFile.c:95
 misra-c2012-11.3:Platform/Windows/Source/SolidSyslogWindowsMutex.c:37
@@ -105,7 +107,8 @@ misra-c2012-5.7:Core/Source/SolidSyslogFileBlockDevice.c:14
 misra-c2012-5.7:Core/Source/SolidSyslogFileBlockDevice.c:21
 misra-c2012-5.7:Core/Source/SolidSyslogOriginSd.c:6
 misra-c2012-5.7:Core/Source/SolidSyslogUdpPayload.c:5
-misra-c2012-5.7:Platform/Atomics/Source/SolidSyslogStdAtomicU32.c:10
+misra-c2012-5.7:Core/Interface/SolidSyslogAtomicCounter.h:11
+misra-c2012-5.7:Platform/Atomics/Interface/SolidSyslogStdAtomicCounter.h:13
 misra-c2012-5.7:Platform/FatFs/Interface/SolidSyslogFatFsFile.h:20
 misra-c2012-5.7:Platform/FreeRtos/Interface/SolidSyslogFreeRtosDatagram.h:13
 misra-c2012-5.7:Platform/FreeRtos/Interface/SolidSyslogFreeRtosMutex.h:13
@@ -129,7 +132,7 @@ misra-c2012-5.7:Platform/Posix/Source/SolidSyslogPosixTcpStream.c:23
 misra-c2012-5.7:Platform/Windows/Interface/SolidSyslogWindowsFile.h:11
 misra-c2012-5.7:Platform/Windows/Interface/SolidSyslogWindowsMutex.h:13
 misra-c2012-5.7:Platform/Windows/Interface/SolidSyslogWinsockTcpStream.h:11
-misra-c2012-5.7:Platform/Windows/Source/SolidSyslogWindowsAtomicU32.c:10
+misra-c2012-5.7:Platform/Windows/Interface/SolidSyslogWindowsAtomicCounter.h:13
 misra-c2012-5.7:Platform/Windows/Source/SolidSyslogWindowsClock.c:21
 misra-c2012-5.7:Platform/Windows/Source/SolidSyslogWindowsFile.c:20
 misra-c2012-5.7:Platform/Windows/Source/SolidSyslogWindowsHostname.c:19
@@ -151,8 +154,7 @@ misra-c2012-18.7:Core/Source/SolidSyslogFormatter.c:12
 
 # D.006 — Rule 1.4: C11 <stdatomic.h>
 # See docs/misra-deviations.md#d006
-misra-c2012-1.4:Platform/Atomics/Source/SolidSyslogStdAtomicU32.c:19
-misra-c2012-1.4:Platform/Windows/Source/SolidSyslogWindowsAtomicU32.c:19
+misra-c2012-1.4:Platform/Atomics/Source/SolidSyslogStdAtomicCounter.c:21
 
 # D.007 — Rule 11.8: const-strip false-positives + Winsock platform-API
 # See docs/misra-deviations.md#d007
@@ -197,3 +199,4 @@ misra-c2012-20.10:Core/Source/SolidSyslogMacros.h:9
 # See docs/misra-deviations.md#d012
 misra-c2012-2.5:Core/Interface/SolidSyslogCircularBuffer.h:25
 misra-c2012-2.5:Core/Interface/SolidSyslogCircularBuffer.h:30
+
