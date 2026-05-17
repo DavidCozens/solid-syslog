@@ -129,16 +129,16 @@ void SolidSyslogCircularBuffer_Destroy(struct SolidSyslogBuffer* base)
 
 static size_t CircularBuffer_IndexFromHandle(const struct SolidSyslogBuffer* base)
 {
-    size_t poolIndex = SOLIDSYSLOG_CIRCULAR_BUFFER_POOL_SIZE;
-    for (size_t i = 0; i < SOLIDSYSLOG_CIRCULAR_BUFFER_POOL_SIZE; i++)
+    size_t result = SOLIDSYSLOG_CIRCULAR_BUFFER_POOL_SIZE;
+    for (size_t poolIndex = 0; poolIndex < SOLIDSYSLOG_CIRCULAR_BUFFER_POOL_SIZE; poolIndex++)
     {
-        if (base == CircularBuffer_HandleFromIndex(i))
+        if (base == CircularBuffer_HandleFromIndex(poolIndex))
         {
-            poolIndex = i;
+            result = poolIndex;
             break;
         }
     }
-    return poolIndex;
+    return result;
 }
 
 static inline bool CircularBuffer_PoolIndexIsValid(size_t poolIndex)
