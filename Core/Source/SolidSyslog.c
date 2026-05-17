@@ -347,7 +347,7 @@ static inline uint8_t SolidSyslog_MakePrival(const struct SolidSyslogMessage* me
 {
     uint8_t f = (uint8_t) message->Facility;
     uint8_t s = (uint8_t) message->Severity;
-    uint8_t prival = SolidSyslog_CombineFacilityAndSeverity(SolidSyslogFacility_Syslog, SolidSyslogSeverity_Error);
+    uint8_t prival = SolidSyslog_CombineFacilityAndSeverity(SOLIDSYSLOG_FACILITY_SYSLOG, SolidSyslogSeverity_Error);
 
     if (SolidSyslog_PrivalComponentsAreValid(f, s))
     {
@@ -369,7 +369,7 @@ static inline bool SolidSyslog_PrivalComponentsAreValid(uint8_t facility, uint8_
 
 static inline bool SolidSyslog_FacilityIsValid(uint8_t facility)
 {
-    return facility <= (uint8_t) SolidSyslogFacility_Local7;
+    return facility <= (uint8_t) SOLIDSYSLOG_FACILITY_LOCAL7;
 }
 
 static inline bool SolidSyslog_SeverityIsValid(uint8_t severity)

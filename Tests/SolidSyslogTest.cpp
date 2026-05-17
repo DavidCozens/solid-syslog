@@ -371,7 +371,7 @@ TEST_GROUP(SolidSyslog)
         config = {buffer, nullptr, nullptr, StringFake_GetHostname, StringFake_GetAppName, StringFake_GetProcessId, store, nullptr, 0};
         SolidSyslog_Create(&config);
         // cppcheck-suppress unreadVariable -- read via Log() through &message; cppcheck does not model CppUTest macros
-        message = {SolidSyslogFacility_Local0, SolidSyslogSeverity_Informational, nullptr, nullptr};
+        message = {SOLIDSYSLOG_FACILITY_LOCAL0, SolidSyslogSeverity_Informational, nullptr, nullptr};
     }
 
     void teardown() override
@@ -418,7 +418,7 @@ TEST(SolidSyslog, PriValIs134)
 
 TEST(SolidSyslog, FacilityAppearsInPrival)
 {
-    message.Facility = SolidSyslogFacility_News;
+    message.Facility = SOLIDSYSLOG_FACILITY_NEWS;
     Log();
     CHECK_PRIVAL("<62>");
 }
@@ -432,14 +432,14 @@ TEST(SolidSyslog, SeverityAppearsInPrival)
 
 TEST(SolidSyslog, LowestFacilityProducesCorrectPrival)
 {
-    message.Facility = SolidSyslogFacility_Kern;
+    message.Facility = SOLIDSYSLOG_FACILITY_KERN;
     Log();
     CHECK_PRIVAL("<6>");
 }
 
 TEST(SolidSyslog, HighestFacilityProducesCorrectPrival)
 {
-    message.Facility = SolidSyslogFacility_Local7;
+    message.Facility = SOLIDSYSLOG_FACILITY_LOCAL7;
     Log();
     CHECK_PRIVAL("<190>");
 }
@@ -1261,7 +1261,7 @@ TEST(SolidSyslog, AllFieldsAtMaxLengthProducesValidMessage)
     config.Clock = StubClock;
     SolidSyslog_Destroy();
     SolidSyslog_Create(&config);
-    message.Facility = SolidSyslogFacility_Local7;
+    message.Facility = SOLIDSYSLOG_FACILITY_LOCAL7;
     message.Severity = SolidSyslogSeverity_Debug;
     Log();
     CHECK_PRIVAL("<191>");
@@ -1641,7 +1641,7 @@ TEST_GROUP(SolidSyslogLifecycle)
     {
         SolidSyslog_Destroy();
         // cppcheck-suppress unreadVariable -- read via Log() in tests; cppcheck does not model CppUTest macros
-        message = {SolidSyslogFacility_Local0, SolidSyslogSeverity_Informational, nullptr, nullptr};
+        message = {SOLIDSYSLOG_FACILITY_LOCAL0, SolidSyslogSeverity_Informational, nullptr, nullptr};
         // cppcheck-suppress unreadVariable -- read via validConfig() in tests; cppcheck does not model CppUTest macros
         sender = SenderFake_Create();
         // cppcheck-suppress unreadVariable -- read via validConfig() in tests; cppcheck does not model CppUTest macros

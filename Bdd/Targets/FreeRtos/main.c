@@ -144,7 +144,7 @@ static uint16_t port = (uint16_t) BDD_TARGET_UDP_PORT;
 static uint32_t endpointVersion = 0U;
 
 static struct SolidSyslogMessage testMessage = {
-    .Facility = SolidSyslogFacility_Local0,
+    .Facility = SOLIDSYSLOG_FACILITY_LOCAL0,
     .Severity = SolidSyslogSeverity_Informational,
     .MessageId = messageId,
     .Msg = msg,

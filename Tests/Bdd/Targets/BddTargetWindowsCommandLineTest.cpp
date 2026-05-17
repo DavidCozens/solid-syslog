@@ -19,7 +19,7 @@ TEST(BddTargetWindowsCommandLine, DefaultFacilityIsLocal0)
     char arg0[] = "test";
     char* argv[] = {arg0, nullptr};
     Parse(1, argv);
-    LONGS_EQUAL(SolidSyslogFacility_Local0, options.Facility);
+    LONGS_EQUAL(SOLIDSYSLOG_FACILITY_LOCAL0, options.Facility);
 }
 
 TEST(BddTargetWindowsCommandLine, DefaultSeverityIsInfo)
@@ -130,7 +130,7 @@ TEST(BddTargetWindowsCommandLine, UnknownFlagIsIgnored)
     char arg2[] = "value";
     char* argv[] = {arg0, arg1, arg2, nullptr};
     Parse(3, argv);
-    LONGS_EQUAL(SolidSyslogFacility_Local0, options.Facility);
+    LONGS_EQUAL(SOLIDSYSLOG_FACILITY_LOCAL0, options.Facility);
     POINTERS_EQUAL(nullptr, options.MessageId);
 }
 
@@ -140,7 +140,7 @@ TEST(BddTargetWindowsCommandLine, FacilityFlagWithoutValueIsIgnored)
     char arg1[] = "--facility";
     char* argv[] = {arg0, arg1, nullptr};
     Parse(2, argv);
-    LONGS_EQUAL(SolidSyslogFacility_Local0, options.Facility);
+    LONGS_EQUAL(SOLIDSYSLOG_FACILITY_LOCAL0, options.Facility);
 }
 
 TEST(BddTargetWindowsCommandLine, DefaultAppNameIsNull)
