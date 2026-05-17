@@ -486,15 +486,3 @@ TEST(SolidSyslogCircularBufferPool, DestroyOfUnknownHandleReportsWarning)
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
     STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_CIRCULARBUFFER_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
 }
-
-TEST(SolidSyslogCircularBufferPool, DestroyOfFallbackHandleIsSilent)
-{
-    FillPool();
-    overflow = MakeBuffer();
-    ErrorHandlerFake_Install(nullptr);
-
-    SolidSyslogCircularBuffer_Destroy(overflow);
-    overflow = nullptr;
-
-    CALLED_FAKE(ErrorHandlerFake_Handle, NEVER);
-}

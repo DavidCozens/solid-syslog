@@ -93,24 +93,21 @@ static inline bool CircularBuffer_HandleIsValid(const struct SolidSyslogBuffer* 
 
 void SolidSyslogCircularBuffer_Destroy(struct SolidSyslogBuffer* base)
 {
-    if (CircularBuffer_HandleIsValid(base))
+    bool released = false;
+    for (size_t poolIndex = 0; (poolIndex < SOLIDSYSLOG_CIRCULAR_BUFFER_POOL_SIZE) && !released; poolIndex++)
     {
-        bool released = false;
-        for (size_t poolIndex = 0; (poolIndex < SOLIDSYSLOG_CIRCULAR_BUFFER_POOL_SIZE) && !released; poolIndex++)
+        SolidSyslog_LockConfig();
+        if (Pool[poolIndex].InUse && (base == &Pool[poolIndex].Object.Base))
         {
-            SolidSyslog_LockConfig();
-            if (Pool[poolIndex].InUse && (base == &Pool[poolIndex].Object.Base))
-            {
-                CircularBuffer_Cleanup(base);
-                Pool[poolIndex].InUse = false;
-                released = true;
-            }
-            SolidSyslog_UnlockConfig();
+            CircularBuffer_Cleanup(base);
+            Pool[poolIndex].InUse = false;
+            released = true;
         }
-        if (!released)
-        {
-            SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_ERROR_MSG_CIRCULARBUFFER_UNKNOWN_DESTROY);
-        }
+        SolidSyslog_UnlockConfig();
+    }
+    if (!released)
+    {
+        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_ERROR_MSG_CIRCULARBUFFER_UNKNOWN_DESTROY);
     }
 }
 
