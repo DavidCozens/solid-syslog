@@ -26,8 +26,10 @@ static struct SolidSyslogBuffer* CircularBuffer_AcquireFirstFree(void);
 static struct SolidSyslogBuffer* CircularBuffer_AcquireIfFree(size_t poolIndex);
 static inline bool CircularBuffer_PoolItemIsFree(size_t poolIndex);
 static inline struct SolidSyslogBuffer* CircularBuffer_Acquire(size_t poolIndex);
+static inline void CircularBuffer_MarkInUse(size_t poolIndex);
 static inline struct SolidSyslogBuffer* CircularBuffer_HandleFromIndex(size_t poolIndex);
 static inline bool CircularBuffer_HandleIsValid(const struct SolidSyslogBuffer* handle);
+static inline void CircularBuffer_MarkFree(size_t poolIndex);
 
 static struct Slot Pool[SOLIDSYSLOG_CIRCULAR_BUFFER_POOL_SIZE];
 static struct SolidSyslogBuffer Fallback = {Fallback_Write, Fallback_Read};
@@ -83,8 +85,13 @@ static inline bool CircularBuffer_PoolItemIsFree(size_t poolIndex)
 
 static inline struct SolidSyslogBuffer* CircularBuffer_Acquire(size_t poolIndex)
 {
-    Pool[poolIndex].InUse = true;
+    CircularBuffer_MarkInUse(poolIndex);
     return CircularBuffer_HandleFromIndex(poolIndex);
+}
+
+static inline void CircularBuffer_MarkInUse(size_t poolIndex)
+{
+    Pool[poolIndex].InUse = true;
 }
 
 static inline struct SolidSyslogBuffer* CircularBuffer_HandleFromIndex(size_t poolIndex)
@@ -115,7 +122,7 @@ void SolidSyslogCircularBuffer_Destroy(struct SolidSyslogBuffer* base)
         if (Pool[poolIndex].InUse)
         {
             CircularBuffer_Cleanup(base);
-            Pool[poolIndex].InUse = false;
+            CircularBuffer_MarkFree(poolIndex);
             released = true;
         }
         SolidSyslog_UnlockConfig();
@@ -124,6 +131,11 @@ void SolidSyslogCircularBuffer_Destroy(struct SolidSyslogBuffer* base)
     {
         SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_ERROR_MSG_CIRCULARBUFFER_UNKNOWN_DESTROY);
     }
+}
+
+static inline void CircularBuffer_MarkFree(size_t poolIndex)
+{
+    Pool[poolIndex].InUse = false;
 }
 
 static bool Fallback_Read(struct SolidSyslogBuffer* base, void* data, size_t maxSize, size_t* bytesRead)
