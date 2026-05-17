@@ -26,6 +26,7 @@ static struct SolidSyslogBuffer* CircularBuffer_AcquireFirstFree(void);
 static struct SolidSyslogBuffer* CircularBuffer_AcquireIfFree(size_t poolIndex);
 static inline bool CircularBuffer_PoolItemIsFree(size_t poolIndex);
 static inline struct SolidSyslogBuffer* CircularBuffer_Acquire(size_t poolIndex);
+static inline struct SolidSyslogBuffer* CircularBuffer_HandleFromIndex(size_t poolIndex);
 static inline bool CircularBuffer_HandleIsValid(const struct SolidSyslogBuffer* handle);
 
 static struct Slot Pool[SOLIDSYSLOG_CIRCULAR_BUFFER_POOL_SIZE];
@@ -83,6 +84,11 @@ static inline bool CircularBuffer_PoolItemIsFree(size_t poolIndex)
 static inline struct SolidSyslogBuffer* CircularBuffer_Acquire(size_t poolIndex)
 {
     Pool[poolIndex].InUse = true;
+    return CircularBuffer_HandleFromIndex(poolIndex);
+}
+
+static inline struct SolidSyslogBuffer* CircularBuffer_HandleFromIndex(size_t poolIndex)
+{
     return &Pool[poolIndex].Object.Base;
 }
 
@@ -96,7 +102,7 @@ void SolidSyslogCircularBuffer_Destroy(struct SolidSyslogBuffer* base)
     size_t poolIndex = SOLIDSYSLOG_CIRCULAR_BUFFER_POOL_SIZE;
     for (size_t i = 0; i < SOLIDSYSLOG_CIRCULAR_BUFFER_POOL_SIZE; i++)
     {
-        if (base == &Pool[i].Object.Base)
+        if (base == CircularBuffer_HandleFromIndex(i))
         {
             poolIndex = i;
             break;
