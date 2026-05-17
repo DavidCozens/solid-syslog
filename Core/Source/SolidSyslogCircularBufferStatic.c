@@ -25,6 +25,7 @@ static void Fallback_Write(struct SolidSyslogBuffer* base, const void* data, siz
 static struct SolidSyslogBuffer* CircularBuffer_AcquireFirstFree(void);
 static struct SolidSyslogBuffer* CircularBuffer_AcquireIfFree(size_t poolIndex);
 static inline bool CircularBuffer_PoolItemIsFree(size_t poolIndex);
+static inline struct SolidSyslogBuffer* CircularBuffer_Acquire(size_t poolIndex);
 static inline bool CircularBuffer_HandleIsValid(const struct SolidSyslogBuffer* handle);
 
 static struct Slot Pool[SOLIDSYSLOG_CIRCULAR_BUFFER_POOL_SIZE];
@@ -68,8 +69,7 @@ static struct SolidSyslogBuffer* CircularBuffer_AcquireIfFree(size_t poolIndex)
     SolidSyslog_LockConfig();
     if (CircularBuffer_PoolItemIsFree(poolIndex))
     {
-        Pool[poolIndex].InUse = true;
-        handle = &Pool[poolIndex].Object.Base;
+        handle = CircularBuffer_Acquire(poolIndex);
     }
     SolidSyslog_UnlockConfig();
     return handle;
@@ -78,6 +78,12 @@ static struct SolidSyslogBuffer* CircularBuffer_AcquireIfFree(size_t poolIndex)
 static inline bool CircularBuffer_PoolItemIsFree(size_t poolIndex)
 {
     return !Pool[poolIndex].InUse;
+}
+
+static inline struct SolidSyslogBuffer* CircularBuffer_Acquire(size_t poolIndex)
+{
+    Pool[poolIndex].InUse = true;
+    return &Pool[poolIndex].Object.Base;
 }
 
 static inline bool CircularBuffer_HandleIsValid(const struct SolidSyslogBuffer* handle)
