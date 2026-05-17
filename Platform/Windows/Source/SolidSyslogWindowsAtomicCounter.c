@@ -1,5 +1,6 @@
 #include "SolidSyslogWindowsAtomicCounter.h"
 
+#include "SolidSyslogAtomicCounter.h"
 #include "SolidSyslogAtomicCounterDefinition.h"
 #include "SolidSyslogMacros.h"
 

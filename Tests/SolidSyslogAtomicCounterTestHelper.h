@@ -2,11 +2,12 @@
 #define SOLIDSYSLOGATOMICCOUNTERTESTHELPER_H
 
 #include "ExternC.h"
-#include "SolidSyslogAtomicCounter.h"
 
 #include <stdint.h>
 
 EXTERN_C_BEGIN
+
+    struct SolidSyslogAtomicCounter;
 
     enum
     {
@@ -15,7 +16,7 @@ EXTERN_C_BEGIN
 
     typedef struct
     {
-        uint8_t Bytes[TEST_ATOMIC_COUNTER_STORAGE_SIZE];
+        intptr_t Slots[(TEST_ATOMIC_COUNTER_STORAGE_SIZE + sizeof(intptr_t) - 1U) / sizeof(intptr_t)];
     } TestAtomicCounterStorage;
 
     struct SolidSyslogAtomicCounter* TestAtomicCounter_Create(TestAtomicCounterStorage * storage);

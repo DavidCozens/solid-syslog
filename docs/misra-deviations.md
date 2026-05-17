@@ -432,7 +432,7 @@ source-code change.
 ### Risk and mitigation
 
 - **C99 baseline drift.** The project's C99 baseline is preserved
-  everywhere except in these two TUs (and the macros that gate them).
+  everywhere except in this TU (and the macros that gate it).
   No C11 feature leaks into public headers.
 - **Future C standards.** If C23's deprecation paths affect
   `<stdatomic.h>`, the Atomics module is the single migration point.

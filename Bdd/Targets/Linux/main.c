@@ -20,7 +20,6 @@
 #include "BddTargetTlsSender.h"
 #include "BddTargetUdpConfig.h"
 #include "SolidSyslog.h"
-#include "SolidSyslogAtomicCounter.h"
 #include "SolidSyslogStdAtomicCounter.h"
 #include "SolidSyslogTunables.h"
 #include "SolidSyslogConfig.h"

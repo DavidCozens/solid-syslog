@@ -2,11 +2,12 @@
 #define SOLIDSYSLOGWINDOWSATOMICCOUNTER_H
 
 #include "ExternC.h"
-#include "SolidSyslogAtomicCounter.h"
 
 #include <stdint.h>
 
 EXTERN_C_BEGIN
+
+    struct SolidSyslogAtomicCounter;
 
     enum
     {
