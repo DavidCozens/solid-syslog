@@ -235,11 +235,11 @@ static inline bool UdpSender_TransmitDatagram(struct SolidSyslogUdpSender* self,
 {
     enum SolidSyslogDatagramSendResult result =
         SolidSyslogDatagram_SendTo(self->Config.Datagram, buffer, size, UdpSender_Address(self));
-    if (result == SolidSyslogDatagramSendResult_Oversize)
+    if (result == SOLIDSYSLOG_DATAGRAM_SEND_RESULT_OVERSIZE)
     {
         result = UdpSender_RetryAfterOversize(self, buffer, size);
     }
-    return result == SolidSyslogDatagramSendResult_Sent;
+    return result == SOLIDSYSLOG_DATAGRAM_SEND_RESULT_SENT;
 }
 
 static inline enum SolidSyslogDatagramSendResult UdpSender_RetryAfterOversize(
@@ -253,15 +253,15 @@ static inline enum SolidSyslogDatagramSendResult UdpSender_RetryAfterOversize(
     size_t trimmed = SolidSyslogUdpPayload_TrimToCodepointBoundary((const uint8_t*) buffer, clipLimit);
     /* Default SENT swallows trimmed == 0 (path can't carry the message) so the
      * Service algorithm doesn't loop on an undeliverable. */
-    enum SolidSyslogDatagramSendResult result = SolidSyslogDatagramSendResult_Sent;
+    enum SolidSyslogDatagramSendResult result = SOLIDSYSLOG_DATAGRAM_SEND_RESULT_SENT;
     if (trimmed > 0U)
     {
         result = SolidSyslogDatagram_SendTo(self->Config.Datagram, buffer, trimmed, UdpSender_Address(self));
-        if (result == SolidSyslogDatagramSendResult_Oversize)
+        if (result == SOLIDSYSLOG_DATAGRAM_SEND_RESULT_OVERSIZE)
         {
             /* Retry still OVERSIZE means the kernel disagrees with its own
              * MaxPayload — swallow for the same reason. */
-            result = SolidSyslogDatagramSendResult_Sent;
+            result = SOLIDSYSLOG_DATAGRAM_SEND_RESULT_SENT;
         }
     }
     return result;

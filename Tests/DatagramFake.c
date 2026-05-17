@@ -42,7 +42,7 @@ struct SolidSyslogDatagram* DatagramFake_Create(void)
     fake->Base.Close = Close;
     for (int i = 0; i < DATAGRAMFAKE_MAX_SEND_CALLS; i++)
     {
-        fake->SendResults[i] = SolidSyslogDatagramSendResult_Sent;
+        fake->SendResults[i] = SOLIDSYSLOG_DATAGRAM_SEND_RESULT_SENT;
     }
     return &fake->Base;
 }
@@ -123,7 +123,7 @@ static enum SolidSyslogDatagramSendResult SendTo(
 {
     struct DatagramFake* fake = (struct DatagramFake*) self;
     int idx = fake->SendCallCount;
-    enum SolidSyslogDatagramSendResult result = SolidSyslogDatagramSendResult_Failed;
+    enum SolidSyslogDatagramSendResult result = SOLIDSYSLOG_DATAGRAM_SEND_RESULT_FAILED;
     (void) addr;
     if (idx < DATAGRAMFAKE_MAX_SEND_CALLS)
     {

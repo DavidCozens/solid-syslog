@@ -46,22 +46,22 @@ TEST(DatagramFake, SendDefaultsToSent)
 {
     const char payload[] = "hi";
     LONGS_EQUAL(
-        SolidSyslogDatagramSendResult_Sent,
+        SOLIDSYSLOG_DATAGRAM_SEND_RESULT_SENT,
         SolidSyslogDatagram_SendTo(datagram, payload, sizeof(payload), nullptr)
     );
 }
 
 TEST(DatagramFake, SendReturnsConfiguredResultPerCall)
 {
-    DatagramFake_SetSendResult(datagram, 0, SolidSyslogDatagramSendResult_Oversize);
-    DatagramFake_SetSendResult(datagram, 1, SolidSyslogDatagramSendResult_Failed);
+    DatagramFake_SetSendResult(datagram, 0, SOLIDSYSLOG_DATAGRAM_SEND_RESULT_OVERSIZE);
+    DatagramFake_SetSendResult(datagram, 1, SOLIDSYSLOG_DATAGRAM_SEND_RESULT_FAILED);
     const char payload[] = "hi";
     LONGS_EQUAL(
-        SolidSyslogDatagramSendResult_Oversize,
+        SOLIDSYSLOG_DATAGRAM_SEND_RESULT_OVERSIZE,
         SolidSyslogDatagram_SendTo(datagram, payload, sizeof(payload), nullptr)
     );
     LONGS_EQUAL(
-        SolidSyslogDatagramSendResult_Failed,
+        SOLIDSYSLOG_DATAGRAM_SEND_RESULT_FAILED,
         SolidSyslogDatagram_SendTo(datagram, payload, sizeof(payload), nullptr)
     );
 }

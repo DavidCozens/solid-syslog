@@ -17,9 +17,9 @@ EXTERN_C_BEGIN
      * collapse it into Failed. */
     enum SolidSyslogDatagramSendResult
     {
-        SolidSyslogDatagramSendResult_Sent,
-        SolidSyslogDatagramSendResult_Oversize,
-        SolidSyslogDatagramSendResult_Failed
+        SOLIDSYSLOG_DATAGRAM_SEND_RESULT_SENT,
+        SOLIDSYSLOG_DATAGRAM_SEND_RESULT_OVERSIZE,
+        SOLIDSYSLOG_DATAGRAM_SEND_RESULT_FAILED
     };
 
     bool SolidSyslogDatagram_Open(struct SolidSyslogDatagram * datagram);

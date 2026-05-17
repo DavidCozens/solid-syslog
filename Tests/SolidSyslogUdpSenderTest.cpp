@@ -591,8 +591,8 @@ TEST(SolidSyslogUdpSenderRetry, SuccessfulSendDoesNotQueryMaxPayload)
 
 TEST(SolidSyslogUdpSenderRetry, OversizeQueriesMaxPayloadAndRetries)
 {
-    firstSendReturns(SolidSyslogDatagramSendResult_Oversize);
-    retrySendReturns(SolidSyslogDatagramSendResult_Sent);
+    firstSendReturns(SOLIDSYSLOG_DATAGRAM_SEND_RESULT_OVERSIZE);
+    retrySendReturns(SOLIDSYSLOG_DATAGRAM_SEND_RESULT_SENT);
     maxPayload(3);
     Send();
     CALLED_DATAGRAM_MAX_PAYLOAD(ONCE);
@@ -601,8 +601,8 @@ TEST(SolidSyslogUdpSenderRetry, OversizeQueriesMaxPayloadAndRetries)
 
 TEST(SolidSyslogUdpSenderRetry, OversizeRetryTrimsBufferToMaxPayload)
 {
-    firstSendReturns(SolidSyslogDatagramSendResult_Oversize);
-    retrySendReturns(SolidSyslogDatagramSendResult_Sent);
+    firstSendReturns(SOLIDSYSLOG_DATAGRAM_SEND_RESULT_OVERSIZE);
+    retrySendReturns(SOLIDSYSLOG_DATAGRAM_SEND_RESULT_SENT);
     maxPayload(3);
     Send();
     LONGS_EQUAL(3, retrySendSize());
@@ -610,8 +610,8 @@ TEST(SolidSyslogUdpSenderRetry, OversizeRetryTrimsBufferToMaxPayload)
 
 TEST(SolidSyslogUdpSenderRetry, OversizeRetrySucceedsReturnsTrue)
 {
-    firstSendReturns(SolidSyslogDatagramSendResult_Oversize);
-    retrySendReturns(SolidSyslogDatagramSendResult_Sent);
+    firstSendReturns(SOLIDSYSLOG_DATAGRAM_SEND_RESULT_OVERSIZE);
+    retrySendReturns(SOLIDSYSLOG_DATAGRAM_SEND_RESULT_SENT);
     maxPayload(3);
     CHECK_TRUE(Send());
 }
@@ -621,8 +621,8 @@ TEST(SolidSyslogUdpSenderRetry, OversizeRetrySucceedsReturnsTrue)
 TEST(SolidSyslogUdpSenderRetry, OversizeRetryWalksBackToCodepointBoundary)
 {
     const uint8_t payload[] = {0x61, 0x62, 0xC3, 0xA9};
-    firstSendReturns(SolidSyslogDatagramSendResult_Oversize);
-    retrySendReturns(SolidSyslogDatagramSendResult_Sent);
+    firstSendReturns(SOLIDSYSLOG_DATAGRAM_SEND_RESULT_OVERSIZE);
+    retrySendReturns(SOLIDSYSLOG_DATAGRAM_SEND_RESULT_SENT);
     maxPayload(3);
     Send(payload, sizeof(payload));
     LONGS_EQUAL(2, retrySendSize());
@@ -634,16 +634,16 @@ TEST(SolidSyslogUdpSenderRetry, OversizeRetryWalksBackToCodepointBoundary)
  * Swallow: drop the message and return true so the caller moves on. */
 TEST(SolidSyslogUdpSenderRetry, DoubleOversizeReturnsTrueToAvoidPermanentLoop)
 {
-    firstSendReturns(SolidSyslogDatagramSendResult_Oversize);
-    retrySendReturns(SolidSyslogDatagramSendResult_Oversize);
+    firstSendReturns(SOLIDSYSLOG_DATAGRAM_SEND_RESULT_OVERSIZE);
+    retrySendReturns(SOLIDSYSLOG_DATAGRAM_SEND_RESULT_OVERSIZE);
     maxPayload(3);
     CHECK_TRUE(Send());
 }
 
 TEST(SolidSyslogUdpSenderRetry, DoubleOversizeDoesNotSendThird)
 {
-    firstSendReturns(SolidSyslogDatagramSendResult_Oversize);
-    retrySendReturns(SolidSyslogDatagramSendResult_Oversize);
+    firstSendReturns(SOLIDSYSLOG_DATAGRAM_SEND_RESULT_OVERSIZE);
+    retrySendReturns(SOLIDSYSLOG_DATAGRAM_SEND_RESULT_OVERSIZE);
     maxPayload(3);
     Send();
     CALLED_DATAGRAM_SEND(TWICE);
@@ -651,7 +651,7 @@ TEST(SolidSyslogUdpSenderRetry, DoubleOversizeDoesNotSendThird)
 
 TEST(SolidSyslogUdpSenderRetry, ZeroMaxPayloadSkipsRetrySend)
 {
-    firstSendReturns(SolidSyslogDatagramSendResult_Oversize);
+    firstSendReturns(SOLIDSYSLOG_DATAGRAM_SEND_RESULT_OVERSIZE);
     maxPayload(0);
     Send();
     CALLED_DATAGRAM_SEND(ONCE);
@@ -662,7 +662,7 @@ TEST(SolidSyslogUdpSenderRetry, ZeroMaxPayloadSkipsRetrySend)
  * Service algorithm discards rather than retrying forever. */
 TEST(SolidSyslogUdpSenderRetry, ZeroMaxPayloadReturnsTrueToAvoidPermanentLoop)
 {
-    firstSendReturns(SolidSyslogDatagramSendResult_Oversize);
+    firstSendReturns(SOLIDSYSLOG_DATAGRAM_SEND_RESULT_OVERSIZE);
     maxPayload(0);
     CHECK_TRUE(Send());
 }
@@ -672,8 +672,8 @@ TEST(SolidSyslogUdpSenderRetry, ZeroMaxPayloadReturnsTrueToAvoidPermanentLoop)
  * Buffered/Service algorithm keeps the message for retry. */
 TEST(SolidSyslogUdpSenderRetry, RetryFailedNonOversizeReturnsFalse)
 {
-    firstSendReturns(SolidSyslogDatagramSendResult_Oversize);
-    retrySendReturns(SolidSyslogDatagramSendResult_Failed);
+    firstSendReturns(SOLIDSYSLOG_DATAGRAM_SEND_RESULT_OVERSIZE);
+    retrySendReturns(SOLIDSYSLOG_DATAGRAM_SEND_RESULT_FAILED);
     maxPayload(3);
     CHECK_FALSE(Send());
 }
@@ -685,8 +685,8 @@ TEST(SolidSyslogUdpSenderRetry, MaxPayloadLargerThanMessageCapsTrimToMessageSize
      * the original message. The trim must cap at the message size to
      * avoid reading past the buffer. */
     const uint8_t payload[] = {0x61, 0x62, 0x63};
-    firstSendReturns(SolidSyslogDatagramSendResult_Oversize);
-    retrySendReturns(SolidSyslogDatagramSendResult_Sent);
+    firstSendReturns(SOLIDSYSLOG_DATAGRAM_SEND_RESULT_OVERSIZE);
+    retrySendReturns(SOLIDSYSLOG_DATAGRAM_SEND_RESULT_SENT);
     maxPayload(9999);
     Send(payload, sizeof(payload));
     LONGS_EQUAL(sizeof(payload), retrySendSize());
@@ -694,7 +694,7 @@ TEST(SolidSyslogUdpSenderRetry, MaxPayloadLargerThanMessageCapsTrimToMessageSize
 
 TEST(SolidSyslogUdpSenderRetry, NonOversizeFailureDoesNotRetry)
 {
-    firstSendReturns(SolidSyslogDatagramSendResult_Failed);
+    firstSendReturns(SOLIDSYSLOG_DATAGRAM_SEND_RESULT_FAILED);
     Send();
     CALLED_DATAGRAM_SEND(ONCE);
     CALLED_DATAGRAM_MAX_PAYLOAD(NEVER);
@@ -702,7 +702,7 @@ TEST(SolidSyslogUdpSenderRetry, NonOversizeFailureDoesNotRetry)
 
 TEST(SolidSyslogUdpSenderRetry, NonOversizeFailureReturnsFalse)
 {
-    firstSendReturns(SolidSyslogDatagramSendResult_Failed);
+    firstSendReturns(SOLIDSYSLOG_DATAGRAM_SEND_RESULT_FAILED);
     CHECK_FALSE(Send());
 }
 
