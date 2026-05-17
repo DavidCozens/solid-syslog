@@ -163,7 +163,7 @@ TEST_GROUP(BlockSequenceScan)
         config.BlockDevice                = &fakeDevice.Base;
         config.MaxBlockSize                = 1000;
         config.MaxBlocks                   = 99;
-        config.DiscardPolicy              = SolidSyslogDiscardPolicy_Oldest;
+        config.DiscardPolicy              = SOLIDSYSLOG_DISCARD_POLICY_OLDEST;
         BlockSequence_Init(&sequence, &config);
     }
 };
@@ -251,7 +251,7 @@ TEST_GROUP(BlockSequenceRotation)
         config.BlockDevice                = &fakeDevice.Base;
         config.MaxBlockSize               = ROTATION_BLOCK_SIZE;
         config.MaxBlocks                  = 99;
-        config.DiscardPolicy              = SolidSyslogDiscardPolicy_Oldest;
+        config.DiscardPolicy              = SOLIDSYSLOG_DISCARD_POLICY_OLDEST;
         BlockSequence_Init(&sequence, &config);
 
         BlockSequence_Open(&sequence); /* cold start: Acquire(0) */
