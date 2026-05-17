@@ -23,7 +23,7 @@ EXTERN_C_BEGIN
     ((maxMessages) * (SOLIDSYSLOG_MAX_MESSAGE_SIZE + SOLIDSYSLOG_CIRCULAR_BUFFER_HEADER_BYTES))
 
     struct SolidSyslogBuffer* SolidSyslogCircularBuffer_Create(
-        struct SolidSyslogMutex* mutex,
+        struct SolidSyslogMutex * mutex,
         uint8_t* ring,
         size_t ringBytes
     );

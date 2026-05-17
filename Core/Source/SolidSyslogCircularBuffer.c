@@ -34,9 +34,9 @@ static inline size_t CircularBuffer_PeekRecordSize(const struct SolidSyslogCircu
 
 void CircularBuffer_Initialise(
     struct SolidSyslogCircularBuffer* self,
-    struct SolidSyslogMutex*          mutex,
-    uint8_t*                          ring,
-    size_t                            ringBytes
+    struct SolidSyslogMutex* mutex,
+    uint8_t* ring,
+    size_t ringBytes
 )
 {
     self->Base.Read = CircularBuffer_Read;
