@@ -1,5 +1,113 @@
 # Dev Log
 
+## 2026-05-17 — S10.13 Security policies + CRC + Sync primitives conformance (#383)
+
+Second per-group conformance story in E10, applying the S10.12 pilot
+recipe to the Security policies + CRC + Sync primitives group. Cleared
+all warning-mode findings raised by `analyze-tidy` and
+`analyze-cppcheck` (with the cppcheck-misra addon) against
+`SolidSyslogCrc16.{c,h}`, `SolidSyslogCrc16Policy.{c,h}`,
+`SolidSyslogNullSecurityPolicy.{c,h}`, `SolidSyslogSecurityPolicyDefinition.h`,
+`SolidSyslogMutex.{c,h}`, `SolidSyslogMutexDefinition.h`,
+`SolidSyslogNullMutex.{c,h}` and the three Platform mutex impls
+(`SolidSyslogPosixMutex.{c,h}`, `SolidSyslogWindowsMutex.{c,h}`,
+`SolidSyslogFreeRtosMutex.{c,h}`).
+
+### MISRA fixes — three new findings, each reviewed per-site
+
+- 1× rule 5.9 in `SolidSyslogNullMutex.c` — bare `instance` collided
+  with the same name in `SolidSyslogNullSecurityPolicy.c` and
+  `SolidSyslogCrc16Policy.c`. Renamed to `NullMutex_Instance` per the
+  S10.08 / S10.12 `<Class>_Instance` convention. Couldn't move into
+  `_Create` because `_Destroy` also touches it.
+- 2× rule 8.9 (advisory) in `SolidSyslogNullSecurityPolicy.c` and
+  `SolidSyslogCrc16Policy.c` — file-scope `static instance` only read
+  in `_Create`. Moved into `_Create` as block-scope statics, matching
+  the S10.12 `QUEUE_NAME_PREFIX` recipe.
+
+No new deviations. No new `cppcheck-suppress` comments. No count bumps
+to existing deviations (D.002 / D.003 / D.010) — no new sites accrued
+to those.
+
+### CRC-16 inner-loop review
+
+`SolidSyslogCrc16.c` had zero warning-mode findings, so this was a
+deliberate "walk the loop and decide whether to tighten anything
+anyway" pass. Three small changes landed:
+
+- `int bit` → `uint_fast8_t bit` — match the comparand's unsigned
+  essential type. cppcheck-misra's chosen 10.4 subset doesn't flag
+  the signed/unsigned mix in `for`-loop bounds, but it's still the
+  right type.
+- `!= 0` → `!= 0U` — match the U-suffixed literal style used
+  elsewhere in the file (S10.10 sweep convention).
+- Dropped the `BITS_PER_BYTE = 8U` enum constant; inlined `8U`.
+
+### Decisions
+
+- **Drop `BITS_PER_BYTE`, inline the literal.** Switching the loop
+  variable to `uint_fast8_t` unmasked clang-tidy's
+  `bugprone-too-small-loop-variable`, because anonymous-enum constants
+  in C have essential type `int` regardless of the `U` suffix on
+  their literal. clang-tidy compared the 8-bit `uint_fast8_t`
+  variable against the 32-bit `int` bound and flagged it. Three fixes
+  considered:
+  - (A) inline the literal `8U` (clang-tidy's `MagnitudeBitsUpperLimit`
+    default 16 skips small-literal warnings — 8's magnitude is 3 bits,
+    well below the threshold);
+  - (B) promote `BITS_PER_BYTE` out of the enum to
+    `static const uint8_t` (type-honest but diverges from the
+    tree-wide enum convention for one constant);
+  - (C) widen the loop variable to `unsigned` (keeps the enum form
+    but loses the "explicitly small unsigned" semantic).
+  Went with (A) — `BITS_PER_BYTE` was a one-use named constant whose
+  meaning ("there are 8 bits in a byte") is self-evident from the
+  surrounding CRC code. The other CRC enum constants
+  (`CRC16_CCITT_INIT`, `CRC16_CCITT_POLY`, `MSB_MASK`) carry
+  non-obvious values and retain their names.
+
+- **Anonymous-enum constants in C are `int`, not the literal's type.**
+  Surfaced explicitly during the CRC review: even when the literal is
+  `0x1021U` (essentially unsigned), the enum constant the literal
+  initialises is typed `int` per C99 §6.7.2.2. This is a quirk of
+  the form, not a bug — within cast-wrapped bitwise ops (as in
+  `(uint16_t) ((crc << 1) ^ CRC16_CCITT_POLY)`) the boundary cast
+  normalises the essential type. But it does mean enum constants
+  can't always stand in for typed integer constants without surprise
+  — e.g. as the upper bound of a narrow-typed loop. Worth knowing
+  for future per-group stories.
+
+### Scope rule observation
+
+The scoped cppcheck-misra re-runs we used during fix-verification
+flagged additional 2.4 findings on `Crc16.c` / `Crc16Policy.c` that
+didn't appear in the full-tree run. Re-confirmed the S10.12 scope
+rule: trust the **full-tree** invocation as the source of truth.
+Scoped runs are useful for fast iteration but can produce different
+output because cppcheck-misra's rule subset behaves differently when
+fewer translation units are visible.
+
+### Gates
+
+- `cmake --preset tidy && cmake --build --preset tidy` — clean
+  (0 findings).
+- `cmake --preset debug && cmake --build --preset debug --target junit`
+  — 1122 tests, 0 failures.
+- `cmake --preset clang-debug && cmake --build --preset clang-debug --target junit`
+  — 1122 tests, 0 failures.
+- `cmake --preset sanitize && cmake --build --preset sanitize --target junit`
+  — 1122 tests, 0 failures.
+- `cmake --preset coverage && cmake --build --preset coverage --target coverage`
+  — 100% line coverage on every Linux-buildable file in scope. (Tree
+  overall: 99.6% lines / 99.0% functions, well above the 90% gate.)
+- Standalone non-MISRA `cppcheck Core/Source/` — clean (0 findings).
+- Standalone `cppcheck --addon=misra` full tree — zero findings on
+  S10.13 scope files.
+- `clang-format --dry-run --Werror` on edited files — clean.
+
+Windows / BDD / OpenSSL integration are CI's responsibility per the
+CLAUDE.md workflow note.
+
 ## 2026-05-16 — S10.12 Pilot — Buffer group conformance + anonymous-enum policy (#381)
 
 First per-group conformance story in E10. Cleared all warning-mode
