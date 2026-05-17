@@ -68,8 +68,20 @@ if(HAVE_ATOMIC_COUNTER)
     list(APPEND TEST_SOURCES
         SolidSyslogAtomicCounterTest.cpp
         SolidSyslogAtomicU32Test.cpp
+        SolidSyslogAtomicCounterContractTest.cpp
     )
 endif()
+
+if(HAVE_STDATOMIC_H)
+    list(APPEND TEST_SOURCES
+        SolidSyslogStdAtomicCounterTestHelper.c
+    )
+endif()
+
+# Whitebox-include path: SolidSyslogStdAtomicCounterTestHelper.c does
+# `#include "SolidSyslogStdAtomicCounter.c"` so the static helpers are
+# reachable for test-only setup. Same pattern as the existing
+# SolidSyslogAtomicCounterTest.cpp -> Core/Source whitebox include.
 
 if(SOLIDSYSLOG_POSIX)
     list(APPEND TEST_SOURCES
@@ -126,6 +138,10 @@ add_executable(${PROJECT_NAME}Tests ${TEST_SOURCES})
 
 target_link_libraries(${PROJECT_NAME}Tests PRIVATE ${PROJECT_NAME} ErrorHandlerFake CppUTest CppUTestExt Threads::Threads)
 target_include_directories(${PROJECT_NAME}Tests PRIVATE ${CMAKE_SOURCE_DIR}/Core/Source ${CMAKE_CURRENT_SOURCE_DIR}/Support)
+
+if(HAVE_STDATOMIC_H)
+    target_include_directories(${PROJECT_NAME}Tests PRIVATE ${CMAKE_SOURCE_DIR}/Platform/Atomics/Source)
+endif()
 
 # Drives the static_assert in SolidSyslogTunablesTest.cpp when a tunable-override
 # preset is active. Default builds leave it undefined; the assertion compiles out.
