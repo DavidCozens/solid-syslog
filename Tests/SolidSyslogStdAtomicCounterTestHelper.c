@@ -22,17 +22,17 @@ struct SolidSyslogAtomicCounter* TestAtomicCounter_Create(TestAtomicCounterStora
     return SolidSyslogStdAtomicCounter_Create((SolidSyslogStdAtomicCounterStorage*) storage);
 }
 
-void TestAtomicCounter_Init(struct SolidSyslogAtomicCounter* self, uint32_t value)
+void TestAtomicCounter_Init(struct SolidSyslogAtomicCounter* base, uint32_t value)
 {
-    StdAtomicCounter_Init(self, value);
+    StdAtomicCounter_Init(StdAtomicCounter_SelfFromBase(base), value);
 }
 
-uint32_t TestAtomicCounter_Increment(struct SolidSyslogAtomicCounter* self)
+uint32_t TestAtomicCounter_Increment(struct SolidSyslogAtomicCounter* base)
 {
-    return SolidSyslogStdAtomicCounter_Increment(self);
+    return SolidSyslogAtomicCounter_Increment(base);
 }
 
-void TestAtomicCounter_Destroy(struct SolidSyslogAtomicCounter* self)
+void TestAtomicCounter_Destroy(struct SolidSyslogAtomicCounter* base)
 {
-    SolidSyslogStdAtomicCounter_Destroy(self);
+    SolidSyslogStdAtomicCounter_Destroy(base);
 }

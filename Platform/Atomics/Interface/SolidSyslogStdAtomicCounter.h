@@ -8,14 +8,18 @@
 
 EXTERN_C_BEGIN
 
+    enum
+    {
+        SOLIDSYSLOG_STDATOMICCOUNTER_SIZE = sizeof(intptr_t) * 2U
+    };
+
     typedef struct
     {
-        intptr_t Slot;
+        intptr_t slots[(SOLIDSYSLOG_STDATOMICCOUNTER_SIZE + sizeof(intptr_t) - 1U) / sizeof(intptr_t)];
     } SolidSyslogStdAtomicCounterStorage;
 
     struct SolidSyslogAtomicCounter * SolidSyslogStdAtomicCounter_Create(SolidSyslogStdAtomicCounterStorage * storage);
-    uint32_t SolidSyslogStdAtomicCounter_Increment(struct SolidSyslogAtomicCounter * self);
-    void SolidSyslogStdAtomicCounter_Destroy(struct SolidSyslogAtomicCounter * self);
+    void SolidSyslogStdAtomicCounter_Destroy(struct SolidSyslogAtomicCounter * base);
 
 EXTERN_C_END
 

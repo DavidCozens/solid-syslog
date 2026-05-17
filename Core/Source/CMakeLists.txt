@@ -31,6 +31,11 @@ set(SOURCES
 if(HAVE_ATOMIC_COUNTER)
     list(APPEND SOURCES SolidSyslogAtomicCounter.c)
 endif()
+# SolidSyslogAtomicCounter.c is the public vtable dispatcher — included
+# under the same HAVE_ATOMIC_COUNTER gate as the platform impls
+# (HAVE_STDATOMIC_H -> Platform/Atomics, HAVE_WINDOWS_INTERLOCKED ->
+# Platform/Windows), so it's only compiled when at least one atomic
+# backend is available.
 
 if(SOLIDSYSLOG_POSIX OR SOLIDSYSLOG_WINSOCK OR DEFINED ENV{FREERTOS_KERNEL_PATH})
     list(APPEND SOURCES

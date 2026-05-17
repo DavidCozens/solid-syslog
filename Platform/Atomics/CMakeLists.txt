@@ -1,6 +1,5 @@
 if(HAVE_STDATOMIC_H)
     target_sources(${PROJECT_NAME} PRIVATE
-        Source/SolidSyslogStdAtomicU32.c
         Source/SolidSyslogStdAtomicCounter.c
     )
 endif()
