@@ -150,7 +150,7 @@ TEST(SolidSyslogWinsockDatagram, SendToReturnsSentOnSuccess)
 {
     SolidSyslogDatagram_Open(datagram);
     LONGS_EQUAL(
-        SolidSyslogDatagramSendResult_Sent,
+        SOLIDSYSLOG_DATAGRAM_SEND_RESULT_SENT,
         SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr)
     );
 }
@@ -160,7 +160,7 @@ TEST(SolidSyslogWinsockDatagram, SendToReturnsFailedOnSendtoFailure)
     SolidSyslogDatagram_Open(datagram);
     WinsockFake_SetSendtoFails(true);
     LONGS_EQUAL(
-        SolidSyslogDatagramSendResult_Failed,
+        SOLIDSYSLOG_DATAGRAM_SEND_RESULT_FAILED,
         SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr)
     );
 }
@@ -217,7 +217,7 @@ TEST(SolidSyslogWinsockDatagram, SendToReturnsOversizeOnWsaemsgsize)
     SolidSyslogDatagram_Open(datagram);
     WinsockFake_FailNextSendtoWithLastError(WSAEMSGSIZE);
     LONGS_EQUAL(
-        SolidSyslogDatagramSendResult_Oversize,
+        SOLIDSYSLOG_DATAGRAM_SEND_RESULT_OVERSIZE,
         SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr)
     );
 }
@@ -227,7 +227,7 @@ TEST(SolidSyslogWinsockDatagram, SendToReturnsFailedWhenConnectFails)
     SolidSyslogDatagram_Open(datagram);
     WinsockFake_SetConnectFails(true);
     LONGS_EQUAL(
-        SolidSyslogDatagramSendResult_Failed,
+        SOLIDSYSLOG_DATAGRAM_SEND_RESULT_FAILED,
         SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr)
     );
 }

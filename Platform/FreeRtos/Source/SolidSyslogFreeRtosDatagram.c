@@ -22,8 +22,8 @@ struct SolidSyslogFreeRtosDatagram
 };
 
 SOLIDSYSLOG_STATIC_ASSERT(
-    sizeof(FreeRtosDatagram) <= SOLIDSYSLOG_FREERTOSDATAGRAM_SIZE,
-    "SOLIDSYSLOG_FREERTOSDATAGRAM_SIZE is too small for SolidSyslogFreeRtosDatagram layout"
+    sizeof(FreeRtosDatagram) <= SOLIDSYSLOG_FREE_RTOS_DATAGRAM_SIZE,
+    "SOLIDSYSLOG_FREE_RTOS_DATAGRAM_SIZE is too small for SolidSyslogFreeRtosDatagram layout"
 );
 
 /* Time the calling task yields after issuing an ARP probe so the IP task can
@@ -100,7 +100,7 @@ static enum SolidSyslogDatagramSendResult FreeRtosDatagram_SendTo(
 )
 {
     FreeRtosDatagram* self = FreeRtosDatagram_SelfFromBase(base);
-    enum SolidSyslogDatagramSendResult result = SolidSyslogDatagramSendResult_Failed;
+    enum SolidSyslogDatagramSendResult result = SOLIDSYSLOG_DATAGRAM_SEND_RESULT_FAILED;
     if (FreeRtosDatagram_IsOpen(self))
     {
         const struct freertos_sockaddr* dest = SolidSyslogAddress_AsConstFreertosSockaddr(addr);
@@ -108,7 +108,7 @@ static enum SolidSyslogDatagramSendResult FreeRtosDatagram_SendTo(
         int32_t sent = FreeRTOS_sendto(self->Socket, buffer, size, 0, dest, sizeof(*dest));
         if (sent > 0)
         {
-            result = SolidSyslogDatagramSendResult_Sent;
+            result = SOLIDSYSLOG_DATAGRAM_SEND_RESULT_SENT;
         }
     }
     return result;

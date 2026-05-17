@@ -84,14 +84,15 @@ CheckOptions:
   - { key: readability-identifier-naming.EnumCase,              value: CamelCase   }
   - { key: readability-identifier-naming.EnumPrefix,            value: SolidSyslog }
 
-  # Tier 1 — public enum constants on named (tagged) enums: SolidSyslogClass_Constant.
-  # Anonymous enums (Tier 1 public macro-equivalents and Tier 2 file-scope
-  # named-constant idiom) use SCREAMING_SNAKE — that is the project's macro
-  # shape and is accepted via the IgnoredRegexp below. Decided in S10.12; see
-  # docs/NAMING.md "Anonymous-enum named-constant idiom".
-  - { key: readability-identifier-naming.EnumConstantCase,           value: aNy_CasE          }
-  - { key: readability-identifier-naming.EnumConstantPrefix,         value: SolidSyslog       }
-  - { key: readability-identifier-naming.EnumConstantIgnoredRegexp,  value: '^[A-Z][A-Z0-9_]*$' }
+  # Enum constants — SCREAMING_SNAKE tree-wide, no exceptions.
+  # Tagged public enums:    SOLIDSYSLOG_CLASS_MEMBER
+  # Anonymous public enums: SOLIDSYSLOG_NAME   (e.g. SOLIDSYSLOG_STREAM_SENDER_SIZE)
+  # Anonymous TU-local:     NAME               (e.g. IPV4_HEADER_BYTES)
+  # Single rule, mechanically enforced. SOLIDSYSLOG_ prefix on public sites
+  # is enforced by review + cppcheck-misra 5.4 distinctness (clang-tidy
+  # cannot distinguish public from TU-local enum constants syntactically).
+  # Decided in S10.22; see docs/NAMING.md "Enum constants".
+  - { key: readability-identifier-naming.EnumConstantCase,    value: UPPER_CASE }
 
   # Tier 1 — public typedefs (enum / function-pointer only per NAMING.md):
   # SolidSyslogClass or SolidSyslogClass_Fn

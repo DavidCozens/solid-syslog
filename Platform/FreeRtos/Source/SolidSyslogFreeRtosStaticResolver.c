@@ -17,8 +17,8 @@ struct SolidSyslogFreeRtosStaticResolver
 };
 
 SOLIDSYSLOG_STATIC_ASSERT(
-    sizeof(FreeRtosStaticResolver) <= SOLIDSYSLOG_FREERTOSSTATICRESOLVER_SIZE,
-    "SOLIDSYSLOG_FREERTOSSTATICRESOLVER_SIZE is too small for SolidSyslogFreeRtosStaticResolver layout"
+    sizeof(FreeRtosStaticResolver) <= SOLIDSYSLOG_FREE_RTOS_STATIC_RESOLVER_SIZE,
+    "SOLIDSYSLOG_FREE_RTOS_STATIC_RESOLVER_SIZE is too small for SolidSyslogFreeRtosStaticResolver layout"
 );
 
 static bool FreeRtosStaticResolver_Resolve(

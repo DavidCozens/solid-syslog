@@ -78,8 +78,8 @@ static SolidSyslogSsize FreeRtosTcpStream_ReceiveOrCloseOnFailure(FreeRtosTcpStr
 static void FreeRtosTcpStream_CloseSocket(FreeRtosTcpStream* self);
 
 SOLIDSYSLOG_STATIC_ASSERT(
-    sizeof(FreeRtosTcpStream) <= SOLIDSYSLOG_FREERTOSTCPSTREAM_SIZE,
-    "SOLIDSYSLOG_FREERTOSTCPSTREAM_SIZE is too small for SolidSyslogFreeRtosTcpStream layout"
+    sizeof(FreeRtosTcpStream) <= SOLIDSYSLOG_FREE_RTOS_TCP_STREAM_SIZE,
+    "SOLIDSYSLOG_FREE_RTOS_TCP_STREAM_SIZE is too small for SolidSyslogFreeRtosTcpStream layout"
 );
 
 static const FreeRtosTcpStream DEFAULT_INSTANCE = {

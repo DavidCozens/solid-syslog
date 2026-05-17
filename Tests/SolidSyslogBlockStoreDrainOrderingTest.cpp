@@ -223,7 +223,7 @@ TEST_GROUP_BASE(ServiceDrainInterleave, DrainTestFixtureBase)
      * reproducer; CircularBuffer is FIFO so all messages are retained
      * until Service drains them (unlike BufferFake which only keeps
      * the last one). */
-    SolidSyslogCircularBufferStorage bufferStorage[SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE(16)] = {};
+    SolidSyslogCircularBufferStorage bufferStorage[SOLIDSYSLOG_CIRCULAR_BUFFER_STORAGE_SIZE(16)] = {};
     SolidSyslogBlockStoreStorage     storeStorage                                              = {};
     struct SolidSyslogStore*         store                                                     = nullptr;
     struct SolidSyslogMutex*         mutex                                                     = nullptr;
@@ -306,7 +306,7 @@ TEST(ServiceDrainInterleave, DiscardNewestDoesNotLetNewestBypassOldestOnRecovery
         /*maxBlocks=*/2,
         /*maxBlockSize=*/200 /*will clamp up*/,
         /*payloadSize=*/SOLIDSYSLOG_MAX_MESSAGE_SIZE - 100U,
-        SolidSyslogDiscardPolicy_Newest
+        SOLIDSYSLOG_DISCARD_POLICY_NEWEST
     };
     Setup(cfg);
 
@@ -377,7 +377,8 @@ TEST(ServiceDrainInterleave, DiscardNewestDoesNotLetNewestBypassOldestOnRecovery
  * we have the bug in our hands. */
 TEST(BlockStoreDrainOrdering, OutageDrainProducesAscendingSequenceIds)
 {
-    DrainTestConfig cfg = {/*maxBlocks=*/2, /*maxBlockSize=*/200, /*payloadSize=*/64, SolidSyslogDiscardPolicy_Newest};
+    DrainTestConfig cfg =
+        {/*maxBlocks=*/2, /*maxBlockSize=*/200, /*payloadSize=*/64, SOLIDSYSLOG_DISCARD_POLICY_NEWEST};
     CreateStore(cfg);
 
     /* Pre-outage send + drain — mirrors `When the client sends a message`

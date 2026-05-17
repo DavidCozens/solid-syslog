@@ -229,12 +229,12 @@ static inline bool BlockSequence_BlockIsFull(const struct BlockSequence* blockSe
 static inline bool BlockSequence_StoreIsFull(const struct BlockSequence* blockSequence)
 {
     return (BlockSequence_BlockCount(blockSequence) >= blockSequence->MaxBlocks) &&
-           (blockSequence->DiscardPolicy != SolidSyslogDiscardPolicy_Oldest);
+           (blockSequence->DiscardPolicy != SOLIDSYSLOG_DISCARD_POLICY_OLDEST);
 }
 
 static inline void BlockSequence_NotifyStoreFull(struct BlockSequence* blockSequence)
 {
-    if ((blockSequence->DiscardPolicy == SolidSyslogDiscardPolicy_Halt) && !blockSequence->Halted)
+    if ((blockSequence->DiscardPolicy == SOLIDSYSLOG_DISCARD_POLICY_HALT) && !blockSequence->Halted)
     {
         blockSequence->Halted = true;
 

@@ -67,7 +67,7 @@ static const char* const THRESHOLD_MARKER_PATH = "Bdd/output/solidsyslog_thresho
 static SolidSyslogWinsockTcpStreamStorage tcpStreamStorage;
 static SolidSyslogStreamSenderStorage tcpSenderStorage;
 static SolidSyslogCircularBufferStorage
-    bufferStorage[SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE(BDD_TARGET_BUFFER_MESSAGES)];
+    bufferStorage[SOLIDSYSLOG_CIRCULAR_BUFFER_STORAGE_SIZE(BDD_TARGET_BUFFER_MESSAGES)];
 static SolidSyslogWindowsMutexStorage mutexStorage;
 static SolidSyslogWindowsAtomicCounterStorage counterStorage;
 static volatile bool shutdownFlag;
@@ -136,13 +136,13 @@ static enum SolidSyslogDiscardPolicy MapDiscardPolicy(const char* policy)
 {
     if (strcmp(policy, "newest") == 0)
     {
-        return SolidSyslogDiscardPolicy_Newest;
+        return SOLIDSYSLOG_DISCARD_POLICY_NEWEST;
     }
     if (strcmp(policy, "halt") == 0)
     {
-        return SolidSyslogDiscardPolicy_Halt;
+        return SOLIDSYSLOG_DISCARD_POLICY_HALT;
     }
-    return SolidSyslogDiscardPolicy_Oldest;
+    return SOLIDSYSLOG_DISCARD_POLICY_OLDEST;
 }
 
 static volatile bool haltExit;

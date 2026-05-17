@@ -109,13 +109,12 @@ struct SolidSyslogSecurityPolicy
     /* ... */
 };
 
-/* Public enum constants follow the same prefix rule. PascalCase
- * (rather than SCREAMING_SNAKE) is what disambiguates them from
- * macros (rule 5.5). */
+/* Public enum constants — SCREAMING_SNAKE with the project prefix.
+ * Single rule for tagged and anonymous enums tree-wide. */
 enum SolidSyslogSeverity
 {
-    SolidSyslogSeverity_Emergency = 0,
-    SolidSyslogSeverity_Alert     = 1,
+    SOLIDSYSLOG_SEVERITY_EMERGENCY = 0,
+    SOLIDSYSLOG_SEVERITY_ALERT     = 1,
     /* ... */
 };
 ```
@@ -541,39 +540,59 @@ pressure from rule 5.4.)
 **Exceptions:** CppUTest's `TEST`, `TEST_GROUP`, `CHECK_*`, `LONGS_EQUAL`,
 etc. are used unmodified — see Tests below.
 
-### Anonymous-enum named-constant idiom
+### Enum constants
 
-`enum { NAME = value };` (an enum with no tag) is the project's
-type-safe alternative to `#define` for integer constants. The form is
-distinct from tagged enums (Tier 1 `SolidSyslog<Class>` tags with
-`SolidSyslog<Class>_Constant` members) in both shape and purpose — an
-anonymous enum is a macro replacement, not a public type.
+All enum constants — tagged or anonymous, public or TU-local — are
+`SCREAMING_SNAKE`. One rule, mechanically enforced by clang-tidy
+(`EnumConstantCase: UPPER_CASE`, no exceptions).
 
 ```c
-/* Public, in a header — Tier 1 macro-equivalent */
-enum
+/* Tagged public enum — Tier 1 type with named members */
+enum SolidSyslogSeverity
 {
-    SOLIDSYSLOG_CIRCULARBUFFER_OVERHEAD = 7,
-    SOLIDSYSLOG_CIRCULARBUFFER_HEADER_BYTES = sizeof(uint16_t)
+    SOLIDSYSLOG_SEVERITY_EMERGENCY = 0,
+    SOLIDSYSLOG_SEVERITY_ALERT     = 1,
+    /* ... */
 };
 
-/* File-scope, in a .c — Tier 2 macro-equivalent */
+/* Anonymous public enum — Tier 1 macro-equivalent */
 enum
 {
-    HEADER_BYTES = SOLIDSYSLOG_CIRCULARBUFFER_HEADER_BYTES
+    SOLIDSYSLOG_CIRCULAR_BUFFER_OVERHEAD = 7,
+    SOLIDSYSLOG_CIRCULAR_BUFFER_HEADER_BYTES = sizeof(uint16_t)
+};
+
+/* Anonymous TU-local enum — Tier 2 macro-equivalent */
+enum
+{
+    HEADER_BYTES = SOLIDSYSLOG_CIRCULAR_BUFFER_HEADER_BYTES
 };
 ```
 
-Casing follows the **macro** convention, not the enum-constant
-convention: `SOLIDSYSLOG_*` for public sites, bare `SCREAMING_SNAKE`
-for file-scope sites. clang-tidy's `EnumConstantIgnoredRegexp` accepts
-this shape so the rule for tagged-enum constants
-(`SolidSyslog<Class>_Constant`) stays tight without forcing rename of
-the macro-replacement form.
+**Word boundaries.** Snake-separate at every CamelCase boundary in the
+source identifier (`DatagramSendResult` → `DATAGRAM_SEND_RESULT`,
+`AuthPriv` → `AUTH_PRIV`). Trailing digits stay glued to the preceding
+word (`Local0` → `LOCAL0`).
 
-MISRA rule 2.4 (unused tag declarations) cppcheck-fires on anonymous
-enums even though they have no tag. The project-wide deviation **D.010**
-covers all such sites — see `docs/misra-deviations.md#d010`.
+**Project prefix.** Public sites (anywhere visible outside a single
+TU) carry `SOLIDSYSLOG_`. TU-local anonymous-enum constants
+(`IPV4_HEADER_BYTES`, `UINT32_MAX_DECIMAL_DIGITS`) don't. clang-tidy
+cannot distinguish public from TU-local enum constants syntactically;
+the prefix rule for public sites is enforced by review and by
+cppcheck-misra rule 5.4 distinctness.
+
+The anonymous-enum named-constant idiom is itself unchanged — it's
+still the project's type-safe alternative to `#define` for integer
+constants, distinct in shape from tagged enums in purpose if not in
+casing. MISRA rule 2.4 (unused tag declarations) cppcheck-fires on
+anonymous enums; the project-wide deviation **D.010** covers all such
+sites — see `docs/misra-deviations.md#d010`.
+
+This single-rule convention replaces the S10.07/S10.12 split where
+tagged-enum constants used `SolidSyslog<Class>_Constant` (PascalCase,
+class-scoped) and anonymous-enum constants used SCREAMING_SNAKE. The
+split was hard to enforce mechanically (only judgement separated the
+two cases) and was drifting in S10.16; S10.22 collapsed it.
 
 ---
 
@@ -643,7 +662,7 @@ struct SolidSyslogBuffer
 
 /* Core/Interface/SolidSyslogCircularBuffer.h ---------------------------- */
 
-#define SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE_BYTES(bytes) /* ... */
+#define SOLIDSYSLOG_CIRCULAR_BUFFER_STORAGE_SIZE_BYTES(bytes) /* ... */
 
 typedef size_t SolidSyslogCircularBufferStorage;
 
@@ -742,7 +761,7 @@ static inline bool CircularBuffer_IsEmpty(const struct SolidSyslogCircularBuffer
 | Public function                       | `SolidSyslogClass_Function`                | `SolidSyslogBuffer_Append`                 |
 | Public struct tag                     | `SolidSyslogClass`                         | `struct SolidSyslogBuffer`                 |
 | Public enum type                      | `SolidSyslogClass`                         | `enum SolidSyslogSeverity`                 |
-| Public enum constant                  | `SolidSyslogClass_Constant`                | `SolidSyslogSeverity_Emergency`            |
+| Public enum constant                  | `SOLIDSYSLOG_CLASS_CONSTANT`               | `SOLIDSYSLOG_SEVERITY_EMERGENCY`            |
 | Public macro                          | `SOLIDSYSLOG_SCREAMING_SNAKE`              | `SOLIDSYSLOG_MAXIMUM_RECORD_LENGTH`        |
 | Public typedef (enum/fn-pointer only) | `SolidSyslogClass` / `SolidSyslogClass_Fn` | `SolidSyslogTransport_SendFn`              |
 | Static function                       | `Class_Function`                           | `Buffer_WriteMagic`                        |

@@ -80,19 +80,19 @@ static bool UdpSender_IsValidConfig(const struct SolidSyslogUdpSenderConfig* con
     bool valid = false;
     if (config == NULL)
     {
-        SolidSyslog_Error(SolidSyslogSeverity_Error, SOLIDSYSLOG_ERROR_MSG_UDPSENDER_CREATE_NULL_CONFIG);
+        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_UDPSENDER_CREATE_NULL_CONFIG);
     }
     else if (config->Resolver == NULL)
     {
-        SolidSyslog_Error(SolidSyslogSeverity_Error, SOLIDSYSLOG_ERROR_MSG_UDPSENDER_CREATE_NULL_RESOLVER);
+        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_UDPSENDER_CREATE_NULL_RESOLVER);
     }
     else if (config->Datagram == NULL)
     {
-        SolidSyslog_Error(SolidSyslogSeverity_Error, SOLIDSYSLOG_ERROR_MSG_UDPSENDER_CREATE_NULL_DATAGRAM);
+        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_UDPSENDER_CREATE_NULL_DATAGRAM);
     }
     else if (config->Endpoint == NULL)
     {
-        SolidSyslog_Error(SolidSyslogSeverity_Error, SOLIDSYSLOG_ERROR_MSG_UDPSENDER_CREATE_NULL_ENDPOINT);
+        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_UDPSENDER_CREATE_NULL_ENDPOINT);
     }
     else
     {
@@ -124,7 +124,7 @@ static bool UdpSender_Send(struct SolidSyslogSender* base, const void* buffer, s
     bool result = false;
     if (buffer == NULL)
     {
-        SolidSyslog_Error(SolidSyslogSeverity_Error, SOLIDSYSLOG_ERROR_MSG_UDPSENDER_SEND_NULL_BUFFER);
+        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_UDPSENDER_SEND_NULL_BUFFER);
     }
     else
     {
@@ -213,7 +213,7 @@ static bool UdpSender_ResolveDestination(struct SolidSyslogUdpSender* self, cons
 {
     return SolidSyslogResolver_Resolve(
         self->Config.Resolver,
-        SolidSyslogTransport_Udp,
+        SOLIDSYSLOG_TRANSPORT_UDP,
         host,
         port,
         UdpSender_Address(self)
@@ -235,11 +235,11 @@ static inline bool UdpSender_TransmitDatagram(struct SolidSyslogUdpSender* self,
 {
     enum SolidSyslogDatagramSendResult result =
         SolidSyslogDatagram_SendTo(self->Config.Datagram, buffer, size, UdpSender_Address(self));
-    if (result == SolidSyslogDatagramSendResult_Oversize)
+    if (result == SOLIDSYSLOG_DATAGRAM_SEND_RESULT_OVERSIZE)
     {
         result = UdpSender_RetryAfterOversize(self, buffer, size);
     }
-    return result == SolidSyslogDatagramSendResult_Sent;
+    return result == SOLIDSYSLOG_DATAGRAM_SEND_RESULT_SENT;
 }
 
 static inline enum SolidSyslogDatagramSendResult UdpSender_RetryAfterOversize(
@@ -253,15 +253,15 @@ static inline enum SolidSyslogDatagramSendResult UdpSender_RetryAfterOversize(
     size_t trimmed = SolidSyslogUdpPayload_TrimToCodepointBoundary((const uint8_t*) buffer, clipLimit);
     /* Default SENT swallows trimmed == 0 (path can't carry the message) so the
      * Service algorithm doesn't loop on an undeliverable. */
-    enum SolidSyslogDatagramSendResult result = SolidSyslogDatagramSendResult_Sent;
+    enum SolidSyslogDatagramSendResult result = SOLIDSYSLOG_DATAGRAM_SEND_RESULT_SENT;
     if (trimmed > 0U)
     {
         result = SolidSyslogDatagram_SendTo(self->Config.Datagram, buffer, trimmed, UdpSender_Address(self));
-        if (result == SolidSyslogDatagramSendResult_Oversize)
+        if (result == SOLIDSYSLOG_DATAGRAM_SEND_RESULT_OVERSIZE)
         {
             /* Retry still OVERSIZE means the kernel disagrees with its own
              * MaxPayload — swallow for the same reason. */
-            result = SolidSyslogDatagramSendResult_Sent;
+            result = SOLIDSYSLOG_DATAGRAM_SEND_RESULT_SENT;
         }
     }
     return result;

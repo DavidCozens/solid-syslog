@@ -19,8 +19,8 @@ struct SolidSyslogFreeRtosMutex
 };
 
 SOLIDSYSLOG_STATIC_ASSERT(
-    sizeof(FreeRtosMutex) <= SOLIDSYSLOG_FREERTOSMUTEX_SIZE,
-    "SOLIDSYSLOG_FREERTOSMUTEX_SIZE is too small for SolidSyslogFreeRtosMutex layout"
+    sizeof(FreeRtosMutex) <= SOLIDSYSLOG_FREE_RTOS_MUTEX_SIZE,
+    "SOLIDSYSLOG_FREE_RTOS_MUTEX_SIZE is too small for SolidSyslogFreeRtosMutex layout"
 );
 
 static void FreeRtosMutex_Lock(struct SolidSyslogMutex* base);

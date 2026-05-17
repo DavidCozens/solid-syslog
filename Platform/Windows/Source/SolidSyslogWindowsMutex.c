@@ -13,8 +13,8 @@ struct SolidSyslogWindowsMutex
 };
 
 SOLIDSYSLOG_STATIC_ASSERT(
-    sizeof(struct SolidSyslogWindowsMutex) <= SOLIDSYSLOG_WINDOWSMUTEX_SIZE,
-    "SOLIDSYSLOG_WINDOWSMUTEX_SIZE is too small for SolidSyslogWindowsMutex layout"
+    sizeof(struct SolidSyslogWindowsMutex) <= SOLIDSYSLOG_WINDOWS_MUTEX_SIZE,
+    "SOLIDSYSLOG_WINDOWS_MUTEX_SIZE is too small for SolidSyslogWindowsMutex layout"
 );
 
 static void WindowsMutex_Lock(struct SolidSyslogMutex* base);

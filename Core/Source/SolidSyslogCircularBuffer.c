@@ -12,7 +12,7 @@
 
 enum
 {
-    HEADER_BYTES = SOLIDSYSLOG_CIRCULARBUFFER_HEADER_BYTES
+    HEADER_BYTES = SOLIDSYSLOG_CIRCULAR_BUFFER_HEADER_BYTES
 };
 
 struct SolidSyslogCircularBuffer
@@ -28,8 +28,8 @@ struct SolidSyslogCircularBuffer
 
 SOLIDSYSLOG_STATIC_ASSERT(
     sizeof(struct SolidSyslogCircularBuffer) ==
-        (SOLIDSYSLOG_CIRCULARBUFFER_OVERHEAD * sizeof(SolidSyslogCircularBufferStorage)),
-    "SOLIDSYSLOG_CIRCULARBUFFER_OVERHEAD does not match struct layout"
+        (SOLIDSYSLOG_CIRCULAR_BUFFER_OVERHEAD * sizeof(SolidSyslogCircularBufferStorage)),
+    "SOLIDSYSLOG_CIRCULAR_BUFFER_OVERHEAD does not match struct layout"
 );
 
 static bool CircularBuffer_Read(struct SolidSyslogBuffer* base, void* data, size_t maxSize, size_t* bytesRead);

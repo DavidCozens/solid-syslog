@@ -13,8 +13,8 @@ struct SolidSyslogPosixMutex
 };
 
 SOLIDSYSLOG_STATIC_ASSERT(
-    sizeof(struct SolidSyslogPosixMutex) <= SOLIDSYSLOG_POSIXMUTEX_SIZE,
-    "SOLIDSYSLOG_POSIXMUTEX_SIZE is too small for SolidSyslogPosixMutex layout"
+    sizeof(struct SolidSyslogPosixMutex) <= SOLIDSYSLOG_POSIX_MUTEX_SIZE,
+    "SOLIDSYSLOG_POSIX_MUTEX_SIZE is too small for SolidSyslogPosixMutex layout"
 );
 
 static void PosixMutex_Lock(struct SolidSyslogMutex* base);

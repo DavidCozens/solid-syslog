@@ -144,8 +144,8 @@ static uint16_t port = (uint16_t) BDD_TARGET_UDP_PORT;
 static uint32_t endpointVersion = 0U;
 
 static struct SolidSyslogMessage testMessage = {
-    .Facility = SolidSyslogFacility_Local0,
-    .Severity = SolidSyslogSeverity_Informational,
+    .Facility = SOLIDSYSLOG_FACILITY_LOCAL0,
+    .Severity = SOLIDSYSLOG_SEVERITY_INFORMATIONAL,
     .MessageId = messageId,
     .Msg = msg,
 };
@@ -170,7 +170,7 @@ enum
 };
 
 static SolidSyslogCircularBufferStorage
-    bufferStorage[SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE(BDD_TARGET_BUFFER_MESSAGES)];
+    bufferStorage[SOLIDSYSLOG_CIRCULAR_BUFFER_STORAGE_SIZE(BDD_TARGET_BUFFER_MESSAGES)];
 static SolidSyslogFreeRtosMutexStorage mutexStorage;
 
 /* Lifecycle mutex serialises SolidSyslog_Service against the rebuild path
@@ -537,13 +537,13 @@ static enum SolidSyslogDiscardPolicy MapDiscardPolicy(const char* policy)
 {
     if (strcmp(policy, "newest") == 0)
     {
-        return SolidSyslogDiscardPolicy_Newest;
+        return SOLIDSYSLOG_DISCARD_POLICY_NEWEST;
     }
     if (strcmp(policy, "halt") == 0)
     {
-        return SolidSyslogDiscardPolicy_Halt;
+        return SOLIDSYSLOG_DISCARD_POLICY_HALT;
     }
-    return SolidSyslogDiscardPolicy_Oldest;
+    return SOLIDSYSLOG_DISCARD_POLICY_OLDEST;
 }
 
 static void OnStoreFull(void* context)

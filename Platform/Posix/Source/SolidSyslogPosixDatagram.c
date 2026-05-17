@@ -89,18 +89,18 @@ static enum SolidSyslogDatagramSendResult PosixDatagram_SendTo(
 )
 {
     struct SolidSyslogPosixDatagram* self = PosixDatagram_SelfFromBase(base);
-    enum SolidSyslogDatagramSendResult result = SolidSyslogDatagramSendResult_Failed;
+    enum SolidSyslogDatagramSendResult result = SOLIDSYSLOG_DATAGRAM_SEND_RESULT_FAILED;
     if (PosixDatagram_ConnectIfNeeded(self, addr))
     {
         const struct sockaddr_in* sin = SolidSyslogAddress_AsConstSockaddrIn(addr);
         ssize_t sent = sendto(self->Fd, buffer, size, 0, (const struct sockaddr*) sin, sizeof(*sin));
         if (sent >= 0)
         {
-            result = SolidSyslogDatagramSendResult_Sent;
+            result = SOLIDSYSLOG_DATAGRAM_SEND_RESULT_SENT;
         }
         else if (errno == EMSGSIZE)
         {
-            result = SolidSyslogDatagramSendResult_Oversize;
+            result = SOLIDSYSLOG_DATAGRAM_SEND_RESULT_OVERSIZE;
         }
         else
         {

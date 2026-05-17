@@ -17,19 +17,19 @@ EXTERN_C_BEGIN
 
     enum
     {
-        SOLIDSYSLOG_CIRCULARBUFFER_OVERHEAD = 7,
-        SOLIDSYSLOG_CIRCULARBUFFER_HEADER_BYTES = sizeof(uint16_t)
+        SOLIDSYSLOG_CIRCULAR_BUFFER_OVERHEAD = 7,
+        SOLIDSYSLOG_CIRCULAR_BUFFER_HEADER_BYTES = sizeof(uint16_t)
     };
 
 /* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- cannot compute array size as a constexpr in C */
-#define SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE_BYTES(ringBytes) \
-    (SOLIDSYSLOG_CIRCULARBUFFER_OVERHEAD +                       \
+#define SOLIDSYSLOG_CIRCULAR_BUFFER_STORAGE_SIZE_BYTES(ringBytes) \
+    (SOLIDSYSLOG_CIRCULAR_BUFFER_OVERHEAD +                       \
      (((ringBytes) + sizeof(SolidSyslogCircularBufferStorage) - 1U) / sizeof(SolidSyslogCircularBufferStorage)))
 
 /* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- cannot compute array size as a constexpr in C */
-#define SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE(maxMessages)                                              \
-    SOLIDSYSLOG_CIRCULARBUFFER_STORAGE_SIZE_BYTES(                                                        \
-        (size_t) (maxMessages) * (SOLIDSYSLOG_MAX_MESSAGE_SIZE + SOLIDSYSLOG_CIRCULARBUFFER_HEADER_BYTES) \
+#define SOLIDSYSLOG_CIRCULAR_BUFFER_STORAGE_SIZE(maxMessages)                                              \
+    SOLIDSYSLOG_CIRCULAR_BUFFER_STORAGE_SIZE_BYTES(                                                        \
+        (size_t) (maxMessages) * (SOLIDSYSLOG_MAX_MESSAGE_SIZE + SOLIDSYSLOG_CIRCULAR_BUFFER_HEADER_BYTES) \
     )
 
     struct SolidSyslogBuffer* SolidSyslogCircularBuffer_Create(

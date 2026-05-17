@@ -33,7 +33,7 @@ struct SolidSyslogBlockStore
 
 SOLIDSYSLOG_STATIC_ASSERT(
     sizeof(struct SolidSyslogBlockStore) <= sizeof(SolidSyslogBlockStoreStorage),
-    "SOLIDSYSLOG_BLOCKSTORE_STORAGE_SIZE is too small for struct SolidSyslogBlockStore"
+    "SOLIDSYSLOG_BLOCK_STORE_STORAGE_SIZE is too small for struct SolidSyslogBlockStore"
 );
 
 static const struct SolidSyslogBlockStore DEFAULT_INSTANCE = {0};

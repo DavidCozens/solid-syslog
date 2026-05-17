@@ -53,7 +53,7 @@ struct SolidSyslogFileBlockDevice
 
 SOLIDSYSLOG_STATIC_ASSERT(
     sizeof(struct SolidSyslogFileBlockDevice) <= sizeof(SolidSyslogFileBlockDeviceStorage),
-    "SOLIDSYSLOG_FILEBLOCKDEVICE_STORAGE_SIZE is too small for struct SolidSyslogFileBlockDevice"
+    "SOLIDSYSLOG_FILE_BLOCK_DEVICE_STORAGE_SIZE is too small for struct SolidSyslogFileBlockDevice"
 );
 
 /* vtable — forward-declared because Create wires them before their definitions */
