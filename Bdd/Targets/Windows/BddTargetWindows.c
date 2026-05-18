@@ -360,7 +360,7 @@ int BddTargetWindows_Run(int argc, char* argv[])
     SolidSyslog_Destroy();
     SolidSyslogOriginSd_Destroy();
     SolidSyslogTimeQualitySd_Destroy();
-    SolidSyslogMetaSd_Destroy();
+    SolidSyslogMetaSd_Destroy(metaSd);
     SolidSyslogWindowsAtomicCounter_Destroy(counter);
     DestroyStore(store, &options);
     SolidSyslogCircularBuffer_Destroy(buffer);

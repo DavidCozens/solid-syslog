@@ -643,7 +643,7 @@ TEST(SolidSyslog, MetaSdProducesSequenceIdInStructuredData)
     SolidSyslog_Create(&config);
     Log();
     STRCMP_EQUAL("[meta sequenceId=\"1\"]", SyslogField(lastMessage(), SYSLOG_FIELD_SDATA).c_str());
-    SolidSyslogMetaSd_Destroy();
+    SolidSyslogMetaSd_Destroy(metaSd);
     TestAtomicCounter_Destroy(counter);
 }
 
@@ -662,7 +662,7 @@ TEST(SolidSyslog, MetaSdSequenceIdIncrementsAcrossLogCalls)
     Log();
     Log();
     STRCMP_EQUAL("[meta sequenceId=\"2\"]", SyslogField(lastMessage(), SYSLOG_FIELD_SDATA).c_str());
-    SolidSyslogMetaSd_Destroy();
+    SolidSyslogMetaSd_Destroy(metaSd);
     TestAtomicCounter_Destroy(counter);
 }
 
@@ -681,7 +681,7 @@ TEST(SolidSyslog, MsgFieldPreservedWithMetaSd)
     message.Msg = "hello world";
     Log();
     STRCMP_EQUAL("hello world", SyslogMsg(lastMessage()).c_str());
-    SolidSyslogMetaSd_Destroy();
+    SolidSyslogMetaSd_Destroy(metaSd);
     TestAtomicCounter_Destroy(counter);
 }
 
@@ -748,7 +748,7 @@ TEST(SolidSyslog, MetaSdAndTimeQualitySdCoexistInSdArray)
         SyslogField(lastMessage(), SYSLOG_FIELD_SDATA).c_str()
     );
     SolidSyslogTimeQualitySd_Destroy();
-    SolidSyslogMetaSd_Destroy();
+    SolidSyslogMetaSd_Destroy(metaSd);
     TestAtomicCounter_Destroy(counter);
 }
 

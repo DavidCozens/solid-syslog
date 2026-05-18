@@ -652,7 +652,7 @@ static void TeardownAll(void)
     SolidSyslog_Destroy();
     SolidSyslogOriginSd_Destroy();
     SolidSyslogTimeQualitySd_Destroy();
-    SolidSyslogMetaSd_Destroy();
+    SolidSyslogMetaSd_Destroy(metaSd);
     SolidSyslogStdAtomicCounter_Destroy(atomicCounter);
     DestroyCurrentStore();
     if (fatfsMounted)

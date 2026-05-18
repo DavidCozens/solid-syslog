@@ -112,4 +112,20 @@
 #error "SOLIDSYSLOG_SWITCHING_SENDER_POOL_SIZE must be >= 1"
 #endif
 
+/*
+ * Number of SolidSyslogMetaSd instances the library's internal
+ * static pool can simultaneously hold. Default 1 — meta SD is typically
+ * wired into SolidSyslogConfig.Sd[] once per process.
+ *
+ * Floor: 1. Sub-floor values rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_META_SD_POOL_SIZE
+/* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- macro form required for preprocessor visibility (floor #if) and C array-size const-expr. */
+#define SOLIDSYSLOG_META_SD_POOL_SIZE 1U
+#endif
+
+#if SOLIDSYSLOG_META_SD_POOL_SIZE < 1
+#error "SOLIDSYSLOG_META_SD_POOL_SIZE must be >= 1"
+#endif
+
 #endif /* SOLIDSYSLOG_TUNABLES_DEFAULTS_H */
