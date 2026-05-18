@@ -96,15 +96,27 @@ TEST(SolidSyslogSwitchingSender, CreateDestroyWorksWithoutCrashing)
 TEST(SolidSyslogSwitchingSender, DestroyDoesNotSendToInnerSenders)
 {
     SolidSyslogSwitchingSender_Destroy(sender);
+    sender = nullptr;
+
     CALLED_FAKE_ON(SenderFake_Send, innerA, NEVER);
     CALLED_FAKE_ON(SenderFake_Send, innerB, NEVER);
+
+    // Re-create so teardown's Destroy(sender) targets a live handle —
+    // the destroy under test has already freed the original slot.
+    CreateSwitchingSender(2);
 }
 
 TEST(SolidSyslogSwitchingSender, DestroyDoesNotDisconnectInnerSenders)
 {
     SolidSyslogSwitchingSender_Destroy(sender);
+    sender = nullptr;
+
     CALLED_FAKE_ON(SenderFake_Disconnect, innerA, NEVER);
     CALLED_FAKE_ON(SenderFake_Disconnect, innerB, NEVER);
+
+    // Re-create so teardown's Destroy(sender) targets a live handle —
+    // the destroy under test has already freed the original slot.
+    CreateSwitchingSender(2);
 }
 
 TEST(SolidSyslogSwitchingSender, SendDelegatesToSenderAtSelectedIndex)
