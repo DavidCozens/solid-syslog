@@ -8,7 +8,7 @@
 #include "SolidSyslogMetaSd.h"
 #include "SolidSyslogTimeQualitySd.h"
 #include "SolidSyslogCircularBuffer.h"
-#include "SolidSyslogNullBuffer.h"
+#include "SolidSyslogPassthroughBuffer.h"
 #include "SolidSyslogNullMutex.h"
 #include "SolidSyslogNullStore.h"
 #include "SolidSyslogFormatter.h"
@@ -366,7 +366,7 @@ TEST_GROUP(SolidSyslog)
     {
         fakeSender = SenderFake_Create();
         StringFake_Reset();
-        buffer = SolidSyslogNullBuffer_Create(fakeSender);
+        buffer = SolidSyslogPassthroughBuffer_Create(fakeSender);
         store  = SolidSyslogNullStore_Create();
         config = {buffer, nullptr, nullptr, StringFake_GetHostname, StringFake_GetAppName, StringFake_GetProcessId, store, nullptr, 0};
         SolidSyslog_Create(&config);
@@ -378,7 +378,7 @@ TEST_GROUP(SolidSyslog)
     {
         SolidSyslog_Destroy();
         SolidSyslogNullStore_Destroy();
-        SolidSyslogNullBuffer_Destroy();
+        SolidSyslogPassthroughBuffer_Destroy();
         SenderFake_Destroy(fakeSender);
     }
 

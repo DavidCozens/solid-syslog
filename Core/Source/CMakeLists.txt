@@ -6,7 +6,7 @@ set(SOURCES
     SolidSyslogBuffer.c
     SolidSyslogFormatter.c
     SolidSyslogMetaSd.c
-    SolidSyslogNullBuffer.c
+    SolidSyslogPassthroughBuffer.c
     SolidSyslogCircularBuffer.c
     SolidSyslogCircularBufferStatic.c
     SolidSyslogPoolAllocator.c

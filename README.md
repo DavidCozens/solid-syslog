@@ -10,7 +10,7 @@ is not a core dependency; Core has zero OpenSSL references.
 Designed for resource-constrained environments:
 - C99, no dynamic memory allocation required — allocator is caller-injected
 - Transport-agnostic — UDP, TCP, TLS, or bring your own
-- Buffer-agnostic — NullBuffer (direct send), portable CircularBuffer (mutex-injected ring), POSIX message queue, or bring your own
+- Buffer-agnostic — PassthroughBuffer (direct send), portable CircularBuffer (mutex-injected ring), POSIX message queue, or bring your own
 - No `#ifdef` feature flags — optional features composed at link time
 - MISRA C:2012 informed
 - Dependency injection throughout — fully testable without a network
@@ -61,7 +61,7 @@ Public headers are split by audience (Interface Segregation Principle):
 - **`SolidSyslogError.h`** — install a handler to react to library-internal errors (NULL guards, send failures); default is silent. See `Bdd/Targets/Common/BddTargetStderrErrorHandler.c` for a reference implementation
 - **`SolidSyslogConfigLock.h`** — optional setup-time lock injection (`SolidSyslog_SetConfigLock(lockFn, unlockFn)`); wraps library-internal pool slot walks so multi-task setup is safe. Defaults are no-ops, so single-task systems can ignore it. Integrators on RTOS / multi-core wire `taskENTER_CRITICAL`, a static `pthread_mutex_t`, `EnterCriticalSection`, or a spinlock pair
 - **`SolidSyslogSenderDefinition.h`** / **`SolidSyslogBufferDefinition.h`** — extension points for custom senders and buffers
-- **`SolidSyslogNullBuffer.h`** — direct-send buffer for single-task systems
+- **`SolidSyslogPassthroughBuffer.h`** — direct-send buffer for single-task systems
 - **`SolidSyslogCircularBuffer.h`** — portable ring buffer with caller-allocated ring memory and an injected `SolidSyslogMutex` (`SolidSyslogPosixMutex` / `SolidSyslogWindowsMutex` / `SolidSyslogFreeRtosMutex` / `SolidSyslogNullMutex` / your own); the cross-platform threaded buffer. Instance bookkeeping lives in a library-internal static pool (E11)
 - **`SolidSyslogPosixMessageQueueBuffer.h`** — thread-safe POSIX message queue buffer
 - **`SolidSyslogUdpSender.h`** — UDP transport (RFC 5426)

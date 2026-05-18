@@ -27,7 +27,7 @@ EXTERN_C_BEGIN
     typedef size_t (*SolidSyslogStoreThresholdFunction)(void* context);
 
     /* Edge-triggered: fires once when used-bytes transitions from below threshold to at-or-above.
-     * NullBuffer note: SolidSyslog_Log is synchronous under SolidSyslogNullBuffer, so calling
+     * PassthroughBuffer note: SolidSyslog_Log is synchronous under SolidSyslogPassthroughBuffer, so calling
      * SolidSyslog_Log from this callback will recurse into Store_Write. Either gate the Log,
      * or use SolidSyslogPosixMessageQueueBuffer (which returns immediately). */
     typedef void (*SolidSyslogStoreThresholdCallback)(void* context);

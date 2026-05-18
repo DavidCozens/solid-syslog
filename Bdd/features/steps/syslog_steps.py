@@ -408,7 +408,7 @@ def run_example(context, extra_args=None, expected_messages=1):
     (S24.05).
 
     The pre-S13.18 implementation wrote `send N\\nquit\\n` upfront via
-    process.communicate() and relied on NullBuffer's synchronous Send to
+    process.communicate() and relied on PassthroughBuffer's synchronous Send to
     guarantee delivery before exit. That assumption broke once the
     target became buffered — `quit` could land before the service
     thread had drained, losing the UDP packet. The prompt protocol

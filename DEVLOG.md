@@ -1,5 +1,99 @@
 # Dev Log
 
+## 2026-05-18 — S11.03: Rename NullBuffer to PassthroughBuffer (#397)
+
+Pure mechanical rename — the type is a passthrough that forwards
+`Write` directly into an injected `SolidSyslogSender`, not a GoF Null
+Object. Splitting it out from the Core sweep (S11.04) per the epic
+sequencing keeps the cross-tree rename's review surface separate from
+pool semantics.
+
+### Mechanical scope
+
+- File renames via `git mv`: `Core/Interface/SolidSyslogNullBuffer.h`,
+  `Core/Source/SolidSyslogNullBuffer.c`,
+  `Tests/SolidSyslogNullBufferTest.cpp` → corresponding
+  `PassthroughBuffer` paths.
+- Tier 1 symbols: `SolidSyslogNullBuffer_Create`, `_Destroy`, `struct
+  SolidSyslogNullBuffer`, include guard `SOLIDSYSLOGNULLBUFFER_H`.
+- Tier 2 statics: `NullBuffer_Read`, `_Write`, `_SelfFromBase`,
+  `_Instance` → `PassthroughBuffer_*` per the strip-only rule (file
+  basename minus the `SolidSyslog` namespace).
+- Test group: `TEST_GROUP(SolidSyslogPassthroughBuffer)`. Individual
+  test names left alone — they describe behaviour, not the class.
+- Call sites: `Tests/SolidSyslogTest.cpp` (include + two Create/Destroy
+  calls); two CMakeLists.txt source-list entries.
+- Doc / comment sweep: `CLAUDE.md` (audience table row), `README.md`
+  (two prose), `SKILL.md` (one prose), `docs/iec62443.md` (three SR
+  rows), `Core/Interface/SolidSyslogBlockStore.h` (recursion-gotcha
+  doc comment), `Bdd/features/tcp_singletask.feature`,
+  `Bdd/features/steps/syslog_steps.py`.
+- `misra_suppressions.txt`: 11.3 entry path updated (line number
+  unchanged — same file content under new name).
+
+### Doc honesty corrections (adjacent to the rename, not the rename itself)
+
+Three places held a "but NullBuffer doesn't actually fit this rule"
+caveat — the rename removes the misleading example, so the caveat
+can go too. Calling these out explicitly because they're substantive
+edits in a story scoped as mechanical:
+
+- **`CLAUDE.md` Design Patterns null-object bullet** previously listed
+  `SolidSyslogNullBuffer` alongside `NullSecurityPolicy` and `NullStore`
+  as "the type's null object" sites where guard checks should be
+  skipped. `PassthroughBuffer` is not a null object. Removed from the
+  list (decided pre-raise).
+- **`SKILL.md` Architecture line** previously read "Null object pattern
+  throughout (NullBuffer is the buffer null object)". The parenthetical
+  was wrong; struck. The remaining "Null object pattern throughout" is
+  still accurate (NullMutex / NullStore / NullSecurityPolicy genuinely
+  are no-ops).
+- **`Core/Source/SolidSyslog.c` nil-collaborators comment block**
+  previously read "The public SolidSyslogNull* family is for
+  integrator-chosen no-ops with different semantics (e.g. NullBuffer
+  is a direct-send shim)". After the rename the family no longer
+  contains the "different semantics" example; the caveat now misleads
+  in the opposite direction, so dropped. The remaining sentence stands
+  unchanged.
+
+### Deliberate non-renames
+
+Three callouts so the next sed sweep doesn't catch them:
+
+- `Tests/SolidSyslogTest.cpp::TEST(SolidSyslogLifecycle, CreateWithNullBufferReportsError)` —
+  refers to NULL pointer (`config.Buffer = NULL`), not the class.
+- `Tests/SolidSyslogUdpSenderTest.cpp::TEST(SolidSyslogUdpSenderBadSetup,
+  SendWithNullBufferReportsErrorAndDoesNotSend)` — same.
+- `Bdd/Targets/FreeRtos/main.c:6` historical comment about S08.04 —
+  preserved as historical narrative; at the time the type really was
+  called NullBuffer.
+
+### Gates
+
+debug, clang-debug, sanitize, coverage, tidy, cppcheck, clang-format.
+cppcheck-misra count **88 on the rename branch, 88 on main** — zero
+new findings, zero entries against `SolidSyslogPassthroughBuffer.c`.
+(Side-note: my S11.02 closing note recorded "60" as the baseline; that
+appears to have been a non-deterministic cppcheck run or an
+incomplete invocation — the actual main baseline at the time of this
+session is 88, verified by running the identical command against main
+in isolation. AC #3 in the story body inherits the same stale number;
+the true invariant — "no new findings introduced by the rename" — is
+met.)
+
+PassthroughBuffer.c at 100% line coverage post-rename.
+
+### Out of scope (carrying forward to S11.04)
+
+The `Instance` singleton, the `void _Destroy(void)` signature, the
+existing 11.3 storage-cast on the `SelfFromBase` helper, and the
+absence of a `SOLIDSYSLOG_PASSTHROUGHBUFFER_POOL_SIZE` tunable all
+carry forward unchanged. S11.04 (Core sweep) migrates this class
+onto `SolidSyslogPoolAllocator` and retires the cast in the same
+move.
+
+---
+
 ## 2026-05-18 — S11.02: Extract SolidSyslogPoolAllocator helper (#395)
 
 S11.01 left every E11 class about to copy the same 13-function pool
