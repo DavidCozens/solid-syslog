@@ -150,6 +150,7 @@ TEST(SolidSyslogTimeQualitySd, DestroyDoesNotCrash)
 // clang-format off
 TEST_GROUP(SolidSyslogTimeQualitySdPool)
 {
+    // cppcheck-suppress constVariable -- assigned in TEST() bodies; cppcheck does not model CppUTest macros
     struct SolidSyslogStructuredData* pooled[SOLIDSYSLOG_TIME_QUALITY_SD_POOL_SIZE] = {};
     struct SolidSyslogStructuredData* overflow                                       = nullptr;
 
@@ -162,6 +163,7 @@ TEST_GROUP(SolidSyslogTimeQualitySdPool)
                 SolidSyslogTimeQualitySd_Destroy(handle);
             }
         }
+        // cppcheck-suppress knownConditionTrueFalse -- assigned in TEST() bodies; cppcheck does not model CppUTest macros
         if (overflow != nullptr)
         {
             SolidSyslogTimeQualitySd_Destroy(overflow);

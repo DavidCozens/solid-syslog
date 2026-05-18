@@ -268,7 +268,7 @@ TEST_GROUP(SolidSyslogSwitchingSenderPool)
     struct SolidSyslogSender* inners[1]                                       = {nullptr};
     struct SolidSyslogSender* pooled[SOLIDSYSLOG_SWITCHING_SENDER_POOL_SIZE]  = {};
     struct SolidSyslogSender* overflow                                        = nullptr;
-    SolidSyslogSwitchingSenderConfig config                                   = {};
+    SolidSyslogSwitchingSenderConfig config;
 
     void setup() override
     {
