@@ -1,5 +1,92 @@
 # Dev Log
 
+## 2026-05-18 — S11.02: Extract SolidSyslogPoolAllocator helper (#395)
+
+S11.01 left every E11 class about to copy the same 13-function pool
+plumbing — slot walk, per-iteration `LockConfig`, claim/release,
+fallback dispatch, reverse lookup. S11.02 hoists everything except the
+reverse lookup into a TU-internal `SolidSyslogPoolAllocator` that each
+`*Static.c` instantiates with a caller-supplied `bool[]`.
+
+### Shape of the helper
+
+Three operations + a predicate, all under `Core/Source/` (never on the
+public include path):
+
+- `SolidSyslogPoolAllocator_AcquireFirstFree(self)` — walks the pool
+  with `LockConfig` wrapping every per-slot probe (matches the pilot's
+  invariant exactly), returns first claimed index or `Count` on
+  exhaustion.
+- `SolidSyslogPoolAllocator_FreeIfInUse(self, index, cleanup, ctx)` —
+  locks once, runs `cleanup` *inside* the lock before clearing
+  `InUse`, returns whether the slot was actually freed. The cleanup
+  callback is the one bit of class-specific behaviour the helper
+  can't see; passing it in keeps the lock-held-during-cleanup
+  invariant intact across every consumer.
+- `SolidSyslogPoolAllocator_IndexIsValid(self, index)` — static-inline
+  predicate over `Count`.
+
+The struct is two fields (`bool* InUse; size_t Count;`), declared
+public so each `*Static.c` can do `static struct SolidSyslogPoolAllocator
+Allocator = {InUseArray, POOL_SIZE};` at file scope — no `_Create`
+needed, no storage cast.
+
+### Cycle-by-cycle TDD pacing
+
+Happy-path then locking, as agreed in the design discussion. Twelve
+tests across five behaviours: `IndexIsValid` true/false, `AcquireFirstFree`
+empty/walks/exhausted, `FreeIfInUse` happy/already-free/NULL-callback,
+locking-per-probe (1 vs N), locking-exactly-once on free, and the
+cleanup-inside-the-lock invariant (the spy captures `LockCount -
+UnlockCount` at the moment of invocation and asserts it's exactly 1).
+The cleanup-inside-the-lock test would catch any drift where someone
+moves the cleanup call out of the critical section.
+
+### Migration of `CircularBufferStatic.c`
+
+107 deletions, 17 insertions. The `struct Slot` wrapper retired —
+`Pool` is now a bare array of `SolidSyslogCircularBuffer`, `InUse` is
+its own array, and direct `&Pool[index].Base` access replaces the
+old `HandleFromIndex` helper. Ten file-scope helpers retired
+(`AcquireFirstFree`, `AcquireIfFree`, `Acquire`, `PoolItemIsFree`,
+`PoolItemIsInUse`, `MarkInUse`, `MarkFree`, `HandleFromIndex`,
+`HandleIsValid`, `FreeIfInUse`). What's left in the file: `_Create`,
+`_Destroy`, `IndexFromHandle` (the per-class reverse lookup —
+intentionally kept per-class because hoisting it would require a
+typeless callback that breaks the no-cast invariant), `CleanupAtIndex`
+(3-line bridge from the helper's typeless cleanup signature to
+`CircularBuffer_Cleanup`), and the two `Fallback` vtable entries.
+
+### Test suite untouched
+
+`SolidSyslogCircularBufferTest.cpp` was not modified — that was the
+regression net. Every assertion including the lock-count tests
+(`CreateAcquiresAndReleasesConfigLockOnFirstFreeSlot`,
+`CreateLocksOncePerSlotProbedWhenPoolIsFull`,
+`DestroyOfPooledHandleLocksOnce`, `DestroyOfUnknownHandleDoesNotLock`)
+passes against the new implementation because the helper preserves the
+per-probe and per-free lock invariants exactly.
+
+### Decisions confirmed
+
+- **Helper does not report exhaustion errors itself** — each class wants
+  its own `SOLIDSYSLOG_ERROR_MSG_<CLASS>_POOL_EXHAUSTED` string.
+- **`IndexFromHandle` stays per-class** — hoisting would need a
+  typeless callback or a `const void*` cast that breaks the no-cast
+  invariant; the 5 lines per class aren't worth it.
+- **No public-header audience-table entry** — helper is TU-internal,
+  not an integration point.
+
+### Gates
+
+debug, clang-debug, sanitize, coverage (helper and migrated file both
+at 100% line), tidy, cppcheck, cppcheck-misra (60 hits — one fewer than
+pre-migration; zero new), clang-format, IWYU. Full suite revalidated
+at `SOLIDSYSLOG_CIRCULAR_BUFFER_POOL_SIZE=3` (the validation step from
+end of S11.01) — 1139 tests pass.
+
+---
+
 ## 2026-05-17 — S11.01 commits 2–N: CircularBuffer pool migration (E11 pilot, #392)
 
 The body of S11.01 — every commit after the `SolidSyslog_SetConfigLock`
