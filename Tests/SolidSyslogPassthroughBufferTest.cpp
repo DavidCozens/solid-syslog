@@ -125,7 +125,7 @@ TEST_GROUP(SolidSyslogPassthroughBufferPool)
         SenderFake_Destroy(fakeSender);
     }
 
-    struct SolidSyslogBuffer* MakeBuffer()
+    [[nodiscard]] struct SolidSyslogBuffer* MakeBuffer() const
     {
         return SolidSyslogPassthroughBuffer_Create(fakeSender);
     }

@@ -9,7 +9,7 @@ EXTERN_C_BEGIN
     struct SolidSyslogBuffer;
 
     struct SolidSyslogBuffer* SolidSyslogPassthroughBuffer_Create(struct SolidSyslogSender * sender);
-    void SolidSyslogPassthroughBuffer_Destroy(struct SolidSyslogBuffer * buffer);
+    void SolidSyslogPassthroughBuffer_Destroy(struct SolidSyslogBuffer * base);
 
 EXTERN_C_END
 

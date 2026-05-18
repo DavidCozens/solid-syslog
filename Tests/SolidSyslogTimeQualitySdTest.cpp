@@ -168,7 +168,7 @@ TEST_GROUP(SolidSyslogTimeQualitySdPool)
         }
     }
 
-    struct SolidSyslogStructuredData* MakeSd()
+    static struct SolidSyslogStructuredData* MakeSd()
     {
         return SolidSyslogTimeQualitySd_Create(StubGetTimeQuality);
     }

@@ -15,7 +15,7 @@ EXTERN_C_BEGIN
     };
 
     struct SolidSyslogSender* SolidSyslogUdpSender_Create(const struct SolidSyslogUdpSenderConfig* config);
-    void SolidSyslogUdpSender_Destroy(struct SolidSyslogSender * sender);
+    void SolidSyslogUdpSender_Destroy(struct SolidSyslogSender * base);
 
 EXTERN_C_END
 
