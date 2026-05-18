@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "ErrorHandlerFake.h"
 #include "SenderFake.h"
 #include "SolidSyslogSender.h"
 #include "SolidSyslogSwitchingSender.h"
@@ -321,4 +322,59 @@ TEST(SolidSyslogSwitchingSenderPool, FillingPoolThenOverflowReturnsDistinctFallb
         CHECK_TEXT(slot != nullptr, "pool slot was nullptr (FillPool failed?)");
         CHECK_TEXT(overflow != slot, "Fallback handle collided with a pool slot");
     }
+}
+
+// Bad-setup tests — _Create rejects malformed config and routes to NullSender.
+
+// clang-format off
+TEST_GROUP(SolidSyslogSwitchingSenderBadSetup)
+{
+    struct SolidSyslogSender*               innerA = nullptr;
+    struct SolidSyslogSender*               inners[1] = {nullptr};
+    int                                     sentinel = 0;
+    SolidSyslogSwitchingSenderConfig        config{};
+
+    void setup() override
+    {
+        innerA   = SenderFake_Create();
+        inners[0] = innerA;
+        config   = {inners, 1, TestSelector};
+        ErrorHandlerFake_Install(&sentinel);
+    }
+
+    void teardown() override
+    {
+        ErrorHandlerFake_Uninstall();
+        SenderFake_Destroy(innerA);
+    }
+};
+
+// clang-format on
+
+TEST(SolidSyslogSwitchingSenderBadSetup, CreateWithNullConfigReportsError)
+{
+    SolidSyslogSwitchingSender_Create(nullptr);
+    CHECK_REPORTED_ERROR("SolidSyslogSwitchingSender_Create called with NULL config");
+}
+
+TEST(SolidSyslogSwitchingSenderBadSetup, CreateWithNullSendersReportsError)
+{
+    config.Senders = nullptr;
+    SolidSyslogSwitchingSender_Create(&config);
+    CHECK_REPORTED_ERROR("SolidSyslogSwitchingSender_Create config.Senders is NULL");
+}
+
+TEST(SolidSyslogSwitchingSenderBadSetup, CreateWithNullSelectorReportsError)
+{
+    config.Selector = nullptr;
+    SolidSyslogSwitchingSender_Create(&config);
+    CHECK_REPORTED_ERROR("SolidSyslogSwitchingSender_Create config.Selector is NULL");
+}
+
+TEST(SolidSyslogSwitchingSenderBadSetup, SendOnBadSetupSenderReturnsTrueAndDrops)
+{
+    /* Bad-config _Create returns NullSender (Send drops on the floor),
+     * so a misconfigured SwitchingSender doesn't fill the Store. */
+    struct SolidSyslogSender* badSender = SolidSyslogSwitchingSender_Create(nullptr);
+    CHECK_TRUE(SolidSyslogSender_Send(badSender, "x", 1));
 }

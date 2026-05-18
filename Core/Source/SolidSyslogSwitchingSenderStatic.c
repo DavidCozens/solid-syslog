@@ -13,6 +13,7 @@
 
 struct SolidSyslogSender;
 
+static bool SwitchingSender_IsValidConfig(const struct SolidSyslogSwitchingSenderConfig* config);
 static size_t SwitchingSender_IndexFromHandle(const struct SolidSyslogSender* base);
 static void SwitchingSender_CleanupAtIndex(size_t index, void* context);
 
@@ -22,18 +23,43 @@ static struct SolidSyslogPoolAllocator Allocator = {InUse, SOLIDSYSLOG_SWITCHING
 
 struct SolidSyslogSender* SolidSyslogSwitchingSender_Create(const struct SolidSyslogSwitchingSenderConfig* config)
 {
-    size_t index = SolidSyslogPoolAllocator_AcquireFirstFree(&Allocator);
     struct SolidSyslogSender* handle = SolidSyslogNullSender_Get();
-    if (SolidSyslogPoolAllocator_IndexIsValid(&Allocator, index))
+    if (SwitchingSender_IsValidConfig(config))
     {
-        SwitchingSender_Initialise(&Pool[index].Base, config);
-        handle = &Pool[index].Base;
+        size_t index = SolidSyslogPoolAllocator_AcquireFirstFree(&Allocator);
+        if (SolidSyslogPoolAllocator_IndexIsValid(&Allocator, index))
+        {
+            SwitchingSender_Initialise(&Pool[index].Base, config);
+            handle = &Pool[index].Base;
+        }
+        else
+        {
+            SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_SWITCHINGSENDER_POOL_EXHAUSTED);
+        }
+    }
+    return handle;
+}
+
+static bool SwitchingSender_IsValidConfig(const struct SolidSyslogSwitchingSenderConfig* config)
+{
+    bool valid = false;
+    if (config == NULL)
+    {
+        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_SWITCHINGSENDER_CREATE_NULL_CONFIG);
+    }
+    else if (config->Senders == NULL)
+    {
+        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_SWITCHINGSENDER_CREATE_NULL_SENDERS);
+    }
+    else if (config->Selector == NULL)
+    {
+        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_SWITCHINGSENDER_CREATE_NULL_SELECTOR);
     }
     else
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_SWITCHINGSENDER_POOL_EXHAUSTED);
+        valid = true;
     }
-    return handle;
+    return valid;
 }
 
 void SolidSyslogSwitchingSender_Destroy(struct SolidSyslogSender* base)
