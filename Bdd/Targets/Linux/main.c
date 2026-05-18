@@ -288,7 +288,7 @@ int main(int argc, char* argv[])
 
     SolidSyslog_Destroy();
     SolidSyslogOriginSd_Destroy();
-    SolidSyslogTimeQualitySd_Destroy();
+    SolidSyslogTimeQualitySd_Destroy(timeQuality);
     SolidSyslogMetaSd_Destroy(metaSd);
     SolidSyslogStdAtomicCounter_Destroy(counter);
     DestroyStore(store, &options);

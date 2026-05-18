@@ -383,7 +383,7 @@ live under `Core/Interface/`; platform-specific helpers (the `SolidSyslogPosix*`
 | `SolidSyslogStdAtomicCounter.h` | System setup code on platforms with C11 `<stdatomic.h>` | `SolidSyslogStdAtomicCounterStorage`, `SOLIDSYSLOG_STDATOMICCOUNTER_SIZE`, `SolidSyslogStdAtomicCounter_Create(storage)`, `_Destroy(base)`. Uses `_Atomic uint32_t` + `atomic_compare_exchange_strong_explicit` CAS loop. |
 | `SolidSyslogWindowsAtomicCounter.h` | System setup code on Windows targets without `<stdatomic.h>` (legacy MSVC) | `SolidSyslogWindowsAtomicCounterStorage`, `SOLIDSYSLOG_WINDOWSATOMICCOUNTER_SIZE`, `SolidSyslogWindowsAtomicCounter_Create(storage)`, `_Destroy(base)`. Uses `volatile LONG` + `InterlockedCompareExchange` CAS loop. |
 | `SolidSyslogTimeQuality.h` | Any code providing time quality data | `SolidSyslogTimeQuality`, `SolidSyslogTimeQualityFunction`, `SOLIDSYSLOG_SYNC_ACCURACY_OMIT` |
-| `SolidSyslogTimeQualitySd.h` | System setup code using timeQuality SD | `SolidSyslogTimeQualitySd_Create`, `_Destroy` |
+| `SolidSyslogTimeQualitySd.h` | System setup code using timeQuality SD | `SolidSyslogTimeQualitySd_Create(getTimeQuality)`, `_Destroy(sd)`. Instance struct lives in a library-internal static pool (E11). Pool exhaustion resolves to the shared `SolidSyslogNullSd`. |
 | `SolidSyslogOriginSd.h` | System setup code using origin SD (software, swVersion, enterpriseId, ip) | `SolidSyslogOriginSdConfig` (software, swVersion, enterpriseId, getIpCount, getIpAt — each independently optional via NULL), `SolidSyslogOriginIpCountFunction`, `SolidSyslogOriginIpAtFunction`, `SolidSyslogOriginSd_Create`, `_Destroy` |
 
 Most application code only needs `SolidSyslog.h` — it never sees allocators, senders, buffers, or config structs.

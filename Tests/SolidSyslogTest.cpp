@@ -747,7 +747,7 @@ TEST(SolidSyslog, MetaSdAndTimeQualitySdCoexistInSdArray)
         "[meta sequenceId=\"1\"][timeQuality tzKnown=\"1\" isSynced=\"1\"]",
         SyslogField(lastMessage(), SYSLOG_FIELD_SDATA).c_str()
     );
-    SolidSyslogTimeQualitySd_Destroy();
+    SolidSyslogTimeQualitySd_Destroy(timeQuality);
     SolidSyslogMetaSd_Destroy(metaSd);
     TestAtomicCounter_Destroy(counter);
 }

@@ -28,6 +28,10 @@
 #define SOLIDSYSLOG_ERROR_MSG_METASD_POOL_EXHAUSTED "SolidSyslogMetaSd_Create pool exhausted; returning fallback SD"
 #define SOLIDSYSLOG_ERROR_MSG_METASD_UNKNOWN_DESTROY \
     "SolidSyslogMetaSd_Destroy called with a handle not issued by this pool"
+#define SOLIDSYSLOG_ERROR_MSG_TIMEQUALITYSD_POOL_EXHAUSTED \
+    "SolidSyslogTimeQualitySd_Create pool exhausted; returning fallback SD"
+#define SOLIDSYSLOG_ERROR_MSG_TIMEQUALITYSD_UNKNOWN_DESTROY \
+    "SolidSyslogTimeQualitySd_Destroy called with a handle not issued by this pool"
 #define SOLIDSYSLOG_ERROR_MSG_CIRCULARBUFFER_POOL_EXHAUSTED \
     "SolidSyslogCircularBuffer_Create pool exhausted; returning fallback buffer"
 #define SOLIDSYSLOG_ERROR_MSG_CIRCULARBUFFER_UNKNOWN_DESTROY \

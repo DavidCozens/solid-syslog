@@ -26,6 +26,7 @@ set(SOURCES
     SolidSyslogStream.c
     SolidSyslogStructuredData.c
     SolidSyslogTimeQualitySd.c
+    SolidSyslogTimeQualitySdStatic.c
     SolidSyslogOriginSd.c
     SolidSyslogFile.c
     SolidSyslogBlockStore.c
