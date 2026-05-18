@@ -28,6 +28,7 @@ set(TEST_SOURCES
     SolidSyslogPoolAllocatorTest.cpp
     SolidSyslogNullMutexTest.cpp
     SolidSyslogNullSdTest.cpp
+    SolidSyslogNullSenderTest.cpp
     SolidSyslogNullStoreTest.cpp
     SolidSyslogNullSecurityPolicyTest.cpp
     SolidSyslogCrc16Test.cpp

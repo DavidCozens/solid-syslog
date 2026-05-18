@@ -13,6 +13,7 @@ set(SOURCES
     SolidSyslogMutex.c
     SolidSyslogNullMutex.c
     SolidSyslogSender.c
+    SolidSyslogNullSender.c
     SolidSyslogStore.c
     SolidSyslogNullSd.c
     SolidSyslogNullStore.c

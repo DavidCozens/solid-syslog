@@ -321,6 +321,7 @@ live under `Core/Interface/`; platform-specific helpers (the `SolidSyslogPosix*`
 | `SolidSyslogEndpoint.h` | System setup code that supplies destination host/port (and version on changes) | `SolidSyslogEndpoint`, `SolidSyslogEndpointFunction`, `SolidSyslogEndpointVersionFunction`, `SOLIDSYSLOG_MAX_HOST_SIZE` |
 | `SolidSyslogSender.h` | Any code holding a sender handle | `SolidSyslogSender_Send`, `SolidSyslogSender_Disconnect` |
 | `SolidSyslogSenderDefinition.h` | Sender implementors (extension point) | `SolidSyslogSender` vtable struct (`Send`, `Disconnect`) |
+| `SolidSyslogNullSender.h` | Any code installing a no-op sender slot (Send returns `false`, Disconnect is a no-op) | `SolidSyslogNullSender_Get` |
 | `SolidSyslogTransport.h` | Any code selecting a transport or needing default port constants | `SolidSyslogTransport` enum (`UDP`, `TCP`), `SOLIDSYSLOG_UDP_DEFAULT_PORT`, `SOLIDSYSLOG_TCP_DEFAULT_PORT` |
 | `SolidSyslogResolver.h` | Any code that needs to resolve a destination | `SolidSyslogResolver_Resolve(resolver, transport, host, port, *out)` |
 | `SolidSyslogResolverDefinition.h` | Resolver implementors (extension point) | `SolidSyslogResolver` vtable struct (`Resolve`) |
