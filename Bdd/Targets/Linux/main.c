@@ -55,6 +55,7 @@ static SolidSyslogPosixTcpStreamStorage plainTcpStreamStorage;
 static struct SolidSyslogStream* plainTcpStream;
 static SolidSyslogStreamSenderStorage plainTcpSenderStorage;
 static struct SolidSyslogSender* plainTcpSender;
+static struct SolidSyslogSender* udpSender;
 
 static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
 {
@@ -83,7 +84,7 @@ static struct SolidSyslogSender* CreateSender(const struct BddTargetOptions* opt
     udpConfig.Datagram = SolidSyslogPosixDatagram_Create();
     udpConfig.Endpoint = BddTargetUdpConfig_GetEndpoint;
     udpConfig.EndpointVersion = BddTargetUdpConfig_GetEndpointVersion;
-    struct SolidSyslogSender* udpSender = SolidSyslogUdpSender_Create(&udpConfig);
+    udpSender = SolidSyslogUdpSender_Create(&udpConfig);
 
     plainTcpStream = SolidSyslogPosixTcpStream_Create(&plainTcpStreamStorage);
     static struct SolidSyslogStreamSenderConfig tcpConfig = {0};
@@ -187,7 +188,7 @@ static void DestroySender(void)
     BddTargetTlsSender_Destroy();
     SolidSyslogStreamSender_Destroy(plainTcpSender);
     SolidSyslogPosixTcpStream_Destroy(plainTcpStream);
-    SolidSyslogUdpSender_Destroy();
+    SolidSyslogUdpSender_Destroy(udpSender);
     SolidSyslogPosixDatagram_Destroy();
     SolidSyslogGetAddrInfoResolver_Destroy();
 }

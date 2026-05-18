@@ -76,6 +76,7 @@ static volatile bool shutdownFlag;
 static struct SolidSyslogStream* plainTcpStream;
 static struct SolidSyslogSender* plainTcpSender;
 static struct SolidSyslogDatagram* udpDatagram;
+static struct SolidSyslogSender* udpSender;
 
 /* Block-store backing — created in CreateStore, released in DestroyStore. */
 static struct SolidSyslogFile* storeFile;
@@ -186,7 +187,7 @@ static struct SolidSyslogSender* CreateSender(const struct BddTargetWindowsOptio
     udpConfig.Datagram = udpDatagram;
     udpConfig.Endpoint = GetEndpoint;
     udpConfig.EndpointVersion = GetEndpointVersion;
-    struct SolidSyslogSender* udpSender = SolidSyslogUdpSender_Create(&udpConfig);
+    udpSender = SolidSyslogUdpSender_Create(&udpConfig);
 
     plainTcpStream = SolidSyslogWinsockTcpStream_Create(&tcpStreamStorage);
     static struct SolidSyslogStreamSenderConfig tcpConfig = {0};
@@ -218,7 +219,7 @@ static void DestroySender(void)
     BddTargetTlsSender_Destroy();
     SolidSyslogStreamSender_Destroy(plainTcpSender);
     SolidSyslogWinsockTcpStream_Destroy(plainTcpStream);
-    SolidSyslogUdpSender_Destroy();
+    SolidSyslogUdpSender_Destroy(udpSender);
     SolidSyslogWinsockDatagram_Destroy();
     SolidSyslogWinsockResolver_Destroy();
 }

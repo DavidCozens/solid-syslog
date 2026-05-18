@@ -16,9 +16,9 @@ TEST_GROUP(SolidSyslogNullSender)
 
 // clang-format on
 
-TEST(SolidSyslogNullSender, SendReturnsFalse)
+TEST(SolidSyslogNullSender, SendReturnsTrueToDropOnTheFloor)
 {
-    CHECK_FALSE(SolidSyslogSender_Send(sender, "hello", 5));
+    CHECK_TRUE(SolidSyslogSender_Send(sender, "hello", 5));
 }
 
 TEST(SolidSyslogNullSender, DisconnectDoesNotCrash)

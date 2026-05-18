@@ -250,6 +250,7 @@ static struct SolidSyslogResolver* resolver = NULL;
 static struct SolidSyslogDatagram* datagram = NULL;
 static struct SolidSyslogStream* tcpStream = NULL;
 static struct SolidSyslogSender* tcpSender = NULL;
+static struct SolidSyslogSender* udpSender = NULL;
 static struct SolidSyslogBuffer* buffer = NULL;
 static struct SolidSyslogMutex* bufferMutex = NULL;
 
@@ -674,7 +675,7 @@ static void TeardownAll(void)
     SolidSyslogSwitchingSender_Destroy();
     SolidSyslogStreamSender_Destroy(tcpSender);
     SolidSyslogFreeRtosTcpStream_Destroy(tcpStream);
-    SolidSyslogUdpSender_Destroy();
+    SolidSyslogUdpSender_Destroy(udpSender);
     SolidSyslogFreeRtosDatagram_Destroy(datagram);
     SolidSyslogFreeRtosStaticResolver_Destroy(resolver);
 }
@@ -785,7 +786,7 @@ static void InteractiveTask(void* argument)
         .Endpoint = GetEndpoint,
         .EndpointVersion = GetEndpointVersion,
     };
-    struct SolidSyslogSender* udpSender = SolidSyslogUdpSender_Create(&udpConfig);
+    udpSender = SolidSyslogUdpSender_Create(&udpConfig);
 
     /* Plain TCP path via the new FreeRTOS Plus-TCP stream adapter. Shares the
      * UDP endpoint callbacks because the BDD oracle (syslog-ng) listens on the

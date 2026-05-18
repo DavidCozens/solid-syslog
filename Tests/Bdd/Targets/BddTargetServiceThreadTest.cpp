@@ -78,7 +78,7 @@ TEST_GROUP(BddTargetServiceThread)
     {
         SolidSyslog_Destroy();
         SolidSyslogPosixMessageQueueBuffer_Destroy();
-        SolidSyslogUdpSender_Destroy();
+        SolidSyslogUdpSender_Destroy(sender);
         SolidSyslogPosixDatagram_Destroy();
         SolidSyslogGetAddrInfoResolver_Destroy();
     }

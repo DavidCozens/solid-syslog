@@ -71,4 +71,26 @@
 #error "SOLIDSYSLOG_PASSTHROUGH_BUFFER_POOL_SIZE must be >= 1"
 #endif
 
+/*
+ * Number of SolidSyslogUdpSender instances the library's internal
+ * static pool can simultaneously hold. Each instance carries its
+ * config (resolver/datagram/endpoint pointers), the resolved address
+ * storage, and connection state.
+ *
+ * Default 1 — almost all integrators wire a single UDP sender into
+ * either SolidSyslogConfig directly or as one branch of a
+ * SwitchingSender. Bump via SOLIDSYSLOG_USER_TUNABLES_FILE if more
+ * than one is genuinely needed.
+ *
+ * Floor: 1. Sub-floor values rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_UDP_SENDER_POOL_SIZE
+/* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- macro form required for preprocessor visibility (floor #if) and C array-size const-expr. */
+#define SOLIDSYSLOG_UDP_SENDER_POOL_SIZE 1U
+#endif
+
+#if SOLIDSYSLOG_UDP_SENDER_POOL_SIZE < 1
+#error "SOLIDSYSLOG_UDP_SENDER_POOL_SIZE must be >= 1"
+#endif
+
 #endif /* SOLIDSYSLOG_TUNABLES_DEFAULTS_H */
