@@ -23,7 +23,7 @@ set(TEST_SOURCES
     SolidSyslogMetaSdTest.cpp
     SolidSyslogTimeQualitySdTest.cpp
     SolidSyslogOriginSdTest.cpp
-    SolidSyslogNullBufferTest.cpp
+    SolidSyslogPassthroughBufferTest.cpp
     SolidSyslogCircularBufferTest.cpp
     SolidSyslogPoolAllocatorTest.cpp
     SolidSyslogNullMutexTest.cpp

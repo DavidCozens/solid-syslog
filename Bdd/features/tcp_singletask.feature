@@ -1,6 +1,6 @@
 @tcp @windows_wip
 Feature: TCP message delivery (single-task example)
-  The Linux single-task example (NullBuffer, synchronous send) sends
+  The Linux single-task example (PassthroughBuffer, synchronous send) sends
   messages via TCP transport with RFC 6587 octet-counting framing.
   Linux-only post-S13.18 — Windows TCP coverage now comes from
   tcp_transport.feature via the BDD target. The single-task

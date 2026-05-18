@@ -336,7 +336,7 @@ live under `Core/Interface/`; platform-specific helpers (the `SolidSyslogPosix*`
 | `SolidSyslogSwitchingSender.h` | System setup code composing multiple inner senders | `SolidSyslogSwitchingSenderConfig` (senders, senderCount, selector), `SolidSyslogSwitchingSenderSelector`, `SolidSyslogSwitchingSender_Create`, `_Destroy` |
 | `SolidSyslogBuffer.h` | Library internals consuming a buffer (Service algorithm) | `SolidSyslogBuffer_Write`, `_Read` |
 | `SolidSyslogBufferDefinition.h` | Buffer implementors (extension point) | `SolidSyslogBuffer` vtable struct |
-| `SolidSyslogNullBuffer.h` | System setup code (single-task, no buffering) | `SolidSyslogNullBuffer_Create`, `_Destroy` |
+| `SolidSyslogPassthroughBuffer.h` | System setup code (single-task, no buffering) | `SolidSyslogPassthroughBuffer_Create`, `_Destroy` |
 | `SolidSyslogPosixMessageQueueBuffer.h` | System setup code using POSIX message queue buffer | `SolidSyslogPosixMessageQueueBuffer_Create`, `_Destroy` |
 | `SolidSyslogCircularBuffer.h` | System setup code using an in-memory ring buffer (bare-metal / RTOS / Windows) | `SOLIDSYSLOG_CIRCULAR_BUFFER_HEADER_BYTES`, `SOLIDSYSLOG_CIRCULAR_BUFFER_RING_BYTES(maxMessages)` (friendly: N max-sized messages → ring bytes), `SolidSyslogCircularBuffer_Create(mutex, ring, ringBytes)`, `_Destroy(buffer)` (uint16-length-prefixed records, drop-newest on overflow, no-split wrap, mutex-injected synchronization). Instance struct lives in a library-internal static pool (E11); caller supplies the ring memory only. |
 | `SolidSyslogMutex.h` | Any code holding a mutex handle | `SolidSyslogMutex_Lock`, `_Unlock` |
@@ -353,7 +353,7 @@ live under `Core/Interface/`; platform-specific helpers (the `SolidSyslogPosix*`
 | `SolidSyslogBlockDevice.h` | Library internals consuming a block device (BlockSequence inside BlockStore) and integrator code addressing blocks directly | `SolidSyslogBlockDevice_Acquire`, `_Dispose`, `_Exists`, `_Read`, `_Append`, `_WriteAt`, `_Size` (block-indexed I/O; Acquire makes a block ready for fresh writes, Dispose releases it) |
 | `SolidSyslogBlockDeviceDefinition.h` | BlockDevice implementors (extension point) | `SolidSyslogBlockDevice` vtable struct (`Acquire`, `Dispose`, `Exists`, `Read`, `Append`, `WriteAt`, `Size`) |
 | `SolidSyslogFileBlockDevice.h` | System setup code wiring a file-backed block device | `SolidSyslogFileBlockDeviceStorage`, `SOLIDSYSLOG_FILEBLOCKDEVICE_STORAGE_SIZE`, `SolidSyslogFileBlockDevice_Create(storage, readFile, writeFile, pathPrefix)` (sequence-numbered filenames `<prefix><NN>.log`, two cached file handles), `_Destroy(device)` |
-| `SolidSyslogBlockStore.h` | System setup code using a BlockDevice-backed store | `SolidSyslogBlockStoreStorage`, `SOLIDSYSLOG_BLOCKSTORE_STORAGE_SIZE`, `SolidSyslogBlockStoreConfig` (with `blockDevice`, `storeFullContext`, `getCapacityThreshold`, `onThresholdCrossed`, `thresholdContext`), `SolidSyslogBlockStore_Create(storage, config)`, `_Destroy(store)`, `SolidSyslogDiscardPolicy` (`SolidSyslogDiscardPolicy_Oldest` / `_Newest` / `_Halt`), `SolidSyslogStoreFullCallback(void* context)`, `SolidSyslogStoreThresholdFunction(void* context)` (returns threshold in bytes; 0 disables; queried each Write), `SolidSyslogStoreThresholdCallback(void* context)` (edge-triggered; NullBuffer recursion gotcha — see header) |
+| `SolidSyslogBlockStore.h` | System setup code using a BlockDevice-backed store | `SolidSyslogBlockStoreStorage`, `SOLIDSYSLOG_BLOCKSTORE_STORAGE_SIZE`, `SolidSyslogBlockStoreConfig` (with `blockDevice`, `storeFullContext`, `getCapacityThreshold`, `onThresholdCrossed`, `thresholdContext`), `SolidSyslogBlockStore_Create(storage, config)`, `_Destroy(store)`, `SolidSyslogDiscardPolicy` (`SolidSyslogDiscardPolicy_Oldest` / `_Newest` / `_Halt`), `SolidSyslogStoreFullCallback(void* context)`, `SolidSyslogStoreThresholdFunction(void* context)` (returns threshold in bytes; 0 disables; queried each Write), `SolidSyslogStoreThresholdCallback(void* context)` (edge-triggered; PassthroughBuffer recursion gotcha — see header) |
 | `SolidSyslogSecurityPolicyDefinition.h` | SecurityPolicy implementors (extension point) | `SolidSyslogSecurityPolicy` vtable struct, `SOLIDSYSLOG_MAX_INTEGRITY_SIZE` |
 | `SolidSyslogNullSecurityPolicy.h` | System setup code (no integrity checking) | `SolidSyslogNullSecurityPolicy_Create`, `_Destroy` |
 | `SolidSyslogCrc16Policy.h` | System setup code using CRC-16 integrity | `SolidSyslogCrc16Policy_Create`, `_Destroy` |
@@ -462,8 +462,8 @@ code should follow them; reviewers should call out drift.
   comparison operators.** Plain `&&` between bool-typed operands needs no extra
   parens — readability wins over MISRA pedantry there.
 - **No null-pointer checks where the type's null object exists.** Use
-  `SolidSyslogNullSecurityPolicy`, `SolidSyslogNullStore`, `SolidSyslogNullBuffer`
-  rather than `if (policy != NULL) policy->Compute(...)`.
+  `SolidSyslogNullSecurityPolicy`, `SolidSyslogNullStore` rather than
+  `if (policy != NULL) policy->Compute(...)`.
 
 ### Test code
 

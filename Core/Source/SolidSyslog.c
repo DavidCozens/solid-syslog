@@ -570,9 +570,8 @@ static inline void SolidSyslog_FormatNilvalue(struct SolidSyslogFormatter* f)
  * — its absence is a valid integrator choice (matches SolidSyslogNullStore
  * semantics: drain proceeds, fall-through to direct send).
  *
- * The public SolidSyslogNull* family is for integrator-chosen no-ops with
- * different semantics (e.g. NullBuffer is a direct-send shim); these
- * internal nils are crash-safe defaults only.
+ * The public SolidSyslogNull* family is for integrator-chosen no-ops;
+ * these internal nils are crash-safe defaults only.
  * ============================================================================ */
 
 static bool nilBufferReportArmed = true;

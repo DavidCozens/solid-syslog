@@ -69,11 +69,11 @@ Test progression follows ZOMBIES order.
 - OO-in-C: structs with function pointers (vtable pattern)
 - Dependency injection for transport, buffering, clock, hostname, allocator
 - Buffer abstraction decouples formatting from sending: `SolidSyslog_Log` writes to buffer,
-  `SolidSyslog_Service` reads from buffer and sends. Implementations: NullBuffer (direct send,
+  `SolidSyslog_Service` reads from buffer and sends. Implementations: PassthroughBuffer (direct send,
   single-task), CircularBuffer (portable ring with caller-allocated ring memory and an injected
   `SolidSyslogMutex` — Posix/Windows/Null mutex shipped, integrators can plug their own RTOS
   primitive), PosixMessageQueueBuffer (POSIX message queue, used by the Linux Threaded example)
-- Null object pattern throughout (NullBuffer is the buffer null object)
+- Null object pattern throughout
 - All fields use uniform field object pattern with format function pointer
 - Optional features composed at link time — no conditional compilation
 - C11 static assertions via compatibility shim

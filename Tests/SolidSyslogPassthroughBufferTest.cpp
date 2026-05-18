@@ -6,14 +6,14 @@
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
     // macros
 #include "SolidSyslogBuffer.h"
-#include "SolidSyslogNullBuffer.h"
+#include "SolidSyslogPassthroughBuffer.h"
 #include "SenderFake.h"
 
 static const char* const TEST_MESSAGE = "hello";
 static const size_t TEST_MESSAGE_LEN = 5;
 
 // clang-format off
-TEST_GROUP(SolidSyslogNullBuffer)
+TEST_GROUP(SolidSyslogPassthroughBuffer)
 {
     struct SolidSyslogSender* fakeSender = nullptr;
     struct SolidSyslogBuffer* buffer     = nullptr;
@@ -22,12 +22,12 @@ TEST_GROUP(SolidSyslogNullBuffer)
     {
         fakeSender = SenderFake_Create();
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        buffer = SolidSyslogNullBuffer_Create(fakeSender);
+        buffer = SolidSyslogPassthroughBuffer_Create(fakeSender);
     }
 
     void teardown() override
     {
-        SolidSyslogNullBuffer_Destroy();
+        SolidSyslogPassthroughBuffer_Destroy();
         SenderFake_Destroy(fakeSender);
     }
 
@@ -39,41 +39,41 @@ TEST_GROUP(SolidSyslogNullBuffer)
 
 // clang-format on
 
-TEST(SolidSyslogNullBuffer, CreateDestroyWorksWithoutCrashing)
+TEST(SolidSyslogPassthroughBuffer, CreateDestroyWorksWithoutCrashing)
 {
 }
 
-TEST(SolidSyslogNullBuffer, WriteForwardsBufferToSender)
+TEST(SolidSyslogPassthroughBuffer, WriteForwardsBufferToSender)
 {
     Write();
     STRCMP_EQUAL(TEST_MESSAGE, SenderFake_LastBufferAsString(fakeSender));
 }
 
-TEST(SolidSyslogNullBuffer, WriteForwardsSizeToSender)
+TEST(SolidSyslogPassthroughBuffer, WriteForwardsSizeToSender)
 {
     Write();
     LONGS_EQUAL(TEST_MESSAGE_LEN, SenderFake_LastSize(fakeSender));
 }
 
-TEST(SolidSyslogNullBuffer, WriteResultsInOneSend)
+TEST(SolidSyslogPassthroughBuffer, WriteResultsInOneSend)
 {
     Write();
     CALLED_FAKE_ON(SenderFake_Send, fakeSender, ONCE);
 }
 
-TEST(SolidSyslogNullBuffer, TwoWritesResultInTwoSends)
+TEST(SolidSyslogPassthroughBuffer, TwoWritesResultInTwoSends)
 {
     Write();
     Write();
     CALLED_FAKE_ON(SenderFake_Send, fakeSender, TWICE);
 }
 
-TEST(SolidSyslogNullBuffer, NoWritesResultInNoSends)
+TEST(SolidSyslogPassthroughBuffer, NoWritesResultInNoSends)
 {
     CALLED_FAKE_ON(SenderFake_Send, fakeSender, NEVER);
 }
 
-TEST(SolidSyslogNullBuffer, ReadReturnsNothingToSend)
+TEST(SolidSyslogPassthroughBuffer, ReadReturnsNothingToSend)
 {
     char data[512];
     size_t bytesRead = 0;
@@ -81,7 +81,7 @@ TEST(SolidSyslogNullBuffer, ReadReturnsNothingToSend)
     CHECK_FALSE(sent);
 }
 
-IGNORE_TEST(SolidSyslogNullBuffer, HappyPathOnly)
+IGNORE_TEST(SolidSyslogPassthroughBuffer, HappyPathOnly)
 
 {
     // Error handling not yet implemented — see Epic #31
