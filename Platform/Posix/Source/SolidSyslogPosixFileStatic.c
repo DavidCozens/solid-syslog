@@ -11,6 +11,8 @@
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
 
+struct SolidSyslogFile;
+
 static size_t PosixFile_IndexFromHandle(const struct SolidSyslogFile* base);
 static void PosixFile_CleanupAtIndex(size_t index, void* context);
 

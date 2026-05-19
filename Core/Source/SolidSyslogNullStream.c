@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "SolidSyslogStream.h"
 #include "SolidSyslogStreamDefinition.h"
 
 struct SolidSyslogAddress;

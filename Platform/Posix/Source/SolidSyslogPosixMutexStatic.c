@@ -11,6 +11,8 @@
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
 
+struct SolidSyslogMutex;
+
 static size_t PosixMutex_IndexFromHandle(const struct SolidSyslogMutex* base);
 static void PosixMutex_CleanupAtIndex(size_t index, void* context);
 

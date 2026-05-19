@@ -153,6 +153,7 @@ IGNORE_TEST(SolidSyslogPosixMessageQueueBuffer, HappyPathOnly)
 // clang-format off
 TEST_GROUP(SolidSyslogPosixMessageQueueBufferPool)
 {
+    // cppcheck-suppress constVariable -- assigned in test bodies; cppcheck does not model CppUTest lifecycle
     struct SolidSyslogBuffer* pooled[SOLIDSYSLOG_POSIX_MESSAGE_QUEUE_BUFFER_POOL_SIZE] = {};
     struct SolidSyslogBuffer* overflow                                                 = nullptr;
 
@@ -165,6 +166,7 @@ TEST_GROUP(SolidSyslogPosixMessageQueueBufferPool)
                 SolidSyslogPosixMessageQueueBuffer_Destroy(handle);
             }
         }
+        // cppcheck-suppress knownConditionTrueFalse -- assigned in test bodies; cppcheck does not model CppUTest lifecycle
         if (overflow != nullptr)
         {
             SolidSyslogPosixMessageQueueBuffer_Destroy(overflow);
@@ -173,11 +175,16 @@ TEST_GROUP(SolidSyslogPosixMessageQueueBufferPool)
         ErrorHandlerFake_Uninstall();
     }
 
+    struct SolidSyslogBuffer* MakeBuffer()
+    {
+        return SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
+    }
+
     void FillPool()
     {
         for (auto*& slot : pooled)
         {
-            slot = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
+            slot = MakeBuffer();
         }
     }
 };
@@ -188,7 +195,7 @@ TEST(SolidSyslogPosixMessageQueueBufferPool, FillingPoolThenOverflowReturnsDisti
 {
     FillPool();
 
-    overflow = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
+    overflow = MakeBuffer();
 
     CHECK_IS_FALLBACK(overflow, pooled);
 }
@@ -198,7 +205,7 @@ TEST(SolidSyslogPosixMessageQueueBufferPool, ExhaustedCreateReportsError)
     ErrorHandlerFake_Install(nullptr);
     FillPool();
 
-    overflow = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
+    overflow = MakeBuffer();
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
@@ -208,7 +215,7 @@ TEST(SolidSyslogPosixMessageQueueBufferPool, ExhaustedCreateReportsError)
 TEST(SolidSyslogPosixMessageQueueBufferPool, FallbackReadAndWriteAreNoOps)
 {
     FillPool();
-    overflow = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
+    overflow = MakeBuffer();
 
     SolidSyslogBuffer_Write(overflow, "hello", 5);
 
@@ -222,7 +229,7 @@ TEST(SolidSyslogPosixMessageQueueBufferPool, CreateAcquiresAndReleasesConfigLock
 {
     ConfigLockFake_Install();
 
-    pooled[0] = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
+    pooled[0] = MakeBuffer();
 
     CALLED_FAKE(ConfigLockFake_Lock, ONCE);
     CALLED_FAKE(ConfigLockFake_Unlock, ONCE);
@@ -233,7 +240,7 @@ TEST(SolidSyslogPosixMessageQueueBufferPool, CreateLocksOncePerSlotProbedWhenPoo
     FillPool();
     ConfigLockFake_Install();
 
-    overflow = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
+    overflow = MakeBuffer();
 
     LONGS_EQUAL(SOLIDSYSLOG_POSIX_MESSAGE_QUEUE_BUFFER_POOL_SIZE, ConfigLockFake_LockCallCount());
     LONGS_EQUAL(SOLIDSYSLOG_POSIX_MESSAGE_QUEUE_BUFFER_POOL_SIZE, ConfigLockFake_UnlockCallCount());
@@ -241,7 +248,7 @@ TEST(SolidSyslogPosixMessageQueueBufferPool, CreateLocksOncePerSlotProbedWhenPoo
 
 TEST(SolidSyslogPosixMessageQueueBufferPool, DestroyOfPooledHandleLocksOnce)
 {
-    pooled[0] = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
+    pooled[0] = MakeBuffer();
     ConfigLockFake_Install();
 
     SolidSyslogPosixMessageQueueBuffer_Destroy(pooled[0]);
@@ -276,7 +283,7 @@ TEST(SolidSyslogPosixMessageQueueBufferPool, DestroyOfUnknownHandleReportsWarnin
 
 TEST(SolidSyslogPosixMessageQueueBufferPool, DestroyOfStaleHandleReportsWarning)
 {
-    pooled[0] = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
+    pooled[0] = MakeBuffer();
     SolidSyslogPosixMessageQueueBuffer_Destroy(pooled[0]);
     ErrorHandlerFake_Install(nullptr);
 

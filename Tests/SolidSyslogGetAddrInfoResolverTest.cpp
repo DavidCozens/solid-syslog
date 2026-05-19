@@ -146,6 +146,7 @@ TEST(SolidSyslogGetAddrInfoResolver, FreesAddrInfoOnSuccess)
 // clang-format off
 TEST_GROUP(SolidSyslogGetAddrInfoResolverPool)
 {
+    // cppcheck-suppress constVariable -- assigned in test bodies; cppcheck does not model CppUTest lifecycle
     struct SolidSyslogResolver* pooled[SOLIDSYSLOG_GETADDRINFO_RESOLVER_POOL_SIZE] = {};
     struct SolidSyslogResolver* overflow                                            = nullptr;
 
@@ -158,6 +159,7 @@ TEST_GROUP(SolidSyslogGetAddrInfoResolverPool)
                 SolidSyslogGetAddrInfoResolver_Destroy(handle);
             }
         }
+        // cppcheck-suppress knownConditionTrueFalse -- assigned in test bodies; cppcheck does not model CppUTest lifecycle
         if (overflow != nullptr)
         {
             SolidSyslogGetAddrInfoResolver_Destroy(overflow);

@@ -11,6 +11,8 @@
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
 
+struct SolidSyslogDatagram;
+
 static size_t PosixDatagram_IndexFromHandle(const struct SolidSyslogDatagram* base);
 static void PosixDatagram_CleanupAtIndex(size_t index, void* context);
 

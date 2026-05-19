@@ -274,6 +274,7 @@ TEST(SolidSyslogPosixDatagram, SendToReturnsFailedWhenConnectFails)
 // clang-format off
 TEST_GROUP(SolidSyslogPosixDatagramPool)
 {
+    // cppcheck-suppress constVariable -- assigned in test bodies; cppcheck does not model CppUTest lifecycle
     struct SolidSyslogDatagram* pooled[SOLIDSYSLOG_POSIX_DATAGRAM_POOL_SIZE] = {};
     struct SolidSyslogDatagram* overflow                                     = nullptr;
 
@@ -286,6 +287,7 @@ TEST_GROUP(SolidSyslogPosixDatagramPool)
                 SolidSyslogPosixDatagram_Destroy(handle);
             }
         }
+        // cppcheck-suppress knownConditionTrueFalse -- assigned in test bodies; cppcheck does not model CppUTest lifecycle
         if (overflow != nullptr)
         {
             SolidSyslogPosixDatagram_Destroy(overflow);

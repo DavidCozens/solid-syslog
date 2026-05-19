@@ -26,6 +26,7 @@ static inline struct SolidSyslogPosixMessageQueueBuffer* PosixMessageQueueBuffer
 );
 static inline const char* PosixMessageQueueBuffer_QueueName(struct SolidSyslogPosixMessageQueueBuffer* self);
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- distinct semantic meaning; mirrors the public _Create signature
 void PosixMessageQueueBuffer_Initialise(struct SolidSyslogBuffer* base, size_t maxMessageSize, long maxMessages)
 {
     static const char queueNamePrefix[] = "/solidsyslog_";

@@ -60,6 +60,7 @@ TEST(SolidSyslogPosixMutex, LockUnlockDoesNotCrash)
 // clang-format off
 TEST_GROUP(SolidSyslogPosixMutexPool)
 {
+    // cppcheck-suppress constVariable -- assigned in test bodies; cppcheck does not model CppUTest lifecycle
     struct SolidSyslogMutex* pooled[SOLIDSYSLOG_POSIX_MUTEX_POOL_SIZE] = {};
     struct SolidSyslogMutex* overflow                                  = nullptr;
 
@@ -72,6 +73,7 @@ TEST_GROUP(SolidSyslogPosixMutexPool)
                 SolidSyslogPosixMutex_Destroy(handle);
             }
         }
+        // cppcheck-suppress knownConditionTrueFalse -- assigned in test bodies; cppcheck does not model CppUTest lifecycle
         if (overflow != nullptr)
         {
             SolidSyslogPosixMutex_Destroy(overflow);

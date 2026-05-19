@@ -3,8 +3,11 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "SolidSyslogDatagram.h"
 #include "SolidSyslogDatagramDefinition.h"
 #include "SolidSyslogUdpPayload.h"
+
+struct SolidSyslogAddress;
 
 static bool NullDatagram_Open(struct SolidSyslogDatagram* base);
 static enum SolidSyslogDatagramSendResult NullDatagram_SendTo(

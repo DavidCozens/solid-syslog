@@ -11,16 +11,12 @@
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
 
+struct SolidSyslogBuffer;
+
 /* The shared queue name is derived from the process ID — fine for the
  * default pool size of 1 instance per process. Bumping the tunable
  * above 1 in the same process would race two slots onto the same
  * `/solidsyslog_<pid>` queue; that scenario is outside today's contract. */
-
-struct InitContext
-{
-    size_t MaxMessageSize;
-    long MaxMessages;
-};
 
 static size_t PosixMessageQueueBuffer_IndexFromHandle(const struct SolidSyslogBuffer* base);
 static void PosixMessageQueueBuffer_CleanupAtIndex(size_t index, void* context);

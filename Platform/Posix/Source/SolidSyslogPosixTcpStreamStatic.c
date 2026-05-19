@@ -11,6 +11,8 @@
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
 
+struct SolidSyslogStream;
+
 static size_t PosixTcpStream_IndexFromHandle(const struct SolidSyslogStream* base);
 static void PosixTcpStream_CleanupAtIndex(size_t index, void* context);
 

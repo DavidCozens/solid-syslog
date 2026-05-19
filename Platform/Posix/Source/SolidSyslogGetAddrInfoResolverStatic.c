@@ -11,6 +11,8 @@
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
 
+struct SolidSyslogResolver;
+
 static size_t GetAddrInfoResolver_IndexFromHandle(const struct SolidSyslogResolver* base);
 static void GetAddrInfoResolver_CleanupAtIndex(size_t index, void* context);
 
