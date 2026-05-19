@@ -1,6 +1,13 @@
 #include "BlockSequencePrivate.h"
 
 #include "SolidSyslogBlockDevice.h"
+#include "SolidSyslogBlockStore.h"
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+struct SolidSyslogBlockDevice;
 
 enum
 {
