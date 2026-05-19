@@ -354,6 +354,7 @@ live under `Core/Interface/`; platform-specific helpers (the `SolidSyslogPosix*`
 | `SolidSyslogNullStore.h` | System setup code (no store-and-forward) | `SolidSyslogNullStore_Get` |
 | `SolidSyslogFileDefinition.h` | File implementors (extension point) | `SolidSyslogFile` vtable struct |
 | `SolidSyslogFile.h` | Any code using the file abstraction | `SolidSyslogFile_Open`, `_Close`, `_IsOpen`, `_Read`, `_Write`, `_SeekTo`, `_Size`, `_Truncate` |
+| `SolidSyslogNullFile.h` | Any code installing a no-op file slot (Open/IsOpen/Read/Exists return `false`, Write/Delete return `true` so callers' success paths are not tripped, SeekTo/Truncate/Close are no-ops, Size returns `0`) | `SolidSyslogNullFile_Get` |
 | `SolidSyslogBlockDevice.h` | Library internals consuming a block device (BlockSequence inside BlockStore) and integrator code addressing blocks directly | `SolidSyslogBlockDevice_Acquire`, `_Dispose`, `_Exists`, `_Read`, `_Append`, `_WriteAt`, `_Size` (block-indexed I/O; Acquire makes a block ready for fresh writes, Dispose releases it) |
 | `SolidSyslogNullBlockDevice.h` | Any code installing a no-op block device slot (every method returns `false` / `0` — disk doesn't exist) | `SolidSyslogNullBlockDevice_Get` |
 | `SolidSyslogBlockDeviceDefinition.h` | BlockDevice implementors (extension point) | `SolidSyslogBlockDevice` vtable struct (`Acquire`, `Dispose`, `Exists`, `Read`, `Append`, `WriteAt`, `Size`) |
