@@ -5,26 +5,21 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <sys/socket.h>
-#include <unistd.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 #include "SolidSyslogAddressInternal.h"
-#include "SolidSyslogDatagramDefinition.h"
-#include "SolidSyslogUdpPayload.h"
 #include "SolidSyslogDatagram.h"
+#include "SolidSyslogDatagramDefinition.h"
+#include "SolidSyslogNullDatagram.h"
+#include "SolidSyslogPosixDatagramPrivate.h"
+#include "SolidSyslogUdpPayload.h"
 
 struct SolidSyslogAddress;
 
 enum
 {
     INVALID_FD = -1
-};
-
-struct SolidSyslogPosixDatagram
-{
-    struct SolidSyslogDatagram Base;
-    int Fd;
-    bool Connected;
 };
 
 static bool PosixDatagram_Open(struct SolidSyslogDatagram* base);
@@ -44,23 +39,29 @@ static inline bool PosixDatagram_ConnectIfNeeded(
 );
 static inline bool PosixDatagram_IsFileDescriptorValid(int fd);
 
-static struct SolidSyslogPosixDatagram instance = {.Fd = INVALID_FD};
-
-struct SolidSyslogDatagram* SolidSyslogPosixDatagram_Create(void)
+void PosixDatagram_Initialise(struct SolidSyslogDatagram* base)
 {
-    instance.Base.Open = PosixDatagram_Open;
-    instance.Base.SendTo = PosixDatagram_SendTo;
-    instance.Base.MaxPayload = PosixDatagram_MaxPayload;
-    instance.Base.Close = PosixDatagram_Close;
-    return &instance.Base;
+    struct SolidSyslogPosixDatagram* self = PosixDatagram_SelfFromBase(base);
+    self->Base.Open = PosixDatagram_Open;
+    self->Base.SendTo = PosixDatagram_SendTo;
+    self->Base.MaxPayload = PosixDatagram_MaxPayload;
+    self->Base.Close = PosixDatagram_Close;
+    self->Fd = INVALID_FD;
+    self->Connected = false;
 }
 
-void SolidSyslogPosixDatagram_Destroy(void)
+void PosixDatagram_Cleanup(struct SolidSyslogDatagram* base)
 {
-    instance.Base.Open = NULL;
-    instance.Base.SendTo = NULL;
-    instance.Base.MaxPayload = NULL;
-    instance.Base.Close = NULL;
+    struct SolidSyslogPosixDatagram* self = PosixDatagram_SelfFromBase(base);
+    if (PosixDatagram_IsFileDescriptorValid(self->Fd))
+    {
+        close(self->Fd);
+        self->Fd = INVALID_FD;
+        self->Connected = false;
+    }
+    /* Overwrite the abstract base with the shared NullDatagram vtable so
+     * use-after-destroy is a safe no-op rather than a NULL-fn-pointer crash. */
+    *base = *SolidSyslogNullDatagram_Get();
 }
 
 static bool PosixDatagram_Open(struct SolidSyslogDatagram* base)

@@ -125,9 +125,9 @@ TEST_BASE(UdpSenderTestBase)
         config   = {resolver, datagram, TestEndpoint, TestEndpointVersion};
     }
 
-    static void teardownFakesWithPosixDatagram()
+    void teardownFakesWithPosixDatagram() const
     {
-        SolidSyslogPosixDatagram_Destroy();
+        SolidSyslogPosixDatagram_Destroy(datagram);
         SolidSyslogGetAddrInfoResolver_Destroy();
     }
 

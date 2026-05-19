@@ -49,11 +49,12 @@ static uint32_t BddTargetEndpointVersion() // NOLINT(modernize-use-trailing-retu
 // clang-format off
 TEST_GROUP(BddTargetServiceThread)
 {
-    struct SolidSyslogSender* sender = nullptr;
-    struct SolidSyslogBuffer* buffer = nullptr;
-    struct SolidSyslogStore*  store  = nullptr;
+    struct SolidSyslogSender*   sender   = nullptr;
+    struct SolidSyslogBuffer*   buffer   = nullptr;
+    struct SolidSyslogStore*    store    = nullptr;
+    struct SolidSyslogDatagram* datagram = nullptr;
     // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
-    volatile bool             shutdown;
+    volatile bool               shutdown;
 
     void setup() override
     {
@@ -65,7 +66,8 @@ TEST_GROUP(BddTargetServiceThread)
         lastSleepMs       = 0;
         sleepShutdownFlag = nullptr;
 
-        SolidSyslogUdpSenderConfig udpConfig = {SolidSyslogGetAddrInfoResolver_Create(), SolidSyslogPosixDatagram_Create(), BddTargetEndpoint, BddTargetEndpointVersion};
+        datagram = SolidSyslogPosixDatagram_Create();
+        SolidSyslogUdpSenderConfig udpConfig = {SolidSyslogGetAddrInfoResolver_Create(), datagram, BddTargetEndpoint, BddTargetEndpointVersion};
         sender = SolidSyslogUdpSender_Create(&udpConfig);
         buffer = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
         store  = SolidSyslogNullStore_Get();
@@ -79,7 +81,7 @@ TEST_GROUP(BddTargetServiceThread)
         SolidSyslog_Destroy();
         SolidSyslogPosixMessageQueueBuffer_Destroy();
         SolidSyslogUdpSender_Destroy(sender);
-        SolidSyslogPosixDatagram_Destroy();
+        SolidSyslogPosixDatagram_Destroy(datagram);
         SolidSyslogGetAddrInfoResolver_Destroy();
     }
 
