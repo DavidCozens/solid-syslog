@@ -21,7 +21,7 @@ TEST_GROUP(SolidSyslogNullDatagram)
 
 TEST(SolidSyslogNullDatagram, SendToReturnsSentToDropOnTheFloor)
 {
-    CHECK_EQUAL(SOLIDSYSLOG_DATAGRAM_SEND_RESULT_SENT, SolidSyslogDatagram_SendTo(datagram, "x", 1, nullptr));
+    LONGS_EQUAL(SOLIDSYSLOG_DATAGRAM_SEND_RESULT_SENT, SolidSyslogDatagram_SendTo(datagram, "x", 1, nullptr));
 }
 
 TEST(SolidSyslogNullDatagram, OpenReturnsTrue)
@@ -31,7 +31,7 @@ TEST(SolidSyslogNullDatagram, OpenReturnsTrue)
 
 TEST(SolidSyslogNullDatagram, MaxPayloadReturnsIpv6SafeDefault)
 {
-    CHECK_EQUAL((size_t) SOLIDSYSLOG_UDP_IPV6_SAFE_PAYLOAD, SolidSyslogDatagram_MaxPayload(datagram));
+    UNSIGNED_LONGS_EQUAL((size_t) SOLIDSYSLOG_UDP_IPV6_SAFE_PAYLOAD, SolidSyslogDatagram_MaxPayload(datagram));
 }
 
 TEST(SolidSyslogNullDatagram, CloseDoesNotCrash)

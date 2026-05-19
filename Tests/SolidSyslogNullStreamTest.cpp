@@ -29,7 +29,7 @@ TEST(SolidSyslogNullStream, OpenReturnsTrue)
 TEST(SolidSyslogNullStream, ReadReturnsZeroForWouldBlock)
 {
     char buffer[1] = {0};
-    CHECK_EQUAL(0, SolidSyslogStream_Read(stream, buffer, sizeof(buffer)));
+    LONGS_EQUAL(0, SolidSyslogStream_Read(stream, buffer, sizeof(buffer)));
 }
 
 TEST(SolidSyslogNullStream, CloseDoesNotCrash)

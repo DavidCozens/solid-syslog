@@ -21,7 +21,12 @@ struct SolidSyslogPosixMessageQueueBuffer
     size_t MaxMessageSize;
 };
 
-void PosixMessageQueueBuffer_Initialise(struct SolidSyslogBuffer* base, size_t maxMessageSize, long maxMessages);
+void PosixMessageQueueBuffer_Initialise(
+    struct SolidSyslogBuffer* base,
+    size_t maxMessageSize,
+    long maxMessages,
+    size_t slotIndex
+);
 void PosixMessageQueueBuffer_Cleanup(struct SolidSyslogBuffer* base);
 
 #endif /* SOLIDSYSLOGPOSIXMESSAGEQUEUEBUFFERPRIVATE_H */

@@ -4,6 +4,7 @@
 #include <mqueue.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <sys/types.h>
 
 #include "SolidSyslogBufferDefinition.h"
@@ -26,17 +27,28 @@ static inline struct SolidSyslogPosixMessageQueueBuffer* PosixMessageQueueBuffer
 );
 static inline const char* PosixMessageQueueBuffer_QueueName(struct SolidSyslogPosixMessageQueueBuffer* self);
 
-// NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- distinct semantic meaning; mirrors the public _Create signature
-void PosixMessageQueueBuffer_Initialise(struct SolidSyslogBuffer* base, size_t maxMessageSize, long maxMessages)
+// NOLINTBEGIN(bugprone-easily-swappable-parameters) -- distinct semantic meaning; mirrors the public _Create signature plus a per-slot discriminator
+void PosixMessageQueueBuffer_Initialise(
+    struct SolidSyslogBuffer* base,
+    size_t maxMessageSize,
+    long maxMessages,
+    size_t slotIndex
+)
+// NOLINTEND(bugprone-easily-swappable-parameters)
 {
     static const char queueNamePrefix[] = "/solidsyslog_";
 
     struct SolidSyslogPosixMessageQueueBuffer* self = PosixMessageQueueBuffer_SelfFromBase(base);
 
+    /* Queue name: /solidsyslog_<pid>_<slotIndex>. The pid keeps the name
+     * unique per process; the slot index keeps multiple in-process pool
+     * entries from aliasing onto the same kernel queue object. */
     struct SolidSyslogFormatter* name =
         SolidSyslogFormatter_Create(self->NameStorage, POSIX_MESSAGE_QUEUE_BUFFER_MAX_NAME_SIZE);
     SolidSyslogFormatter_BoundedString(name, queueNamePrefix, sizeof(queueNamePrefix) - 1U);
     SolidSyslogPosixProcessId_Get(name);
+    SolidSyslogFormatter_AsciiCharacter(name, '_');
+    SolidSyslogFormatter_Uint32(name, (uint32_t) slotIndex);
 
     struct mq_attr attr = {0};
     attr.mq_maxmsg = maxMessages;

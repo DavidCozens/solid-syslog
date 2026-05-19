@@ -15,15 +15,28 @@ static inline struct SolidSyslogPosixMutex* PosixMutex_SelfFromBase(struct Solid
 void PosixMutex_Initialise(struct SolidSyslogMutex* base)
 {
     struct SolidSyslogPosixMutex* self = PosixMutex_SelfFromBase(base);
-    self->Base.Lock = PosixMutex_Lock;
-    self->Base.Unlock = PosixMutex_Unlock;
-    pthread_mutex_init(&self->Mutex, NULL);
+    if (pthread_mutex_init(&self->Mutex, NULL) == 0)
+    {
+        self->Base.Lock = PosixMutex_Lock;
+        self->Base.Unlock = PosixMutex_Unlock;
+    }
+    else
+    {
+        /* pthread_mutex_init failed (ENOMEM, EAGAIN). Install the shared
+         * NullMutex vtable so Lock/Unlock are safe no-ops; Cleanup will
+         * see the marker and skip pthread_mutex_destroy on the
+         * uninitialised native handle. */
+        *base = *SolidSyslogNullMutex_Get();
+    }
 }
 
 void PosixMutex_Cleanup(struct SolidSyslogMutex* base)
 {
     struct SolidSyslogPosixMutex* self = PosixMutex_SelfFromBase(base);
-    pthread_mutex_destroy(&self->Mutex);
+    if (self->Base.Lock == PosixMutex_Lock)
+    {
+        pthread_mutex_destroy(&self->Mutex);
+    }
     /* Overwrite the abstract base with the shared NullMutex vtable so
      * use-after-destroy is a safe no-op rather than a NULL-fn-pointer crash. */
     *base = *SolidSyslogNullMutex_Get();

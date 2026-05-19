@@ -13,10 +13,10 @@
 
 struct SolidSyslogBuffer;
 
-/* The shared queue name is derived from the process ID — fine for the
- * default pool size of 1 instance per process. Bumping the tunable
- * above 1 in the same process would race two slots onto the same
- * `/solidsyslog_<pid>` queue; that scenario is outside today's contract. */
+/* Each pool slot's queue name is `/solidsyslog_<pid>_<slotIndex>`. The
+ * pid keeps the name unique per process; the slot index keeps multiple
+ * in-process pool entries from aliasing onto the same kernel queue
+ * object when the pool tunable is bumped above 1. */
 
 static size_t PosixMessageQueueBuffer_IndexFromHandle(const struct SolidSyslogBuffer* base);
 static void PosixMessageQueueBuffer_CleanupAtIndex(size_t index, void* context);
@@ -36,7 +36,12 @@ struct SolidSyslogBuffer* SolidSyslogPosixMessageQueueBuffer_Create(size_t maxMe
     struct SolidSyslogBuffer* handle = SolidSyslogNullBuffer_Get();
     if (SolidSyslogPoolAllocator_IndexIsValid(&PosixMessageQueueBuffer_Allocator, index))
     {
-        PosixMessageQueueBuffer_Initialise(&PosixMessageQueueBuffer_Pool[index].Base, maxMessageSize, maxMessages);
+        PosixMessageQueueBuffer_Initialise(
+            &PosixMessageQueueBuffer_Pool[index].Base,
+            maxMessageSize,
+            maxMessages,
+            index
+        );
         handle = &PosixMessageQueueBuffer_Pool[index].Base;
     }
     else

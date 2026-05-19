@@ -49,7 +49,7 @@ TEST(SolidSyslogNullFile, SeekToDoesNotCrash)
 
 TEST(SolidSyslogNullFile, SizeReturnsZero)
 {
-    CHECK_EQUAL(0U, SolidSyslogFile_Size(file));
+    UNSIGNED_LONGS_EQUAL(0U, SolidSyslogFile_Size(file));
 }
 
 TEST(SolidSyslogNullFile, TruncateDoesNotCrash)
