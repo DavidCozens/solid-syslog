@@ -325,6 +325,7 @@ live under `Core/Interface/`; platform-specific helpers (the `SolidSyslogPosix*`
 | `SolidSyslogTransport.h` | Any code selecting a transport or needing default port constants | `SolidSyslogTransport` enum (`UDP`, `TCP`), `SOLIDSYSLOG_UDP_DEFAULT_PORT`, `SOLIDSYSLOG_TCP_DEFAULT_PORT` |
 | `SolidSyslogResolver.h` | Any code that needs to resolve a destination | `SolidSyslogResolver_Resolve(resolver, transport, host, port, *out)` |
 | `SolidSyslogResolverDefinition.h` | Resolver implementors (extension point) | `SolidSyslogResolver` vtable struct (`Resolve`) |
+| `SolidSyslogNullResolver.h` | Any code installing a no-op resolver slot (Resolve returns `false` so the caller's unresolved-host error path runs naturally) | `SolidSyslogNullResolver_Get` |
 | `SolidSyslogFreeRtosStaticResolver.h` | System setup code on FreeRTOS targets pinned to a hardcoded IPv4 destination (no DNS) | `SolidSyslogFreeRtosStaticResolverStorage`, `SOLIDSYSLOG_FREERTOSSTATICRESOLVER_SIZE`, `SolidSyslogFreeRtosStaticResolver_Create(storage, ipv4Octets)`, `_Destroy(resolver)` (ignores host and transport at Resolve time; port is taken from each call) |
 | `SolidSyslogDatagram.h` | Sender implementors using datagram transport | `SolidSyslogDatagram_Open`, `_SendTo`, `_Close` |
 | `SolidSyslogDatagramDefinition.h` | Datagram implementors (extension point) | `SolidSyslogDatagram` vtable struct (`Open`, `SendTo`, `Close`) |

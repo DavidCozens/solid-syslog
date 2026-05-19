@@ -58,6 +58,7 @@ endif()
 if(SOLIDSYSLOG_POSIX OR SOLIDSYSLOG_WINSOCK OR DEFINED ENV{FREERTOS_KERNEL_PATH})
     list(APPEND SOURCES
         SolidSyslogResolver.c
+        SolidSyslogNullResolver.c
         SolidSyslogDatagram.c
         SolidSyslogNullDatagram.c
         SolidSyslogUdpSender.c

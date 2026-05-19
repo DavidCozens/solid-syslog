@@ -30,6 +30,7 @@ set(TEST_SOURCES
     SolidSyslogNullBufferTest.cpp
     SolidSyslogNullDatagramTest.cpp
     SolidSyslogNullFileTest.cpp
+    SolidSyslogNullResolverTest.cpp
     SolidSyslogNullStreamTest.cpp
     SolidSyslogNullMutexTest.cpp
     SolidSyslogNullSdTest.cpp
