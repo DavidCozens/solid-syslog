@@ -6,6 +6,7 @@
 #include "SolidSyslogBufferDefinition.h"
 #include "SolidSyslogError.h"
 #include "SolidSyslogErrorMessages.h"
+#include "SolidSyslogNullBuffer.h"
 #include "SolidSyslogPassthroughBufferPrivate.h"
 #include "SolidSyslogPoolAllocator.h"
 #include "SolidSyslogPrival.h"
@@ -13,14 +14,11 @@
 
 struct SolidSyslogSender;
 
-static bool Fallback_Read(struct SolidSyslogBuffer* base, void* data, size_t maxSize, size_t* bytesRead);
-static void Fallback_Write(struct SolidSyslogBuffer* base, const void* data, size_t size);
 static size_t PassthroughBuffer_IndexFromHandle(const struct SolidSyslogBuffer* base);
 static void PassthroughBuffer_CleanupAtIndex(size_t index, void* context);
 
 static bool PassthroughBuffer_InUse[SOLIDSYSLOG_PASSTHROUGH_BUFFER_POOL_SIZE];
 static struct SolidSyslogPassthroughBuffer PassthroughBuffer_Pool[SOLIDSYSLOG_PASSTHROUGH_BUFFER_POOL_SIZE];
-struct SolidSyslogBuffer PassthroughBuffer_Fallback = {Fallback_Write, Fallback_Read};
 static struct SolidSyslogPoolAllocator PassthroughBuffer_Allocator = {
     PassthroughBuffer_InUse,
     SOLIDSYSLOG_PASSTHROUGH_BUFFER_POOL_SIZE
@@ -29,7 +27,7 @@ static struct SolidSyslogPoolAllocator PassthroughBuffer_Allocator = {
 struct SolidSyslogBuffer* SolidSyslogPassthroughBuffer_Create(struct SolidSyslogSender* sender)
 {
     size_t index = SolidSyslogPoolAllocator_AcquireFirstFree(&PassthroughBuffer_Allocator);
-    struct SolidSyslogBuffer* handle = &PassthroughBuffer_Fallback;
+    struct SolidSyslogBuffer* handle = SolidSyslogNullBuffer_Get();
     if (SolidSyslogPoolAllocator_IndexIsValid(&PassthroughBuffer_Allocator, index))
     {
         PassthroughBuffer_Initialise(&PassthroughBuffer_Pool[index].Base, sender);
@@ -76,20 +74,4 @@ static void PassthroughBuffer_CleanupAtIndex(size_t index, void* context)
 {
     (void) context;
     PassthroughBuffer_Cleanup(&PassthroughBuffer_Pool[index].Base);
-}
-
-static bool Fallback_Read(struct SolidSyslogBuffer* base, void* data, size_t maxSize, size_t* bytesRead)
-{
-    (void) base;
-    (void) data;
-    (void) maxSize;
-    *bytesRead = 0;
-    return false;
-}
-
-static void Fallback_Write(struct SolidSyslogBuffer* base, const void* data, size_t size)
-{
-    (void) base;
-    (void) data;
-    (void) size;
 }

@@ -24,9 +24,8 @@ misra-c2012-11.2:Platform/Windows/Source/SolidSyslogAddressInternal.h:23
 misra-c2012-11.3:Core/Interface/SolidSyslogFormatter.h:30
 misra-c2012-11.3:Core/Source/SolidSyslogBlockStore.c:82
 misra-c2012-11.3:Core/Source/SolidSyslogBlockStore.c:165
-misra-c2012-11.3:Core/Source/SolidSyslogCircularBuffer.c:86
-misra-c2012-11.3:Core/Source/SolidSyslogFileBlockDevice.c:118
-misra-c2012-11.3:Core/Source/SolidSyslogFileBlockDevice.c:146
+misra-c2012-11.3:Core/Source/SolidSyslogCircularBuffer.c:87
+misra-c2012-11.3:Core/Source/SolidSyslogFileBlockDevice.c:102
 misra-c2012-11.3:Core/Source/SolidSyslogFormatter.c:93
 misra-c2012-11.3:Core/Source/SolidSyslogMetaSd.c:83
 misra-c2012-11.3:Core/Source/SolidSyslogPassthroughBuffer.c:54
@@ -95,14 +94,14 @@ misra-c2012-5.7:Core/Interface/SolidSyslogTransport.h:5
 misra-c2012-5.7:Core/Interface/SolidSyslogUdpPayload.h:15
 misra-c2012-5.7:Core/Source/BlockSequence.c:6
 misra-c2012-5.7:Core/Source/BlockSequence.c:92
-misra-c2012-5.7:Core/Source/SolidSyslogCircularBuffer.c:14
+misra-c2012-5.7:Core/Source/SolidSyslogCircularBuffer.c:15
 misra-c2012-5.7:Core/Source/RecordStore.c:9
 misra-c2012-5.7:Core/Source/RecordStore.h:14
 misra-c2012-5.7:Core/Source/SolidSyslog.c:26
 misra-c2012-5.7:Core/Source/SolidSyslogCrc16.c:12
 misra-c2012-5.7:Core/Source/SolidSyslogCrc16Policy.c:10
-misra-c2012-5.7:Core/Source/SolidSyslogFileBlockDevice.c:14
-misra-c2012-5.7:Core/Source/SolidSyslogFileBlockDevice.c:21
+misra-c2012-5.7:Core/Source/SolidSyslogFileBlockDevice.c:16
+misra-c2012-5.7:Core/Source/SolidSyslogFileBlockDevice.c:23
 misra-c2012-5.7:Core/Source/SolidSyslogOriginSd.c:6
 misra-c2012-5.7:Core/Source/SolidSyslogUdpPayload.c:5
 misra-c2012-5.7:Core/Interface/SolidSyslogAtomicCounter.h:11
@@ -185,7 +184,7 @@ misra-c2012-2.4:Core/Interface/SolidSyslogSecurityPolicyDefinition.h:13
 misra-c2012-2.4:Core/Interface/SolidSyslogTransport.h:5
 misra-c2012-2.4:Core/Source/BlockSequence.c:6
 misra-c2012-2.4:Core/Source/BlockSequence.c:92
-misra-c2012-2.4:Core/Source/SolidSyslogCircularBuffer.c:14
+misra-c2012-2.4:Core/Source/SolidSyslogCircularBuffer.c:15
 misra-c2012-2.4:Core/Source/SolidSyslogStreamSender.c:19
 
 # D.011 — Rule 20.10: `#` stringification in _Static_assert polyfill

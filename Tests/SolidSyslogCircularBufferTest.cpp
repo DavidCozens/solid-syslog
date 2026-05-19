@@ -108,12 +108,11 @@ TEST(SolidSyslogCircularBuffer, CreateDestroyDoesNotCrash)
 {
 }
 
-TEST(SolidSyslogCircularBuffer, UseAfterDestroyIsCrashSafeViaFallbackVtable)
+TEST(SolidSyslogCircularBuffer, UseAfterDestroyIsCrashSafeViaNullBufferVtable)
 {
-    /* After Destroy the slot's abstract-base vtable is the class-private Fallback's,
-     * so Write/Read through the stale handle is a safe no-op rather than a NULL-fn-
-     * pointer crash. Fallback.Write swallows; Fallback.Read returns false with
-     * bytesRead=0. */
+    /* After Destroy the slot's abstract-base vtable is the shared NullBuffer's, so
+     * Write/Read through the stale handle is a safe no-op rather than a NULL-fn-pointer
+     * crash. NullBuffer.Write swallows; NullBuffer.Read returns false with bytesRead=0. */
     SolidSyslogCircularBuffer_Destroy(buffer);
 
     Write("x");

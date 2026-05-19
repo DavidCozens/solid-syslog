@@ -134,6 +134,26 @@
 #endif
 
 /*
+ * Number of SolidSyslogFileBlockDevice instances the library's internal
+ * static pool can simultaneously hold. Each instance carries the cached
+ * open-file handle plus the path-prefix pointer.
+ *
+ * Default 1 — almost all integrators wire a single FileBlockDevice as
+ * the backing store for one BlockStore. Bump via
+ * SOLIDSYSLOG_USER_TUNABLES_FILE if more than one is genuinely needed.
+ *
+ * Floor: 1. Sub-floor values rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_FILE_BLOCK_DEVICE_POOL_SIZE
+/* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- macro form required for preprocessor visibility (floor #if) and C array-size const-expr. */
+#define SOLIDSYSLOG_FILE_BLOCK_DEVICE_POOL_SIZE 1U
+#endif
+
+#if SOLIDSYSLOG_FILE_BLOCK_DEVICE_POOL_SIZE < 1
+#error "SOLIDSYSLOG_FILE_BLOCK_DEVICE_POOL_SIZE must be >= 1"
+#endif
+
+/*
  * Number of SolidSyslogMetaSd instances the library's internal
  * static pool can simultaneously hold. Default 1 — meta SD is typically
  * wired into SolidSyslogConfig.Sd[] once per process.

@@ -160,8 +160,7 @@ static struct SolidSyslogStore* CreateStore(const struct BddTargetOptions* optio
         static SolidSyslogPosixFileStorage fileStorage;
         storeFile = SolidSyslogPosixFile_Create(&fileStorage);
 
-        static SolidSyslogFileBlockDeviceStorage blockDeviceStorage;
-        storeBlockDevice = SolidSyslogFileBlockDevice_Create(&blockDeviceStorage, storeFile, STORE_PATH_PREFIX);
+        storeBlockDevice = SolidSyslogFileBlockDevice_Create(storeFile, STORE_PATH_PREFIX);
 
         static size_t capacityThreshold;
         capacityThreshold = options->CapacityThreshold;

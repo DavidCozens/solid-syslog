@@ -41,7 +41,6 @@ TEST_GROUP(SolidSyslogBlockStorePosix)
 
     SolidSyslogPosixFileStorage fileStorage = {};
     struct SolidSyslogFile* file = nullptr;
-    SolidSyslogFileBlockDeviceStorage deviceStorage = {};
     struct SolidSyslogBlockDevice* device = nullptr;
     struct SolidSyslogStore* store = nullptr;
     char maxMsg[SOLIDSYSLOG_MAX_MESSAGE_SIZE] = {};
@@ -50,7 +49,7 @@ TEST_GROUP(SolidSyslogBlockStorePosix)
     {
         CleanStoreFiles();
         file   = SolidSyslogPosixFile_Create(&fileStorage);
-        device = SolidSyslogFileBlockDevice_Create(&deviceStorage, file, TEST_PATH_PREFIX);
+        device = SolidSyslogFileBlockDevice_Create(file, TEST_PATH_PREFIX);
         std::memset(maxMsg, 'A', sizeof(maxMsg));
     }
 
