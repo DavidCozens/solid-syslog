@@ -9,6 +9,7 @@
 #include "SolidSyslogResolver.h"
 #include "SolidSyslogSenderDefinition.h"
 #include "SolidSyslogStream.h"
+#include "SolidSyslogStreamSender.h"
 #include "SolidSyslogStreamSenderPrivate.h"
 #include "SolidSyslogTransport.h"
 

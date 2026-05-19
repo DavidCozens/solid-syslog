@@ -30,7 +30,7 @@ Three commits on the branch:
 
 ### Decisions
 
-- **The user-after-destroy crash-safety gap was caught after commit 1
+- **The use-after-destroy crash-safety gap was caught after commit 1
   landed.** David's question: "I think we have been overwriting self
   with a null-object so crash safe if used after destroy" — surfaced
   that my StreamSender Cleanup (and every S11.04-migrated class on
@@ -117,6 +117,41 @@ Three commits on the branch:
   `SOLIDSYSLOG_STREAM_SENDER_POOL_SIZE=3` and
   `SOLIDSYSLOG_FILE_BLOCK_DEVICE_POOL_SIZE=3` via the
   `SOLIDSYSLOG_USER_TUNABLES_FILE` override mechanism.
+
+- **`SOLIDSYSLOG_STREAM_SENDER_POOL_SIZE` default bumped to 2.**
+  CI on the open PR surfaced 4+4 BDD scenarios (Linux + Windows
+  TLS/mTLS) failing with "received 0 of 1 messages". Root cause: the
+  Linux and Windows BDD targets each wire two StreamSenders behind a
+  SwitchingSender — plain TCP for the `@tcp` scenarios, TLS for the
+  `@tls`/`@mtls` scenarios. With pool=1 the second Create returned the
+  shared NullSender and silently dropped on Send. The previous tunable
+  note ("almost all integrators wire a single stream-framed sender …
+  as one branch of a SwitchingSender") was too optimistic; a
+  TCP-with-TLS-fallback wiring is a realistic shape, and the cost of
+  one extra slot (~64B/64-bit) is trivial against the silent-drop
+  failure mode. Note kept rewritten to reflect this.
+
+- **IWYU hygiene on the new Static.c / `Get()` files.** CI flagged
+  five direct/transitive include mismatches introduced by Part A: two
+  `Static.c` files were pulling in `SolidSyslogBufferDefinition.h`
+  when only the pointer was used (Definition arrives transitively
+  via `…Private.h`); `FileBlockDevice.c` carried a stale
+  `SolidSyslogMacros.h` and was missing `<stdint.h>` for a
+  `(uint8_t)` cast; `StreamSender.c` was using
+  `SolidSyslogStreamSenderConfig` without a direct include of its
+  public header; `NullBufferTest.cpp` used `size_t` without
+  `<stddef.h>`. All fixed; iwyu now clean.
+
+- **CodeRabbit nits absorbed.** Two doc fixes (CLAUDE.md BrE
+  consistency on `synchronise`; DEVLOG typo `user-after-destroy` →
+  `use-after-destroy`). Two production-code suggestions to silence
+  the `UNKNOWN_DESTROY` warning when the caller passes the
+  Create-time null-object fallback back through `_Destroy` were
+  declined — the warning is correct signal: a bad-setup `Create`
+  emits ERR at detection, and a Destroy-time warning on the same bad
+  setup makes the misuse *more* discoverable, not less. Suppressing
+  it would hide a real signal in cases where the integrator destroys
+  something they didn't actually own.
 
 ### Deferred to part B (next session)
 

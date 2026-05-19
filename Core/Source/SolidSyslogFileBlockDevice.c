@@ -2,12 +2,12 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include "SolidSyslogBlockDeviceDefinition.h"
 #include "SolidSyslogFile.h"
 #include "SolidSyslogFileBlockDevicePrivate.h"
 #include "SolidSyslogFormatter.h"
-#include "SolidSyslogMacros.h"
 #include "SolidSyslogNullBlockDevice.h"
 
 struct SolidSyslogFile;

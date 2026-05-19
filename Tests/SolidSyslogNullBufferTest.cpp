@@ -1,3 +1,5 @@
+#include <stddef.h>
+
 #include "CppUTest/TestHarness.h"
 #include "SolidSyslogBuffer.h"
 #include "SolidSyslogNullBuffer.h"

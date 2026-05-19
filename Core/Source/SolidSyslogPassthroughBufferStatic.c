@@ -3,7 +3,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "SolidSyslogBufferDefinition.h"
 #include "SolidSyslogError.h"
 #include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogNullBuffer.h"
@@ -12,6 +11,7 @@
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
 
+struct SolidSyslogBuffer;
 struct SolidSyslogSender;
 
 static size_t PassthroughBuffer_IndexFromHandle(const struct SolidSyslogBuffer* base);

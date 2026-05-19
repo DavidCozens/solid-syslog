@@ -4,7 +4,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "SolidSyslogBufferDefinition.h"
 #include "SolidSyslogCircularBufferPrivate.h"
 #include "SolidSyslogError.h"
 #include "SolidSyslogErrorMessages.h"
@@ -13,6 +12,7 @@
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
 
+struct SolidSyslogBuffer;
 struct SolidSyslogMutex;
 
 static size_t CircularBuffer_IndexFromHandle(const struct SolidSyslogBuffer* base);

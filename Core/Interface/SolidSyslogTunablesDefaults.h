@@ -117,16 +117,18 @@
  * static pool can simultaneously hold. Each instance carries its
  * config (resolver/stream/endpoint pointers) and connection state.
  *
- * Default 1 — almost all integrators wire a single stream-framed
- * sender (TCP, TLS) into either SolidSyslogConfig directly or as one
- * branch of a SwitchingSender. Bump via SOLIDSYSLOG_USER_TUNABLES_FILE
- * if more than one is genuinely needed.
+ * Default 2 — common multi-transport wirings combine a plain TCP
+ * stream sender with a TLS stream sender behind a SwitchingSender so
+ * a TLS failure can fall back to plain TCP (or vice-versa). A pool of
+ * 1 would starve the second branch and silently resolve it to the
+ * shared SolidSyslogNullSender. Bump via SOLIDSYSLOG_USER_TUNABLES_FILE
+ * for wirings that need more.
  *
  * Floor: 1. Sub-floor values rejected at compile time.
  */
 #ifndef SOLIDSYSLOG_STREAM_SENDER_POOL_SIZE
 /* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- macro form required for preprocessor visibility (floor #if) and C array-size const-expr. */
-#define SOLIDSYSLOG_STREAM_SENDER_POOL_SIZE 1U
+#define SOLIDSYSLOG_STREAM_SENDER_POOL_SIZE 2U
 #endif
 
 #if SOLIDSYSLOG_STREAM_SENDER_POOL_SIZE < 1
