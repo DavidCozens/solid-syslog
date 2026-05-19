@@ -51,7 +51,6 @@ static const char* const STORE_PATH_PREFIX = "/tmp/STORE";
 static const char* const THRESHOLD_MARKER_PATH = "/tmp/solidsyslog_threshold_marker.log";
 static struct SolidSyslogFile* storeFile;
 static struct SolidSyslogBlockDevice* storeBlockDevice;
-static SolidSyslogPosixTcpStreamStorage plainTcpStreamStorage;
 static struct SolidSyslogStream* plainTcpStream;
 static struct SolidSyslogSender* plainTcpSender;
 static struct SolidSyslogSender* udpSender;
@@ -90,7 +89,7 @@ static struct SolidSyslogSender* CreateSender(const struct BddTargetOptions* opt
     udpConfig.EndpointVersion = BddTargetUdpConfig_GetEndpointVersion;
     udpSender = SolidSyslogUdpSender_Create(&udpConfig);
 
-    plainTcpStream = SolidSyslogPosixTcpStream_Create(&plainTcpStreamStorage);
+    plainTcpStream = SolidSyslogPosixTcpStream_Create();
     static struct SolidSyslogStreamSenderConfig tcpConfig = {0};
     tcpConfig.Resolver = resolver;
     tcpConfig.Stream = plainTcpStream;

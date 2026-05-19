@@ -133,6 +133,29 @@
 #endif
 
 /*
+ * Number of SolidSyslogPosixTcpStream instances the library's internal
+ * static pool can simultaneously hold. Each instance carries an
+ * int file descriptor.
+ *
+ * Default 2 — the Linux BDD target wires *two* stream-framed senders
+ * behind a SwitchingSender (plain TCP, plus TLS that wraps another
+ * underlying PosixTcpStream as its transport), so default 1 would
+ * silently fall back to NullStream on the second Create. Matches the
+ * SOLIDSYSLOG_STREAM_SENDER_POOL_SIZE default for the same reason.
+ * Bump via SOLIDSYSLOG_USER_TUNABLES_FILE if more are needed.
+ *
+ * Floor: 1. Sub-floor values rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_POSIX_TCP_STREAM_POOL_SIZE
+/* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- macro form required for preprocessor visibility (floor #if) and C array-size const-expr. */
+#define SOLIDSYSLOG_POSIX_TCP_STREAM_POOL_SIZE 2U
+#endif
+
+#if SOLIDSYSLOG_POSIX_TCP_STREAM_POOL_SIZE < 1
+#error "SOLIDSYSLOG_POSIX_TCP_STREAM_POOL_SIZE must be >= 1"
+#endif
+
+/*
  * Number of SolidSyslogPassthroughBuffer instances the library's
  * internal static pool can simultaneously hold. Each instance is
  * tiny (vtable + a Sender pointer).
