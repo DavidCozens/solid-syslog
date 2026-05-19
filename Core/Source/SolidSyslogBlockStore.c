@@ -3,7 +3,7 @@
 #include <stdbool.h>
 
 #include "BlockSequence.h"
-#include "RecordStore.h"
+#include "RecordStorePrivate.h"
 #include "SolidSyslogTunables.h"
 #include "SolidSyslogBlockDevice.h"
 #include "SolidSyslogMacros.h"
@@ -62,7 +62,7 @@ struct SolidSyslogStore* SolidSyslogBlockStore_Create(
     struct SolidSyslogBlockStore* self = BlockStore_SelfFromStorage(storage);
     *self = DEFAULT_INSTANCE;
 
-    RecordStore_Init(&self->RecordStore, BlockStore_ResolveSecurityPolicy(config->SecurityPolicy));
+    RecordStore_Initialise(&self->RecordStore, BlockStore_ResolveSecurityPolicy(config->SecurityPolicy));
 
     struct BlockSequenceConfig blockConfig = BlockStore_BuildBlockSequenceConfig(config, &self->RecordStore);
     BlockSequence_Init(&self->BlockSequence, &blockConfig);

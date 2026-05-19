@@ -34,6 +34,7 @@ set(SOURCES
     SolidSyslogFile.c
     SolidSyslogBlockStore.c
     RecordStore.c
+    RecordStoreStatic.c
     BlockSequence.c
     SolidSyslogBlockDevice.c
     SolidSyslogFileBlockDevice.c

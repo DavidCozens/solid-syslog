@@ -1,5 +1,5 @@
-#ifndef SOLIDSYSLOG_RECORDSTORE_H
-#define SOLIDSYSLOG_RECORDSTORE_H
+#ifndef SOLIDSYSLOG_RECORDSTOREPRIVATE_H
+#define SOLIDSYSLOG_RECORDSTOREPRIVATE_H
 
 #include "SolidSyslogSecurityPolicyDefinition.h"
 #include "SolidSyslogTunables.h"
@@ -24,7 +24,11 @@ struct RecordStore
     uint8_t Buffer[RECORD_BUFFER_SIZE];
 };
 
-void RecordStore_Init(struct RecordStore* recordStore, struct SolidSyslogSecurityPolicy* securityPolicy);
+void RecordStore_Initialise(struct RecordStore* recordStore, struct SolidSyslogSecurityPolicy* securityPolicy);
+void RecordStore_Cleanup(struct RecordStore* recordStore);
+
+struct RecordStore* RecordStore_Create(struct SolidSyslogSecurityPolicy* securityPolicy);
+void RecordStore_Destroy(struct RecordStore* recordStore);
 
 size_t RecordStore_RecordSize(const struct RecordStore* recordStore, uint16_t dataLength);
 
@@ -62,4 +66,4 @@ size_t RecordStore_FindFirstUnsent(
     bool* corrupt
 );
 
-#endif /* SOLIDSYSLOG_RECORDSTORE_H */
+#endif /* SOLIDSYSLOG_RECORDSTOREPRIVATE_H */
