@@ -136,6 +136,31 @@
 #endif
 
 /*
+ * Number of SolidSyslogBlockStore instances the library's internal
+ * static pool can simultaneously hold. Sizes three pools 1:1 — the
+ * BlockStore slot itself, plus the TU-internal RecordStore and
+ * BlockSequence pools that each BlockStore composes. The 1:1
+ * invariant means a BlockStore slot is guaranteed a free RecordStore
+ * and BlockSequence on Create; if any inner Create returns its
+ * fallback under normal use, the BlockStore as a whole resolves to
+ * SolidSyslogNullStore.
+ *
+ * Default 1 — almost all integrators wire a single store-and-forward
+ * BlockStore. Bump via SOLIDSYSLOG_USER_TUNABLES_FILE if more than
+ * one is genuinely needed.
+ *
+ * Floor: 1. Sub-floor values rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_BLOCK_STORE_POOL_SIZE
+/* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- macro form required for preprocessor visibility (floor #if) and C array-size const-expr. */
+#define SOLIDSYSLOG_BLOCK_STORE_POOL_SIZE 1U
+#endif
+
+#if SOLIDSYSLOG_BLOCK_STORE_POOL_SIZE < 1
+#error "SOLIDSYSLOG_BLOCK_STORE_POOL_SIZE must be >= 1"
+#endif
+
+/*
  * Number of SolidSyslogFileBlockDevice instances the library's internal
  * static pool can simultaneously hold. Each instance carries the cached
  * open-file handle plus the path-prefix pointer.

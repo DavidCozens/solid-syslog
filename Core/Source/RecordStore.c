@@ -1,9 +1,14 @@
-#include "RecordStore.h"
+#include "RecordStorePrivate.h"
 
 #include "SolidSyslogBlockDevice.h"
+#include "SolidSyslogSecurityPolicyDefinition.h"
 #include "SolidSyslogTunables.h"
 
+#include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
+
+struct SolidSyslogBlockDevice;
 
 enum
 {
@@ -71,12 +76,20 @@ static inline size_t RecordStore_SentFlagOffset(
     return RecordStore_IntegrityChecksumOffset(recordStart, dataLength) + recordStore->SecurityPolicy->IntegritySize;
 }
 
-void RecordStore_Init(struct RecordStore* recordStore, struct SolidSyslogSecurityPolicy* securityPolicy)
+void RecordStore_Initialise(struct RecordStore* recordStore, struct SolidSyslogSecurityPolicy* securityPolicy)
 {
     recordStore->SecurityPolicy = securityPolicy;
     recordStore->HasReadRecord = false;
     recordStore->LastReadBlockIndex = 0;
     recordStore->LastSentFlagOffset = 0;
+}
+
+void RecordStore_Cleanup(struct RecordStore* recordStore)
+{
+    /* No owned resources to release. The next _Initialise overwrites every
+     * field, so leave the slot's bytes alone — clearing them would be
+     * write-then-overwrite churn. */
+    (void) recordStore;
 }
 
 size_t RecordStore_RecordSize(const struct RecordStore* recordStore, uint16_t dataLength)
