@@ -1,27 +1,20 @@
-#include "SolidSyslogStreamSender.h"
-
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
+#include "SolidSyslogAddress.h"
 #include "SolidSyslogEndpoint.h"
 #include "SolidSyslogFormatter.h"
-#include "SolidSyslogMacros.h"
-#include "SolidSyslogSenderDefinition.h"
-#include "SolidSyslogAddress.h"
+#include "SolidSyslogNullSender.h"
 #include "SolidSyslogResolver.h"
+#include "SolidSyslogSenderDefinition.h"
 #include "SolidSyslogStream.h"
+#include "SolidSyslogStreamSender.h"
+#include "SolidSyslogStreamSenderPrivate.h"
 #include "SolidSyslogTransport.h"
 
 struct SolidSyslogAddress;
-
-struct SolidSyslogStreamSender
-{
-    struct SolidSyslogSender Base;
-    struct SolidSyslogStreamSenderConfig Config;
-    bool Connected;
-    uint32_t LastEndpointVersion;
-};
+struct SolidSyslogFormatter;
 
 enum
 {
@@ -35,7 +28,6 @@ enum
 static bool StreamSender_Send(struct SolidSyslogSender* base, const void* buffer, size_t size);
 static void StreamSender_Disconnect(struct SolidSyslogSender* base);
 
-static inline struct SolidSyslogStreamSender* StreamSender_SelfFromStorage(SolidSyslogStreamSenderStorage* storage);
 static inline struct SolidSyslogStreamSender* StreamSender_SelfFromBase(struct SolidSyslogSender* base);
 
 static inline bool StreamSender_Reconcile(struct SolidSyslogStreamSender* self);
@@ -54,60 +46,28 @@ static bool StreamSender_SendBytes(struct SolidSyslogStreamSender* self, const v
 static void StreamSender_NilEndpoint(struct SolidSyslogEndpoint* endpoint);
 static uint32_t StreamSender_NilEndpointVersion(void);
 
-SOLIDSYSLOG_STATIC_ASSERT(
-    sizeof(struct SolidSyslogStreamSender) <= sizeof(SolidSyslogStreamSenderStorage),
-    "SOLIDSYSLOG_STREAM_SENDER_SIZE is too small for struct SolidSyslogStreamSender"
-);
-
-static const struct SolidSyslogStreamSender DEFAULT_INSTANCE = {
-    {StreamSender_Send, StreamSender_Disconnect},
-    {NULL, NULL, StreamSender_NilEndpoint, StreamSender_NilEndpointVersion},
-    false,
-    0,
-};
-
-static const struct SolidSyslogStreamSender DESTROYED_INSTANCE = {
-    {NULL, NULL},
-    {NULL, NULL, StreamSender_NilEndpoint, StreamSender_NilEndpointVersion},
-    false,
-    0,
-};
-
-struct SolidSyslogSender* SolidSyslogStreamSender_Create(
-    SolidSyslogStreamSenderStorage* storage,
-    const struct SolidSyslogStreamSenderConfig* config
-)
-{
-    struct SolidSyslogStreamSender* self = StreamSender_SelfFromStorage(storage);
-    *self = DEFAULT_INSTANCE;
-    self->Config.Resolver = config->Resolver;
-    self->Config.Stream = config->Stream;
-    if (config->Endpoint != NULL)
-    {
-        self->Config.Endpoint = config->Endpoint;
-    }
-    if (config->EndpointVersion != NULL)
-    {
-        self->Config.EndpointVersion = config->EndpointVersion;
-    }
-    return &self->Base;
-}
-
-static inline struct SolidSyslogStreamSender* StreamSender_SelfFromStorage(SolidSyslogStreamSenderStorage* storage)
-{
-    return (struct SolidSyslogStreamSender*) storage;
-}
-
-void SolidSyslogStreamSender_Destroy(struct SolidSyslogSender* base)
+void StreamSender_Initialise(struct SolidSyslogSender* base, const struct SolidSyslogStreamSenderConfig* config)
 {
     struct SolidSyslogStreamSender* self = StreamSender_SelfFromBase(base);
-    StreamSender_Disconnect(base);
-    *self = DESTROYED_INSTANCE;
+    self->Base.Send = StreamSender_Send;
+    self->Base.Disconnect = StreamSender_Disconnect;
+    self->Config.Resolver = config->Resolver;
+    self->Config.Stream = config->Stream;
+    self->Config.Endpoint = (config->Endpoint != NULL) ? config->Endpoint : StreamSender_NilEndpoint;
+    self->Config.EndpointVersion =
+        (config->EndpointVersion != NULL) ? config->EndpointVersion : StreamSender_NilEndpointVersion;
+    self->Connected = false;
+    self->LastEndpointVersion = 0;
 }
 
-static inline struct SolidSyslogStreamSender* StreamSender_SelfFromBase(struct SolidSyslogSender* base)
+void StreamSender_Cleanup(struct SolidSyslogSender* base)
 {
-    return (struct SolidSyslogStreamSender*) base;
+    /* Disconnect first so the live Config.Stream is still reachable; then overwrite the
+     * abstract base with the shared NullSender vtable so use-after-destroy is a safe
+     * no-op rather than a NULL-fn-pointer crash. Derived fields are private to this TU
+     * so the next _Initialise overwrites them; no need to wipe here. */
+    StreamSender_Disconnect(base);
+    *base = *SolidSyslogNullSender_Get();
 }
 
 static bool StreamSender_Send(struct SolidSyslogSender* base, const void* buffer, size_t size)
@@ -181,6 +141,11 @@ static void StreamSender_Disconnect(struct SolidSyslogSender* base)
     {
         StreamSender_CloseStream(self);
     }
+}
+
+static inline struct SolidSyslogStreamSender* StreamSender_SelfFromBase(struct SolidSyslogSender* base)
+{
+    return (struct SolidSyslogStreamSender*) base;
 }
 
 static inline void StreamSender_CloseStream(struct SolidSyslogStreamSender* self)

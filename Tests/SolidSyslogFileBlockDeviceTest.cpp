@@ -2,6 +2,7 @@
 #include "SolidSyslogBlockDevice.h"
 #include "SolidSyslogFileBlockDevice.h"
 #include "SolidSyslogFile.h"
+#include "SolidSyslogTunables.h"
 #include "CppUTest/TestHarness.h"
 
 class TEST_SolidSyslogFileBlockDevice_AcquireSecondBlockPreservesFirstBlockContent_Test;
@@ -32,16 +33,15 @@ static const char* const TEST_PATH_PREFIX = "/tmp/blockdev_";
 // clang-format off
 TEST_GROUP(SolidSyslogFileBlockDevice)
 {
-    struct FileFakeStorage              fileStorage  = {};
-    struct SolidSyslogFile*             file         = nullptr;
-    SolidSyslogFileBlockDeviceStorage   deviceStorage = {};
-    struct SolidSyslogBlockDevice*      device       = nullptr;
+    struct FileFakeStorage              fileStorage = {};
+    struct SolidSyslogFile*             file        = nullptr;
+    struct SolidSyslogBlockDevice*      device      = nullptr;
 
     void setup() override
     {
         file = FileFake_Create(&fileStorage);
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        device = SolidSyslogFileBlockDevice_Create(&deviceStorage, file, TEST_PATH_PREFIX);
+        device = SolidSyslogFileBlockDevice_Create(file, TEST_PATH_PREFIX);
     }
 
     void teardown() override
@@ -255,4 +255,87 @@ TEST(SolidSyslogFileBlockDevice, ReadFollowedByWriteOnSameBlockDoesNotOpenTwoHan
 
     CHECK_TRUE(SolidSyslogBlockDevice_WriteAt(device, 0, 1, "X", 1));
     CHECK_BLOCK_CONTAINS(0, 0, "rXc", 3);
+}
+
+TEST(SolidSyslogFileBlockDevice, UseAfterDestroyIsCrashSafeViaNullBlockDeviceVtable)
+{
+    /* After Destroy the slot's abstract-base vtable is the shared NullBlockDevice's, so
+     * vtable calls through the stale handle are safe no-ops rather than a NULL-fn-pointer
+     * crash. NullBlockDevice methods return false / 0. */
+    SolidSyslogFileBlockDevice_Destroy(device);
+
+    CHECK_FALSE(SolidSyslogBlockDevice_Acquire(device, 0));
+    CHECK_FALSE(SolidSyslogBlockDevice_Exists(device, 0));
+    CHECK_FALSE(SolidSyslogBlockDevice_Dispose(device, 0));
+    char buf[3] = {};
+    CHECK_FALSE(SolidSyslogBlockDevice_Read(device, 0, 0, buf, 3));
+    CHECK_FALSE(SolidSyslogBlockDevice_Append(device, 0, "x", 1));
+    CHECK_FALSE(SolidSyslogBlockDevice_WriteAt(device, 0, 0, "x", 1));
+    LONGS_EQUAL(0, SolidSyslogBlockDevice_Size(device, 0));
+
+    device = nullptr; // teardown's nullptr guard skips the second Destroy
+}
+
+// Pool tests — prove SOLIDSYSLOG_FILE_BLOCK_DEVICE_POOL_SIZE caps live
+// instances and overflow falls back to the class-private no-op BlockDevice.
+// Generic pool mechanics (lock counts, per-probe locking, stale-handle warning)
+// are covered by SolidSyslogPoolAllocatorTest.cpp.
+
+// clang-format off
+TEST_GROUP(SolidSyslogFileBlockDevicePool)
+{
+    struct FileFakeStorage              fileStorage = {};
+    struct SolidSyslogFile*             file        = nullptr;
+    struct SolidSyslogBlockDevice*      pooled[SOLIDSYSLOG_FILE_BLOCK_DEVICE_POOL_SIZE] = {};
+    struct SolidSyslogBlockDevice*      overflow    = nullptr;
+
+    void setup() override
+    {
+        file = FileFake_Create(&fileStorage);
+    }
+
+    void teardown() override
+    {
+        for (auto* handle : pooled)
+        {
+            if (handle != nullptr)
+            {
+                SolidSyslogFileBlockDevice_Destroy(handle);
+            }
+        }
+        if (overflow != nullptr)
+        {
+            SolidSyslogFileBlockDevice_Destroy(overflow);
+        }
+        FileFake_Destroy();
+    }
+
+    [[nodiscard]] struct SolidSyslogBlockDevice* MakeDevice() const
+    {
+        return SolidSyslogFileBlockDevice_Create(file, TEST_PATH_PREFIX);
+    }
+
+    void FillPool()
+    {
+        for (auto*& slot : pooled)
+        {
+            slot = MakeDevice();
+        }
+    }
+};
+
+// clang-format on
+
+TEST(SolidSyslogFileBlockDevicePool, FillingPoolThenOverflowReturnsDistinctFallback)
+{
+    FillPool();
+
+    overflow = MakeDevice();
+
+    CHECK_TEXT(overflow != nullptr, "Fallback handle was nullptr");
+    for (auto* slot : pooled)
+    {
+        CHECK_TEXT(slot != nullptr, "pool slot was nullptr (FillPool failed?)");
+        CHECK_TEXT(overflow != slot, "Fallback handle collided with a pool slot");
+    }
 }

@@ -53,7 +53,6 @@ static struct SolidSyslogFile* storeFile;
 static struct SolidSyslogBlockDevice* storeBlockDevice;
 static SolidSyslogPosixTcpStreamStorage plainTcpStreamStorage;
 static struct SolidSyslogStream* plainTcpStream;
-static SolidSyslogStreamSenderStorage plainTcpSenderStorage;
 static struct SolidSyslogSender* plainTcpSender;
 static struct SolidSyslogSender* udpSender;
 static struct SolidSyslogSender* switchingSender;
@@ -93,7 +92,7 @@ static struct SolidSyslogSender* CreateSender(const struct BddTargetOptions* opt
     tcpConfig.Stream = plainTcpStream;
     tcpConfig.Endpoint = BddTargetTcpConfig_GetEndpoint;
     tcpConfig.EndpointVersion = BddTargetTcpConfig_GetEndpointVersion;
-    plainTcpSender = SolidSyslogStreamSender_Create(&plainTcpSenderStorage, &tcpConfig);
+    plainTcpSender = SolidSyslogStreamSender_Create(&tcpConfig);
 
     struct SolidSyslogSender* tlsSender = BddTargetTlsSender_Create(resolver, mtlsModeActive);
 
@@ -161,8 +160,7 @@ static struct SolidSyslogStore* CreateStore(const struct BddTargetOptions* optio
         static SolidSyslogPosixFileStorage fileStorage;
         storeFile = SolidSyslogPosixFile_Create(&fileStorage);
 
-        static SolidSyslogFileBlockDeviceStorage blockDeviceStorage;
-        storeBlockDevice = SolidSyslogFileBlockDevice_Create(&blockDeviceStorage, storeFile, STORE_PATH_PREFIX);
+        storeBlockDevice = SolidSyslogFileBlockDevice_Create(storeFile, STORE_PATH_PREFIX);
 
         static size_t capacityThreshold;
         capacityThreshold = options->CapacityThreshold;

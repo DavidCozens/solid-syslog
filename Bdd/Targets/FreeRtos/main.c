@@ -158,7 +158,6 @@ static NetworkEndPoint_t networkEndPoint;
 static SolidSyslogFreeRtosStaticResolverStorage resolverStorage;
 static SolidSyslogFreeRtosDatagramStorage datagramStorage;
 static SolidSyslogFreeRtosTcpStreamStorage tcpStreamStorage;
-static SolidSyslogStreamSenderStorage tcpSenderStorage;
 
 /* CircularBuffer + FreeRtosMutex composition for cross-task emission.
  * 8 max-sized messages is comfortably above the 3-message BDD scenarios
@@ -196,7 +195,6 @@ static volatile bool solidSyslogTeardown = false;
 static const char STORE_PATH_PREFIX[] = "STORE";
 
 static SolidSyslogFatFsFileStorage storeFileStorage;
-static SolidSyslogFileBlockDeviceStorage blockDeviceStorage;
 static SolidSyslogBlockStoreStorage blockStoreStorage;
 
 /* FATFS object lives in .bss because f_mount stores its address inside the
@@ -591,7 +589,7 @@ static bool RebuildWithFileStore(void)
      * BlockSequence_Open's f_stat / f_open calls now hit a live filesystem
      * via disk_read / disk_write semihosting traps. */
     storeFile = SolidSyslogFatFsFile_Create(&storeFileStorage);
-    storeBlockDevice = SolidSyslogFileBlockDevice_Create(&blockDeviceStorage, storeFile, STORE_PATH_PREFIX);
+    storeBlockDevice = SolidSyslogFileBlockDevice_Create(storeFile, STORE_PATH_PREFIX);
 
     struct SolidSyslogSecurityPolicy* policy = SolidSyslogCrc16Policy_Create();
     struct SolidSyslogBlockStoreConfig storeConfig = {
@@ -800,7 +798,7 @@ static void InteractiveTask(void* argument)
         .Endpoint = GetEndpoint,
         .EndpointVersion = GetEndpointVersion,
     };
-    tcpSender = SolidSyslogStreamSender_Create(&tcpSenderStorage, &tcpConfig);
+    tcpSender = SolidSyslogStreamSender_Create(&tcpConfig);
 
     /* SwitchingSender lets `set transport <udp|tcp>` flip the active transport
      * at runtime. Default to UDP so existing UDP-tagged scenarios stay green;

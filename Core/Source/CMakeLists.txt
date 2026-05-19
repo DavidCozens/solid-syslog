@@ -20,6 +20,8 @@ set(SOURCES
     SolidSyslogStore.c
     SolidSyslogNullSd.c
     SolidSyslogNullStore.c
+    SolidSyslogNullBuffer.c
+    SolidSyslogNullBlockDevice.c
     SolidSyslogNullSecurityPolicy.c
     SolidSyslogCrc16.c
     SolidSyslogCrc16Policy.c
@@ -35,6 +37,7 @@ set(SOURCES
     BlockSequence.c
     SolidSyslogBlockDevice.c
     SolidSyslogFileBlockDevice.c
+    SolidSyslogFileBlockDeviceStatic.c
     SolidSyslogUdpPayload.c
 )
 
@@ -54,6 +57,7 @@ if(SOLIDSYSLOG_POSIX OR SOLIDSYSLOG_WINSOCK OR DEFINED ENV{FREERTOS_KERNEL_PATH}
         SolidSyslogUdpSender.c
         SolidSyslogUdpSenderStatic.c
         SolidSyslogStreamSender.c
+        SolidSyslogStreamSenderStatic.c
     )
 endif()
 

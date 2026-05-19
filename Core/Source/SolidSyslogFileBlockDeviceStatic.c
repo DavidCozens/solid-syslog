@@ -1,0 +1,73 @@
+#include "SolidSyslogFileBlockDevice.h"
+
+#include <stdbool.h>
+#include <stddef.h>
+
+#include "SolidSyslogError.h"
+#include "SolidSyslogErrorMessages.h"
+#include "SolidSyslogFileBlockDevicePrivate.h"
+#include "SolidSyslogNullBlockDevice.h"
+#include "SolidSyslogPoolAllocator.h"
+#include "SolidSyslogPrival.h"
+#include "SolidSyslogTunables.h"
+
+struct SolidSyslogBlockDevice;
+struct SolidSyslogFile;
+
+static size_t FileBlockDevice_IndexFromHandle(const struct SolidSyslogBlockDevice* base);
+static void FileBlockDevice_CleanupAtIndex(size_t index, void* context);
+
+static bool FileBlockDevice_InUse[SOLIDSYSLOG_FILE_BLOCK_DEVICE_POOL_SIZE];
+static struct SolidSyslogFileBlockDevice FileBlockDevice_Pool[SOLIDSYSLOG_FILE_BLOCK_DEVICE_POOL_SIZE];
+static struct SolidSyslogPoolAllocator FileBlockDevice_Allocator = {
+    FileBlockDevice_InUse,
+    SOLIDSYSLOG_FILE_BLOCK_DEVICE_POOL_SIZE
+};
+
+struct SolidSyslogBlockDevice* SolidSyslogFileBlockDevice_Create(struct SolidSyslogFile* file, const char* pathPrefix)
+{
+    struct SolidSyslogBlockDevice* result = SolidSyslogNullBlockDevice_Get();
+    size_t index = SolidSyslogPoolAllocator_AcquireFirstFree(&FileBlockDevice_Allocator);
+    if (SolidSyslogPoolAllocator_IndexIsValid(&FileBlockDevice_Allocator, index))
+    {
+        FileBlockDevice_Initialise(&FileBlockDevice_Pool[index].Base, file, pathPrefix);
+        result = &FileBlockDevice_Pool[index].Base;
+    }
+    else
+    {
+        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_FILEBLOCKDEVICE_POOL_EXHAUSTED);
+    }
+    return result;
+}
+
+void SolidSyslogFileBlockDevice_Destroy(struct SolidSyslogBlockDevice* base)
+{
+    size_t index = FileBlockDevice_IndexFromHandle(base);
+    bool released =
+        SolidSyslogPoolAllocator_IndexIsValid(&FileBlockDevice_Allocator, index) &&
+        SolidSyslogPoolAllocator_FreeIfInUse(&FileBlockDevice_Allocator, index, FileBlockDevice_CleanupAtIndex, NULL);
+    if (!released)
+    {
+        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_ERROR_MSG_FILEBLOCKDEVICE_UNKNOWN_DESTROY);
+    }
+}
+
+static size_t FileBlockDevice_IndexFromHandle(const struct SolidSyslogBlockDevice* base)
+{
+    size_t result = SOLIDSYSLOG_FILE_BLOCK_DEVICE_POOL_SIZE;
+    for (size_t poolIndex = 0; poolIndex < SOLIDSYSLOG_FILE_BLOCK_DEVICE_POOL_SIZE; poolIndex++)
+    {
+        if (base == &FileBlockDevice_Pool[poolIndex].Base)
+        {
+            result = poolIndex;
+            break;
+        }
+    }
+    return result;
+}
+
+static void FileBlockDevice_CleanupAtIndex(size_t index, void* context)
+{
+    (void) context;
+    FileBlockDevice_Cleanup(&FileBlockDevice_Pool[index].Base);
+}

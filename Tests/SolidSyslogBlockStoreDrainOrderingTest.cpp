@@ -113,16 +113,15 @@ struct DrainTestConfig
 // clang-format off
 TEST_BASE(DrainTestFixtureBase)
 {
-    struct FileFakeStorage            fileStorage   = {};
-    struct SolidSyslogFile*           file          = nullptr;
-    SolidSyslogFileBlockDeviceStorage deviceStorage = {};
-    struct SolidSyslogBlockDevice*    device        = nullptr;
-    struct SolidSyslogSecurityPolicy* policy        = nullptr;
+    struct FileFakeStorage            fileStorage = {};
+    struct SolidSyslogFile*           file        = nullptr;
+    struct SolidSyslogBlockDevice*    device      = nullptr;
+    struct SolidSyslogSecurityPolicy* policy      = nullptr;
 
     void setupBlockDeviceAndPolicy()
     {
         file   = FileFake_Create(&fileStorage);
-        device = SolidSyslogFileBlockDevice_Create(&deviceStorage, file, TEST_PATH_PREFIX);
+        device = SolidSyslogFileBlockDevice_Create(file, TEST_PATH_PREFIX);
         policy = SolidSyslogNullSecurityPolicy_Get();
     }
 

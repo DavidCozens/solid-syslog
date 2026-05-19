@@ -71,13 +71,12 @@ TEST_BASE(BlockDeviceTestBase)
 {
     struct FileFakeStorage storage = {};
     struct SolidSyslogFile* file = nullptr;
-    SolidSyslogFileBlockDeviceStorage deviceStorage = {};
     struct SolidSyslogBlockDevice* device = nullptr;
 
     void setupBlockDeviceFakes()
     {
         file   = FileFake_Create(&storage);
-        device = SolidSyslogFileBlockDevice_Create(&deviceStorage, file, TEST_PATH_PREFIX);
+        device = SolidSyslogFileBlockDevice_Create(file, TEST_PATH_PREFIX);
     }
 
     void teardownBlockDeviceFakes() const
@@ -498,7 +497,7 @@ TEST_GROUP_BASE(SolidSyslogBlockStoreConfig, BlockDeviceTestBase)
     {
         SolidSyslogFileBlockDevice_Destroy(device);
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        device = SolidSyslogFileBlockDevice_Create(&deviceStorage, file, prefix);
+        device = SolidSyslogFileBlockDevice_Create(file, prefix);
         struct SolidSyslogBlockStoreConfig config = MakeConfig(device);
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
         store = SolidSyslogBlockStore_Create(&storeStorage, &config);

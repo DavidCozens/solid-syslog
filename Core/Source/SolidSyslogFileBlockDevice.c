@@ -2,11 +2,13 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include "SolidSyslogBlockDeviceDefinition.h"
-#include "SolidSyslogFormatter.h"
-#include "SolidSyslogMacros.h"
 #include "SolidSyslogFile.h"
+#include "SolidSyslogFileBlockDevicePrivate.h"
+#include "SolidSyslogFormatter.h"
+#include "SolidSyslogNullBlockDevice.h"
 
 struct SolidSyslogFile;
 
@@ -33,30 +35,7 @@ static inline bool FileBlockDevice_IsValidBlockIndex(size_t blockIndex)
     return blockIndex <= MAX_BLOCK_INDEX;
 }
 
-/* OpenHandle caches the single SolidSyslogFile the device holds. The handle is
- * re-pointed only when the targeted blockIndex changes; same-block runs reuse
- * it. This is the structural enforcement of the S27.01 single-handle-per-path
- * invariant — by construction the device has exactly one underlying file. */
-struct OpenHandle
-{
-    struct SolidSyslogFile* File;
-    size_t BlockIndex;
-    bool IsOpen;
-};
-
-struct SolidSyslogFileBlockDevice
-{
-    struct SolidSyslogBlockDevice Base;
-    struct OpenHandle Handle;
-    const char* PathPrefix;
-};
-
-SOLIDSYSLOG_STATIC_ASSERT(
-    sizeof(struct SolidSyslogFileBlockDevice) <= sizeof(SolidSyslogFileBlockDeviceStorage),
-    "SOLIDSYSLOG_FILE_BLOCK_DEVICE_STORAGE_SIZE is too small for struct SolidSyslogFileBlockDevice"
-);
-
-/* vtable — forward-declared because Create wires them before their definitions */
+/* vtable — forward-declared because _Initialise wires them before their definitions */
 static bool FileBlockDevice_Acquire(struct SolidSyslogBlockDevice* base, size_t blockIndex);
 static bool FileBlockDevice_Dispose(struct SolidSyslogBlockDevice* base, size_t blockIndex);
 static bool FileBlockDevice_Exists(struct SolidSyslogBlockDevice* base, size_t blockIndex);
@@ -86,40 +65,16 @@ static bool FileBlockDevice_WriteAt(
 // NOLINTEND(bugprone-easily-swappable-parameters)
 static size_t FileBlockDevice_Size(struct SolidSyslogBlockDevice* base, size_t blockIndex);
 
-static inline struct SolidSyslogFileBlockDevice* FileBlockDevice_SelfFromStorage(
-    SolidSyslogFileBlockDeviceStorage* storage
-);
 static inline struct SolidSyslogFileBlockDevice* FileBlockDevice_SelfFromBase(struct SolidSyslogBlockDevice* base);
-static inline void FileBlockDevice_InitialiseVtable(struct SolidSyslogFileBlockDevice* self);
+static inline void FileBlockDevice_CloseIfOpen(struct OpenHandle* handle);
 
-/* ------------------------------------------------------------------
- * Create
- * ----------------------------------------------------------------*/
-
-struct SolidSyslogBlockDevice* SolidSyslogFileBlockDevice_Create(
-    SolidSyslogFileBlockDeviceStorage* storage,
+void FileBlockDevice_Initialise(
+    struct SolidSyslogBlockDevice* base,
     struct SolidSyslogFile* file,
     const char* pathPrefix
 )
 {
-    struct SolidSyslogFileBlockDevice* self = FileBlockDevice_SelfFromStorage(storage);
-
-    FileBlockDevice_InitialiseVtable(self);
-    self->Handle = (struct OpenHandle) {.File = file, .BlockIndex = 0, .IsOpen = false};
-    self->PathPrefix = pathPrefix;
-
-    return &self->Base;
-}
-
-static inline struct SolidSyslogFileBlockDevice* FileBlockDevice_SelfFromStorage(
-    SolidSyslogFileBlockDeviceStorage* storage
-)
-{
-    return (struct SolidSyslogFileBlockDevice*) storage;
-}
-
-static inline void FileBlockDevice_InitialiseVtable(struct SolidSyslogFileBlockDevice* self)
-{
+    struct SolidSyslogFileBlockDevice* self = FileBlockDevice_SelfFromBase(base);
     self->Base.Acquire = FileBlockDevice_Acquire;
     self->Base.Dispose = FileBlockDevice_Dispose;
     self->Base.Exists = FileBlockDevice_Exists;
@@ -127,18 +82,19 @@ static inline void FileBlockDevice_InitialiseVtable(struct SolidSyslogFileBlockD
     self->Base.Append = FileBlockDevice_Append;
     self->Base.WriteAt = FileBlockDevice_WriteAt;
     self->Base.Size = FileBlockDevice_Size;
+    self->Handle = (struct OpenHandle) {.File = file, .BlockIndex = 0, .IsOpen = false};
+    self->PathPrefix = pathPrefix;
 }
 
-/* ------------------------------------------------------------------
- * Destroy
- * ----------------------------------------------------------------*/
-
-static inline void FileBlockDevice_CloseIfOpen(struct OpenHandle* handle);
-
-void SolidSyslogFileBlockDevice_Destroy(struct SolidSyslogBlockDevice* base)
+void FileBlockDevice_Cleanup(struct SolidSyslogBlockDevice* base)
 {
+    /* Close the cached file handle while we can still see it; then overwrite the
+     * abstract base with the shared NullBlockDevice vtable so use-after-destroy is
+     * a safe no-op rather than a NULL-fn-pointer crash. Derived fields are private
+     * to this TU; the next _Initialise overwrites them. */
     struct SolidSyslogFileBlockDevice* self = FileBlockDevice_SelfFromBase(base);
     FileBlockDevice_CloseIfOpen(&self->Handle);
+    *base = *SolidSyslogNullBlockDevice_Get();
 }
 
 static inline struct SolidSyslogFileBlockDevice* FileBlockDevice_SelfFromBase(struct SolidSyslogBlockDevice* base)
