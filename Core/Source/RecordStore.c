@@ -1,9 +1,14 @@
 #include "RecordStorePrivate.h"
 
 #include "SolidSyslogBlockDevice.h"
+#include "SolidSyslogSecurityPolicyDefinition.h"
 #include "SolidSyslogTunables.h"
 
+#include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
+
+struct SolidSyslogBlockDevice;
 
 enum
 {

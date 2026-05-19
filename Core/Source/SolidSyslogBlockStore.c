@@ -1,6 +1,7 @@
 #include "SolidSyslogBlockStore.h"
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "BlockSequencePrivate.h"
 #include "RecordStorePrivate.h"
@@ -8,7 +9,6 @@
 #include "SolidSyslogBlockStorePrivate.h"
 #include "SolidSyslogNullStore.h"
 #include "SolidSyslogStoreDefinition.h"
-#include "SolidSyslogTunables.h"
 
 /* vtable — forward-declared because BlockStore_InitialiseVtable references them before their definitions */
 static bool BlockStore_Write(struct SolidSyslogStore* base, const void* data, size_t size);

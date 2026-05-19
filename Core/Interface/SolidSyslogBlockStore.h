@@ -3,7 +3,6 @@
 
 #include <stddef.h>
 
-#include "SolidSyslogSecurityPolicyDefinition.h"
 #include "ExternC.h"
 
 struct SolidSyslogStore;
@@ -11,6 +10,7 @@ struct SolidSyslogStore;
 EXTERN_C_BEGIN
 
     struct SolidSyslogBlockDevice;
+    struct SolidSyslogSecurityPolicy;
 
     enum SolidSyslogDiscardPolicy
     {

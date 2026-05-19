@@ -164,6 +164,7 @@ TEST_GROUP(BlockSequenceScan)
         config.MaxBlockSize                = 1000;
         config.MaxBlocks                   = 99;
         config.DiscardPolicy              = SOLIDSYSLOG_DISCARD_POLICY_OLDEST;
+        // cppcheck-suppress unreadVariable -- read across TEST_GROUP methods; cppcheck does not model CppUTest macros
         sequence = BlockSequence_Create(&config);
     }
 
@@ -247,7 +248,9 @@ TEST_GROUP(BlockSequenceRotation)
         fakeDevice.Base.Append  = FakeAppend;
         fakeDevice.Base.WriteAt = FakeWriteAt;
         fakeDevice.Base.Size    = FakeSize;
+        // cppcheck-suppress unreadVariable -- read indirectly via FakeExists; cppcheck does not model the function-pointer indirection
         fakeDevice.existing     = &existing;
+        // cppcheck-suppress unreadVariable -- read indirectly via RecordCall; cppcheck does not model the function-pointer indirection
         fakeDevice.calls        = &calls;
         // cppcheck-suppress unreadVariable -- read indirectly via FakeSize; cppcheck does not model the function-pointer indirection
         fakeDevice.sizes        = &sizes;
@@ -291,7 +294,7 @@ TEST_GROUP(BlockSequenceRotation)
         return (disposeAt >= 0) && (acquireAt >= 0) && (disposeAt < acquireAt);
     }
 
-    void ForceRotation()
+    void ForceRotation() const
     {
         bool readBlockChanged = false;
         BlockSequence_PrepareForWrite(sequence, ROTATION_BLOCK_SIZE + 1, &readBlockChanged);
