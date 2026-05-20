@@ -155,7 +155,6 @@ static struct SolidSyslogMessage testMessage = {
 static NetworkInterface_t networkInterface;
 static NetworkEndPoint_t networkEndPoint;
 
-static SolidSyslogFreeRtosStaticResolverStorage resolverStorage;
 static SolidSyslogFreeRtosTcpStreamStorage tcpStreamStorage;
 
 /* CircularBuffer + FreeRtosMutex composition for cross-task emission.
@@ -772,7 +771,7 @@ static void InteractiveTask(void* argument)
 {
     (void) argument;
 
-    resolver = SolidSyslogFreeRtosStaticResolver_Create(&resolverStorage, TEST_DESTINATION_IPV4);
+    resolver = SolidSyslogFreeRtosStaticResolver_Create(TEST_DESTINATION_IPV4);
     datagram = SolidSyslogFreeRtosDatagram_Create();
 
     struct SolidSyslogUdpSenderConfig udpConfig = {

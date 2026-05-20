@@ -73,10 +73,13 @@ else()
         SolidSyslogFreeRtosStaticResolverTest.cpp
         main.cpp
         ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosStaticResolver.c
+        ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosStaticResolverStatic.c
     )
 
     target_link_libraries(SolidSyslogFreeRtosStaticResolverTest PRIVATE
         ${PROJECT_NAME}
+        ConfigLockFake
+        ErrorHandlerFake
         CppUTest
         CppUTestExt
     )
