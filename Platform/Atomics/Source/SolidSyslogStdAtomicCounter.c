@@ -1,42 +1,39 @@
 #include "SolidSyslogStdAtomicCounter.h"
 
+#include <stdatomic.h>
+#include <stdint.h>
+
 #include "SolidSyslogAtomicCounter.h"
 #include "SolidSyslogAtomicCounterDefinition.h"
-#include "SolidSyslogMacros.h"
-
-#include <stdatomic.h>
-#include <stddef.h>
-
-struct SolidSyslogStdAtomicCounter
-{
-    struct SolidSyslogAtomicCounter Base;
-    _Atomic uint32_t Value;
-};
-
-SOLIDSYSLOG_STATIC_ASSERT(
-    sizeof(struct SolidSyslogStdAtomicCounter) <= sizeof(SolidSyslogStdAtomicCounterStorage),
-    SolidSyslogStdAtomicCounterStorage_too_small
-);
+#include "SolidSyslogNullAtomicCounter.h"
+#include "SolidSyslogStdAtomicCounterPrivate.h"
 
 static uint32_t StdAtomicCounter_Increment(struct SolidSyslogAtomicCounter* base);
-static void StdAtomicCounter_Init(struct SolidSyslogStdAtomicCounter* self, uint32_t value);
+
 static inline struct SolidSyslogStdAtomicCounter* StdAtomicCounter_SelfFromBase(struct SolidSyslogAtomicCounter* base);
-static inline struct SolidSyslogStdAtomicCounter* StdAtomicCounter_SelfFromStorage(
-    SolidSyslogStdAtomicCounterStorage* storage
-);
 
-struct SolidSyslogAtomicCounter* SolidSyslogStdAtomicCounter_Create(SolidSyslogStdAtomicCounterStorage* storage)
-{
-    struct SolidSyslogStdAtomicCounter* self = StdAtomicCounter_SelfFromStorage(storage);
-    self->Base.Increment = StdAtomicCounter_Increment;
-    StdAtomicCounter_Init(self, 0U);
-    return &self->Base;
-}
-
-void SolidSyslogStdAtomicCounter_Destroy(struct SolidSyslogAtomicCounter* base)
+void StdAtomicCounter_Initialise(struct SolidSyslogAtomicCounter* base)
 {
     struct SolidSyslogStdAtomicCounter* self = StdAtomicCounter_SelfFromBase(base);
-    self->Base.Increment = NULL;
+    self->Base.Increment = StdAtomicCounter_Increment;
+    StdAtomicCounter_Init(self, 0U);
+}
+
+void StdAtomicCounter_Cleanup(struct SolidSyslogAtomicCounter* base)
+{
+    /* Overwrite the abstract base with the shared NullAtomicCounter vtable so
+     * use-after-destroy is a safe no-op rather than a NULL-fn-pointer crash. */
+    *base = *SolidSyslogNullAtomicCounter_Get();
+}
+
+void StdAtomicCounter_Init(struct SolidSyslogStdAtomicCounter* self, uint32_t value)
+{
+    atomic_init(&self->Value, value);
+}
+
+static inline struct SolidSyslogStdAtomicCounter* StdAtomicCounter_SelfFromBase(struct SolidSyslogAtomicCounter* base)
+{
+    return (struct SolidSyslogStdAtomicCounter*) base;
 }
 
 static uint32_t StdAtomicCounter_Increment(struct SolidSyslogAtomicCounter* base)
@@ -55,21 +52,4 @@ static uint32_t StdAtomicCounter_Increment(struct SolidSyslogAtomicCounter* base
         memory_order_relaxed
     ));
     return next;
-}
-
-static void StdAtomicCounter_Init(struct SolidSyslogStdAtomicCounter* self, uint32_t value)
-{
-    atomic_init(&self->Value, value);
-}
-
-static inline struct SolidSyslogStdAtomicCounter* StdAtomicCounter_SelfFromBase(struct SolidSyslogAtomicCounter* base)
-{
-    return (struct SolidSyslogStdAtomicCounter*) base;
-}
-
-static inline struct SolidSyslogStdAtomicCounter* StdAtomicCounter_SelfFromStorage(
-    SolidSyslogStdAtomicCounterStorage* storage
-)
-{
-    return (struct SolidSyslogStdAtomicCounter*) storage;
 }

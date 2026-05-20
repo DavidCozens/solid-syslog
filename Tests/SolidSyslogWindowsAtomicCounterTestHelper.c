@@ -1,9 +1,10 @@
 #include "SolidSyslogAtomicCounterTestHelper.h"
 
 #include "SolidSyslogAtomicCounter.h"
-#include "SolidSyslogMacros.h"
+#include "SolidSyslogTunables.h"
 #include "SolidSyslogWindowsAtomicCounter.h"
 
+#include <stddef.h>
 #include <stdint.h>
 
 struct SolidSyslogAtomicCounter;
@@ -17,14 +18,9 @@ struct SolidSyslogAtomicCounter;
 // NOLINTNEXTLINE(bugprone-suspicious-include)
 #include "SolidSyslogWindowsAtomicCounter.c"
 
-SOLIDSYSLOG_STATIC_ASSERT(
-    sizeof(SolidSyslogWindowsAtomicCounterStorage) <= TEST_ATOMIC_COUNTER_STORAGE_SIZE,
-    TestAtomicCounterStorage_too_small_for_Windows
-);
-
-struct SolidSyslogAtomicCounter* TestAtomicCounter_Create(TestAtomicCounterStorage* storage)
+struct SolidSyslogAtomicCounter* TestAtomicCounter_Create(void)
 {
-    return SolidSyslogWindowsAtomicCounter_Create((SolidSyslogWindowsAtomicCounterStorage*) storage);
+    return SolidSyslogWindowsAtomicCounter_Create();
 }
 
 void TestAtomicCounter_Init(struct SolidSyslogAtomicCounter* base, uint32_t value)
@@ -40,4 +36,9 @@ uint32_t TestAtomicCounter_Increment(struct SolidSyslogAtomicCounter* base)
 void TestAtomicCounter_Destroy(struct SolidSyslogAtomicCounter* base)
 {
     SolidSyslogWindowsAtomicCounter_Destroy(base);
+}
+
+size_t TestAtomicCounter_PoolSize(void)
+{
+    return SOLIDSYSLOG_WINDOWS_ATOMIC_COUNTER_POOL_SIZE;
 }

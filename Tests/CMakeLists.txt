@@ -90,10 +90,12 @@ endif()
 if(HAVE_STDATOMIC_H)
     list(APPEND TEST_SOURCES
         SolidSyslogStdAtomicCounterTestHelper.c
+        SolidSyslogStdAtomicCounterPoolTest.cpp
     )
 elseif(HAVE_WINDOWS_INTERLOCKED)
     list(APPEND TEST_SOURCES
         SolidSyslogWindowsAtomicCounterTestHelper.c
+        SolidSyslogWindowsAtomicCounterPoolTest.cpp
     )
 endif()
 

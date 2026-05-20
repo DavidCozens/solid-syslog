@@ -123,5 +123,13 @@
     "SolidSyslogFreeRtosTcpStream_Create pool exhausted; returning fallback stream"
 #define SOLIDSYSLOG_ERROR_MSG_FREERTOSTCPSTREAM_UNKNOWN_DESTROY \
     "SolidSyslogFreeRtosTcpStream_Destroy called with a handle not issued by this pool"
+#define SOLIDSYSLOG_ERROR_MSG_STDATOMICCOUNTER_POOL_EXHAUSTED \
+    "SolidSyslogStdAtomicCounter_Create pool exhausted; returning fallback counter"
+#define SOLIDSYSLOG_ERROR_MSG_STDATOMICCOUNTER_UNKNOWN_DESTROY \
+    "SolidSyslogStdAtomicCounter_Destroy called with a handle not issued by this pool"
+#define SOLIDSYSLOG_ERROR_MSG_WINDOWSATOMICCOUNTER_POOL_EXHAUSTED \
+    "SolidSyslogWindowsAtomicCounter_Create pool exhausted; returning fallback counter"
+#define SOLIDSYSLOG_ERROR_MSG_WINDOWSATOMICCOUNTER_UNKNOWN_DESTROY \
+    "SolidSyslogWindowsAtomicCounter_Destroy called with a handle not issued by this pool"
 
 #endif /* SOLIDSYSLOGERRORMESSAGES_H */

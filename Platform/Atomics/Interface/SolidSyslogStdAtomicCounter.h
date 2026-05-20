@@ -3,23 +3,11 @@
 
 #include "ExternC.h"
 
-#include <stdint.h>
-
 EXTERN_C_BEGIN
 
     struct SolidSyslogAtomicCounter;
 
-    enum
-    {
-        SOLIDSYSLOG_STD_ATOMIC_COUNTER_SIZE = sizeof(intptr_t) * 2U
-    };
-
-    typedef struct
-    {
-        intptr_t slots[(SOLIDSYSLOG_STD_ATOMIC_COUNTER_SIZE + sizeof(intptr_t) - 1U) / sizeof(intptr_t)];
-    } SolidSyslogStdAtomicCounterStorage;
-
-    struct SolidSyslogAtomicCounter* SolidSyslogStdAtomicCounter_Create(SolidSyslogStdAtomicCounterStorage * storage);
+    struct SolidSyslogAtomicCounter* SolidSyslogStdAtomicCounter_Create(void);
     void SolidSyslogStdAtomicCounter_Destroy(struct SolidSyslogAtomicCounter * base);
 
 EXTERN_C_END

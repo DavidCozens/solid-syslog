@@ -2,7 +2,6 @@
 
 #include <stdint.h>
 
-#include "SolidSyslogAtomicCounter.h"
 #include "SolidSyslogAtomicCounterDefinition.h"
 
 static uint32_t NullAtomicCounter_Increment(struct SolidSyslogAtomicCounter* base);

@@ -631,8 +631,7 @@ TEST(SolidSyslog, InjectedSdObjectFormatIsCalledDuringLog)
 
 TEST(SolidSyslog, MetaSdProducesSequenceIdInStructuredData)
 {
-    TestAtomicCounterStorage counterStorage;
-    SolidSyslogAtomicCounter* counter = TestAtomicCounter_Create(&counterStorage);
+    SolidSyslogAtomicCounter* counter = TestAtomicCounter_Create();
     SolidSyslogMetaSdConfig metaConfig{};
     metaConfig.Counter = counter;
     SolidSyslogStructuredData* metaSd = SolidSyslogMetaSd_Create(&metaConfig);
@@ -649,8 +648,7 @@ TEST(SolidSyslog, MetaSdProducesSequenceIdInStructuredData)
 
 TEST(SolidSyslog, MetaSdSequenceIdIncrementsAcrossLogCalls)
 {
-    TestAtomicCounterStorage counterStorage;
-    SolidSyslogAtomicCounter* counter = TestAtomicCounter_Create(&counterStorage);
+    SolidSyslogAtomicCounter* counter = TestAtomicCounter_Create();
     SolidSyslogMetaSdConfig metaConfig{};
     metaConfig.Counter = counter;
     SolidSyslogStructuredData* metaSd = SolidSyslogMetaSd_Create(&metaConfig);
@@ -668,8 +666,7 @@ TEST(SolidSyslog, MetaSdSequenceIdIncrementsAcrossLogCalls)
 
 TEST(SolidSyslog, MsgFieldPreservedWithMetaSd)
 {
-    TestAtomicCounterStorage counterStorage;
-    SolidSyslogAtomicCounter* counter = TestAtomicCounter_Create(&counterStorage);
+    SolidSyslogAtomicCounter* counter = TestAtomicCounter_Create();
     SolidSyslogMetaSdConfig metaConfig{};
     metaConfig.Counter = counter;
     SolidSyslogStructuredData* metaSd = SolidSyslogMetaSd_Create(&metaConfig);
@@ -731,8 +728,7 @@ TEST(SolidSyslog, AllSdFailingProducesNilvalue)
 
 TEST(SolidSyslog, MetaSdAndTimeQualitySdCoexistInSdArray)
 {
-    TestAtomicCounterStorage counterStorage;
-    SolidSyslogAtomicCounter* counter = TestAtomicCounter_Create(&counterStorage);
+    SolidSyslogAtomicCounter* counter = TestAtomicCounter_Create();
     SolidSyslogMetaSdConfig metaConfig{};
     metaConfig.Counter = counter;
     SolidSyslogStructuredData* metaSd = SolidSyslogMetaSd_Create(&metaConfig);

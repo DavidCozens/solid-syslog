@@ -11,8 +11,7 @@ TEST_GROUP(AtomicCounterContract){};
 
 TEST(AtomicCounterContract, CreateReturnsNonNullHandle)
 {
-    TestAtomicCounterStorage storage;
-    struct SolidSyslogAtomicCounter* counter = TestAtomicCounter_Create(&storage);
+    struct SolidSyslogAtomicCounter* counter = TestAtomicCounter_Create();
 
     CHECK(counter != nullptr);
 
@@ -21,8 +20,7 @@ TEST(AtomicCounterContract, CreateReturnsNonNullHandle)
 
 TEST(AtomicCounterContract, FirstIncrementReturnsOne)
 {
-    TestAtomicCounterStorage storage;
-    struct SolidSyslogAtomicCounter* counter = TestAtomicCounter_Create(&storage);
+    struct SolidSyslogAtomicCounter* counter = TestAtomicCounter_Create();
 
     LONGS_EQUAL(1, TestAtomicCounter_Increment(counter));
 
@@ -31,8 +29,7 @@ TEST(AtomicCounterContract, FirstIncrementReturnsOne)
 
 TEST(AtomicCounterContract, SequentialIncrementsCount1Then2Then3)
 {
-    TestAtomicCounterStorage storage;
-    struct SolidSyslogAtomicCounter* counter = TestAtomicCounter_Create(&storage);
+    struct SolidSyslogAtomicCounter* counter = TestAtomicCounter_Create();
 
     LONGS_EQUAL(1, TestAtomicCounter_Increment(counter));
     LONGS_EQUAL(2, TestAtomicCounter_Increment(counter));
@@ -41,12 +38,22 @@ TEST(AtomicCounterContract, SequentialIncrementsCount1Then2Then3)
     TestAtomicCounter_Destroy(counter);
 }
 
-TEST(AtomicCounterContract, TwoCountersInSeparateStorageAreIndependent)
+/* Independence of two simultaneous counters is only observable when the
+ * runtime pool can host at least two slots. The default build runs at
+ * pool size 1; the `tunable-override-debug` preset bumps it to 2 (see
+ * Tests/Fixtures/SmallMessageSizeTunables.h). When pool size < 2, print
+ * a notice and exit cleanly via TEST_EXIT so the test is honestly
+ * accounted for. */
+TEST(AtomicCounterContract, TwoCountersFromPoolAreIndependent)
 {
-    TestAtomicCounterStorage storageA;
-    TestAtomicCounterStorage storageB;
-    struct SolidSyslogAtomicCounter* counterA = TestAtomicCounter_Create(&storageA);
-    struct SolidSyslogAtomicCounter* counterB = TestAtomicCounter_Create(&storageB);
+    if (TestAtomicCounter_PoolSize() < 2U)
+    {
+        UT_PRINT("Pool size < 2 — counter independence only observable under tunable-override-debug");
+        TEST_EXIT;
+    }
+
+    struct SolidSyslogAtomicCounter* counterA = TestAtomicCounter_Create();
+    struct SolidSyslogAtomicCounter* counterB = TestAtomicCounter_Create();
 
     LONGS_EQUAL(1, TestAtomicCounter_Increment(counterA));
     LONGS_EQUAL(2, TestAtomicCounter_Increment(counterA));
@@ -60,8 +67,7 @@ TEST(AtomicCounterContract, TwoCountersInSeparateStorageAreIndependent)
 
 TEST(AtomicCounterContract, IncrementAfterInitReturnsValuePlusOne)
 {
-    TestAtomicCounterStorage storage;
-    struct SolidSyslogAtomicCounter* counter = TestAtomicCounter_Create(&storage);
+    struct SolidSyslogAtomicCounter* counter = TestAtomicCounter_Create();
 
     TestAtomicCounter_Init(counter, 5U);
 
@@ -72,8 +78,7 @@ TEST(AtomicCounterContract, IncrementAfterInitReturnsValuePlusOne)
 
 TEST(AtomicCounterContract, IncrementAtMaxWrapsToOne)
 {
-    TestAtomicCounterStorage storage;
-    struct SolidSyslogAtomicCounter* counter = TestAtomicCounter_Create(&storage);
+    struct SolidSyslogAtomicCounter* counter = TestAtomicCounter_Create();
 
     /* RFC 5424 §7.3.1: sequenceId values are in [1, 2^31 - 1] and wrap to 1, not 0. */
     TestAtomicCounter_Init(counter, (uint32_t) INT32_MAX);

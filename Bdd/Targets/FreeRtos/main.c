@@ -225,7 +225,6 @@ static volatile bool pendingNoSd = false;
  * .Store and pass the same struct back into SolidSyslog_Create. */
 static struct SolidSyslogConfig solidSyslogConfig;
 static struct SolidSyslogStructuredData* sdList[3];
-static SolidSyslogStdAtomicCounterStorage atomicCounterStorage;
 static struct SolidSyslogAtomicCounter* atomicCounter = NULL;
 static struct SolidSyslogStructuredData* metaSd = NULL;
 static struct SolidSyslogStructuredData* timeQualitySd = NULL;
@@ -826,7 +825,7 @@ static void InteractiveTask(void* argument)
     currentStore = SolidSyslogNullStore_Get();
     currentStoreIsFile = false;
 
-    atomicCounter = SolidSyslogStdAtomicCounter_Create(&atomicCounterStorage);
+    atomicCounter = SolidSyslogStdAtomicCounter_Create();
     struct SolidSyslogMetaSdConfig metaConfig = {
         .Counter = atomicCounter,
         .GetSysUpTime = SolidSyslogFreeRtosSysUpTime_Get,
