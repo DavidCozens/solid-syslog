@@ -3,6 +3,10 @@
 
 #include "SolidSyslogFreeRtosDatagram.h"
 
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
 #include "FreeRTOS.h"
 #include "FreeRTOS_ARP.h"
 #include "FreeRTOS_Sockets.h"

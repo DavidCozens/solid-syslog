@@ -436,6 +436,7 @@ TEST(SolidSyslogFreeRtosTcpStreamPool, FallbackVtableMethodsAreNoOps)
     SolidSyslogAddressStorage addrStorage{};
     struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&addrStorage);
     char buf[8] = {0};
+    FreeRtosSocketsFake_Reset();
 
     /* NullStream's Open/Send/Read return safe values so the Service algorithm
      * does not tear the (non-existent) connection down on the fallback. */
@@ -443,9 +444,12 @@ TEST(SolidSyslogFreeRtosTcpStreamPool, FallbackVtableMethodsAreNoOps)
     CHECK_TRUE(SolidSyslogStream_Send(overflow, buf, sizeof(buf)));
     LONGS_EQUAL(0, SolidSyslogStream_Read(overflow, buf, sizeof(buf)));
     SolidSyslogStream_Close(overflow);
+
     CALLED_FAKE(FreeRtosSocketsFake_Socket, NEVER);
+    CALLED_FAKE(FreeRtosSocketsFake_Connect, NEVER);
     CALLED_FAKE(FreeRtosSocketsFake_Send, NEVER);
     CALLED_FAKE(FreeRtosSocketsFake_Recv, NEVER);
+    CALLED_FAKE(FreeRtosSocketsFake_Closesocket, NEVER);
 }
 
 TEST(SolidSyslogFreeRtosTcpStreamPool, CreateAcquiresAndReleasesConfigLockOnFirstFreeSlot)

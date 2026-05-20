@@ -145,10 +145,14 @@ TEST(SolidSyslogFreeRtosMutexPool, ExhaustedCreateReportsError)
 TEST(SolidSyslogFreeRtosMutexPool, FallbackLockUnlockAreNoOps)
 {
     FillPool();
+    FreeRtosSemaphoreFake_Reset();
     overflow = SolidSyslogFreeRtosMutex_Create();
 
     SolidSyslogMutex_Lock(overflow);
     SolidSyslogMutex_Unlock(overflow);
+
+    CALLED_FAKE(FreeRtosSemaphoreFake_SemaphoreTake, NEVER);
+    CALLED_FAKE(FreeRtosSemaphoreFake_SemaphoreGive, NEVER);
 }
 
 TEST(SolidSyslogFreeRtosMutexPool, CreateAcquiresAndReleasesConfigLockOnFirstFreeSlot)

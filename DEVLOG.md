@@ -89,9 +89,12 @@ nulls (all four needed — `NullMutex` `_Get`, `NullDatagram`,
   coverage is captured per-class by the separate test exes and is at
   100% locally per per-class test runs), analyze-tidy clean on every
   new/migrated file, analyze-cppcheck clean, analyze-format clean.
-  Per-class Pool TEST_GROUPs add 36 tests overall (9 × 4 classes); 8
-  tests added to existing Mutex group / 0 to Datagram (existing 25
-  preserved) etc. — total addition ~37 tests.
+  Per-class Pool TEST_GROUPs add 37 tests overall (9 each for Mutex,
+  Datagram, TcpStream; 10 for StaticResolver — 9 canonical + 1
+  class-specific `FallbackResolveReturnsFalse`). The pre-migration
+  `DestroyIsIdempotent` test on `FreeRtosStaticResolver` is superseded
+  by `DestroyOfStaleHandleReportsWarning` in the new Pool group, so
+  net test-count change is +36. See per-class breakdown below.
 
 ### Per-class delta numbers
 

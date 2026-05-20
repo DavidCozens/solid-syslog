@@ -327,12 +327,19 @@ TEST(SolidSyslogFreeRtosDatagramPool, FallbackVtableMethodsAreNoOps)
 {
     FillPool();
     overflow = SolidSyslogFreeRtosDatagram_Create();
+    SolidSyslogAddressStorage addrStorage{};
+    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&addrStorage);
+    FreeRtosSocketsFake_Reset();
 
     /* NullDatagram's Open returns true so caller success paths are not
      * tripped; no underlying FreeRTOS_socket is created. */
     CHECK_TRUE(SolidSyslogDatagram_Open(overflow));
-    CALLED_FAKE(FreeRtosSocketsFake_Socket, NEVER);
+    SolidSyslogDatagram_SendTo(overflow, "x", 1, addr);
     SolidSyslogDatagram_Close(overflow);
+
+    CALLED_FAKE(FreeRtosSocketsFake_Socket, NEVER);
+    CALLED_FAKE(FreeRtosSocketsFake_Sendto, NEVER);
+    CALLED_FAKE(FreeRtosSocketsFake_Closesocket, NEVER);
 }
 
 TEST(SolidSyslogFreeRtosDatagramPool, CreateAcquiresAndReleasesConfigLockOnFirstFreeSlot)
