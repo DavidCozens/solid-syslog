@@ -295,22 +295,34 @@ TEST(SolidSyslogPosixMessageQueueBufferPool, DestroyOfStaleHandleReportsWarning)
     STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_POSIXMESSAGEQUEUEBUFFER_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
 }
 
-/* Pool-size >= 2 isolation contract. Exercised by the
- * `tunable-override-debug` preset (which sets the pool size to 2 via
- * Tests/Fixtures/SmallMessageSizeTunables.h); the default build compiles
- * the test out because the pool size is 1 and a two-slot scenario isn't
- * representable. */
-#if SOLIDSYSLOG_POSIX_MESSAGE_QUEUE_BUFFER_POOL_SIZE >= 2
+/* Slot-indexed queue names are only observable with at least two pool
+ * slots. The default build runs at pool size 1; the
+ * `tunable-override-debug` preset bumps it to 2 (see
+ * Tests/Fixtures/SmallMessageSizeTunables.h). When the runtime pool
+ * size can't host a second slot, print a notice and exit cleanly via
+ * TEST_EXIT so the test is honestly accounted for in the run rather
+ * than compiled out. Local pointers (not fixture's `pooled[]`) so the
+ * second handle has compile-time storage even at pool size 1. */
 TEST(SolidSyslogPosixMessageQueueBufferPool, EachPooledHandleHasIsolatedQueue)
 {
-    pooled[0] = MakeBuffer();
-    pooled[1] = MakeBuffer();
+    if (SOLIDSYSLOG_POSIX_MESSAGE_QUEUE_BUFFER_POOL_SIZE < 2U)
+    {
+        UT_PRINT("Pool size < 2 — slot isolation only observable under tunable-override-debug");
+        TEST_EXIT;
+    }
 
-    SolidSyslogBuffer_Write(pooled[0], "slot0", 5);
+    struct SolidSyslogBuffer* slotZero = MakeBuffer();
+    struct SolidSyslogBuffer* slotOne = MakeBuffer();
+
+    SolidSyslogBuffer_Write(slotZero, "slot0", 5U);
 
     char readBuffer[SOLIDSYSLOG_MAX_MESSAGE_SIZE] = {};
     size_t bytesRead = 99U;
-    CHECK_FALSE(SolidSyslogBuffer_Read(pooled[1], readBuffer, sizeof(readBuffer), &bytesRead));
+    bool readSucceeded = SolidSyslogBuffer_Read(slotOne, readBuffer, sizeof(readBuffer), &bytesRead);
+
+    SolidSyslogPosixMessageQueueBuffer_Destroy(slotZero);
+    SolidSyslogPosixMessageQueueBuffer_Destroy(slotOne);
+
+    CHECK_FALSE(readSucceeded);
     LONGS_EQUAL(0, bytesRead);
 }
-#endif
