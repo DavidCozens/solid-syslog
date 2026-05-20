@@ -109,6 +109,16 @@ S11.06; `NullMutex` already in `_Get` shape).
   carry audience rows on the Windows side); pre-existing inconsistency
   with POSIX. Tracked for S11.11 wrap-up.
 
+- **`*Static.c` helper placement.** CodeRabbit flagged that
+  `IndexFromHandle` / `CleanupAtIndex` should be `static inline` and
+  defined immediately beneath the first caller per CLAUDE.md's helper
+  rule, rather than the forward-declare-at-top + define-at-end shape.
+  The rule has drifted across the entire `*Static.c` family — every
+  S11.01 / S11.04 / S11.05 / S11.06 / S11.07 `*Static.c` follows the
+  drifted shape today. Fixing S11.07 in isolation would leave the
+  already-merged stories inconsistent. Carved out as the next standalone
+  cleanup story (does not block S11.08).
+
 ### Open questions
 
 - **`WinsockDatagram` `socket()` failure mode.** Today's pool Create
