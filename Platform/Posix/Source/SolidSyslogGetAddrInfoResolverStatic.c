@@ -13,8 +13,8 @@
 
 struct SolidSyslogResolver;
 
-static size_t GetAddrInfoResolver_IndexFromHandle(const struct SolidSyslogResolver* base);
-static void GetAddrInfoResolver_CleanupAtIndex(size_t index, void* context);
+static inline size_t GetAddrInfoResolver_IndexFromHandle(const struct SolidSyslogResolver* base);
+static inline void GetAddrInfoResolver_CleanupAtIndex(size_t index, void* context);
 
 static bool GetAddrInfoResolver_InUse[SOLIDSYSLOG_GETADDRINFO_RESOLVER_POOL_SIZE];
 static struct SolidSyslogGetAddrInfoResolver GetAddrInfoResolver_Pool[SOLIDSYSLOG_GETADDRINFO_RESOLVER_POOL_SIZE];
@@ -55,7 +55,7 @@ void SolidSyslogGetAddrInfoResolver_Destroy(struct SolidSyslogResolver* base)
     }
 }
 
-static size_t GetAddrInfoResolver_IndexFromHandle(const struct SolidSyslogResolver* base)
+static inline size_t GetAddrInfoResolver_IndexFromHandle(const struct SolidSyslogResolver* base)
 {
     size_t result = SOLIDSYSLOG_GETADDRINFO_RESOLVER_POOL_SIZE;
     for (size_t poolIndex = 0; poolIndex < SOLIDSYSLOG_GETADDRINFO_RESOLVER_POOL_SIZE; poolIndex++)
@@ -69,7 +69,7 @@ static size_t GetAddrInfoResolver_IndexFromHandle(const struct SolidSyslogResolv
     return result;
 }
 
-static void GetAddrInfoResolver_CleanupAtIndex(size_t index, void* context)
+static inline void GetAddrInfoResolver_CleanupAtIndex(size_t index, void* context)
 {
     (void) context;
     GetAddrInfoResolver_Cleanup(&GetAddrInfoResolver_Pool[index].Base);

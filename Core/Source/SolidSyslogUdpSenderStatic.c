@@ -14,8 +14,8 @@
 struct SolidSyslogSender;
 
 static bool UdpSender_IsValidConfig(const struct SolidSyslogUdpSenderConfig* config);
-static size_t UdpSender_IndexFromHandle(const struct SolidSyslogSender* base);
-static void UdpSender_CleanupAtIndex(size_t index, void* context);
+static inline size_t UdpSender_IndexFromHandle(const struct SolidSyslogSender* base);
+static inline void UdpSender_CleanupAtIndex(size_t index, void* context);
 
 static bool UdpSender_InUse[SOLIDSYSLOG_UDP_SENDER_POOL_SIZE];
 static struct SolidSyslogUdpSender UdpSender_Pool[SOLIDSYSLOG_UDP_SENDER_POOL_SIZE];
@@ -77,7 +77,7 @@ static bool UdpSender_IsValidConfig(const struct SolidSyslogUdpSenderConfig* con
     return valid;
 }
 
-static size_t UdpSender_IndexFromHandle(const struct SolidSyslogSender* base)
+static inline size_t UdpSender_IndexFromHandle(const struct SolidSyslogSender* base)
 {
     size_t result = SOLIDSYSLOG_UDP_SENDER_POOL_SIZE;
     for (size_t poolIndex = 0; poolIndex < SOLIDSYSLOG_UDP_SENDER_POOL_SIZE; poolIndex++)
@@ -91,7 +91,7 @@ static size_t UdpSender_IndexFromHandle(const struct SolidSyslogSender* base)
     return result;
 }
 
-static void UdpSender_CleanupAtIndex(size_t index, void* context)
+static inline void UdpSender_CleanupAtIndex(size_t index, void* context)
 {
     (void) context;
     UdpSender_Cleanup(&UdpSender_Pool[index].Base);

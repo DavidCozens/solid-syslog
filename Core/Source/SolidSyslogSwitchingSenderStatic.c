@@ -14,8 +14,8 @@
 struct SolidSyslogSender;
 
 static bool SwitchingSender_IsValidConfig(const struct SolidSyslogSwitchingSenderConfig* config);
-static size_t SwitchingSender_IndexFromHandle(const struct SolidSyslogSender* base);
-static void SwitchingSender_CleanupAtIndex(size_t index, void* context);
+static inline size_t SwitchingSender_IndexFromHandle(const struct SolidSyslogSender* base);
+static inline void SwitchingSender_CleanupAtIndex(size_t index, void* context);
 
 static bool SwitchingSender_InUse[SOLIDSYSLOG_SWITCHING_SENDER_POOL_SIZE];
 static struct SolidSyslogSwitchingSender SwitchingSender_Pool[SOLIDSYSLOG_SWITCHING_SENDER_POOL_SIZE];
@@ -77,7 +77,7 @@ void SolidSyslogSwitchingSender_Destroy(struct SolidSyslogSender* base)
     }
 }
 
-static size_t SwitchingSender_IndexFromHandle(const struct SolidSyslogSender* base)
+static inline size_t SwitchingSender_IndexFromHandle(const struct SolidSyslogSender* base)
 {
     size_t result = SOLIDSYSLOG_SWITCHING_SENDER_POOL_SIZE;
     for (size_t poolIndex = 0; poolIndex < SOLIDSYSLOG_SWITCHING_SENDER_POOL_SIZE; poolIndex++)
@@ -91,7 +91,7 @@ static size_t SwitchingSender_IndexFromHandle(const struct SolidSyslogSender* ba
     return result;
 }
 
-static void SwitchingSender_CleanupAtIndex(size_t index, void* context)
+static inline void SwitchingSender_CleanupAtIndex(size_t index, void* context)
 {
     (void) context;
     SwitchingSender_Cleanup(&SwitchingSender_Pool[index].Base);

@@ -13,8 +13,8 @@
 
 struct SolidSyslogStructuredData;
 
-static size_t OriginSd_IndexFromHandle(const struct SolidSyslogStructuredData* base);
-static void OriginSd_CleanupAtIndex(size_t index, void* context);
+static inline size_t OriginSd_IndexFromHandle(const struct SolidSyslogStructuredData* base);
+static inline void OriginSd_CleanupAtIndex(size_t index, void* context);
 
 static bool OriginSd_InUse[SOLIDSYSLOG_ORIGIN_SD_POOL_SIZE];
 static struct SolidSyslogOriginSd OriginSd_Pool[SOLIDSYSLOG_ORIGIN_SD_POOL_SIZE];
@@ -47,7 +47,7 @@ void SolidSyslogOriginSd_Destroy(struct SolidSyslogStructuredData* base)
     }
 }
 
-static size_t OriginSd_IndexFromHandle(const struct SolidSyslogStructuredData* base)
+static inline size_t OriginSd_IndexFromHandle(const struct SolidSyslogStructuredData* base)
 {
     size_t result = SOLIDSYSLOG_ORIGIN_SD_POOL_SIZE;
     for (size_t poolIndex = 0; poolIndex < SOLIDSYSLOG_ORIGIN_SD_POOL_SIZE; poolIndex++)
@@ -61,7 +61,7 @@ static size_t OriginSd_IndexFromHandle(const struct SolidSyslogStructuredData* b
     return result;
 }
 
-static void OriginSd_CleanupAtIndex(size_t index, void* context)
+static inline void OriginSd_CleanupAtIndex(size_t index, void* context)
 {
     (void) context;
     OriginSd_Cleanup(&OriginSd_Pool[index].Base);

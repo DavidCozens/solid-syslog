@@ -5,8 +5,8 @@
 #include "SolidSyslogPoolAllocator.h"
 #include "SolidSyslogTunables.h"
 
-static size_t BlockSequence_IndexFromHandle(const struct BlockSequence* blockSequence);
-static void BlockSequence_CleanupAtIndex(size_t index, void* context);
+static inline size_t BlockSequence_IndexFromHandle(const struct BlockSequence* blockSequence);
+static inline void BlockSequence_CleanupAtIndex(size_t index, void* context);
 
 static bool BlockSequence_InUse[SOLIDSYSLOG_BLOCK_STORE_POOL_SIZE];
 static struct BlockSequence BlockSequence_Pool[SOLIDSYSLOG_BLOCK_STORE_POOL_SIZE];
@@ -39,7 +39,7 @@ void BlockSequence_Destroy(struct BlockSequence* blockSequence)
     }
 }
 
-static size_t BlockSequence_IndexFromHandle(const struct BlockSequence* blockSequence)
+static inline size_t BlockSequence_IndexFromHandle(const struct BlockSequence* blockSequence)
 {
     size_t result = SOLIDSYSLOG_BLOCK_STORE_POOL_SIZE;
     for (size_t poolIndex = 0; poolIndex < SOLIDSYSLOG_BLOCK_STORE_POOL_SIZE; poolIndex++)
@@ -53,7 +53,7 @@ static size_t BlockSequence_IndexFromHandle(const struct BlockSequence* blockSeq
     return result;
 }
 
-static void BlockSequence_CleanupAtIndex(size_t index, void* context)
+static inline void BlockSequence_CleanupAtIndex(size_t index, void* context)
 {
     (void) context;
     BlockSequence_Cleanup(&BlockSequence_Pool[index]);

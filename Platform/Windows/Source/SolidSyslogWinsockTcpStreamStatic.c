@@ -13,8 +13,8 @@
 
 struct SolidSyslogStream;
 
-static size_t WinsockTcpStream_IndexFromHandle(const struct SolidSyslogStream* base);
-static void WinsockTcpStream_CleanupAtIndex(size_t index, void* context);
+static inline size_t WinsockTcpStream_IndexFromHandle(const struct SolidSyslogStream* base);
+static inline void WinsockTcpStream_CleanupAtIndex(size_t index, void* context);
 
 static bool WinsockTcpStream_InUse[SOLIDSYSLOG_WINSOCK_TCP_STREAM_POOL_SIZE];
 static struct SolidSyslogWinsockTcpStream WinsockTcpStream_Pool[SOLIDSYSLOG_WINSOCK_TCP_STREAM_POOL_SIZE];
@@ -51,7 +51,7 @@ void SolidSyslogWinsockTcpStream_Destroy(struct SolidSyslogStream* base)
     }
 }
 
-static size_t WinsockTcpStream_IndexFromHandle(const struct SolidSyslogStream* base)
+static inline size_t WinsockTcpStream_IndexFromHandle(const struct SolidSyslogStream* base)
 {
     size_t result = SOLIDSYSLOG_WINSOCK_TCP_STREAM_POOL_SIZE;
     for (size_t poolIndex = 0; poolIndex < SOLIDSYSLOG_WINSOCK_TCP_STREAM_POOL_SIZE; poolIndex++)
@@ -65,7 +65,7 @@ static size_t WinsockTcpStream_IndexFromHandle(const struct SolidSyslogStream* b
     return result;
 }
 
-static void WinsockTcpStream_CleanupAtIndex(size_t index, void* context)
+static inline void WinsockTcpStream_CleanupAtIndex(size_t index, void* context)
 {
     (void) context;
     WinsockTcpStream_Cleanup(&WinsockTcpStream_Pool[index].Base);

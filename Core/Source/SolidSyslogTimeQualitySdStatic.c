@@ -14,8 +14,8 @@
 
 struct SolidSyslogStructuredData;
 
-static size_t TimeQualitySd_IndexFromHandle(const struct SolidSyslogStructuredData* base);
-static void TimeQualitySd_CleanupAtIndex(size_t index, void* context);
+static inline size_t TimeQualitySd_IndexFromHandle(const struct SolidSyslogStructuredData* base);
+static inline void TimeQualitySd_CleanupAtIndex(size_t index, void* context);
 
 static bool TimeQualitySd_InUse[SOLIDSYSLOG_TIME_QUALITY_SD_POOL_SIZE];
 static struct SolidSyslogTimeQualitySd TimeQualitySd_Pool[SOLIDSYSLOG_TIME_QUALITY_SD_POOL_SIZE];
@@ -59,7 +59,7 @@ void SolidSyslogTimeQualitySd_Destroy(struct SolidSyslogStructuredData* base)
     }
 }
 
-static size_t TimeQualitySd_IndexFromHandle(const struct SolidSyslogStructuredData* base)
+static inline size_t TimeQualitySd_IndexFromHandle(const struct SolidSyslogStructuredData* base)
 {
     size_t result = SOLIDSYSLOG_TIME_QUALITY_SD_POOL_SIZE;
     for (size_t poolIndex = 0; poolIndex < SOLIDSYSLOG_TIME_QUALITY_SD_POOL_SIZE; poolIndex++)
@@ -73,7 +73,7 @@ static size_t TimeQualitySd_IndexFromHandle(const struct SolidSyslogStructuredDa
     return result;
 }
 
-static void TimeQualitySd_CleanupAtIndex(size_t index, void* context)
+static inline void TimeQualitySd_CleanupAtIndex(size_t index, void* context)
 {
     (void) context;
     TimeQualitySd_Cleanup(&TimeQualitySd_Pool[index].Base);
