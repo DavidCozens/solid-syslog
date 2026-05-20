@@ -10,6 +10,7 @@ if(HAVE_WINDOWS_PLATFORM)
         Source/SolidSyslogWindowsFile.c
         Source/SolidSyslogWindowsHostname.c
         Source/SolidSyslogWindowsMutex.c
+        Source/SolidSyslogWindowsMutexStatic.c
         Source/SolidSyslogWindowsProcessId.c
         Source/SolidSyslogWindowsSleep.c
         Source/SolidSyslogWindowsSysUpTime.c
