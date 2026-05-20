@@ -3,9 +3,15 @@
 
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
     // macros
+#include "ConfigLockFake.h"
+#include "ErrorHandlerFake.h"
 #include "SolidSyslogAddress.h"
 #include "SolidSyslogDatagram.h"
+#include "SolidSyslogDatagramDefinition.h"
+#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogPosixDatagram.h"
+#include "SolidSyslogPrival.h"
+#include "SolidSyslogTunables.h"
 #include "SolidSyslogUdpPayload.h"
 #include "SocketFake.h"
 #include <arpa/inet.h>
@@ -14,6 +20,19 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 #include <cstring>
 #include <netinet/in.h>
 #include <sys/socket.h>
+
+// NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while) -- macros preserve __FILE__/__LINE__ at the call site
+#define CHECK_IS_FALLBACK(handle, pool)                                                \
+    do                                                                                 \
+    {                                                                                  \
+        CHECK_TEXT((handle) != nullptr, "Fallback handle was nullptr");                \
+        for (auto* slot : (pool))                                                      \
+        {                                                                              \
+            CHECK_TEXT(slot != nullptr, "pool slot was nullptr (FillPool failed?)");   \
+            CHECK_TEXT((handle) != slot, "Fallback handle collided with a pool slot"); \
+        }                                                                              \
+    } while (0)
+// NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 
 // clang-format off
 static const char* const TEST_MESSAGE     = "hello";
@@ -47,7 +66,7 @@ TEST_GROUP(SolidSyslogPosixDatagram)
 
     void teardown() override
     {
-        SolidSyslogPosixDatagram_Destroy();
+        SolidSyslogPosixDatagram_Destroy(datagram);
     }
 };
 
@@ -250,4 +269,139 @@ TEST(SolidSyslogPosixDatagram, SendToReturnsFailedWhenConnectFails)
         SOLIDSYSLOG_DATAGRAM_SEND_RESULT_FAILED,
         SolidSyslogDatagram_SendTo(datagram, TEST_MESSAGE, TEST_MESSAGE_LEN, addr)
     );
+}
+
+// clang-format off
+TEST_GROUP(SolidSyslogPosixDatagramPool)
+{
+    // cppcheck-suppress constVariable -- assigned in test bodies; cppcheck does not model CppUTest lifecycle
+    struct SolidSyslogDatagram* pooled[SOLIDSYSLOG_POSIX_DATAGRAM_POOL_SIZE] = {};
+    struct SolidSyslogDatagram* overflow                                     = nullptr;
+
+    void teardown() override
+    {
+        for (auto* handle : pooled)
+        {
+            if (handle != nullptr)
+            {
+                SolidSyslogPosixDatagram_Destroy(handle);
+            }
+        }
+        // cppcheck-suppress knownConditionTrueFalse -- assigned in test bodies; cppcheck does not model CppUTest lifecycle
+        if (overflow != nullptr)
+        {
+            SolidSyslogPosixDatagram_Destroy(overflow);
+        }
+        ConfigLockFake_Uninstall();
+        ErrorHandlerFake_Uninstall();
+    }
+
+    void FillPool()
+    {
+        for (auto*& slot : pooled)
+        {
+            slot = SolidSyslogPosixDatagram_Create();
+        }
+    }
+};
+
+// clang-format on
+
+TEST(SolidSyslogPosixDatagramPool, FillingPoolThenOverflowReturnsDistinctFallback)
+{
+    FillPool();
+
+    overflow = SolidSyslogPosixDatagram_Create();
+
+    CHECK_IS_FALLBACK(overflow, pooled);
+}
+
+TEST(SolidSyslogPosixDatagramPool, ExhaustedCreateReportsError)
+{
+    ErrorHandlerFake_Install(nullptr);
+    FillPool();
+
+    overflow = SolidSyslogPosixDatagram_Create();
+
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_POSIXDATAGRAM_POOL_EXHAUSTED, ErrorHandlerFake_LastMessage());
+}
+
+TEST(SolidSyslogPosixDatagramPool, FallbackSendToReturnsSent)
+{
+    FillPool();
+    overflow = SolidSyslogPosixDatagram_Create();
+
+    LONGS_EQUAL(SOLIDSYSLOG_DATAGRAM_SEND_RESULT_SENT, SolidSyslogDatagram_SendTo(overflow, "x", 1, nullptr));
+}
+
+TEST(SolidSyslogPosixDatagramPool, CreateAcquiresAndReleasesConfigLockOnFirstFreeSlot)
+{
+    ConfigLockFake_Install();
+
+    pooled[0] = SolidSyslogPosixDatagram_Create();
+
+    CALLED_FAKE(ConfigLockFake_Lock, ONCE);
+    CALLED_FAKE(ConfigLockFake_Unlock, ONCE);
+}
+
+TEST(SolidSyslogPosixDatagramPool, CreateLocksOncePerSlotProbedWhenPoolIsFull)
+{
+    FillPool();
+    ConfigLockFake_Install();
+
+    overflow = SolidSyslogPosixDatagram_Create();
+
+    LONGS_EQUAL(SOLIDSYSLOG_POSIX_DATAGRAM_POOL_SIZE, ConfigLockFake_LockCallCount());
+    LONGS_EQUAL(SOLIDSYSLOG_POSIX_DATAGRAM_POOL_SIZE, ConfigLockFake_UnlockCallCount());
+}
+
+TEST(SolidSyslogPosixDatagramPool, DestroyOfPooledHandleLocksOnce)
+{
+    pooled[0] = SolidSyslogPosixDatagram_Create();
+    ConfigLockFake_Install();
+
+    SolidSyslogPosixDatagram_Destroy(pooled[0]);
+    pooled[0] = nullptr;
+
+    CALLED_FAKE(ConfigLockFake_Lock, ONCE);
+    CALLED_FAKE(ConfigLockFake_Unlock, ONCE);
+}
+
+TEST(SolidSyslogPosixDatagramPool, DestroyOfUnknownHandleDoesNotLock)
+{
+    ConfigLockFake_Install();
+    struct SolidSyslogDatagram stranger = {};
+
+    SolidSyslogPosixDatagram_Destroy(&stranger);
+
+    CALLED_FAKE(ConfigLockFake_Lock, NEVER);
+    CALLED_FAKE(ConfigLockFake_Unlock, NEVER);
+}
+
+TEST(SolidSyslogPosixDatagramPool, DestroyOfUnknownHandleReportsWarning)
+{
+    ErrorHandlerFake_Install(nullptr);
+    struct SolidSyslogDatagram stranger = {};
+
+    SolidSyslogPosixDatagram_Destroy(&stranger);
+
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
+    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_POSIXDATAGRAM_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+}
+
+TEST(SolidSyslogPosixDatagramPool, DestroyOfStaleHandleReportsWarning)
+{
+    pooled[0] = SolidSyslogPosixDatagram_Create();
+    SolidSyslogPosixDatagram_Destroy(pooled[0]);
+    ErrorHandlerFake_Install(nullptr);
+
+    SolidSyslogPosixDatagram_Destroy(pooled[0]);
+    pooled[0] = nullptr;
+
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
+    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_POSIXDATAGRAM_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
 }

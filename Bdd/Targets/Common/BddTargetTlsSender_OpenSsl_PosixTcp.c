@@ -10,7 +10,6 @@
 
 struct SolidSyslogResolver;
 
-static SolidSyslogPosixTcpStreamStorage underlyingStreamStorage;
 static struct SolidSyslogStream* underlyingStream;
 static SolidSyslogTlsStreamStorage tlsStreamStorage;
 static struct SolidSyslogStream* tlsStream;
@@ -18,7 +17,7 @@ static struct SolidSyslogSender* sender;
 
 struct SolidSyslogSender* BddTargetTlsSender_Create(struct SolidSyslogResolver* resolver, bool mtls)
 {
-    underlyingStream = SolidSyslogPosixTcpStream_Create(&underlyingStreamStorage);
+    underlyingStream = SolidSyslogPosixTcpStream_Create();
 
     static struct SolidSyslogTlsStreamConfig tlsStreamConfig;
     tlsStreamConfig = (struct SolidSyslogTlsStreamConfig) {0};

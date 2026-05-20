@@ -26,12 +26,14 @@ set(SOURCES
     SolidSyslogCrc16.c
     SolidSyslogCrc16Policy.c
     SolidSyslogStream.c
+    SolidSyslogNullStream.c
     SolidSyslogStructuredData.c
     SolidSyslogTimeQualitySd.c
     SolidSyslogTimeQualitySdStatic.c
     SolidSyslogOriginSd.c
     SolidSyslogOriginSdStatic.c
     SolidSyslogFile.c
+    SolidSyslogNullFile.c
     SolidSyslogBlockStore.c
     SolidSyslogBlockStoreStatic.c
     RecordStore.c
@@ -56,7 +58,9 @@ endif()
 if(SOLIDSYSLOG_POSIX OR SOLIDSYSLOG_WINSOCK OR DEFINED ENV{FREERTOS_KERNEL_PATH})
     list(APPEND SOURCES
         SolidSyslogResolver.c
+        SolidSyslogNullResolver.c
         SolidSyslogDatagram.c
+        SolidSyslogNullDatagram.c
         SolidSyslogUdpSender.c
         SolidSyslogUdpSenderStatic.c
         SolidSyslogStreamSender.c

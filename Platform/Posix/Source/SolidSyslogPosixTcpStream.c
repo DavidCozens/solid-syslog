@@ -13,7 +13,8 @@
 #include <unistd.h>
 
 #include "SolidSyslogAddressInternal.h"
-#include "SolidSyslogMacros.h"
+#include "SolidSyslogNullStream.h"
+#include "SolidSyslogPosixTcpStreamPrivate.h"
 #include "SolidSyslogStream.h"
 #include "SolidSyslogStreamDefinition.h"
 
@@ -36,19 +37,11 @@ enum
     USER_TIMEOUT_MILLISECONDS = 30000
 };
 
-struct SolidSyslogPosixTcpStream
-{
-    struct SolidSyslogStream Base;
-    int Fd;
-};
-
 static bool PosixTcpStream_Open(struct SolidSyslogStream* base, const struct SolidSyslogAddress* addr);
 static bool PosixTcpStream_Send(struct SolidSyslogStream* base, const void* buffer, size_t size);
 static SolidSyslogSsize PosixTcpStream_Read(struct SolidSyslogStream* base, void* buffer, size_t size);
 static void PosixTcpStream_Close(struct SolidSyslogStream* base);
 
-static inline struct SolidSyslogPosixTcpStream* PosixTcpStream_SelfFromStorage(SolidSyslogPosixTcpStreamStorage* storage
-);
 static inline struct SolidSyslogPosixTcpStream* PosixTcpStream_SelfFromBase(struct SolidSyslogStream* base);
 
 static int PosixTcpStream_OpenAndConfigureSocket(void);
@@ -67,39 +60,27 @@ static bool PosixTcpStream_ReadDeferredConnectError(int fd);
 static bool PosixTcpStream_WroteAllBytes(ssize_t sent, size_t expected);
 static inline bool PosixTcpStream_WouldBlock(void);
 
-SOLIDSYSLOG_STATIC_ASSERT(
-    sizeof(struct SolidSyslogPosixTcpStream) <= SOLIDSYSLOG_POSIX_TCP_STREAM_SIZE,
-    "SOLIDSYSLOG_POSIX_TCP_STREAM_SIZE is too small for struct SolidSyslogPosixTcpStream"
-);
-
-static const struct SolidSyslogPosixTcpStream DEFAULT_INSTANCE = {
-    {PosixTcpStream_Open, PosixTcpStream_Send, PosixTcpStream_Read, PosixTcpStream_Close},
-    INVALID_FD,
-};
-
-static const struct SolidSyslogPosixTcpStream DESTROYED_INSTANCE = {
-    {NULL, NULL, NULL, NULL},
-    INVALID_FD,
-};
-
-struct SolidSyslogStream* SolidSyslogPosixTcpStream_Create(SolidSyslogPosixTcpStreamStorage* storage)
-{
-    struct SolidSyslogPosixTcpStream* self = PosixTcpStream_SelfFromStorage(storage);
-    *self = DEFAULT_INSTANCE;
-    return &self->Base;
-}
-
-static inline struct SolidSyslogPosixTcpStream* PosixTcpStream_SelfFromStorage(SolidSyslogPosixTcpStreamStorage* storage
-)
-{
-    return (struct SolidSyslogPosixTcpStream*) storage;
-}
-
-void SolidSyslogPosixTcpStream_Destroy(struct SolidSyslogStream* base)
+void PosixTcpStream_Initialise(struct SolidSyslogStream* base)
 {
     struct SolidSyslogPosixTcpStream* self = PosixTcpStream_SelfFromBase(base);
-    PosixTcpStream_Close(base);
-    *self = DESTROYED_INSTANCE;
+    self->Base.Open = PosixTcpStream_Open;
+    self->Base.Send = PosixTcpStream_Send;
+    self->Base.Read = PosixTcpStream_Read;
+    self->Base.Close = PosixTcpStream_Close;
+    self->Fd = INVALID_FD;
+}
+
+void PosixTcpStream_Cleanup(struct SolidSyslogStream* base)
+{
+    struct SolidSyslogPosixTcpStream* self = PosixTcpStream_SelfFromBase(base);
+    if (PosixTcpStream_IsFileDescriptorValid(self->Fd))
+    {
+        close(self->Fd);
+        self->Fd = INVALID_FD;
+    }
+    /* Overwrite the abstract base with the shared NullStream vtable so
+     * use-after-destroy is a safe no-op rather than a NULL-fn-pointer crash. */
+    *base = *SolidSyslogNullStream_Get();
 }
 
 static inline struct SolidSyslogPosixTcpStream* PosixTcpStream_SelfFromBase(struct SolidSyslogStream* base)

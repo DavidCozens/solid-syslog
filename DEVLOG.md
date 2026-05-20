@@ -1,5 +1,156 @@
 # Dev Log
 
+## 2026-05-19 — S11.06: POSIX adapters onto PoolAllocator
+
+Closes S11.06 (#405). The first platform-adapter sweep in E11 — applies the
+canonical 3-TU split + `SolidSyslogPoolAllocator` to all six stateful POSIX
+adapter classes (`PosixMutex`, `PosixFile`, `PosixTcpStream` — storage-cast;
+`PosixDatagram`, `GetAddrInfoResolver`, `PosixMessageQueueBuffer` —
+file-scope singleton).
+
+Twelve commits on the branch:
+
+- `17101b7 … fce49bb` — four new public GoF nulls land first
+  (`SolidSyslogNullDatagram`, `_NullStream`, `_NullFile`, `_NullResolver`),
+  each reused by this story plus the upcoming S11.07/S11.08/S11.09 sweeps.
+- `bba44d9` — `SolidSyslogNullMutex` migrated from `_Create`/`_Destroy` to
+  the `_Get(void)` shape. It was the last stateless GoF null still on the
+  old shape. Five caller test files updated.
+- `f85c73c … 11d3996` — six per-class POSIX migrations, one commit each,
+  in the order from the issue body. Public `<Class>Storage` types and
+  `SOLIDSYSLOG_*_SIZE` enums deleted from `Platform/Posix/Interface/`;
+  `_Create` drops the `storage` parameter; `_Destroy(base)` shape adopted
+  for the three previously `_Destroy(void)` singletons.
+- `6957ca1` — local gate sweep cleanup (iwyu, cppcheck CTU false positives,
+  tidy NOLINT for an `_Initialise` that mirrors a `_Create`'s existing
+  `bugprone-easily-swappable-parameters` suppression).
+
+### Decisions
+
+- **Four GoF nulls bundled in this story up-front.** Same precedent as
+  S11.04 (`NullSender` + `NullSd`). The pool-exhaustion fallback for
+  `Datagram` / `Stream` / `File` / `Resolver` is needed *now* by S11.06's
+  six classes, and by every platform sweep that follows. Bundling the
+  nulls into this story avoids preceding-story bookkeeping (a la
+  `NullBuffer` rename in S11.03) and lets the cross-sweep types ship on
+  the same review surface as their first consumer.
+
+- **NullDatagram MaxPayload returns `SOLIDSYSLOG_UDP_IPV6_SAFE_PAYLOAD`,
+  not 0.** MaxPayload is reachable from `UdpSender_RetryAfterOversize`,
+  and only that path — but since the call site uses the value as a
+  clip limit, a 0 there would silently drop everything. The IPv6-safe
+  default (1232) keeps any incidental caller of MaxPayload sane while
+  the surrounding SendTo-returns-SENT contract still drops the message
+  on the floor.
+
+- **NullStream Read returns 0 (would-block), not -1 (EOF/error).** A < 0
+  return from Read would force `StreamSender` to flag a broken connection
+  and tear it down, defeating the "drop on the floor" contract.
+  Documented in the production source so future Stream impls follow the
+  same shape for their Null sibling.
+
+- **NullFile per-method semantics chosen for clean-degrade.** `Open` /
+  `IsOpen` / `Read` / `Exists` return `false` (presents consistently as a
+  closed, empty, non-existent file). `Write` / `Delete` return `true`
+  (drop-on-the-floor for the Write, vacuous-success for the Delete).
+  In the realistic pool-exhausted scenario the wider chain is already
+  broken (`BlockStore` on `NullStore`) by the time `NullFile` is
+  reached, but the semantics here are defensible in isolation too —
+  any direct caller of `NullFile` degrades cleanly rather than crashing
+  or spinning on a contradictory state.
+
+- **NullMutex `_Get` migration sits inside S11.06, not a separate
+  cleanup.** Asked pre-flight; rolled in here because `PosixMutex`'s
+  pool-exhaustion fallback wiring needs `NullMutex_Get()` in five test
+  files anyway, and the other Null-* helpers landing in this story are
+  already on `_Get`. `Crc16Policy` is the only remaining Null-shaped
+  class still on `_Create`/`_Destroy` (deliberate — it's not a null
+  object, it's a stateless policy); deferred to a future small cleanup
+  if it's worth doing at all.
+
+- **`GetAddrInfoResolver` stays pool-allocated, not `_Get`.** Mid-sweep
+  call: the class is *truly stateless today* (its slot just holds the
+  vtable), and `_Get` would be the more honest shape. Rejected in
+  favour of symmetry with `FreeRtosStaticResolver` (S11.08) which
+  carries 4 bytes of IPv4 octet state and therefore needs the pool.
+  Splitting the two `Resolver` impls onto different lifecycles would
+  cost long-term consistency for a marginal short-term simplification.
+  Recorded as an open question in the issue body and explicitly closed
+  here.
+
+- **`PosixDatagram` Initialise sets `Fd = INVALID_FD` and
+  `Connected = false` explicitly.** Pre-migration the file-scope
+  singleton's `Fd = INVALID_FD` initial value came from the
+  declaration, and `_Create` never reset it. After Close + a second
+  Create, the slot relied on Close having set `Fd = -1` and
+  `Connected = false`. Pool slots are zero-initialised — `Fd = 0`
+  is a valid FD (stdin) — so the pool migration had to set both
+  fields explicitly in `_Initialise`. Latent re-Create bug closed
+  by the migration.
+
+- **`HandleEqualsStorageAddress` test dropped from
+  `SolidSyslogPosixMutexTest.cpp`.** Pre-migration it pinned the
+  invariant "the returned handle equals the address of the storage the
+  caller supplied" — meaningful for the storage-cast shape, no longer
+  meaningful when the slot is library-internal. The other existing
+  tests carry through as the regression net.
+
+- **Pool-size override validated at 3 for every new tunable.** Built and
+  ran the full suite at
+  `SOLIDSYSLOG_POSIX_MUTEX_POOL_SIZE=3` /
+  `_POSIX_DATAGRAM_POOL_SIZE=3` /
+  `_GETADDRINFO_RESOLVER_POOL_SIZE=3` /
+  `_POSIX_FILE_POOL_SIZE=3` /
+  `_POSIX_TCP_STREAM_POOL_SIZE=3` /
+  `_POSIX_MESSAGE_QUEUE_BUFFER_POOL_SIZE=3` (single
+  `SOLIDSYSLOG_USER_TUNABLES_FILE` override). All 1258 tests green.
+
+- **Verified in `cpputest-freertos` container per
+  `feedback_verify_in_freertos_host_image`.** Full POSIX suite + the
+  five FreeRTOS-specific host tests (`FreeRtosDatagram`, `FreeRtosMutex`,
+  `FreeRtosStaticResolver`, `FreeRtosSysUpTime`, `FreeRtosTcpStream`)
+  all green; the new tunables propagate cleanly through the FreeRTOS
+  build's CMake config.
+
+- **All local gates green.** debug + clang-debug + sanitize + coverage
+  + tidy + cppcheck + iwyu + clang-format. Coverage 100% line on every
+  new and migrated file (lcov per-file table confirms). cppcheck-misra
+  produced no new findings vs `main` — the per-class storage-cast
+  deviations for `PosixMutex` / `PosixFile` / `PosixTcpStream`
+  evaporated (the bonus E11 promised).
+
+### Deferred
+
+- **`Crc16Policy` shape cleanup.** Last class still on `_Create`/
+  `_Destroy` for a stateless thing. Not a null object so doesn't need
+  `_Get`; could become a constexpr-style policy struct or a function
+  pair. Not worth its own story today; will fall out of S11.10 / S11.11
+  cleanups if anything touches it.
+
+- **POSIX function-adapter consistency review.** `PosixHostname`,
+  `PosixProcessId`, `PosixSysUpTime`, `PosixSleep`, `PosixClock` all
+  use bare function names (`SolidSyslogPosix<X>_Get` /
+  `_GetTimestamp`). Out of scope per E11 (stateless, no Create), but
+  worth a glance at S11.11 wrap-up to confirm the audience-table rows
+  still read consistently after the platform sweeps.
+
+### Open questions
+
+- **`PosixMessageQueueBuffer` `mq_open` failure mode.** Today's pool
+  Create returns the slot unconditionally and stashes whatever
+  `mqd_t` comes back from `mq_open`; the migration preserves that.
+  An `mq_open` failure should arguably route to the shared
+  `SolidSyslogNullBuffer` with a separate error message — but that
+  shifts the bad-setup contract and belongs in E12, not this sweep.
+  Flagged in the issue body, deliberately deferred.
+
+- **`PosixTcpStream`'s `SO_SNDTIMEO` bounded-connect timeout** wasn't
+  exercised by S11.06's pool tests (they only stress the slot
+  allocator, not the underlying socket logic). The existing TcpStream
+  suite carries that contract forward unchanged — no regression risk —
+  but if the timeout semantics ever drift, the failure mode would be
+  a Service-loop wedge that's not easy to catch in unit tests.
+
 ## 2026-05-19 — BDD target stderr handler: fatal exit on ERROR severity
 
 Follow-up from S11.05 part B post-merge. The PR's final CI run took 23m

@@ -63,5 +63,29 @@
     "SolidSyslogBlockStore_Create pool exhausted; returning fallback store"
 #define SOLIDSYSLOG_ERROR_MSG_BLOCKSTORE_UNKNOWN_DESTROY \
     "SolidSyslogBlockStore_Destroy called with a handle not issued by this pool"
+#define SOLIDSYSLOG_ERROR_MSG_POSIXMUTEX_POOL_EXHAUSTED \
+    "SolidSyslogPosixMutex_Create pool exhausted; returning fallback mutex"
+#define SOLIDSYSLOG_ERROR_MSG_POSIXMUTEX_UNKNOWN_DESTROY \
+    "SolidSyslogPosixMutex_Destroy called with a handle not issued by this pool"
+#define SOLIDSYSLOG_ERROR_MSG_POSIXDATAGRAM_POOL_EXHAUSTED \
+    "SolidSyslogPosixDatagram_Create pool exhausted; returning fallback datagram"
+#define SOLIDSYSLOG_ERROR_MSG_POSIXDATAGRAM_UNKNOWN_DESTROY \
+    "SolidSyslogPosixDatagram_Destroy called with a handle not issued by this pool"
+#define SOLIDSYSLOG_ERROR_MSG_GETADDRINFORESOLVER_POOL_EXHAUSTED \
+    "SolidSyslogGetAddrInfoResolver_Create pool exhausted; returning fallback resolver"
+#define SOLIDSYSLOG_ERROR_MSG_GETADDRINFORESOLVER_UNKNOWN_DESTROY \
+    "SolidSyslogGetAddrInfoResolver_Destroy called with a handle not issued by this pool"
+#define SOLIDSYSLOG_ERROR_MSG_POSIXFILE_POOL_EXHAUSTED \
+    "SolidSyslogPosixFile_Create pool exhausted; returning fallback file"
+#define SOLIDSYSLOG_ERROR_MSG_POSIXFILE_UNKNOWN_DESTROY \
+    "SolidSyslogPosixFile_Destroy called with a handle not issued by this pool"
+#define SOLIDSYSLOG_ERROR_MSG_POSIXTCPSTREAM_POOL_EXHAUSTED \
+    "SolidSyslogPosixTcpStream_Create pool exhausted; returning fallback stream"
+#define SOLIDSYSLOG_ERROR_MSG_POSIXTCPSTREAM_UNKNOWN_DESTROY \
+    "SolidSyslogPosixTcpStream_Destroy called with a handle not issued by this pool"
+#define SOLIDSYSLOG_ERROR_MSG_POSIXMESSAGEQUEUEBUFFER_POOL_EXHAUSTED \
+    "SolidSyslogPosixMessageQueueBuffer_Create pool exhausted; returning fallback buffer"
+#define SOLIDSYSLOG_ERROR_MSG_POSIXMESSAGEQUEUEBUFFER_UNKNOWN_DESTROY \
+    "SolidSyslogPosixMessageQueueBuffer_Destroy called with a handle not issued by this pool"
 
 #endif /* SOLIDSYSLOGERRORMESSAGES_H */

@@ -51,11 +51,12 @@ static const char* const STORE_PATH_PREFIX = "/tmp/STORE";
 static const char* const THRESHOLD_MARKER_PATH = "/tmp/solidsyslog_threshold_marker.log";
 static struct SolidSyslogFile* storeFile;
 static struct SolidSyslogBlockDevice* storeBlockDevice;
-static SolidSyslogPosixTcpStreamStorage plainTcpStreamStorage;
 static struct SolidSyslogStream* plainTcpStream;
 static struct SolidSyslogSender* plainTcpSender;
 static struct SolidSyslogSender* udpSender;
 static struct SolidSyslogSender* switchingSender;
+static struct SolidSyslogDatagram* udpDatagram;
+static struct SolidSyslogResolver* sharedResolver;
 
 static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
 {
@@ -77,16 +78,18 @@ static struct SolidSyslogSender* CreateSender(const struct BddTargetOptions* opt
 {
     bool mtlsModeActive = (strcmp(options->Transport, "mtls") == 0);
 
-    struct SolidSyslogResolver* resolver = SolidSyslogGetAddrInfoResolver_Create();
+    sharedResolver = SolidSyslogGetAddrInfoResolver_Create();
+    struct SolidSyslogResolver* resolver = sharedResolver;
 
+    udpDatagram = SolidSyslogPosixDatagram_Create();
     static struct SolidSyslogUdpSenderConfig udpConfig = {0};
     udpConfig.Resolver = resolver;
-    udpConfig.Datagram = SolidSyslogPosixDatagram_Create();
+    udpConfig.Datagram = udpDatagram;
     udpConfig.Endpoint = BddTargetUdpConfig_GetEndpoint;
     udpConfig.EndpointVersion = BddTargetUdpConfig_GetEndpointVersion;
     udpSender = SolidSyslogUdpSender_Create(&udpConfig);
 
-    plainTcpStream = SolidSyslogPosixTcpStream_Create(&plainTcpStreamStorage);
+    plainTcpStream = SolidSyslogPosixTcpStream_Create();
     static struct SolidSyslogStreamSenderConfig tcpConfig = {0};
     tcpConfig.Resolver = resolver;
     tcpConfig.Stream = plainTcpStream;
@@ -157,8 +160,7 @@ static struct SolidSyslogStore* CreateStore(const struct BddTargetOptions* optio
 
     if (useFile)
     {
-        static SolidSyslogPosixFileStorage fileStorage;
-        storeFile = SolidSyslogPosixFile_Create(&fileStorage);
+        storeFile = SolidSyslogPosixFile_Create();
 
         storeBlockDevice = SolidSyslogFileBlockDevice_Create(storeFile, STORE_PATH_PREFIX);
 
@@ -188,8 +190,8 @@ static void DestroySender(void)
     SolidSyslogStreamSender_Destroy(plainTcpSender);
     SolidSyslogPosixTcpStream_Destroy(plainTcpStream);
     SolidSyslogUdpSender_Destroy(udpSender);
-    SolidSyslogPosixDatagram_Destroy();
-    SolidSyslogGetAddrInfoResolver_Destroy();
+    SolidSyslogPosixDatagram_Destroy(udpDatagram);
+    SolidSyslogGetAddrInfoResolver_Destroy(sharedResolver);
 }
 
 static void DestroyStore(struct SolidSyslogStore* store, const struct BddTargetOptions* options)
@@ -289,7 +291,7 @@ int main(int argc, char* argv[])
     SolidSyslogMetaSd_Destroy(metaSd);
     SolidSyslogStdAtomicCounter_Destroy(counter);
     DestroyStore(store, &options);
-    SolidSyslogPosixMessageQueueBuffer_Destroy();
+    SolidSyslogPosixMessageQueueBuffer_Destroy(buffer);
     DestroySender();
 
     return 0;

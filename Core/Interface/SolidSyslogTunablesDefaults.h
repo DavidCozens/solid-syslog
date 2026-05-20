@@ -51,6 +51,133 @@
 #endif
 
 /*
+ * Number of SolidSyslogPosixMutex instances the library's internal
+ * static pool can simultaneously hold. Each instance carries a
+ * pthread_mutex_t.
+ *
+ * Default 1 — almost all integrators wire a single PosixMutex into
+ * a CircularBuffer or other thread-safe primitive. Bump via
+ * SOLIDSYSLOG_USER_TUNABLES_FILE if more than one is genuinely
+ * needed.
+ *
+ * Floor: 1. Sub-floor values rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_POSIX_MUTEX_POOL_SIZE
+/* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- macro form required for preprocessor visibility (floor #if) and C array-size const-expr. */
+#define SOLIDSYSLOG_POSIX_MUTEX_POOL_SIZE 1U
+#endif
+
+#if SOLIDSYSLOG_POSIX_MUTEX_POOL_SIZE < 1
+#error "SOLIDSYSLOG_POSIX_MUTEX_POOL_SIZE must be >= 1"
+#endif
+
+/*
+ * Number of SolidSyslogPosixDatagram instances the library's internal
+ * static pool can simultaneously hold. Each instance carries the
+ * AF_INET socket FD and a one-shot connect flag.
+ *
+ * Default 1 — almost all integrators wire a single PosixDatagram into
+ * a UdpSender. Bump via SOLIDSYSLOG_USER_TUNABLES_FILE if more than
+ * one is genuinely needed.
+ *
+ * Floor: 1. Sub-floor values rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_POSIX_DATAGRAM_POOL_SIZE
+/* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- macro form required for preprocessor visibility (floor #if) and C array-size const-expr. */
+#define SOLIDSYSLOG_POSIX_DATAGRAM_POOL_SIZE 1U
+#endif
+
+#if SOLIDSYSLOG_POSIX_DATAGRAM_POOL_SIZE < 1
+#error "SOLIDSYSLOG_POSIX_DATAGRAM_POOL_SIZE must be >= 1"
+#endif
+
+/*
+ * Number of SolidSyslogGetAddrInfoResolver instances the library's
+ * internal static pool can simultaneously hold. The class is
+ * effectively stateless today — the pool slot carries the vtable
+ * holder.
+ *
+ * Default 1 — almost all integrators wire a single resolver into
+ * one or more Senders. Bump via SOLIDSYSLOG_USER_TUNABLES_FILE if
+ * more than one is genuinely needed.
+ *
+ * Floor: 1. Sub-floor values rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_GETADDRINFO_RESOLVER_POOL_SIZE
+/* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- macro form required for preprocessor visibility (floor #if) and C array-size const-expr. */
+#define SOLIDSYSLOG_GETADDRINFO_RESOLVER_POOL_SIZE 1U
+#endif
+
+#if SOLIDSYSLOG_GETADDRINFO_RESOLVER_POOL_SIZE < 1
+#error "SOLIDSYSLOG_GETADDRINFO_RESOLVER_POOL_SIZE must be >= 1"
+#endif
+
+/*
+ * Number of SolidSyslogPosixFile instances the library's internal
+ * static pool can simultaneously hold. Each instance carries an
+ * int file descriptor.
+ *
+ * Default 1 — almost all integrators wire a single PosixFile into a
+ * FileBlockDevice. Bump via SOLIDSYSLOG_USER_TUNABLES_FILE if more
+ * than one is genuinely needed.
+ *
+ * Floor: 1. Sub-floor values rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_POSIX_FILE_POOL_SIZE
+/* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- macro form required for preprocessor visibility (floor #if) and C array-size const-expr. */
+#define SOLIDSYSLOG_POSIX_FILE_POOL_SIZE 1U
+#endif
+
+#if SOLIDSYSLOG_POSIX_FILE_POOL_SIZE < 1
+#error "SOLIDSYSLOG_POSIX_FILE_POOL_SIZE must be >= 1"
+#endif
+
+/*
+ * Number of SolidSyslogPosixTcpStream instances the library's internal
+ * static pool can simultaneously hold. Each instance carries an
+ * int file descriptor.
+ *
+ * Default 2 — the Linux BDD target wires *two* stream-framed senders
+ * behind a SwitchingSender (plain TCP, plus TLS that wraps another
+ * underlying PosixTcpStream as its transport), so default 1 would
+ * silently fall back to NullStream on the second Create. Matches the
+ * SOLIDSYSLOG_STREAM_SENDER_POOL_SIZE default for the same reason.
+ * Bump via SOLIDSYSLOG_USER_TUNABLES_FILE if more are needed.
+ *
+ * Floor: 1. Sub-floor values rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_POSIX_TCP_STREAM_POOL_SIZE
+/* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- macro form required for preprocessor visibility (floor #if) and C array-size const-expr. */
+#define SOLIDSYSLOG_POSIX_TCP_STREAM_POOL_SIZE 2U
+#endif
+
+#if SOLIDSYSLOG_POSIX_TCP_STREAM_POOL_SIZE < 1
+#error "SOLIDSYSLOG_POSIX_TCP_STREAM_POOL_SIZE must be >= 1"
+#endif
+
+/*
+ * Number of SolidSyslogPosixMessageQueueBuffer instances the library's
+ * internal static pool can simultaneously hold. Each instance carries
+ * an mqd_t plus the per-process queue name (Formatter storage).
+ *
+ * Default 1 — almost all integrators wire a single MQ-backed buffer.
+ * The queue name derives from the process ID, so bumping above 1 in
+ * the same process would race multiple slots onto the same
+ * `/solidsyslog_<pid>` name; an integrator needing N > 1 must
+ * additionally distinguish the names (out of scope today).
+ *
+ * Floor: 1. Sub-floor values rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_POSIX_MESSAGE_QUEUE_BUFFER_POOL_SIZE
+/* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- macro form required for preprocessor visibility (floor #if) and C array-size const-expr. */
+#define SOLIDSYSLOG_POSIX_MESSAGE_QUEUE_BUFFER_POOL_SIZE 1U
+#endif
+
+#if SOLIDSYSLOG_POSIX_MESSAGE_QUEUE_BUFFER_POOL_SIZE < 1
+#error "SOLIDSYSLOG_POSIX_MESSAGE_QUEUE_BUFFER_POOL_SIZE must be >= 1"
+#endif
+
+/*
  * Number of SolidSyslogPassthroughBuffer instances the library's
  * internal static pool can simultaneously hold. Each instance is
  * tiny (vtable + a Sender pointer).

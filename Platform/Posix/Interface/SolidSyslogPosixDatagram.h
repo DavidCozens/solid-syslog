@@ -5,8 +5,10 @@
 
 EXTERN_C_BEGIN
 
+    struct SolidSyslogDatagram;
+
     struct SolidSyslogDatagram* SolidSyslogPosixDatagram_Create(void);
-    void SolidSyslogPosixDatagram_Destroy(void);
+    void SolidSyslogPosixDatagram_Destroy(struct SolidSyslogDatagram * base);
 
 EXTERN_C_END
 
