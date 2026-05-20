@@ -9,7 +9,7 @@
 # Format: misra-c2012-<rule>:<file>:<line>
 # Lines starting with # are comments.
 
-# D.002 — Rules 11.2 / 11.3 / 11.5: opaque-impl + caller-supplied-storage
+# D.002 — Rules 11.2 / 11.3 / 11.5: vtable downcasts + Address + Formatter
 # See docs/misra-deviations.md#d002
 misra-c2012-11.2:Core/Interface/SolidSyslogFormatter.h:30
 misra-c2012-11.2:Platform/FreeRtos/Source/SolidSyslogAddress.c:5
