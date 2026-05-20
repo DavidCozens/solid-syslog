@@ -95,5 +95,9 @@
     "SolidSyslogWinsockDatagram_Create pool exhausted; returning fallback datagram"
 #define SOLIDSYSLOG_ERROR_MSG_WINSOCKDATAGRAM_UNKNOWN_DESTROY \
     "SolidSyslogWinsockDatagram_Destroy called with a handle not issued by this pool"
+#define SOLIDSYSLOG_ERROR_MSG_WINSOCKRESOLVER_POOL_EXHAUSTED \
+    "SolidSyslogWinsockResolver_Create pool exhausted; returning fallback resolver"
+#define SOLIDSYSLOG_ERROR_MSG_WINSOCKRESOLVER_UNKNOWN_DESTROY \
+    "SolidSyslogWinsockResolver_Destroy called with a handle not issued by this pool"
 
 #endif /* SOLIDSYSLOGERRORMESSAGES_H */

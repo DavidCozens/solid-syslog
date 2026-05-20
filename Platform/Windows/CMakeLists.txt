@@ -29,6 +29,7 @@ if(SOLIDSYSLOG_WINSOCK)
     target_sources(${PROJECT_NAME} PRIVATE
         Source/SolidSyslogAddress.c
         Source/SolidSyslogWinsockResolver.c
+        Source/SolidSyslogWinsockResolverStatic.c
         Source/SolidSyslogWinsockDatagram.c
         Source/SolidSyslogWinsockDatagramStatic.c
         Source/SolidSyslogWinsockTcpStream.c

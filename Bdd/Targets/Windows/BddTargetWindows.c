@@ -221,7 +221,7 @@ static void DestroySender(void)
     SolidSyslogWinsockTcpStream_Destroy(plainTcpStream);
     SolidSyslogUdpSender_Destroy(udpSender);
     SolidSyslogWinsockDatagram_Destroy(udpDatagram);
-    SolidSyslogWinsockResolver_Destroy();
+    SolidSyslogWinsockResolver_Destroy(resolver);
 }
 
 static struct SolidSyslogStore* CreateStore(const struct BddTargetWindowsOptions* options)
