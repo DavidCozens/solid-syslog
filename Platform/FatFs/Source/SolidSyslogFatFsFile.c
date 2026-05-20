@@ -3,8 +3,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "SolidSyslogFatFsFilePrivate.h"
 #include "SolidSyslogFileDefinition.h"
-#include "SolidSyslogMacros.h"
+#include "SolidSyslogNullFile.h"
 #include "ff.h"
 
 #define READ_WRITE_OR_CREATE (FA_READ | FA_WRITE | FA_OPEN_ALWAYS)
@@ -20,52 +21,36 @@ static void FatFsFile_Truncate(struct SolidSyslogFile* base);
 static bool FatFsFile_Exists(struct SolidSyslogFile* base, const char* path);
 static bool FatFsFile_Delete(struct SolidSyslogFile* base, const char* path);
 
-static inline struct SolidSyslogFatFsFile* FatFsFile_SelfFromStorage(SolidSyslogFatFsFileStorage* storage);
 static inline struct SolidSyslogFatFsFile* FatFsFile_SelfFromBase(struct SolidSyslogFile* base);
 static inline FIL* FatFsFile_Handle(struct SolidSyslogFile* base);
 
-struct SolidSyslogFatFsFile
+void FatFsFile_Initialise(struct SolidSyslogFile* base)
 {
-    struct SolidSyslogFile Base;
-    FIL Fp;
-    bool IsOpen;
-};
-
-SOLIDSYSLOG_STATIC_ASSERT(
-    sizeof(struct SolidSyslogFatFsFile) <= sizeof(SolidSyslogFatFsFileStorage),
-    "SOLIDSYSLOG_FATFS_FILE_SIZE is too small for struct SolidSyslogFatFsFile"
-);
-
-static const struct SolidSyslogFatFsFile DEFAULT_INSTANCE = {
-    .Base =
-        {FatFsFile_Open,
-         FatFsFile_Close,
-         FatFsFile_IsOpen,
-         FatFsFile_Read,
-         FatFsFile_Write,
-         FatFsFile_SeekTo,
-         FatFsFile_Size,
-         FatFsFile_Truncate,
-         FatFsFile_Exists,
-         FatFsFile_Delete},
-    .IsOpen = false,
-};
-
-struct SolidSyslogFile* SolidSyslogFatFsFile_Create(SolidSyslogFatFsFileStorage* storage)
-{
-    struct SolidSyslogFatFsFile* self = FatFsFile_SelfFromStorage(storage);
-    *self = DEFAULT_INSTANCE;
-    return &self->Base;
+    struct SolidSyslogFatFsFile* self = FatFsFile_SelfFromBase(base);
+    self->Base.Open = FatFsFile_Open;
+    self->Base.Close = FatFsFile_Close;
+    self->Base.IsOpen = FatFsFile_IsOpen;
+    self->Base.Read = FatFsFile_Read;
+    self->Base.Write = FatFsFile_Write;
+    self->Base.SeekTo = FatFsFile_SeekTo;
+    self->Base.Size = FatFsFile_Size;
+    self->Base.Truncate = FatFsFile_Truncate;
+    self->Base.Exists = FatFsFile_Exists;
+    self->Base.Delete = FatFsFile_Delete;
+    self->IsOpen = false;
 }
 
-static inline struct SolidSyslogFatFsFile* FatFsFile_SelfFromStorage(SolidSyslogFatFsFileStorage* storage)
-{
-    return (struct SolidSyslogFatFsFile*) storage;
-}
-
-void SolidSyslogFatFsFile_Destroy(struct SolidSyslogFile* base)
+void FatFsFile_Cleanup(struct SolidSyslogFile* base)
 {
     FatFsFile_Close(base);
+    /* Overwrite the abstract base with the shared NullFile vtable so
+     * use-after-destroy is a safe no-op rather than a NULL-fn-pointer crash. */
+    *base = *SolidSyslogNullFile_Get();
+}
+
+static inline struct SolidSyslogFatFsFile* FatFsFile_SelfFromBase(struct SolidSyslogFile* base)
+{
+    return (struct SolidSyslogFatFsFile*) base;
 }
 
 static bool FatFsFile_Open(struct SolidSyslogFile* base, const char* path)
@@ -74,11 +59,6 @@ static bool FatFsFile_Open(struct SolidSyslogFile* base, const char* path)
     FRESULT result = f_open(&self->Fp, path, READ_WRITE_OR_CREATE);
     self->IsOpen = (result == FR_OK);
     return self->IsOpen;
-}
-
-static inline struct SolidSyslogFatFsFile* FatFsFile_SelfFromBase(struct SolidSyslogFile* base)
-{
-    return (struct SolidSyslogFatFsFile*) base;
 }
 
 static void FatFsFile_Close(struct SolidSyslogFile* base)

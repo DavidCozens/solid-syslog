@@ -584,4 +584,25 @@
 #error "SOLIDSYSLOG_WINDOWS_ATOMIC_COUNTER_POOL_SIZE must be >= 1"
 #endif
 
+/*
+ * Number of SolidSyslogFatFsFile instances the library's internal static
+ * pool can simultaneously hold. Each instance carries a FatFs FIL object
+ * (~56 B header + 512 B sector buffer when FF_MAX_SS=512, FF_FS_TINY=0)
+ * plus an IsOpen flag.
+ *
+ * Default 1 — store-and-forward integrations wire a single file under
+ * BlockStore + FileBlockDevice; that's the dominant pattern. Bump via
+ * SOLIDSYSLOG_USER_TUNABLES_FILE if more than one is genuinely needed.
+ *
+ * Floor: 1. Sub-floor values rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_FATFS_FILE_POOL_SIZE
+/* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- macro form required for preprocessor visibility (floor #if) and C array-size const-expr. */
+#define SOLIDSYSLOG_FATFS_FILE_POOL_SIZE 1U
+#endif
+
+#if SOLIDSYSLOG_FATFS_FILE_POOL_SIZE < 1
+#error "SOLIDSYSLOG_FATFS_FILE_POOL_SIZE must be >= 1"
+#endif
+
 #endif /* SOLIDSYSLOG_TUNABLES_DEFAULTS_H */

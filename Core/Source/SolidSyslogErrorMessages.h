@@ -131,5 +131,9 @@
     "SolidSyslogWindowsAtomicCounter_Create pool exhausted; returning fallback counter"
 #define SOLIDSYSLOG_ERROR_MSG_WINDOWSATOMICCOUNTER_UNKNOWN_DESTROY \
     "SolidSyslogWindowsAtomicCounter_Destroy called with a handle not issued by this pool"
+#define SOLIDSYSLOG_ERROR_MSG_FATFSFILE_POOL_EXHAUSTED \
+    "SolidSyslogFatFsFile_Create pool exhausted; returning fallback file"
+#define SOLIDSYSLOG_ERROR_MSG_FATFSFILE_UNKNOWN_DESTROY \
+    "SolidSyslogFatFsFile_Destroy called with a handle not issued by this pool"
 
 #endif /* SOLIDSYSLOGERRORMESSAGES_H */

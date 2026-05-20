@@ -29,16 +29,15 @@ static const char* const TEST_PATH = "test.log";
 // clang-format off
 TEST_GROUP(SolidSyslogFatFsFile)
 {
-    SolidSyslogFatFsFileStorage storage     = {};
-    struct SolidSyslogFile*     file        = nullptr;
+    struct SolidSyslogFile* file = nullptr;
     // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-    char                        buffer[5]   = {'h', 'e', 'l', 'l', 'o'};
+    char buffer[5] = {'h', 'e', 'l', 'l', 'o'};
 
     void setup() override
     {
         FatFsFake_Reset();
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        file = SolidSyslogFatFsFile_Create(&storage);
+        file = SolidSyslogFatFsFile_Create();
     }
 
     void teardown() override
@@ -106,10 +105,9 @@ TEST(SolidSyslogFatFsFile, CloseIsNoOpWhenAlreadyClosed)
 
 TEST(SolidSyslogFatFsFile, DestroyClosesOpenFile)
 {
-    SolidSyslogFatFsFileStorage localStorage = {};
-    struct SolidSyslogFile* localFile = SolidSyslogFatFsFile_Create(&localStorage);
-    SolidSyslogFile_Open(localFile, TEST_PATH);
-    SolidSyslogFatFsFile_Destroy(localFile);
+    SolidSyslogFile_Open(file, TEST_PATH);
+    SolidSyslogFatFsFile_Destroy(file);
+    file = nullptr;
     CALLED_FAKE(FatFsFake_Close, ONCE);
 }
 

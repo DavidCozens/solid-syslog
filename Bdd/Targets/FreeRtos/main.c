@@ -188,8 +188,6 @@ static volatile bool solidSyslogTeardown = false;
  * in our ffconf.h). */
 static const char STORE_PATH_PREFIX[] = "STORE";
 
-static SolidSyslogFatFsFileStorage storeFileStorage;
-
 /* FATFS object lives in .bss because f_mount stores its address inside the
  * FatFs volume registry — the object must outlive every f_open / f_stat /
  * f_unlink. One per volume (FF_VOLUMES = 1). */
@@ -580,7 +578,7 @@ static bool RebuildWithFileStore(void)
     /* Build a fresh FatFs-backed BlockStore. With the volume mounted above,
      * BlockSequence_Open's f_stat / f_open calls now hit a live filesystem
      * via disk_read / disk_write semihosting traps. */
-    storeFile = SolidSyslogFatFsFile_Create(&storeFileStorage);
+    storeFile = SolidSyslogFatFsFile_Create();
     storeBlockDevice = SolidSyslogFileBlockDevice_Create(storeFile, STORE_PATH_PREFIX);
 
     struct SolidSyslogSecurityPolicy* policy = SolidSyslogCrc16Policy_Create();
