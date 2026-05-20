@@ -418,4 +418,23 @@
 #error "SOLIDSYSLOG_WINSOCK_RESOLVER_POOL_SIZE must be >= 1"
 #endif
 
+/*
+ * Number of SolidSyslogWindowsFile instances the library's internal
+ * static pool can simultaneously hold. Each instance carries an `int`
+ * MSVC CRT file descriptor.
+ *
+ * Default 1. Integrators using FileBlockDevice with BlockStore may want
+ * to bump this in line with SOLIDSYSLOG_BLOCK_STORE_POOL_SIZE.
+ *
+ * Floor: 1. Sub-floor values rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_WINDOWS_FILE_POOL_SIZE
+/* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- macro form required for preprocessor visibility (floor #if) and C array-size const-expr. */
+#define SOLIDSYSLOG_WINDOWS_FILE_POOL_SIZE 1U
+#endif
+
+#if SOLIDSYSLOG_WINDOWS_FILE_POOL_SIZE < 1
+#error "SOLIDSYSLOG_WINDOWS_FILE_POOL_SIZE must be >= 1"
+#endif
+
 #endif /* SOLIDSYSLOG_TUNABLES_DEFAULTS_H */

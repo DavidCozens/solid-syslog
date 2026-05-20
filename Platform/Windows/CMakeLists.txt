@@ -8,6 +8,7 @@ if(HAVE_WINDOWS_PLATFORM)
     target_sources(${PROJECT_NAME} PRIVATE
         Source/SolidSyslogWindowsClock.c
         Source/SolidSyslogWindowsFile.c
+        Source/SolidSyslogWindowsFileStatic.c
         Source/SolidSyslogWindowsHostname.c
         Source/SolidSyslogWindowsMutex.c
         Source/SolidSyslogWindowsMutexStatic.c

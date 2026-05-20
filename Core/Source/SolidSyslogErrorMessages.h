@@ -99,5 +99,9 @@
     "SolidSyslogWinsockResolver_Create pool exhausted; returning fallback resolver"
 #define SOLIDSYSLOG_ERROR_MSG_WINSOCKRESOLVER_UNKNOWN_DESTROY \
     "SolidSyslogWinsockResolver_Destroy called with a handle not issued by this pool"
+#define SOLIDSYSLOG_ERROR_MSG_WINDOWSFILE_POOL_EXHAUSTED \
+    "SolidSyslogWindowsFile_Create pool exhausted; returning fallback file"
+#define SOLIDSYSLOG_ERROR_MSG_WINDOWSFILE_UNKNOWN_DESTROY \
+    "SolidSyslogWindowsFile_Destroy called with a handle not issued by this pool"
 
 #endif /* SOLIDSYSLOGERRORMESSAGES_H */

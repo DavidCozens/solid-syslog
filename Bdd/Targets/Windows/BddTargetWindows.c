@@ -230,8 +230,7 @@ static struct SolidSyslogStore* CreateStore(const struct BddTargetWindowsOptions
 
     if (useFile)
     {
-        static SolidSyslogWindowsFileStorage fileStorage;
-        storeFile = SolidSyslogWindowsFile_Create(&fileStorage);
+        storeFile = SolidSyslogWindowsFile_Create();
 
         storeBlockDevice = SolidSyslogFileBlockDevice_Create(storeFile, STORE_PATH_PREFIX);
 
