@@ -232,8 +232,7 @@ int main(int argc, char* argv[])
     struct SolidSyslogStore* store = CreateStore(&options);
 
     struct SolidSyslogBuffer* buffer = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
-    SolidSyslogStdAtomicCounterStorage counterStorage;
-    struct SolidSyslogAtomicCounter* counter = SolidSyslogStdAtomicCounter_Create(&counterStorage);
+    struct SolidSyslogAtomicCounter* counter = SolidSyslogStdAtomicCounter_Create();
     struct SolidSyslogMetaSdConfig metaConfig = {
         .Counter = counter,
         .GetSysUpTime = SolidSyslogPosixSysUpTime_Get,

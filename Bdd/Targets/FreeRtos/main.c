@@ -188,8 +188,6 @@ static volatile bool solidSyslogTeardown = false;
  * in our ffconf.h). */
 static const char STORE_PATH_PREFIX[] = "STORE";
 
-static SolidSyslogFatFsFileStorage storeFileStorage;
-
 /* FATFS object lives in .bss because f_mount stores its address inside the
  * FatFs volume registry — the object must outlive every f_open / f_stat /
  * f_unlink. One per volume (FF_VOLUMES = 1). */
@@ -225,7 +223,6 @@ static volatile bool pendingNoSd = false;
  * .Store and pass the same struct back into SolidSyslog_Create. */
 static struct SolidSyslogConfig solidSyslogConfig;
 static struct SolidSyslogStructuredData* sdList[3];
-static SolidSyslogStdAtomicCounterStorage atomicCounterStorage;
 static struct SolidSyslogAtomicCounter* atomicCounter = NULL;
 static struct SolidSyslogStructuredData* metaSd = NULL;
 static struct SolidSyslogStructuredData* timeQualitySd = NULL;
@@ -581,7 +578,7 @@ static bool RebuildWithFileStore(void)
     /* Build a fresh FatFs-backed BlockStore. With the volume mounted above,
      * BlockSequence_Open's f_stat / f_open calls now hit a live filesystem
      * via disk_read / disk_write semihosting traps. */
-    storeFile = SolidSyslogFatFsFile_Create(&storeFileStorage);
+    storeFile = SolidSyslogFatFsFile_Create();
     storeBlockDevice = SolidSyslogFileBlockDevice_Create(storeFile, STORE_PATH_PREFIX);
 
     struct SolidSyslogSecurityPolicy* policy = SolidSyslogCrc16Policy_Create();
@@ -826,7 +823,7 @@ static void InteractiveTask(void* argument)
     currentStore = SolidSyslogNullStore_Get();
     currentStoreIsFile = false;
 
-    atomicCounter = SolidSyslogStdAtomicCounter_Create(&atomicCounterStorage);
+    atomicCounter = SolidSyslogStdAtomicCounter_Create();
     struct SolidSyslogMetaSdConfig metaConfig = {
         .Counter = atomicCounter,
         .GetSysUpTime = SolidSyslogFreeRtosSysUpTime_Get,

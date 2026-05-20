@@ -65,7 +65,6 @@ static const char* const STORE_PATH_PREFIX = "Bdd/output/STORE";
 static const char* const THRESHOLD_MARKER_PATH = "Bdd/output/solidsyslog_threshold_marker.log";
 
 static uint8_t bufferRing[SOLIDSYSLOG_CIRCULAR_BUFFER_RING_BYTES(BDD_TARGET_BUFFER_MESSAGES)];
-static SolidSyslogWindowsAtomicCounterStorage counterStorage;
 static volatile bool shutdownFlag;
 
 /* Created in CreateSender, destroyed in DestroySender — held in file scope so
@@ -299,7 +298,7 @@ int BddTargetWindows_Run(int argc, char* argv[])
 
     struct SolidSyslogMutex* mutex = SolidSyslogWindowsMutex_Create();
     struct SolidSyslogBuffer* buffer = SolidSyslogCircularBuffer_Create(mutex, bufferRing, sizeof(bufferRing));
-    struct SolidSyslogAtomicCounter* counter = SolidSyslogWindowsAtomicCounter_Create(&counterStorage);
+    struct SolidSyslogAtomicCounter* counter = SolidSyslogWindowsAtomicCounter_Create();
     struct SolidSyslogMetaSdConfig metaConfig = {
         .Counter = counter,
         .GetSysUpTime = SolidSyslogWindowsSysUpTime_Get,

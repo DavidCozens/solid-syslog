@@ -1,5 +1,222 @@
 # Dev Log
 
+## 2026-05-20 — S11.09: AtomicCounter family + TLS + FatFs onto PoolAllocator
+
+Closes S11.09 (#412). Closes out E11's class-by-class migration with the
+four storage-cast classes that don't fit one platform umbrella —
+`StdAtomicCounter` (Platform/Atomics), `WindowsAtomicCounter`
+(Platform/Windows), `FatFsFile` (Platform/FatFs), `TlsStream`
+(Platform/OpenSsl). Each gets the canonical 3-TU split
+(`Class.c` + `ClassPrivate.h` + `ClassStatic.c`) + `SolidSyslogPoolAllocator`
++ the public `<Class>Storage` typedef and `SOLIDSYSLOG_*_SIZE` enum
+deleted from the public header.
+
+Four commits on the branch, then DEVLOG.
+
+- `7c25e84` — **`feat: S11.09 add SolidSyslogNullAtomicCounter`**. New
+  public GoF null with `Increment` returning `1U` unconditionally. RFC
+  5424 §7.3.1 forbids sequenceId `0`; `1U` is indistinguishable from
+  the post-power-on / post-wrap state, which is the safest fallback for
+  pool-exhaustion. Symmetric with the S11.06 wave (NullDatagram /
+  NullStream / NullFile / NullResolver) — both AtomicCounter backends
+  need a fallback and `_Get` doesn't fire `SolidSyslog_Error` because
+  `_Get` is also called by deliberate integrator wiring (e.g.
+  `currentStore = SolidSyslogNullStore_Get();` in the FreeRTOS BDD
+  target's default-store path).
+
+- `f7d0eb9` — **`refactor: S11.09 migrate AtomicCounter family onto
+  PoolAllocator`** (Std + Windows in one commit, not two as the story
+  body sequenced them). The two backends share
+  `Tests/SolidSyslogAtomicCounterTestHelper.h`'s shim signature
+  (`TestAtomicCounter_Create(void) → handle`); splitting per backend
+  would leave the inactive platform's compile broken between commits.
+  Combined commit preserves the per-commit must-compile invariant.
+
+- `804b83a` — **`refactor: S11.09 migrate FatFsFile onto PoolAllocator`**.
+  Deletes the `SOLIDSYSLOG_FATFS_FILE_SIZE = sizeof(intptr_t) * 180U`
+  enum from the public header — the 180-intptr footprint (driven by
+  `FF_MAX_SS=512` and `FIL`'s sector buffer) is now an internal pool
+  concern. The planned S21.03 follow-up that was going to make
+  `FF_MAX_SS > 512` overridable becomes simpler: it's a pool-internal
+  tunable, not a public-API one.
+
+- `2aa9403` — **`refactor: S11.09 migrate TlsStream onto PoolAllocator`**.
+  Largest of the four (~460 lines pre-migration). Refactor-only;
+  bounded handshake retry via the injected Sleep callback, mTLS
+  all-or-nothing client-identity contract, BIO_METHOD lifecycle,
+  SSL_read fail-fast on non-WANT_READ, idempotent Close all preserved
+  verbatim. Drops one obsolete test
+  (`CreateReturnsHandleInsideCallerSuppliedStorage` — asserted the
+  storage-cast invariant which no longer holds).
+
+### Decisions
+
+- **One new public GoF null only.** `SolidSyslogNullAtomicCounter`
+  (commit 1) is the only new public API surface. `NullStream` (S11.06)
+  covers `TlsStream`; `NullFile` (S11.06) covers `FatFsFile`.
+
+- **AtomicCounter siblings ship in one commit.** Per the per-commit
+  must-compile rule: a Std-only commit would leave Windows broken
+  between commits because the shared `TestAtomicCounter_*` shim
+  signature changes for both. Story body sequenced them as two; the
+  executed plan diverges to preserve the invariant. The squash-merged
+  PR collapses to one commit anyway, so the on-`main` history is
+  unchanged from the story body's plan.
+
+- **Pool size defaults — all four at 1U.** None of the four has a
+  documented multi-instance use case. TlsStream could go to 2U on the
+  same logic that gave PosixTcpStream / WinsockTcpStream / FreeRtosTcpStream
+  their 2U defaults (mbedTLS-via-TCP composes two streams), but the
+  TLS path itself is the composition point — bumping the underlying
+  TCP stream is the right place, not bumping TlsStream itself.
+  Integrators wanting multiple concurrent TLS sessions override via
+  `SOLIDSYSLOG_USER_TUNABLES_FILE`.
+
+- **`TestAtomicCounter_PoolSize()` shim function.** Added to the
+  shared `Tests/SolidSyslogAtomicCounterTestHelper.h` so the
+  backend-agnostic contract test can runtime-gate the
+  `TwoCountersFromPoolAreIndependent` scenario. Each backend's
+  TestHelper.c returns its own
+  `SOLIDSYSLOG_{STD,WINDOWS}_ATOMIC_COUNTER_POOL_SIZE`. Avoids the
+  preprocessor-conditional gating the contract test would otherwise
+  need.
+
+- **Tunable-override fixture updated.** `SmallMessageSizeTunables.h`
+  bumps both `_STD_ATOMIC_COUNTER_POOL_SIZE` and
+  `_WINDOWS_ATOMIC_COUNTER_POOL_SIZE` to 2U so the
+  `tunable-override-debug` preset exercises the two-counter
+  independence contract test. Same precedent as the
+  `PosixMessageQueueBuffer` pool-size bump in S11.06.
+
+- **AtomicCounter whitebox-test access preserved.** Each backend's
+  `_Init(uint32_t)` helper (used by the contract test for the
+  wraparound-at-INT32_MAX scenario) stays in `*.c` alongside
+  `_Increment`. The TestHelper continues to `#include "*.c"` (whitebox
+  include) and now also sees the struct definition via the new
+  `*Private.h`. Wraparound contract test mechanism unchanged.
+
+- **`TlsStream`'s `DEFAULT_INSTANCE` / `DESTROYED_INSTANCE` static
+  consts go away.** `Initialise` now sets vtable fields + zeroes
+  Ctx/Ssl/BioMethod explicitly; `Cleanup` overwrites the abstract base
+  with `*SolidSyslogNullStream_Get()`. Matches every other
+  3-TU-migrated class.
+
+- **INTERFACE-library shape preserved for FatFs and Atomics.**
+  `Platform/FatFs/CMakeLists.txt` stays INTERFACE; `SolidSyslogFatFsFileStatic.c`
+  joins `SolidSyslogFatFsFile.c` in every consumer's source list
+  (`Bdd/Targets/FreeRtos/CMakeLists.txt` + `Tests/FatFs/CMakeLists.txt`).
+  `Platform/Atomics/CMakeLists.txt` and `Platform/Windows/CMakeLists.txt`'s
+  `HAVE_WINDOWS_INTERLOCKED` block both stay PRIVATE-source.
+  `Platform/OpenSsl/CMakeLists.txt` likewise PRIVATE.
+
+- **Pool-exhaustion + use-after-destroy fallback severity follows the
+  existing contract** — ERROR on exhausted Create, WARNING on
+  unknown/stale Destroy. Error message constants follow the
+  `SOLIDSYSLOG_ERROR_MSG_<CLASS>_POOL_EXHAUSTED` /
+  `_UNKNOWN_DESTROY` pattern verbatim from S11.06/07/08.
+
+### Per-class delta numbers
+
+- `NullAtomicCounter`: 2 new tests (returns 1, idempotent).
+- `StdAtomicCounter`: 6 existing contract tests (one runtime-gated on
+  pool size ≥ 2; in default builds the contract test runs 5, plus the
+  one that prints TEST_EXIT) + 9 Pool tests = 15 total. Under
+  `tunable-override-debug` all 6 + 9 = 15 run with the gated test live.
+- `WindowsAtomicCounter`: contract tests shared with Std (same
+  backend-agnostic shim) + 9 Pool tests (MSVC build only).
+- `FatFsFile`: 28 existing tests + 9 Pool = 37 total.
+- `TlsStream`: 114 existing tests (one obsolete deleted) + 9 Pool =
+  123 total.
+
+### Local validation
+
+All host gates green from the gcc devcontainer (StdAtomicCounter,
+TlsStream, NullAtomicCounter) and the freertos-host devcontainer
+(FatFsFile, which only compiles when `$FATFS_PATH` is set):
+
+- debug build + 1278 unit tests
+- sanitize build + suite (a pre-existing UBSan finding on `Tests/FileFake.c`
+  is unrelated to this story; `git blame` points to S10.04)
+- coverage: 99.5% line aggregated, 100% line on every new/migrated
+  file when measured per-test-binary (`SolidSyslogTlsStream.c` 183/183,
+  `SolidSyslogTlsStreamStatic.c` 26/26, `SolidSyslogStdAtomicCounter.c`
+  20/20, `SolidSyslogStdAtomicCounterStatic.c` 26/26,
+  `SolidSyslogNullAtomicCounter.c` 4/4, `SolidSyslogFatFsFile.c` and
+  `SolidSyslogFatFsFileStatic.c` 83/83 combined via the separate
+  `SolidSyslogFatFsFileTest` binary). The lcov capture in the `coverage`
+  custom target only runs the main `SolidSyslogTests` exe — same
+  pre-existing aggregation gap as for the WindowsAtomicCounter and the
+  separate `Tests/FatFs/` and `Tests/FreeRtos/` binaries. Worth a
+  separate gate-improvement story; not in scope here.
+- tidy clean on every new/migrated file (the gcc-container CI image
+  doesn't include `Tests/FreeRtos` so the pre-existing CmsdkUart tidy
+  errors flagged in S11.08's DEVLOG are still out-of-CI-scope).
+- cppcheck clean.
+- format clean.
+- IWYU clean via the cpputest-clang container (caught one stray
+  unused include in `SolidSyslogNullAtomicCounter.c` after the first
+  consumer landed — folded into the AtomicCounter migration commit).
+- OpenSSL integration suite green (9 tests).
+
+### Handoff for CI
+
+Four CI-gated checks remain. Per pre-flight agreement, **MSVC
+validation moves to CI for this story** (departing from
+`feedback_local_msvc` for S11.09 specifically — the AtomicCounter
+family + the OpenSSL surface mean the local-MSVC overhead doesn't
+buy a meaningfully different signal than the existing
+`build-windows-msvc` + `integration-windows-openssl` CI jobs).
+
+1. **`build-windows-msvc`** — `WindowsAtomicCounter` and the
+   TlsStream-OpenSsl-WinsockTcp BDD target sender both compile only
+   under MSVC. CI is the gate; expected pass.
+2. **`bdd-windows-otel`** — the OpenSSL+Winsock TLS BDD scenario
+   exercises `TlsStream_Create(&config)` against the cert-validated
+   syslog-ng oracle. Expected pass.
+3. **`analyze-iwyu`** — already validated locally via the clang
+   container; CI re-runs to be sure.
+4. **`bdd-freertos-qemu`** — exercises the FatFsFile pool migration
+   end-to-end (the `set store file` BDD scenario flips the BDD
+   target's store to a FatFs-backed BlockStore, which now goes through
+   the FatFsFile pool). The host smoke (37 tests on the FatFsFakes
+   harness) covers the unit logic; QEMU end-to-end via CI.
+
+### Known stale findings (this devcontainer, pre-existing)
+
+- `Tests/FileFake.c:424` triggers a UBSan `null pointer passed as
+  argument 1` warning under the `sanitize` preset on this branch.
+  Pre-existing: `git log -1 Tests/FileFake.c` points to S10.04 (#364),
+  same shape on `main`. Out of scope for S11.09.
+- `Tests/FreeRtos/CmsdkUartFake.c` tidy errors documented in S11.08's
+  DEVLOG — unchanged. The gcc CI image excludes `Tests/FreeRtos` so
+  these are not gating.
+- Per-test-binary coverage aggregation gap (FatFsFile, FreeRtos,
+  WindowsAtomicCounter only measured by their own exes, not folded
+  into the main `coverage` target's `coverage.info`). Pre-existing,
+  same shape as S11.08's report. Probably worth lifting into a
+  separate coverage-gate story.
+
+### Deferred
+
+- **S11.10 — `SolidSyslog` core retrofit.** Already singleton-shaped;
+  adopt the canonical file layout under fixed pool size 1, no
+  tunable. Story stays as planned in the epic body. Per
+  pre-flight agreement S11.10 and S11.11 stay separate stories from
+  S11.09.
+- **S11.11 — wholesale MISRA `D.002` storage-cast deviation cleanup.**
+  Per-class deviations for StdAtomicCounter / WindowsAtomicCounter /
+  FatFsFile / TlsStream evaporate naturally with this story (the
+  underlying casts are gone). The bulk `docs/misra-deviations.md`
+  edit and `misra_suppressions.txt` pruning is S11.11.
+- **`SOLIDSYSLOG_FATFS_FILE_SIZE` override mechanism for
+  `FF_MAX_SS > 512` (S21.03 follow-up)** — simpler now that the size
+  is no longer in the public surface; it becomes a pool-internal
+  CMake tunable.
+
+### Open questions
+
+- None.
+
 ## 2026-05-20 — S11.08: FreeRTOS adapters onto PoolAllocator
 
 Closes S11.08 (#410). The third platform-adapter sweep in E11 — applies

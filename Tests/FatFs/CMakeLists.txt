@@ -10,13 +10,17 @@
 
 add_executable(SolidSyslogFatFsFileTest
     SolidSyslogFatFsFileTest.cpp
+    SolidSyslogFatFsFilePoolTest.cpp
     main.cpp
     ${CMAKE_SOURCE_DIR}/Platform/FatFs/Source/SolidSyslogFatFsFile.c
+    ${CMAKE_SOURCE_DIR}/Platform/FatFs/Source/SolidSyslogFatFsFileStatic.c
     ${CMAKE_SOURCE_DIR}/Tests/Support/FatFsFakes/Source/FatFsFake.c
 )
 
 target_link_libraries(SolidSyslogFatFsFileTest PRIVATE
     ${PROJECT_NAME}
+    ErrorHandlerFake
+    ConfigLockFake
     CppUTest
     CppUTestExt
 )

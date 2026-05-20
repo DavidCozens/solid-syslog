@@ -66,8 +66,6 @@ static void FakeLanguage_Get(struct SolidSyslogFormatter* formatter)
 TEST_GROUP(SolidSyslogMetaSd)
 {
     // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
-    TestAtomicCounterStorage counterStorage;
-    // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
     SolidSyslogAtomicCounter* counter;
     // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
     SolidSyslogStructuredData* sd;
@@ -82,7 +80,7 @@ TEST_GROUP(SolidSyslogMetaSd)
     {
         ErrorHandlerFake_Install(&sentinel);
         formatter = SolidSyslogFormatter_Create(storage, TEST_BUFFER_SIZE);
-        counter = TestAtomicCounter_Create(&counterStorage);
+        counter = TestAtomicCounter_Create();
         fakeSysUpTimeValue = 0;
         fakeLanguageContent = nullptr;
         fakeLanguageMaxLength = 0;
@@ -304,7 +302,6 @@ TEST(SolidSyslogMetaSd, CreateWithNullCounterReportsWarning)
 // clang-format off
 TEST_GROUP(SolidSyslogMetaSdPool)
 {
-    TestAtomicCounterStorage counterStorage;
     SolidSyslogAtomicCounter* counter                                   = nullptr;
     SolidSyslogMetaSdConfig config{};
     struct SolidSyslogStructuredData* pooled[SOLIDSYSLOG_META_SD_POOL_SIZE] = {};
@@ -312,7 +309,7 @@ TEST_GROUP(SolidSyslogMetaSdPool)
 
     void setup() override
     {
-        counter = TestAtomicCounter_Create(&counterStorage);
+        counter = TestAtomicCounter_Create();
         config.Counter = counter;
     }
 

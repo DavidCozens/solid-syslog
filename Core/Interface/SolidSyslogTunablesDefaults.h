@@ -541,4 +541,90 @@
 #error "SOLIDSYSLOG_FREE_RTOS_TCP_STREAM_POOL_SIZE must be >= 1"
 #endif
 
+/*
+ * Number of SolidSyslogStdAtomicCounter instances the library's
+ * internal static pool can simultaneously hold. Each instance carries
+ * a single _Atomic uint32_t (the sequenceId counter).
+ *
+ * Default 1 — RFC 5424 sequenceIds are scoped per SolidSyslog instance,
+ * and almost all integrators run a single SolidSyslog instance per
+ * process. Bump via SOLIDSYSLOG_USER_TUNABLES_FILE if more than one is
+ * genuinely needed (e.g. several independent SolidSyslog instances).
+ *
+ * Floor: 1. Sub-floor values rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_STD_ATOMIC_COUNTER_POOL_SIZE
+/* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- macro form required for preprocessor visibility (floor #if) and C array-size const-expr. */
+#define SOLIDSYSLOG_STD_ATOMIC_COUNTER_POOL_SIZE 1U
+#endif
+
+#if SOLIDSYSLOG_STD_ATOMIC_COUNTER_POOL_SIZE < 1
+#error "SOLIDSYSLOG_STD_ATOMIC_COUNTER_POOL_SIZE must be >= 1"
+#endif
+
+/*
+ * Number of SolidSyslogWindowsAtomicCounter instances the library's
+ * internal static pool can simultaneously hold. Each instance carries
+ * a single `volatile LONG` (the sequenceId counter, manipulated via
+ * `InterlockedCompareExchange`).
+ *
+ * Default 1 — RFC 5424 sequenceIds are scoped per SolidSyslog instance,
+ * and almost all integrators run a single SolidSyslog instance per
+ * process. Bump via SOLIDSYSLOG_USER_TUNABLES_FILE if more than one is
+ * genuinely needed.
+ *
+ * Floor: 1. Sub-floor values rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_WINDOWS_ATOMIC_COUNTER_POOL_SIZE
+/* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- macro form required for preprocessor visibility (floor #if) and C array-size const-expr. */
+#define SOLIDSYSLOG_WINDOWS_ATOMIC_COUNTER_POOL_SIZE 1U
+#endif
+
+#if SOLIDSYSLOG_WINDOWS_ATOMIC_COUNTER_POOL_SIZE < 1
+#error "SOLIDSYSLOG_WINDOWS_ATOMIC_COUNTER_POOL_SIZE must be >= 1"
+#endif
+
+/*
+ * Number of SolidSyslogFatFsFile instances the library's internal static
+ * pool can simultaneously hold. Each instance carries a FatFs FIL object
+ * (~56 B header + 512 B sector buffer when FF_MAX_SS=512, FF_FS_TINY=0)
+ * plus an IsOpen flag.
+ *
+ * Default 1 — store-and-forward integrations wire a single file under
+ * BlockStore + FileBlockDevice; that's the dominant pattern. Bump via
+ * SOLIDSYSLOG_USER_TUNABLES_FILE if more than one is genuinely needed.
+ *
+ * Floor: 1. Sub-floor values rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_FATFS_FILE_POOL_SIZE
+/* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- macro form required for preprocessor visibility (floor #if) and C array-size const-expr. */
+#define SOLIDSYSLOG_FATFS_FILE_POOL_SIZE 1U
+#endif
+
+#if SOLIDSYSLOG_FATFS_FILE_POOL_SIZE < 1
+#error "SOLIDSYSLOG_FATFS_FILE_POOL_SIZE must be >= 1"
+#endif
+
+/*
+ * Number of SolidSyslogTlsStream instances the library's internal static
+ * pool can simultaneously hold. Each instance carries an SSL_CTX*, SSL*,
+ * BIO_METHOD*, and the integrator's TlsStreamConfig (transport pointer,
+ * sleep callback, cert/key/CA paths).
+ *
+ * Default 1 — TLS senders are scoped per destination and almost all
+ * integrators wire a single TLS sender per process. Bump via
+ * SOLIDSYSLOG_USER_TUNABLES_FILE if more than one is genuinely needed
+ * (e.g. multi-destination egress with separate TLS sessions per peer).
+ *
+ * Floor: 1. Sub-floor values rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_TLS_STREAM_POOL_SIZE
+/* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- macro form required for preprocessor visibility (floor #if) and C array-size const-expr. */
+#define SOLIDSYSLOG_TLS_STREAM_POOL_SIZE 1U
+#endif
+
+#if SOLIDSYSLOG_TLS_STREAM_POOL_SIZE < 1
+#error "SOLIDSYSLOG_TLS_STREAM_POOL_SIZE must be >= 1"
+#endif
+
 #endif /* SOLIDSYSLOG_TUNABLES_DEFAULTS_H */

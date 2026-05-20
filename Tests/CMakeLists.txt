@@ -79,6 +79,7 @@ endif()
 if(HAVE_ATOMIC_COUNTER)
     list(APPEND TEST_SOURCES
         SolidSyslogAtomicCounterContractTest.cpp
+        SolidSyslogNullAtomicCounterTest.cpp
     )
 endif()
 
@@ -89,10 +90,12 @@ endif()
 if(HAVE_STDATOMIC_H)
     list(APPEND TEST_SOURCES
         SolidSyslogStdAtomicCounterTestHelper.c
+        SolidSyslogStdAtomicCounterPoolTest.cpp
     )
 elseif(HAVE_WINDOWS_INTERLOCKED)
     list(APPEND TEST_SOURCES
         SolidSyslogWindowsAtomicCounterTestHelper.c
+        SolidSyslogWindowsAtomicCounterPoolTest.cpp
     )
 endif()
 
@@ -118,6 +121,7 @@ endif()
 if(SOLIDSYSLOG_OPENSSL)
     list(APPEND TEST_SOURCES
         SolidSyslogTlsStreamTest.cpp
+        SolidSyslogTlsStreamPoolTest.cpp
         OpenSslFakeTest.cpp
     )
 endif()
