@@ -13,8 +13,8 @@
 
 struct SolidSyslogFile;
 
-static size_t WindowsFile_IndexFromHandle(const struct SolidSyslogFile* base);
-static void WindowsFile_CleanupAtIndex(size_t index, void* context);
+static inline size_t WindowsFile_IndexFromHandle(const struct SolidSyslogFile* base);
+static inline void WindowsFile_CleanupAtIndex(size_t index, void* context);
 
 static bool WindowsFile_InUse[SOLIDSYSLOG_WINDOWS_FILE_POOL_SIZE];
 static struct SolidSyslogWindowsFile WindowsFile_Pool[SOLIDSYSLOG_WINDOWS_FILE_POOL_SIZE];
@@ -48,7 +48,7 @@ void SolidSyslogWindowsFile_Destroy(struct SolidSyslogFile* base)
     }
 }
 
-static size_t WindowsFile_IndexFromHandle(const struct SolidSyslogFile* base)
+static inline size_t WindowsFile_IndexFromHandle(const struct SolidSyslogFile* base)
 {
     size_t result = SOLIDSYSLOG_WINDOWS_FILE_POOL_SIZE;
     for (size_t poolIndex = 0; poolIndex < SOLIDSYSLOG_WINDOWS_FILE_POOL_SIZE; poolIndex++)
@@ -62,7 +62,7 @@ static size_t WindowsFile_IndexFromHandle(const struct SolidSyslogFile* base)
     return result;
 }
 
-static void WindowsFile_CleanupAtIndex(size_t index, void* context)
+static inline void WindowsFile_CleanupAtIndex(size_t index, void* context)
 {
     (void) context;
     WindowsFile_Cleanup(&WindowsFile_Pool[index].Base);

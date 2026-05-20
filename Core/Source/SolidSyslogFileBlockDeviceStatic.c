@@ -14,8 +14,8 @@
 struct SolidSyslogBlockDevice;
 struct SolidSyslogFile;
 
-static size_t FileBlockDevice_IndexFromHandle(const struct SolidSyslogBlockDevice* base);
-static void FileBlockDevice_CleanupAtIndex(size_t index, void* context);
+static inline size_t FileBlockDevice_IndexFromHandle(const struct SolidSyslogBlockDevice* base);
+static inline void FileBlockDevice_CleanupAtIndex(size_t index, void* context);
 
 static bool FileBlockDevice_InUse[SOLIDSYSLOG_FILE_BLOCK_DEVICE_POOL_SIZE];
 static struct SolidSyslogFileBlockDevice FileBlockDevice_Pool[SOLIDSYSLOG_FILE_BLOCK_DEVICE_POOL_SIZE];
@@ -52,7 +52,7 @@ void SolidSyslogFileBlockDevice_Destroy(struct SolidSyslogBlockDevice* base)
     }
 }
 
-static size_t FileBlockDevice_IndexFromHandle(const struct SolidSyslogBlockDevice* base)
+static inline size_t FileBlockDevice_IndexFromHandle(const struct SolidSyslogBlockDevice* base)
 {
     size_t result = SOLIDSYSLOG_FILE_BLOCK_DEVICE_POOL_SIZE;
     for (size_t poolIndex = 0; poolIndex < SOLIDSYSLOG_FILE_BLOCK_DEVICE_POOL_SIZE; poolIndex++)
@@ -66,7 +66,7 @@ static size_t FileBlockDevice_IndexFromHandle(const struct SolidSyslogBlockDevic
     return result;
 }
 
-static void FileBlockDevice_CleanupAtIndex(size_t index, void* context)
+static inline void FileBlockDevice_CleanupAtIndex(size_t index, void* context)
 {
     (void) context;
     FileBlockDevice_Cleanup(&FileBlockDevice_Pool[index].Base);

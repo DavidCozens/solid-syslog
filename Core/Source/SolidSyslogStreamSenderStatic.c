@@ -13,8 +13,8 @@
 
 struct SolidSyslogSender;
 
-static size_t StreamSender_IndexFromHandle(const struct SolidSyslogSender* base);
-static void StreamSender_CleanupAtIndex(size_t index, void* context);
+static inline size_t StreamSender_IndexFromHandle(const struct SolidSyslogSender* base);
+static inline void StreamSender_CleanupAtIndex(size_t index, void* context);
 
 static bool StreamSender_InUse[SOLIDSYSLOG_STREAM_SENDER_POOL_SIZE];
 static struct SolidSyslogStreamSender StreamSender_Pool[SOLIDSYSLOG_STREAM_SENDER_POOL_SIZE];
@@ -51,7 +51,7 @@ void SolidSyslogStreamSender_Destroy(struct SolidSyslogSender* base)
     }
 }
 
-static size_t StreamSender_IndexFromHandle(const struct SolidSyslogSender* base)
+static inline size_t StreamSender_IndexFromHandle(const struct SolidSyslogSender* base)
 {
     size_t result = SOLIDSYSLOG_STREAM_SENDER_POOL_SIZE;
     for (size_t poolIndex = 0; poolIndex < SOLIDSYSLOG_STREAM_SENDER_POOL_SIZE; poolIndex++)
@@ -65,7 +65,7 @@ static size_t StreamSender_IndexFromHandle(const struct SolidSyslogSender* base)
     return result;
 }
 
-static void StreamSender_CleanupAtIndex(size_t index, void* context)
+static inline void StreamSender_CleanupAtIndex(size_t index, void* context)
 {
     (void) context;
     StreamSender_Cleanup(&StreamSender_Pool[index].Base);

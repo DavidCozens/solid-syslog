@@ -15,8 +15,8 @@
 struct SolidSyslogBuffer;
 struct SolidSyslogMutex;
 
-static size_t CircularBuffer_IndexFromHandle(const struct SolidSyslogBuffer* base);
-static void CircularBuffer_CleanupAtIndex(size_t index, void* context);
+static inline size_t CircularBuffer_IndexFromHandle(const struct SolidSyslogBuffer* base);
+static inline void CircularBuffer_CleanupAtIndex(size_t index, void* context);
 
 static bool CircularBuffer_InUse[SOLIDSYSLOG_CIRCULAR_BUFFER_POOL_SIZE];
 static struct SolidSyslogCircularBuffer CircularBuffer_Pool[SOLIDSYSLOG_CIRCULAR_BUFFER_POOL_SIZE];
@@ -57,7 +57,7 @@ void SolidSyslogCircularBuffer_Destroy(struct SolidSyslogBuffer* base)
     }
 }
 
-static size_t CircularBuffer_IndexFromHandle(const struct SolidSyslogBuffer* base)
+static inline size_t CircularBuffer_IndexFromHandle(const struct SolidSyslogBuffer* base)
 {
     size_t result = SOLIDSYSLOG_CIRCULAR_BUFFER_POOL_SIZE;
     for (size_t poolIndex = 0; poolIndex < SOLIDSYSLOG_CIRCULAR_BUFFER_POOL_SIZE; poolIndex++)
@@ -71,7 +71,7 @@ static size_t CircularBuffer_IndexFromHandle(const struct SolidSyslogBuffer* bas
     return result;
 }
 
-static void CircularBuffer_CleanupAtIndex(size_t index, void* context)
+static inline void CircularBuffer_CleanupAtIndex(size_t index, void* context)
 {
     (void) context;
     CircularBuffer_Cleanup(&CircularBuffer_Pool[index].Base);

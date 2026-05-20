@@ -14,8 +14,8 @@
 struct SolidSyslogBuffer;
 struct SolidSyslogSender;
 
-static size_t PassthroughBuffer_IndexFromHandle(const struct SolidSyslogBuffer* base);
-static void PassthroughBuffer_CleanupAtIndex(size_t index, void* context);
+static inline size_t PassthroughBuffer_IndexFromHandle(const struct SolidSyslogBuffer* base);
+static inline void PassthroughBuffer_CleanupAtIndex(size_t index, void* context);
 
 static bool PassthroughBuffer_InUse[SOLIDSYSLOG_PASSTHROUGH_BUFFER_POOL_SIZE];
 static struct SolidSyslogPassthroughBuffer PassthroughBuffer_Pool[SOLIDSYSLOG_PASSTHROUGH_BUFFER_POOL_SIZE];
@@ -56,7 +56,7 @@ void SolidSyslogPassthroughBuffer_Destroy(struct SolidSyslogBuffer* base)
     }
 }
 
-static size_t PassthroughBuffer_IndexFromHandle(const struct SolidSyslogBuffer* base)
+static inline size_t PassthroughBuffer_IndexFromHandle(const struct SolidSyslogBuffer* base)
 {
     size_t result = SOLIDSYSLOG_PASSTHROUGH_BUFFER_POOL_SIZE;
     for (size_t poolIndex = 0; poolIndex < SOLIDSYSLOG_PASSTHROUGH_BUFFER_POOL_SIZE; poolIndex++)
@@ -70,7 +70,7 @@ static size_t PassthroughBuffer_IndexFromHandle(const struct SolidSyslogBuffer* 
     return result;
 }
 
-static void PassthroughBuffer_CleanupAtIndex(size_t index, void* context)
+static inline void PassthroughBuffer_CleanupAtIndex(size_t index, void* context)
 {
     (void) context;
     PassthroughBuffer_Cleanup(&PassthroughBuffer_Pool[index].Base);

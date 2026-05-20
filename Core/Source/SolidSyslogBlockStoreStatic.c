@@ -17,8 +17,8 @@
 
 struct SolidSyslogStore;
 
-static size_t BlockStore_IndexFromHandle(const struct SolidSyslogStore* base);
-static void BlockStore_CleanupAtIndex(size_t index, void* context);
+static inline size_t BlockStore_IndexFromHandle(const struct SolidSyslogStore* base);
+static inline void BlockStore_CleanupAtIndex(size_t index, void* context);
 static struct SolidSyslogSecurityPolicy* BlockStore_ResolveSecurityPolicy(struct SolidSyslogSecurityPolicy* configured);
 static struct BlockSequenceConfig BlockStore_BuildBlockSequenceConfig(
     const struct SolidSyslogBlockStoreConfig* config,
@@ -100,7 +100,7 @@ void SolidSyslogBlockStore_Destroy(struct SolidSyslogStore* base)
     }
 }
 
-static size_t BlockStore_IndexFromHandle(const struct SolidSyslogStore* base)
+static inline size_t BlockStore_IndexFromHandle(const struct SolidSyslogStore* base)
 {
     size_t result = SOLIDSYSLOG_BLOCK_STORE_POOL_SIZE;
     for (size_t poolIndex = 0; poolIndex < SOLIDSYSLOG_BLOCK_STORE_POOL_SIZE; poolIndex++)
@@ -114,7 +114,7 @@ static size_t BlockStore_IndexFromHandle(const struct SolidSyslogStore* base)
     return result;
 }
 
-static void BlockStore_CleanupAtIndex(size_t index, void* context)
+static inline void BlockStore_CleanupAtIndex(size_t index, void* context)
 {
     (void) context;
     BlockStore_Cleanup(&BlockStore_Pool[index].Base);

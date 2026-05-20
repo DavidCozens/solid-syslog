@@ -13,8 +13,8 @@
 
 struct SolidSyslogDatagram;
 
-static size_t PosixDatagram_IndexFromHandle(const struct SolidSyslogDatagram* base);
-static void PosixDatagram_CleanupAtIndex(size_t index, void* context);
+static inline size_t PosixDatagram_IndexFromHandle(const struct SolidSyslogDatagram* base);
+static inline void PosixDatagram_CleanupAtIndex(size_t index, void* context);
 
 static bool PosixDatagram_InUse[SOLIDSYSLOG_POSIX_DATAGRAM_POOL_SIZE];
 static struct SolidSyslogPosixDatagram PosixDatagram_Pool[SOLIDSYSLOG_POSIX_DATAGRAM_POOL_SIZE];
@@ -51,7 +51,7 @@ void SolidSyslogPosixDatagram_Destroy(struct SolidSyslogDatagram* base)
     }
 }
 
-static size_t PosixDatagram_IndexFromHandle(const struct SolidSyslogDatagram* base)
+static inline size_t PosixDatagram_IndexFromHandle(const struct SolidSyslogDatagram* base)
 {
     size_t result = SOLIDSYSLOG_POSIX_DATAGRAM_POOL_SIZE;
     for (size_t poolIndex = 0; poolIndex < SOLIDSYSLOG_POSIX_DATAGRAM_POOL_SIZE; poolIndex++)
@@ -65,7 +65,7 @@ static size_t PosixDatagram_IndexFromHandle(const struct SolidSyslogDatagram* ba
     return result;
 }
 
-static void PosixDatagram_CleanupAtIndex(size_t index, void* context)
+static inline void PosixDatagram_CleanupAtIndex(size_t index, void* context)
 {
     (void) context;
     PosixDatagram_Cleanup(&PosixDatagram_Pool[index].Base);

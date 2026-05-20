@@ -14,8 +14,8 @@
 struct SolidSyslogStructuredData;
 
 static bool MetaSd_IsValidConfig(const struct SolidSyslogMetaSdConfig* config);
-static size_t MetaSd_IndexFromHandle(const struct SolidSyslogStructuredData* base);
-static void MetaSd_CleanupAtIndex(size_t index, void* context);
+static inline size_t MetaSd_IndexFromHandle(const struct SolidSyslogStructuredData* base);
+static inline void MetaSd_CleanupAtIndex(size_t index, void* context);
 
 static bool MetaSd_InUse[SOLIDSYSLOG_META_SD_POOL_SIZE];
 static struct SolidSyslogMetaSd MetaSd_Pool[SOLIDSYSLOG_META_SD_POOL_SIZE];
@@ -69,7 +69,7 @@ static bool MetaSd_IsValidConfig(const struct SolidSyslogMetaSdConfig* config)
     return valid;
 }
 
-static size_t MetaSd_IndexFromHandle(const struct SolidSyslogStructuredData* base)
+static inline size_t MetaSd_IndexFromHandle(const struct SolidSyslogStructuredData* base)
 {
     size_t result = SOLIDSYSLOG_META_SD_POOL_SIZE;
     for (size_t poolIndex = 0; poolIndex < SOLIDSYSLOG_META_SD_POOL_SIZE; poolIndex++)
@@ -83,7 +83,7 @@ static size_t MetaSd_IndexFromHandle(const struct SolidSyslogStructuredData* bas
     return result;
 }
 
-static void MetaSd_CleanupAtIndex(size_t index, void* context)
+static inline void MetaSd_CleanupAtIndex(size_t index, void* context)
 {
     (void) context;
     MetaSd_Cleanup(&MetaSd_Pool[index].Base);

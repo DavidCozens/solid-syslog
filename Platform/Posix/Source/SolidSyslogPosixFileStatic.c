@@ -13,8 +13,8 @@
 
 struct SolidSyslogFile;
 
-static size_t PosixFile_IndexFromHandle(const struct SolidSyslogFile* base);
-static void PosixFile_CleanupAtIndex(size_t index, void* context);
+static inline size_t PosixFile_IndexFromHandle(const struct SolidSyslogFile* base);
+static inline void PosixFile_CleanupAtIndex(size_t index, void* context);
 
 static bool PosixFile_InUse[SOLIDSYSLOG_POSIX_FILE_POOL_SIZE];
 static struct SolidSyslogPosixFile PosixFile_Pool[SOLIDSYSLOG_POSIX_FILE_POOL_SIZE];
@@ -47,7 +47,7 @@ void SolidSyslogPosixFile_Destroy(struct SolidSyslogFile* base)
     }
 }
 
-static size_t PosixFile_IndexFromHandle(const struct SolidSyslogFile* base)
+static inline size_t PosixFile_IndexFromHandle(const struct SolidSyslogFile* base)
 {
     size_t result = SOLIDSYSLOG_POSIX_FILE_POOL_SIZE;
     for (size_t poolIndex = 0; poolIndex < SOLIDSYSLOG_POSIX_FILE_POOL_SIZE; poolIndex++)
@@ -61,7 +61,7 @@ static size_t PosixFile_IndexFromHandle(const struct SolidSyslogFile* base)
     return result;
 }
 
-static void PosixFile_CleanupAtIndex(size_t index, void* context)
+static inline void PosixFile_CleanupAtIndex(size_t index, void* context)
 {
     (void) context;
     PosixFile_Cleanup(&PosixFile_Pool[index].Base);

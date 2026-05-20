@@ -1,5 +1,34 @@
 # Dev Log
 
+## 2026-05-20 — chore: `*Static.c` helper functions to `static inline`
+
+Mechanical sweep over every `*Static.c` file across Core, Posix and Windows
+(23 files) to mark `IndexFromHandle` and `CleanupAtIndex` `static inline`
+rather than plain `static`. Flagged as a CodeRabbit nit on S11.07's
+`SolidSyslogWinsockResolverStatic.c`; the rule applies to the whole family
+and the inconsistency had drifted across S11.01 / S11.04 / S11.05 / S11.06 /
+S11.07.
+
+Scope is narrow on purpose:
+
+- Only the two mechanical pool helpers (`IndexFromHandle`, `CleanupAtIndex`)
+  in each `*Static.c` get `inline`. They're 5- and 3-liners — natural inline
+  candidates. The forward declarations and definitions both gain the
+  `inline` keyword in the same line edit.
+- The handful of larger `*Static.c` helpers — `BlockStore_ResolveSecurityPolicy`,
+  `BlockStore_BuildBlockSequenceConfig`, `MetaSd_IsValidConfig`,
+  `SwitchingSender_IsValidConfig`, `UdpSender_IsValidConfig` — are
+  deliberately *not* touched. They carry real branching logic and are not
+  inline candidates; their placement at file end is a separate concern
+  (CLAUDE.md "defined immediately beneath the function that first calls
+  them") that would expand this chore's scope materially.
+
+Per-class delta: 4 lines changed per file (two forward decls + two
+definitions). No behaviour change. MSVC build + full 1131-test suite green
+locally. Linux smoke + tidy + iwyu skipped by user judgement — the change
+is text-substitution-of-a-keyword on a fixed-format pair of identifiers,
+trusted to CI.
+
 ## 2026-05-20 — S11.07: Windows adapters onto PoolAllocator
 
 Closes S11.07 (#406). The second platform-adapter sweep in E11 — applies the

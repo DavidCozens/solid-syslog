@@ -18,8 +18,8 @@ struct SolidSyslogBuffer;
  * in-process pool entries from aliasing onto the same kernel queue
  * object when the pool tunable is bumped above 1. */
 
-static size_t PosixMessageQueueBuffer_IndexFromHandle(const struct SolidSyslogBuffer* base);
-static void PosixMessageQueueBuffer_CleanupAtIndex(size_t index, void* context);
+static inline size_t PosixMessageQueueBuffer_IndexFromHandle(const struct SolidSyslogBuffer* base);
+static inline void PosixMessageQueueBuffer_CleanupAtIndex(size_t index, void* context);
 
 static bool PosixMessageQueueBuffer_InUse[SOLIDSYSLOG_POSIX_MESSAGE_QUEUE_BUFFER_POOL_SIZE];
 static struct SolidSyslogPosixMessageQueueBuffer
@@ -67,7 +67,7 @@ void SolidSyslogPosixMessageQueueBuffer_Destroy(struct SolidSyslogBuffer* base)
     }
 }
 
-static size_t PosixMessageQueueBuffer_IndexFromHandle(const struct SolidSyslogBuffer* base)
+static inline size_t PosixMessageQueueBuffer_IndexFromHandle(const struct SolidSyslogBuffer* base)
 {
     size_t result = SOLIDSYSLOG_POSIX_MESSAGE_QUEUE_BUFFER_POOL_SIZE;
     for (size_t poolIndex = 0; poolIndex < SOLIDSYSLOG_POSIX_MESSAGE_QUEUE_BUFFER_POOL_SIZE; poolIndex++)
@@ -81,7 +81,7 @@ static size_t PosixMessageQueueBuffer_IndexFromHandle(const struct SolidSyslogBu
     return result;
 }
 
-static void PosixMessageQueueBuffer_CleanupAtIndex(size_t index, void* context)
+static inline void PosixMessageQueueBuffer_CleanupAtIndex(size_t index, void* context)
 {
     (void) context;
     PosixMessageQueueBuffer_Cleanup(&PosixMessageQueueBuffer_Pool[index].Base);

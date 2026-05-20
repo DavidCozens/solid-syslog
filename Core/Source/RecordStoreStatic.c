@@ -7,8 +7,8 @@
 
 struct SolidSyslogSecurityPolicy;
 
-static size_t RecordStore_IndexFromHandle(const struct RecordStore* recordStore);
-static void RecordStore_CleanupAtIndex(size_t index, void* context);
+static inline size_t RecordStore_IndexFromHandle(const struct RecordStore* recordStore);
+static inline void RecordStore_CleanupAtIndex(size_t index, void* context);
 
 static bool RecordStore_InUse[SOLIDSYSLOG_BLOCK_STORE_POOL_SIZE];
 static struct RecordStore RecordStore_Pool[SOLIDSYSLOG_BLOCK_STORE_POOL_SIZE];
@@ -38,7 +38,7 @@ void RecordStore_Destroy(struct RecordStore* recordStore)
     }
 }
 
-static size_t RecordStore_IndexFromHandle(const struct RecordStore* recordStore)
+static inline size_t RecordStore_IndexFromHandle(const struct RecordStore* recordStore)
 {
     size_t result = SOLIDSYSLOG_BLOCK_STORE_POOL_SIZE;
     for (size_t poolIndex = 0; poolIndex < SOLIDSYSLOG_BLOCK_STORE_POOL_SIZE; poolIndex++)
@@ -52,7 +52,7 @@ static size_t RecordStore_IndexFromHandle(const struct RecordStore* recordStore)
     return result;
 }
 
-static void RecordStore_CleanupAtIndex(size_t index, void* context)
+static inline void RecordStore_CleanupAtIndex(size_t index, void* context)
 {
     (void) context;
     RecordStore_Cleanup(&RecordStore_Pool[index]);
