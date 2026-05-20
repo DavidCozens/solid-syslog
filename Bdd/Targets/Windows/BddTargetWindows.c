@@ -70,6 +70,7 @@ static volatile bool shutdownFlag;
 
 /* Created in CreateSender, destroyed in DestroySender — held in file scope so
    teardown can reach them after the SwitchingSender wraps them all. */
+static struct SolidSyslogResolver* resolver;
 static struct SolidSyslogStream* plainTcpStream;
 static struct SolidSyslogSender* plainTcpSender;
 static struct SolidSyslogDatagram* udpDatagram;
@@ -177,7 +178,7 @@ static struct SolidSyslogSender* CreateSender(const struct BddTargetWindowsOptio
 {
     bool mtlsModeActive = (strcmp(options->Transport, "mtls") == 0);
 
-    struct SolidSyslogResolver* resolver = SolidSyslogWinsockResolver_Create();
+    resolver = SolidSyslogWinsockResolver_Create();
 
     udpDatagram = SolidSyslogWinsockDatagram_Create();
     static struct SolidSyslogUdpSenderConfig udpConfig = {0};
