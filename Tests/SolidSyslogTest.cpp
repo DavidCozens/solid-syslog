@@ -361,6 +361,16 @@ TEST_GROUP(SolidSyslog)
     SolidSyslogStore  *store;
     // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
     struct SolidSyslogSender *fakeSender;
+    /* Pool-backed handles owned by tests that exercise Meta/TimeQuality SD.
+       Held as fixture state so teardown releases their pool slots even if a
+       test body fails mid-assertion — otherwise the leaked slot returns the
+       fallback to subsequent tests and cascades the failure. */
+    // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
+    struct SolidSyslogAtomicCounter   *metaSdCounter;
+    // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
+    struct SolidSyslogStructuredData  *metaSd;
+    // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
+    struct SolidSyslogStructuredData  *timeQualitySd;
 
     void setup() override
     {
@@ -368,6 +378,9 @@ TEST_GROUP(SolidSyslog)
         StringFake_Reset();
         buffer = SolidSyslogPassthroughBuffer_Create(fakeSender);
         store  = SolidSyslogNullStore_Get();
+        metaSdCounter = nullptr;
+        metaSd        = nullptr;
+        timeQualitySd = nullptr;
         config = {buffer, nullptr, nullptr, StringFake_GetHostname, StringFake_GetAppName, StringFake_GetProcessId, store, nullptr, 0};
         SolidSyslog_Create(&config);
         // cppcheck-suppress unreadVariable -- read via Log() through &message; cppcheck does not model CppUTest macros
@@ -377,6 +390,18 @@ TEST_GROUP(SolidSyslog)
     void teardown() override
     {
         SolidSyslog_Destroy();
+        if (timeQualitySd != nullptr)
+        {
+            SolidSyslogTimeQualitySd_Destroy(timeQualitySd);
+        }
+        if (metaSd != nullptr)
+        {
+            SolidSyslogMetaSd_Destroy(metaSd);
+        }
+        if (metaSdCounter != nullptr)
+        {
+            TestAtomicCounter_Destroy(metaSdCounter);
+        }
         SolidSyslogPassthroughBuffer_Destroy(buffer);
         SenderFake_Destroy(fakeSender);
     }
@@ -631,10 +656,10 @@ TEST(SolidSyslog, InjectedSdObjectFormatIsCalledDuringLog)
 
 TEST(SolidSyslog, MetaSdProducesSequenceIdInStructuredData)
 {
-    SolidSyslogAtomicCounter* counter = TestAtomicCounter_Create();
+    metaSdCounter = TestAtomicCounter_Create();
     SolidSyslogMetaSdConfig metaConfig{};
-    metaConfig.Counter = counter;
-    SolidSyslogStructuredData* metaSd = SolidSyslogMetaSd_Create(&metaConfig);
+    metaConfig.Counter = metaSdCounter;
+    metaSd = SolidSyslogMetaSd_Create(&metaConfig);
     SolidSyslogStructuredData* sdList[] = {metaSd};
     config.Sd = sdList;
     config.SdCount = 1;
@@ -642,16 +667,14 @@ TEST(SolidSyslog, MetaSdProducesSequenceIdInStructuredData)
     SolidSyslog_Create(&config);
     Log();
     STRCMP_EQUAL("[meta sequenceId=\"1\"]", SyslogField(lastMessage(), SYSLOG_FIELD_SDATA).c_str());
-    SolidSyslogMetaSd_Destroy(metaSd);
-    TestAtomicCounter_Destroy(counter);
 }
 
 TEST(SolidSyslog, MetaSdSequenceIdIncrementsAcrossLogCalls)
 {
-    SolidSyslogAtomicCounter* counter = TestAtomicCounter_Create();
+    metaSdCounter = TestAtomicCounter_Create();
     SolidSyslogMetaSdConfig metaConfig{};
-    metaConfig.Counter = counter;
-    SolidSyslogStructuredData* metaSd = SolidSyslogMetaSd_Create(&metaConfig);
+    metaConfig.Counter = metaSdCounter;
+    metaSd = SolidSyslogMetaSd_Create(&metaConfig);
     SolidSyslogStructuredData* sdList[] = {metaSd};
     config.Sd = sdList;
     config.SdCount = 1;
@@ -660,16 +683,14 @@ TEST(SolidSyslog, MetaSdSequenceIdIncrementsAcrossLogCalls)
     Log();
     Log();
     STRCMP_EQUAL("[meta sequenceId=\"2\"]", SyslogField(lastMessage(), SYSLOG_FIELD_SDATA).c_str());
-    SolidSyslogMetaSd_Destroy(metaSd);
-    TestAtomicCounter_Destroy(counter);
 }
 
 TEST(SolidSyslog, MsgFieldPreservedWithMetaSd)
 {
-    SolidSyslogAtomicCounter* counter = TestAtomicCounter_Create();
+    metaSdCounter = TestAtomicCounter_Create();
     SolidSyslogMetaSdConfig metaConfig{};
-    metaConfig.Counter = counter;
-    SolidSyslogStructuredData* metaSd = SolidSyslogMetaSd_Create(&metaConfig);
+    metaConfig.Counter = metaSdCounter;
+    metaSd = SolidSyslogMetaSd_Create(&metaConfig);
     SolidSyslogStructuredData* sdList[] = {metaSd};
     config.Sd = sdList;
     config.SdCount = 1;
@@ -678,8 +699,6 @@ TEST(SolidSyslog, MsgFieldPreservedWithMetaSd)
     message.Msg = "hello world";
     Log();
     STRCMP_EQUAL("hello world", SyslogMsg(lastMessage()).c_str());
-    SolidSyslogMetaSd_Destroy(metaSd);
-    TestAtomicCounter_Destroy(counter);
 }
 
 TEST(SolidSyslog, MultipleSdItemsAreConcatenated)
@@ -728,12 +747,12 @@ TEST(SolidSyslog, AllSdFailingProducesNilvalue)
 
 TEST(SolidSyslog, MetaSdAndTimeQualitySdCoexistInSdArray)
 {
-    SolidSyslogAtomicCounter* counter = TestAtomicCounter_Create();
+    metaSdCounter = TestAtomicCounter_Create();
     SolidSyslogMetaSdConfig metaConfig{};
-    metaConfig.Counter = counter;
-    SolidSyslogStructuredData* metaSd = SolidSyslogMetaSd_Create(&metaConfig);
-    SolidSyslogStructuredData* timeQuality = SolidSyslogTimeQualitySd_Create(IntegrationGetTimeQuality);
-    SolidSyslogStructuredData* sdList[] = {metaSd, timeQuality};
+    metaConfig.Counter = metaSdCounter;
+    metaSd = SolidSyslogMetaSd_Create(&metaConfig);
+    timeQualitySd = SolidSyslogTimeQualitySd_Create(IntegrationGetTimeQuality);
+    SolidSyslogStructuredData* sdList[] = {metaSd, timeQualitySd};
     config.Sd = sdList;
     config.SdCount = 2;
     SolidSyslog_Destroy();
@@ -743,9 +762,6 @@ TEST(SolidSyslog, MetaSdAndTimeQualitySdCoexistInSdArray)
         "[meta sequenceId=\"1\"][timeQuality tzKnown=\"1\" isSynced=\"1\"]",
         SyslogField(lastMessage(), SYSLOG_FIELD_SDATA).c_str()
     );
-    SolidSyslogTimeQualitySd_Destroy(timeQuality);
-    SolidSyslogMetaSd_Destroy(metaSd);
-    TestAtomicCounter_Destroy(counter);
 }
 
 TEST(SolidSyslog, NullMessageOmitsMsgField)
