@@ -20,11 +20,11 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 
 namespace
 {
-    void NoOpSleep(int milliseconds)
-    {
-        (void) milliseconds;
-    }
+void NoOpSleep(int milliseconds)
+{
+    (void) milliseconds;
 }
+} // namespace
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while) -- macros preserve __FILE__/__LINE__ at the call site
 
