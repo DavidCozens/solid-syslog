@@ -155,8 +155,6 @@ static struct SolidSyslogMessage testMessage = {
 static NetworkInterface_t networkInterface;
 static NetworkEndPoint_t networkEndPoint;
 
-static SolidSyslogFreeRtosTcpStreamStorage tcpStreamStorage;
-
 /* CircularBuffer + FreeRtosMutex composition for cross-task emission.
  * 8 max-sized messages is comfortably above the 3-message BDD scenarios
  * with headroom for a brief Service drain stall, and ~16 KB of .bss is
@@ -786,7 +784,7 @@ static void InteractiveTask(void* argument)
      * UDP endpoint callbacks because the BDD oracle (syslog-ng) listens on the
      * same host:port for both transports — the syslog-ng config in
      * Bdd/syslog-ng/syslog-ng.conf has a TCP listener on 5514 alongside UDP. */
-    tcpStream = SolidSyslogFreeRtosTcpStream_Create(&tcpStreamStorage);
+    tcpStream = SolidSyslogFreeRtosTcpStream_Create();
     struct SolidSyslogStreamSenderConfig tcpConfig = {
         .Resolver = resolver,
         .Stream = tcpStream,

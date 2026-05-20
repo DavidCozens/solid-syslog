@@ -10,17 +10,10 @@
 #include "task.h"
 
 #include "SolidSyslogAddressInternal.h"
-#include "SolidSyslogMacros.h"
+#include "SolidSyslogFreeRtosTcpStreamPrivate.h"
+#include "SolidSyslogNullStream.h"
 #include "SolidSyslogStream.h"
 #include "SolidSyslogStreamDefinition.h"
-
-typedef struct SolidSyslogFreeRtosTcpStream FreeRtosTcpStream;
-
-struct SolidSyslogFreeRtosTcpStream
-{
-    struct SolidSyslogStream Base;
-    Socket_t Socket;
-};
 
 /* 200 ms is short enough that the Service task keeps draining predictably
  * during an outage, long enough for a healthy peer to ACK over slirp/LAN.
@@ -61,64 +54,63 @@ static bool FreeRtosTcpStream_Send(struct SolidSyslogStream* base, const void* b
 static SolidSyslogSsize FreeRtosTcpStream_Read(struct SolidSyslogStream* base, void* buffer, size_t size);
 static void FreeRtosTcpStream_Close(struct SolidSyslogStream* base);
 
-static inline FreeRtosTcpStream* FreeRtosTcpStream_SelfFromStorage(SolidSyslogFreeRtosTcpStreamStorage* storage);
-static inline FreeRtosTcpStream* FreeRtosTcpStream_SelfFromBase(struct SolidSyslogStream* base);
-static inline bool FreeRtosTcpStream_IsOpen(const FreeRtosTcpStream* self);
-static inline bool FreeRtosTcpStream_IsClosed(const FreeRtosTcpStream* self);
-static void FreeRtosTcpStream_OpenSocket(FreeRtosTcpStream* self);
-static void FreeRtosTcpStream_ConnectOrCloseOnFailure(FreeRtosTcpStream* self, const struct SolidSyslogAddress* addr);
-static bool FreeRtosTcpStream_TryConnect(FreeRtosTcpStream* self, const struct SolidSyslogAddress* addr);
+static inline struct SolidSyslogFreeRtosTcpStream* FreeRtosTcpStream_SelfFromBase(struct SolidSyslogStream* base);
+static inline bool FreeRtosTcpStream_IsOpen(const struct SolidSyslogFreeRtosTcpStream* self);
+static inline bool FreeRtosTcpStream_IsClosed(const struct SolidSyslogFreeRtosTcpStream* self);
+static void FreeRtosTcpStream_OpenSocket(struct SolidSyslogFreeRtosTcpStream* self);
+static void FreeRtosTcpStream_ConnectOrCloseOnFailure(
+    struct SolidSyslogFreeRtosTcpStream* self,
+    const struct SolidSyslogAddress* addr
+);
+static bool FreeRtosTcpStream_TryConnect(
+    struct SolidSyslogFreeRtosTcpStream* self,
+    const struct SolidSyslogAddress* addr
+);
+static inline void FreeRtosTcpStream_PrimeArpIfMissing(uint32_t ip);
 static void FreeRtosTcpStream_ClearTimeouts(Socket_t socket);
 static void FreeRtosTcpStream_SetSendTimeout(Socket_t socket, TickType_t ticks);
 static void FreeRtosTcpStream_SetRecvTimeout(Socket_t socket, TickType_t ticks);
-static bool FreeRtosTcpStream_SendOrCloseOnFailure(FreeRtosTcpStream* self, const void* buffer, size_t size);
-static bool FreeRtosTcpStream_TrySend(FreeRtosTcpStream* self, const void* buffer, size_t size);
-static bool FreeRtosTcpStream_AllBytesSent(BaseType_t sentCount, size_t expected);
-static SolidSyslogSsize FreeRtosTcpStream_ReceiveOrCloseOnFailure(FreeRtosTcpStream* self, void* buffer, size_t size);
-static void FreeRtosTcpStream_CloseSocket(FreeRtosTcpStream* self);
-
-SOLIDSYSLOG_STATIC_ASSERT(
-    sizeof(FreeRtosTcpStream) <= SOLIDSYSLOG_FREE_RTOS_TCP_STREAM_SIZE,
-    "SOLIDSYSLOG_FREE_RTOS_TCP_STREAM_SIZE is too small for SolidSyslogFreeRtosTcpStream layout"
+static bool FreeRtosTcpStream_SendOrCloseOnFailure(
+    struct SolidSyslogFreeRtosTcpStream* self,
+    const void* buffer,
+    size_t size
 );
+static bool FreeRtosTcpStream_TrySend(struct SolidSyslogFreeRtosTcpStream* self, const void* buffer, size_t size);
+static bool FreeRtosTcpStream_AllBytesSent(BaseType_t sentCount, size_t expected);
+static SolidSyslogSsize FreeRtosTcpStream_ReceiveOrCloseOnFailure(
+    struct SolidSyslogFreeRtosTcpStream* self,
+    void* buffer,
+    size_t size
+);
+static void FreeRtosTcpStream_CloseSocket(struct SolidSyslogFreeRtosTcpStream* self);
 
-static const FreeRtosTcpStream DEFAULT_INSTANCE = {
-    {FreeRtosTcpStream_Open, FreeRtosTcpStream_Send, FreeRtosTcpStream_Read, FreeRtosTcpStream_Close},
-    FREERTOS_INVALID_SOCKET,
-};
-
-static const FreeRtosTcpStream DESTROYED_INSTANCE = {
-    {NULL, NULL, NULL, NULL},
-    FREERTOS_INVALID_SOCKET,
-};
-
-struct SolidSyslogStream* SolidSyslogFreeRtosTcpStream_Create(SolidSyslogFreeRtosTcpStreamStorage* storage)
+void FreeRtosTcpStream_Initialise(struct SolidSyslogStream* base)
 {
-    FreeRtosTcpStream* self = FreeRtosTcpStream_SelfFromStorage(storage);
-    *self = DEFAULT_INSTANCE;
-    return &self->Base;
+    struct SolidSyslogFreeRtosTcpStream* self = FreeRtosTcpStream_SelfFromBase(base);
+    self->Base.Open = FreeRtosTcpStream_Open;
+    self->Base.Send = FreeRtosTcpStream_Send;
+    self->Base.Read = FreeRtosTcpStream_Read;
+    self->Base.Close = FreeRtosTcpStream_Close;
+    self->Socket = FREERTOS_INVALID_SOCKET;
 }
 
-static inline FreeRtosTcpStream* FreeRtosTcpStream_SelfFromStorage(SolidSyslogFreeRtosTcpStreamStorage* storage)
+void FreeRtosTcpStream_Cleanup(struct SolidSyslogStream* base)
 {
-    return (FreeRtosTcpStream*) storage;
-}
-
-void SolidSyslogFreeRtosTcpStream_Destroy(struct SolidSyslogStream* base)
-{
-    FreeRtosTcpStream* self = FreeRtosTcpStream_SelfFromBase(base);
+    struct SolidSyslogFreeRtosTcpStream* self = FreeRtosTcpStream_SelfFromBase(base);
     FreeRtosTcpStream_CloseSocket(self);
-    *self = DESTROYED_INSTANCE;
+    /* Overwrite the abstract base with the shared NullStream vtable so
+     * use-after-destroy is a safe no-op rather than a NULL-fn-pointer crash. */
+    *base = *SolidSyslogNullStream_Get();
 }
 
-static inline FreeRtosTcpStream* FreeRtosTcpStream_SelfFromBase(struct SolidSyslogStream* base)
+static inline struct SolidSyslogFreeRtosTcpStream* FreeRtosTcpStream_SelfFromBase(struct SolidSyslogStream* base)
 {
-    return (FreeRtosTcpStream*) base;
+    return (struct SolidSyslogFreeRtosTcpStream*) base;
 }
 
 static bool FreeRtosTcpStream_Open(struct SolidSyslogStream* base, const struct SolidSyslogAddress* addr)
 {
-    FreeRtosTcpStream* self = FreeRtosTcpStream_SelfFromBase(base);
+    struct SolidSyslogFreeRtosTcpStream* self = FreeRtosTcpStream_SelfFromBase(base);
     if (FreeRtosTcpStream_IsClosed(self))
     {
         FreeRtosTcpStream_OpenSocket(self);
@@ -130,22 +122,25 @@ static bool FreeRtosTcpStream_Open(struct SolidSyslogStream* base, const struct 
     return FreeRtosTcpStream_IsOpen(self);
 }
 
-static inline bool FreeRtosTcpStream_IsOpen(const FreeRtosTcpStream* self)
+static inline bool FreeRtosTcpStream_IsOpen(const struct SolidSyslogFreeRtosTcpStream* self)
 {
     return self->Socket != FREERTOS_INVALID_SOCKET;
 }
 
-static inline bool FreeRtosTcpStream_IsClosed(const FreeRtosTcpStream* self)
+static inline bool FreeRtosTcpStream_IsClosed(const struct SolidSyslogFreeRtosTcpStream* self)
 {
     return !FreeRtosTcpStream_IsOpen(self);
 }
 
-static void FreeRtosTcpStream_OpenSocket(FreeRtosTcpStream* self)
+static void FreeRtosTcpStream_OpenSocket(struct SolidSyslogFreeRtosTcpStream* self)
 {
     self->Socket = FreeRTOS_socket(FREERTOS_AF_INET, FREERTOS_SOCK_STREAM, FREERTOS_IPPROTO_TCP);
 }
 
-static void FreeRtosTcpStream_ConnectOrCloseOnFailure(FreeRtosTcpStream* self, const struct SolidSyslogAddress* addr)
+static void FreeRtosTcpStream_ConnectOrCloseOnFailure(
+    struct SolidSyslogFreeRtosTcpStream* self,
+    const struct SolidSyslogAddress* addr
+)
 {
     if (FreeRtosTcpStream_TryConnect(self, addr))
     {
@@ -157,9 +152,10 @@ static void FreeRtosTcpStream_ConnectOrCloseOnFailure(FreeRtosTcpStream* self, c
     }
 }
 
-static inline void FreeRtosTcpStream_PrimeArpIfMissing(uint32_t ip);
-
-static bool FreeRtosTcpStream_TryConnect(FreeRtosTcpStream* self, const struct SolidSyslogAddress* addr)
+static bool FreeRtosTcpStream_TryConnect(
+    struct SolidSyslogFreeRtosTcpStream* self,
+    const struct SolidSyslogAddress* addr
+)
 {
     const struct freertos_sockaddr* dest = SolidSyslogAddress_AsConstFreertosSockaddr(addr);
     FreeRtosTcpStream_PrimeArpIfMissing(dest->sin_address.ulIP_IPv4);
@@ -200,7 +196,7 @@ static void FreeRtosTcpStream_SetRecvTimeout(Socket_t socket, TickType_t ticks)
 
 static bool FreeRtosTcpStream_Send(struct SolidSyslogStream* base, const void* buffer, size_t size)
 {
-    FreeRtosTcpStream* self = FreeRtosTcpStream_SelfFromBase(base);
+    struct SolidSyslogFreeRtosTcpStream* self = FreeRtosTcpStream_SelfFromBase(base);
     bool sent = false;
     if (FreeRtosTcpStream_IsOpen(self))
     {
@@ -209,7 +205,11 @@ static bool FreeRtosTcpStream_Send(struct SolidSyslogStream* base, const void* b
     return sent;
 }
 
-static bool FreeRtosTcpStream_SendOrCloseOnFailure(FreeRtosTcpStream* self, const void* buffer, size_t size)
+static bool FreeRtosTcpStream_SendOrCloseOnFailure(
+    struct SolidSyslogFreeRtosTcpStream* self,
+    const void* buffer,
+    size_t size
+)
 {
     bool sent = FreeRtosTcpStream_TrySend(self, buffer, size);
     if (!sent)
@@ -219,7 +219,7 @@ static bool FreeRtosTcpStream_SendOrCloseOnFailure(FreeRtosTcpStream* self, cons
     return sent;
 }
 
-static bool FreeRtosTcpStream_TrySend(FreeRtosTcpStream* self, const void* buffer, size_t size)
+static bool FreeRtosTcpStream_TrySend(struct SolidSyslogFreeRtosTcpStream* self, const void* buffer, size_t size)
 {
     BaseType_t sentCount = FreeRTOS_send(self->Socket, buffer, size, SEND_RECV_FLAGS_DEFAULT);
     return FreeRtosTcpStream_AllBytesSent(sentCount, size);
@@ -235,7 +235,7 @@ static bool FreeRtosTcpStream_AllBytesSent(BaseType_t sentCount, size_t expected
  * Negative returns are real errors — close the socket and surface failure. */
 static SolidSyslogSsize FreeRtosTcpStream_Read(struct SolidSyslogStream* base, void* buffer, size_t size)
 {
-    FreeRtosTcpStream* self = FreeRtosTcpStream_SelfFromBase(base);
+    struct SolidSyslogFreeRtosTcpStream* self = FreeRtosTcpStream_SelfFromBase(base);
     SolidSyslogSsize result = READ_FAILED;
     if (FreeRtosTcpStream_IsOpen(self))
     {
@@ -244,7 +244,11 @@ static SolidSyslogSsize FreeRtosTcpStream_Read(struct SolidSyslogStream* base, v
     return result;
 }
 
-static SolidSyslogSsize FreeRtosTcpStream_ReceiveOrCloseOnFailure(FreeRtosTcpStream* self, void* buffer, size_t size)
+static SolidSyslogSsize FreeRtosTcpStream_ReceiveOrCloseOnFailure(
+    struct SolidSyslogFreeRtosTcpStream* self,
+    void* buffer,
+    size_t size
+)
 {
     BaseType_t receivedCount = FreeRTOS_recv(self->Socket, buffer, size, SEND_RECV_FLAGS_DEFAULT);
     SolidSyslogSsize result = READ_FAILED;
@@ -264,7 +268,7 @@ static void FreeRtosTcpStream_Close(struct SolidSyslogStream* base)
     FreeRtosTcpStream_CloseSocket(FreeRtosTcpStream_SelfFromBase(base));
 }
 
-static void FreeRtosTcpStream_CloseSocket(FreeRtosTcpStream* self)
+static void FreeRtosTcpStream_CloseSocket(struct SolidSyslogFreeRtosTcpStream* self)
 {
     if (FreeRtosTcpStream_IsOpen(self))
     {

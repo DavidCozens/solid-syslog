@@ -518,4 +518,27 @@
 #error "SOLIDSYSLOG_FREE_RTOS_STATIC_RESOLVER_POOL_SIZE must be >= 1"
 #endif
 
+/*
+ * Number of SolidSyslogFreeRtosTcpStream instances the library's
+ * internal static pool can simultaneously hold. Each instance carries
+ * a FreeRTOS-Plus-TCP Socket_t for the bounded-blocking-connect
+ * non-blocking TCP transport.
+ *
+ * Default 2 — matches the POSIX and Windows TCP stream pool defaults
+ * so a future TLS-via-mbedTLS path (S08.07) wrapping an underlying
+ * FreeRtosTcpStream does not silently fall back to NullStream on the
+ * second Create. Plain-TCP-only integrators pay 8 bytes of extra
+ * static state; mbedTLS integrators are spared an override.
+ *
+ * Floor: 1. Sub-floor values rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_FREE_RTOS_TCP_STREAM_POOL_SIZE
+/* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- macro form required for preprocessor visibility (floor #if) and C array-size const-expr. */
+#define SOLIDSYSLOG_FREE_RTOS_TCP_STREAM_POOL_SIZE 2U
+#endif
+
+#if SOLIDSYSLOG_FREE_RTOS_TCP_STREAM_POOL_SIZE < 1
+#error "SOLIDSYSLOG_FREE_RTOS_TCP_STREAM_POOL_SIZE must be >= 1"
+#endif
+
 #endif /* SOLIDSYSLOG_TUNABLES_DEFAULTS_H */

@@ -183,6 +183,7 @@ add_executable(SolidSyslogBddTarget
     ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosStaticResolverStatic.c
     ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosSysUpTime.c
     ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosTcpStream.c
+    ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosTcpStreamStatic.c
     ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/BddTargetInteractive.c
     ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/BddTargetIps.c
     ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/BddTargetLanguage.c

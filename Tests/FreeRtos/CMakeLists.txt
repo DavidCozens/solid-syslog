@@ -45,6 +45,7 @@ else()
         SolidSyslogFreeRtosTcpStreamTest.cpp
         main.cpp
         ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosTcpStream.c
+        ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosTcpStreamStatic.c
         ${CMAKE_SOURCE_DIR}/Tests/Support/FreeRtosFakes/Source/FreeRtosSocketsFake.c
         ${CMAKE_SOURCE_DIR}/Tests/Support/FreeRtosFakes/Source/FreeRtosArpFake.c
         ${CMAKE_SOURCE_DIR}/Tests/Support/FreeRtosFakes/Source/FreeRtosTaskFake.c
@@ -52,6 +53,8 @@ else()
 
     target_link_libraries(SolidSyslogFreeRtosTcpStreamTest PRIVATE
         ${PROJECT_NAME}
+        ConfigLockFake
+        ErrorHandlerFake
         CppUTest
         CppUTestExt
     )

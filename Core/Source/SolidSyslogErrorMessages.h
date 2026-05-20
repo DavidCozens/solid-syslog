@@ -119,5 +119,9 @@
     "SolidSyslogFreeRtosStaticResolver_Create pool exhausted; returning fallback resolver"
 #define SOLIDSYSLOG_ERROR_MSG_FREERTOSSTATICRESOLVER_UNKNOWN_DESTROY \
     "SolidSyslogFreeRtosStaticResolver_Destroy called with a handle not issued by this pool"
+#define SOLIDSYSLOG_ERROR_MSG_FREERTOSTCPSTREAM_POOL_EXHAUSTED \
+    "SolidSyslogFreeRtosTcpStream_Create pool exhausted; returning fallback stream"
+#define SOLIDSYSLOG_ERROR_MSG_FREERTOSTCPSTREAM_UNKNOWN_DESTROY \
+    "SolidSyslogFreeRtosTcpStream_Destroy called with a handle not issued by this pool"
 
 #endif /* SOLIDSYSLOGERRORMESSAGES_H */
