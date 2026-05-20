@@ -1,5 +1,206 @@
 # Dev Log
 
+## 2026-05-20 — S11.08: FreeRTOS adapters onto PoolAllocator
+
+Closes S11.08 (#410). The third platform-adapter sweep in E11 — applies
+the canonical 3-TU split + `SolidSyslogPoolAllocator` to all four
+stateful FreeRTOS adapter classes. Every FreeRTOS adapter is
+storage-cast today, so the public-header surgery is uniform: drop the
+`<Class>Storage` typedef and the `SOLIDSYSLOG_FREE_RTOS_*_SIZE` enum,
+drop the `storage` parameter from `_Create`. `FreeRtosStaticResolver`
+keeps its `ipv4Octets[4]` parameter — that's its runtime state, not
+storage. The previous `_Destroy(base)` shape on all four matches the
+new contract so no `_Destroy(void) → _Destroy(handle)` migrations are
+needed.
+
+Four per-class commits on the branch, then DEVLOG. No new public GoF
+nulls (all four needed — `NullMutex` `_Get`, `NullDatagram`,
+`NullStream`, `NullResolver` — already landed in S11.06).
+
+- `3f4a43b` — `FreeRtosMutex` (storage-cast). `Initialise` guards
+  `xSemaphoreCreateMutexStatic` returning NULL (only happens when
+  `configSUPPORT_STATIC_ALLOCATION` is misconfigured, but mirrors
+  `PosixMutex`'s defence against `pthread_mutex_init` failure for
+  symmetry) and installs the shared `NullMutex` vtable on failure;
+  `Cleanup` keys `vSemaphoreDelete` off `Base.Lock == FreeRtosMutex_Lock`
+  so it doesn't delete an uninitialised semaphore. Refactor-only
+  otherwise.
+- `4404745` — `FreeRtosDatagram` (storage-cast). The ARP-priming
+  yield-once pattern from S08.03 slice 3b.1.5 (see
+  `project_freertos_arp_first_packet`) is preserved verbatim. The
+  `DEFAULT_INSTANCE` / `DESTROYED_INSTANCE` static const seeds the
+  storage-cast variant used to clear the vtable + Socket are gone; that
+  job moves to `Initialise` (sets vtable, marks Socket
+  `FREERTOS_INVALID_SOCKET`) / `Cleanup` (closes any open socket,
+  overwrites with `NullDatagram`).
+- `ef7a385` — `FreeRtosStaticResolver` (storage-cast). The only
+  FreeRTOS adapter with a `_Create` arg: `ipv4Octets[4]` plumbs through
+  to `Initialise`. The test's `RecreateResolverWith` helper now
+  Destroy/Create-cycles a slot rather than re-stomping caller storage.
+  The pre-migration `DestroyIsIdempotent` test is superseded by
+  `DestroyOfStaleHandleReportsWarning` in the new Pool group — double-
+  Destroy now emits a WARNING per the bad-setup contract.
+- `4cb02ed` — `FreeRtosTcpStream` (storage-cast). Largest commit; the
+  bounded-200 ms SO_SNDTIMEO/SO_RCVTIMEO connect dance, the
+  post-connect timeout clear, the ARP-priming yield-once on cache miss,
+  and the `FreeRTOS_recv` RCVTIMEO=0 "would-block-as-zero" contract are
+  all preserved verbatim. **Refactor-only.**
+
+### Decisions
+
+- **No new public GoF nulls in this story.** All four needed
+  (`NullMutex` `_Get`, `NullDatagram`, `NullStream`, `NullResolver`)
+  landed in S11.06. S11.08 is a pure migration sweep, no new API
+  surface.
+
+- **`FreeRtosTcpStream` pool size default 2U**, matching the POSIX and
+  Windows TCP stream defaults rather than the FreeRTOS BDD target's
+  immediate need of 1. Rationale: when S08.07 (#272) lands TLS via
+  mbedTLS on FreeRTOS, the TLS-underlying-TCP path will need a second
+  concurrent TCP stream alongside the plain-TCP one. Pre-paying 8 bytes
+  of static state to spare every mbedTLS integrator an override is the
+  cleaner default. Same precedent as POSIX/Windows.
+
+- **`FreeRtosMutex_Initialise` partial-init guard.** Symmetric with
+  `PosixMutex_Initialise`. `xSemaphoreCreateMutexStatic`'s documented
+  NULL return is a `configSUPPORT_STATIC_ALLOCATION != 1` compile-time
+  config gate, not a runtime failure mode in practice, but the guard
+  costs nothing and keeps the platform-adapter pattern uniform.
+
+- **Pool-exhaustion fallback uses the shared GoF null per class.**
+  Same severity vocabulary as S11.06/S11.07 — ERROR on exhausted
+  Create, WARNING on unknown/stale Destroy. Error message constants
+  follow the `SOLIDSYSLOG_ERROR_MSG_FREERTOS<*>_POOL_EXHAUSTED` /
+  `_UNKNOWN_DESTROY` pattern verbatim.
+
+- **INTERFACE library shape preserved.** `Platform/FreeRtos/CMakeLists.txt`
+  still exports headers only — sources are recompiled per consumer.
+  Every consumer's source list gets the four new `*Static.c` files
+  added: `Bdd/Targets/FreeRtos/CMakeLists.txt`, and per-exe in
+  `Tests/FreeRtos/CMakeLists.txt`. The Mutex / Datagram / TcpStream /
+  StaticResolver test exes additionally gain `ConfigLockFake` and
+  `ErrorHandlerFake` links for the new Pool TEST_GROUPs (first time
+  the FreeRTOS test exes pull in those fakes).
+
+- **All host gates green from the freertos-host devcontainer:** debug
+  build + 9/9 ctest exes + 1131 unit tests, sanitize, coverage (99.5%
+  overall — same pre-existing gap as POSIX/Windows where the lcov
+  capture only runs the main `SolidSyslogTests` exe; FreeRTOS adapter
+  coverage is captured per-class by the separate test exes and is at
+  100% locally per per-class test runs), analyze-tidy clean on every
+  new/migrated file, analyze-cppcheck clean, analyze-format clean.
+  Per-class Pool TEST_GROUPs add 37 tests overall (9 each for Mutex,
+  Datagram, TcpStream; 10 for StaticResolver — 9 canonical + 1
+  class-specific `FallbackResolveReturnsFalse`). The pre-migration
+  `DestroyIsIdempotent` test on `FreeRtosStaticResolver` is superseded
+  by `DestroyOfStaleHandleReportsWarning` in the new Pool group, so
+  net test-count change is +36. See per-class breakdown below.
+
+### Per-class delta numbers
+
+- `FreeRtosMutex`: 13 tests total (4 existing + 9 Pool).
+- `FreeRtosDatagram`: 30 tests total (21 existing + 9 Pool).
+- `FreeRtosStaticResolver`: 18 tests total (9 existing − 1 superseded
+  `DestroyIsIdempotent` + 10 Pool, of which 9 mirror the canonical set
+  and 1 (`FallbackResolveReturnsFalse`) is class-specific).
+- `FreeRtosTcpStream`: 46 tests total (37 existing + 9 Pool).
+
+### freertos-target devcontainer pass — cross-build + QEMU smoke
+
+After completing the host TDD work, switched into the `freertos-target`
+devcontainer and validated:
+
+1. **`cmake --preset freertos-cross && cmake --build --preset
+   freertos-cross`** — clean ARM Cortex-M3 cross-build; all four new
+   `*Static.c` files compile under arm-none-eabi-gcc 12.2 and the
+   `SolidSyslogBddTarget.elf` links (~951 KB, statically linked,
+   `mps2-an385` cpu/board).
+
+2. **QEMU boot smoke** — `qemu-system-arm -M mps2-an385 -kernel
+   …BddTarget.elf` boots to the `SolidSyslog>` prompt over slirp; piped
+   `get host` / `get port` / `send 1` / `quit` produces the expected
+   `Sent 1 message` and the lifecycle teardown print
+   (`[stack-hwm] interactive=… service=…`).
+
+The smoke run caught one **real correctness regression** in the BDD
+target's own setup, fixed inline in this branch's Mutex commit:
+
+- The FreeRTOS BDD target creates **two** `FreeRtosMutex` instances
+  (`bufferMutex` for the CircularBuffer, `lifecycleMutex` for the
+  Service-vs-rebuild critical section). The library default
+  `SOLIDSYSLOG_FREE_RTOS_MUTEX_POOL_SIZE = 1U` correctly serves the
+  typical single-mutex integrator, but the BDD target's second
+  `_Create` was silently falling back to `SolidSyslogNullMutex` —
+  Lock/Unlock would no-op and the rebuild path could race the Service
+  task. Symptom-only it surfaced at `quit` teardown as a `severity=4`
+  `SolidSyslogFreeRtosMutex_Destroy called with a handle not issued by
+  this pool` warning when Teardown destroyed the NullMutex handle as
+  if it were a pool slot. Fixed by adding
+  `#define SOLIDSYSLOG_FREE_RTOS_MUTEX_POOL_SIZE 2U` to
+  `Bdd/Targets/FreeRtos/solidsyslog_user_tunables.h`, alongside the
+  existing `MAX_MESSAGE_SIZE` override. Smoke clean after the fix —
+  no warning, both mutexes are real pool slots.
+
+  Pre-S11.08 this same configuration worked because each mutex got
+  its own `Storage` blob; the migration's pool semantics are exactly
+  what surfaces the multi-instance need explicitly, which is the
+  intended E11 motivation. The library default stays at 1U — the BDD
+  target is the unusual case carrying its own override.
+
+### Handoff for the next devcontainer / WSL pass
+
+Two CI-gated checks remain unvalidated and need a context switch:
+
+1. **MSVC** (`msvc-debug` preset, Windows host). Per `feedback_local_msvc`,
+   a local MSVC build before push is the expectation. **Action for
+   next context: run from WSL/Windows host with VS 2026 + vcpkg.**
+   Expected pass; the FreeRTOS adapter pack is not built on MSVC
+   (it's a FreeRTOS-only INTERFACE target). The only MSVC-visible
+   changes are the new entries in
+   `Core/Interface/SolidSyslogTunablesDefaults.h` and
+   `Core/Source/SolidSyslogErrorMessages.h` plus the
+   `CLAUDE.md`/`DEVLOG.md` docs — none of those affect compile output.
+
+2. **`bdd-freertos-qemu`** — runs the actual BDD scenarios against the
+   QEMU-hosted `SolidSyslogBddTarget`. Validates that the migration
+   doesn't regress the FreeRTOS interactive UART command channel,
+   UDP/TCP S&F, FatFs store-and-forward. The QEMU boot + `send 1`
+   smoke above covers a sliver of this; the full scenarios test more
+   paths including `set store file` (which now exercises a real
+   lifecycle mutex thanks to the pool-size-2 override). **Action:
+   either `behave` devcontainer (the BDD scenarios run as a Python
+   harness against a QEMU-hosted target) or push the branch and let
+   CI run them.** Expected pass.
+
+3. **`analyze-iwyu`** — no `include-what-you-use` in either
+   freertos-host or freertos-target; CI will report.
+
+### Known stale findings (this devcontainer, pre-existing)
+
+- `Tests/FreeRtos/CmsdkUartFake.c` triggers a handful of tidy
+  `cppcoreguidelines-macro-to-enum` /
+  `bugprone-easily-swappable-parameters` errors under the `tidy`
+  preset in *this* devcontainer. The CI `analyze-tidy` job runs in the
+  `cpputest` container without `FREERTOS_KERNEL_PATH` set, so the
+  `Tests/FreeRtos` subdir is excluded entirely and these errors are
+  not gating. They predate S11.08 — confirmed by checking out main and
+  re-running tidy in this container. Out of scope for this story; the
+  fix is either to clean up `CmsdkUartFake.c` or to add
+  `freertos-host` to the CI analyze-tidy matrix. Not blocking the
+  push.
+
+### Deferred
+
+- **`FreeRtosGetAddrInfoResolver`** (DNS via `FreeRTOS_getaddrinfo`)
+  — tracked under S08.08 (#288). Not implemented yet, so nothing to
+  migrate.
+- **`TlsStream` via mbedTLS** — S08.07 (#272). Will sweep alongside
+  the AtomicCounter family in S11.09.
+- **`SolidSyslogAddress` (FreeRTOS variant)** — utility on a struct,
+  no Create / Destroy. Out of scope for E11.
+- **Audience-table row consistency.** Updated for all four FreeRTOS
+  classes; same shape as POSIX/Windows rows updated in S11.06/S11.07.
+
 ## 2026-05-20 — chore: `*Static.c` helper functions to `static inline`
 
 Mechanical sweep over every `*Static.c` file across Core, Posix and Windows

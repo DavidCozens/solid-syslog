@@ -4,9 +4,15 @@
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
     // macros
 
+#include "ConfigLockFake.h"
+#include "ErrorHandlerFake.h"
 #include "SolidSyslogAddress.h"
+#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogFreeRtosTcpStream.h"
+#include "SolidSyslogPrival.h"
 #include "SolidSyslogStream.h"
+#include "SolidSyslogStreamDefinition.h"
+#include "SolidSyslogTunables.h"
 
 #include "FreeRtosArpFake.h"
 #include "FreeRtosSocketsFake.h"
@@ -15,6 +21,22 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 #include "FreeRTOS.h"
 #include "FreeRTOS_IP.h"
 #include "FreeRTOS_Sockets.h"
+
+// NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while) -- macros preserve __FILE__/__LINE__ at the call site
+
+// Asserts handle is non-null and not one of the slots in pool.
+#define CHECK_IS_FALLBACK(handle, pool)                                                \
+    do                                                                                 \
+    {                                                                                  \
+        CHECK_TEXT((handle) != nullptr, "Fallback handle was nullptr");                \
+        for (auto* slot : (pool))                                                      \
+        {                                                                              \
+            CHECK_TEXT(slot != nullptr, "pool slot was nullptr (FillPool failed?)");   \
+            CHECK_TEXT((handle) != slot, "Fallback handle collided with a pool slot"); \
+        }                                                                              \
+    } while (0)
+
+// NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 
 static const uint16_t TEST_PORT = 514;
 static const char TEST_MESSAGE[] = "hello";
@@ -25,7 +47,6 @@ static const BaseType_t TEST_READ_BYTES = 7;
 // clang-format off
 TEST_GROUP(SolidSyslogFreeRtosTcpStream)
 {
-    SolidSyslogFreeRtosTcpStreamStorage storage{};
     struct SolidSyslogStream*           stream = nullptr;
     SolidSyslogAddressStorage           addrStorage{};
     struct SolidSyslogAddress*          addr = nullptr;
@@ -36,7 +57,7 @@ TEST_GROUP(SolidSyslogFreeRtosTcpStream)
         FreeRtosSocketsFake_Reset();
         FreeRtosArpFake_Reset();
         FreeRtosTaskFake_Reset();
-        stream = SolidSyslogFreeRtosTcpStream_Create(&storage);
+        stream = SolidSyslogFreeRtosTcpStream_Create();
 
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) -- char-type aliasing into platform layout, storage is intptr_t-aligned
         auto* sin                  = reinterpret_cast<struct freertos_sockaddr*>(&addrStorage);
@@ -49,7 +70,10 @@ TEST_GROUP(SolidSyslogFreeRtosTcpStream)
 
     void teardown() override
     {
-        SolidSyslogFreeRtosTcpStream_Destroy(stream);
+        if (stream != nullptr)
+        {
+            SolidSyslogFreeRtosTcpStream_Destroy(stream);
+        }
     }
 
     void openStream() const
@@ -330,6 +354,7 @@ TEST(SolidSyslogFreeRtosTcpStream, DestroyClosesOpenSocket)
 {
     openStream();
     SolidSyslogFreeRtosTcpStream_Destroy(stream);
+    stream = nullptr;
     CHECK_SOCKET_CLOSED_ONCE();
 }
 
@@ -338,5 +363,161 @@ TEST(SolidSyslogFreeRtosTcpStream, DestroyAfterCloseDoesNotCloseAgain)
     openStream();
     SolidSyslogStream_Close(stream);
     SolidSyslogFreeRtosTcpStream_Destroy(stream);
+    stream = nullptr;
     CALLED_FAKE(FreeRtosSocketsFake_Closesocket, ONCE);
+}
+
+// clang-format off
+TEST_GROUP(SolidSyslogFreeRtosTcpStreamPool)
+{
+    // cppcheck-suppress constVariable -- assigned in test bodies; cppcheck does not model CppUTest lifecycle
+    struct SolidSyslogStream* pooled[SOLIDSYSLOG_FREE_RTOS_TCP_STREAM_POOL_SIZE] = {};
+    struct SolidSyslogStream* overflow                                           = nullptr;
+
+    void setup() override
+    {
+        FreeRtosSocketsFake_Reset();
+    }
+
+    void teardown() override
+    {
+        for (auto* handle : pooled)
+        {
+            if (handle != nullptr)
+            {
+                SolidSyslogFreeRtosTcpStream_Destroy(handle);
+            }
+        }
+        // cppcheck-suppress knownConditionTrueFalse -- assigned in test bodies; cppcheck does not model CppUTest lifecycle
+        if (overflow != nullptr)
+        {
+            SolidSyslogFreeRtosTcpStream_Destroy(overflow);
+        }
+        ConfigLockFake_Uninstall();
+        ErrorHandlerFake_Uninstall();
+    }
+
+    void FillPool()
+    {
+        for (auto*& slot : pooled)
+        {
+            slot = SolidSyslogFreeRtosTcpStream_Create();
+        }
+    }
+};
+
+// clang-format on
+
+TEST(SolidSyslogFreeRtosTcpStreamPool, FillingPoolThenOverflowReturnsDistinctFallback)
+{
+    FillPool();
+
+    overflow = SolidSyslogFreeRtosTcpStream_Create();
+
+    CHECK_IS_FALLBACK(overflow, pooled);
+}
+
+TEST(SolidSyslogFreeRtosTcpStreamPool, ExhaustedCreateReportsError)
+{
+    ErrorHandlerFake_Install(nullptr);
+    FillPool();
+
+    overflow = SolidSyslogFreeRtosTcpStream_Create();
+
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_FREERTOSTCPSTREAM_POOL_EXHAUSTED, ErrorHandlerFake_LastMessage());
+}
+
+TEST(SolidSyslogFreeRtosTcpStreamPool, FallbackVtableMethodsAreNoOps)
+{
+    FillPool();
+    overflow = SolidSyslogFreeRtosTcpStream_Create();
+    SolidSyslogAddressStorage addrStorage{};
+    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&addrStorage);
+    char buf[8] = {0};
+    FreeRtosSocketsFake_Reset();
+
+    /* NullStream's Open/Send/Read return safe values so the Service algorithm
+     * does not tear the (non-existent) connection down on the fallback. */
+    CHECK_TRUE(SolidSyslogStream_Open(overflow, addr));
+    CHECK_TRUE(SolidSyslogStream_Send(overflow, buf, sizeof(buf)));
+    LONGS_EQUAL(0, SolidSyslogStream_Read(overflow, buf, sizeof(buf)));
+    SolidSyslogStream_Close(overflow);
+
+    CALLED_FAKE(FreeRtosSocketsFake_Socket, NEVER);
+    CALLED_FAKE(FreeRtosSocketsFake_Connect, NEVER);
+    CALLED_FAKE(FreeRtosSocketsFake_Send, NEVER);
+    CALLED_FAKE(FreeRtosSocketsFake_Recv, NEVER);
+    CALLED_FAKE(FreeRtosSocketsFake_Closesocket, NEVER);
+}
+
+TEST(SolidSyslogFreeRtosTcpStreamPool, CreateAcquiresAndReleasesConfigLockOnFirstFreeSlot)
+{
+    ConfigLockFake_Install();
+
+    pooled[0] = SolidSyslogFreeRtosTcpStream_Create();
+
+    CALLED_FAKE(ConfigLockFake_Lock, ONCE);
+    CALLED_FAKE(ConfigLockFake_Unlock, ONCE);
+}
+
+TEST(SolidSyslogFreeRtosTcpStreamPool, CreateLocksOncePerSlotProbedWhenPoolIsFull)
+{
+    FillPool();
+    ConfigLockFake_Install();
+
+    overflow = SolidSyslogFreeRtosTcpStream_Create();
+
+    LONGS_EQUAL(SOLIDSYSLOG_FREE_RTOS_TCP_STREAM_POOL_SIZE, ConfigLockFake_LockCallCount());
+    LONGS_EQUAL(SOLIDSYSLOG_FREE_RTOS_TCP_STREAM_POOL_SIZE, ConfigLockFake_UnlockCallCount());
+}
+
+TEST(SolidSyslogFreeRtosTcpStreamPool, DestroyOfPooledHandleLocksOnce)
+{
+    pooled[0] = SolidSyslogFreeRtosTcpStream_Create();
+    ConfigLockFake_Install();
+
+    SolidSyslogFreeRtosTcpStream_Destroy(pooled[0]);
+    pooled[0] = nullptr;
+
+    CALLED_FAKE(ConfigLockFake_Lock, ONCE);
+    CALLED_FAKE(ConfigLockFake_Unlock, ONCE);
+}
+
+TEST(SolidSyslogFreeRtosTcpStreamPool, DestroyOfUnknownHandleDoesNotLock)
+{
+    ConfigLockFake_Install();
+    struct SolidSyslogStream stranger = {};
+
+    SolidSyslogFreeRtosTcpStream_Destroy(&stranger);
+
+    CALLED_FAKE(ConfigLockFake_Lock, NEVER);
+    CALLED_FAKE(ConfigLockFake_Unlock, NEVER);
+}
+
+TEST(SolidSyslogFreeRtosTcpStreamPool, DestroyOfUnknownHandleReportsWarning)
+{
+    ErrorHandlerFake_Install(nullptr);
+    struct SolidSyslogStream stranger = {};
+
+    SolidSyslogFreeRtosTcpStream_Destroy(&stranger);
+
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
+    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_FREERTOSTCPSTREAM_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+}
+
+TEST(SolidSyslogFreeRtosTcpStreamPool, DestroyOfStaleHandleReportsWarning)
+{
+    pooled[0] = SolidSyslogFreeRtosTcpStream_Create();
+    SolidSyslogFreeRtosTcpStream_Destroy(pooled[0]);
+    ErrorHandlerFake_Install(nullptr);
+
+    SolidSyslogFreeRtosTcpStream_Destroy(pooled[0]);
+    pooled[0] = nullptr;
+
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
+    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_FREERTOSTCPSTREAM_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
 }

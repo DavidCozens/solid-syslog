@@ -15,6 +15,7 @@ else()
         SolidSyslogFreeRtosDatagramTest.cpp
         main.cpp
         ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosDatagram.c
+        ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosDatagramStatic.c
         ${CMAKE_SOURCE_DIR}/Tests/Support/FreeRtosFakes/Source/FreeRtosSocketsFake.c
         ${CMAKE_SOURCE_DIR}/Tests/Support/FreeRtosFakes/Source/FreeRtosArpFake.c
         ${CMAKE_SOURCE_DIR}/Tests/Support/FreeRtosFakes/Source/FreeRtosTaskFake.c
@@ -22,6 +23,8 @@ else()
 
     target_link_libraries(SolidSyslogFreeRtosDatagramTest PRIVATE
         ${PROJECT_NAME}
+        ConfigLockFake
+        ErrorHandlerFake
         CppUTest
         CppUTestExt
     )
@@ -42,6 +45,7 @@ else()
         SolidSyslogFreeRtosTcpStreamTest.cpp
         main.cpp
         ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosTcpStream.c
+        ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosTcpStreamStatic.c
         ${CMAKE_SOURCE_DIR}/Tests/Support/FreeRtosFakes/Source/FreeRtosSocketsFake.c
         ${CMAKE_SOURCE_DIR}/Tests/Support/FreeRtosFakes/Source/FreeRtosArpFake.c
         ${CMAKE_SOURCE_DIR}/Tests/Support/FreeRtosFakes/Source/FreeRtosTaskFake.c
@@ -49,6 +53,8 @@ else()
 
     target_link_libraries(SolidSyslogFreeRtosTcpStreamTest PRIVATE
         ${PROJECT_NAME}
+        ConfigLockFake
+        ErrorHandlerFake
         CppUTest
         CppUTestExt
     )
@@ -70,10 +76,13 @@ else()
         SolidSyslogFreeRtosStaticResolverTest.cpp
         main.cpp
         ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosStaticResolver.c
+        ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosStaticResolverStatic.c
     )
 
     target_link_libraries(SolidSyslogFreeRtosStaticResolverTest PRIVATE
         ${PROJECT_NAME}
+        ConfigLockFake
+        ErrorHandlerFake
         CppUTest
         CppUTestExt
     )
@@ -98,11 +107,14 @@ add_executable(SolidSyslogFreeRtosMutexTest
     SolidSyslogFreeRtosMutexTest.cpp
     main.cpp
     ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosMutex.c
+    ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosMutexStatic.c
     ${CMAKE_SOURCE_DIR}/Tests/Support/FreeRtosFakes/Source/FreeRtosSemaphoreFake.c
 )
 
 target_link_libraries(SolidSyslogFreeRtosMutexTest PRIVATE
     ${PROJECT_NAME}
+    ConfigLockFake
+    ErrorHandlerFake
     CppUTest
     CppUTestExt
 )

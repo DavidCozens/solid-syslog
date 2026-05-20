@@ -155,10 +155,6 @@ static struct SolidSyslogMessage testMessage = {
 static NetworkInterface_t networkInterface;
 static NetworkEndPoint_t networkEndPoint;
 
-static SolidSyslogFreeRtosStaticResolverStorage resolverStorage;
-static SolidSyslogFreeRtosDatagramStorage datagramStorage;
-static SolidSyslogFreeRtosTcpStreamStorage tcpStreamStorage;
-
 /* CircularBuffer + FreeRtosMutex composition for cross-task emission.
  * 8 max-sized messages is comfortably above the 3-message BDD scenarios
  * with headroom for a brief Service drain stall, and ~16 KB of .bss is
@@ -169,14 +165,12 @@ enum
 };
 
 static uint8_t bufferRing[SOLIDSYSLOG_CIRCULAR_BUFFER_RING_BYTES(BDD_TARGET_BUFFER_MESSAGES)];
-static SolidSyslogFreeRtosMutexStorage mutexStorage;
 
 /* Lifecycle mutex serialises SolidSyslog_Service against the rebuild path
  * (`set store file` swaps NullStore for the file-backed BlockStore by
  * destroying and re-creating SolidSyslog mid-run). Service holds the lock
  * for one Service() call per iteration; the rebuild path holds it across
  * Destroy → BlockStore_Create → Create. */
-static SolidSyslogFreeRtosMutexStorage lifecycleMutexStorage;
 static struct SolidSyslogMutex* lifecycleMutex = NULL;
 static volatile bool solidSyslogReady;
 /* Signals Service to self-delete BEFORE Teardown destroys the lifecycle
@@ -775,8 +769,8 @@ static void InteractiveTask(void* argument)
 {
     (void) argument;
 
-    resolver = SolidSyslogFreeRtosStaticResolver_Create(&resolverStorage, TEST_DESTINATION_IPV4);
-    datagram = SolidSyslogFreeRtosDatagram_Create(&datagramStorage);
+    resolver = SolidSyslogFreeRtosStaticResolver_Create(TEST_DESTINATION_IPV4);
+    datagram = SolidSyslogFreeRtosDatagram_Create();
 
     struct SolidSyslogUdpSenderConfig udpConfig = {
         .Resolver = resolver,
@@ -790,7 +784,7 @@ static void InteractiveTask(void* argument)
      * UDP endpoint callbacks because the BDD oracle (syslog-ng) listens on the
      * same host:port for both transports — the syslog-ng config in
      * Bdd/syslog-ng/syslog-ng.conf has a TCP listener on 5514 alongside UDP. */
-    tcpStream = SolidSyslogFreeRtosTcpStream_Create(&tcpStreamStorage);
+    tcpStream = SolidSyslogFreeRtosTcpStream_Create();
     struct SolidSyslogStreamSenderConfig tcpConfig = {
         .Resolver = resolver,
         .Stream = tcpStream,
@@ -820,12 +814,12 @@ static void InteractiveTask(void* argument)
      * emission in S08.04 slice 3 will add more). The buffer's Read side
      * is the Service task; its Write side is whichever task calls
      * SolidSyslog_Log. */
-    bufferMutex = SolidSyslogFreeRtosMutex_Create(&mutexStorage);
+    bufferMutex = SolidSyslogFreeRtosMutex_Create();
     buffer = SolidSyslogCircularBuffer_Create(bufferMutex, bufferRing, sizeof(bufferRing));
 
     /* Lifecycle mutex created up front so the Service task can take it
      * from its very first iteration without a NULL check. */
-    lifecycleMutex = SolidSyslogFreeRtosMutex_Create(&lifecycleMutexStorage);
+    lifecycleMutex = SolidSyslogFreeRtosMutex_Create();
 
     /* Default store is NullStore — flipped to FatFs/BlockStore by
      * `set store file` via RebuildWithFileStore(). */
