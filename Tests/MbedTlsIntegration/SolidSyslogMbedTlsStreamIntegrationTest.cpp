@@ -131,6 +131,22 @@ TEST_GROUP(SolidSyslogMbedTlsStreamIntegration)
         leafConfig.Issuer = signingCa;
         MbedTlsTestCert_Create(&leafConfig, outClientCert, &rng);
     }
+
+    /* Common config wiring used by every integration test: transport, sleep,
+     * fixture-owned DRBG, and the trusted-CA / hostname pair built in setup().
+     * Per-test tweaks (e.g. swapping the CA chain to test rejection, or
+     * adding ClientCertChain + ClientKey for mTLS) overlay onto the returned
+     * struct before passing it to SolidSyslogMbedTlsStream_Create. */
+    struct SolidSyslogMbedTlsStreamConfig BuildBaseConfig(struct SolidSyslogStream* transport)
+    {
+        struct SolidSyslogMbedTlsStreamConfig cfg = {};
+        cfg.Transport = transport;
+        cfg.Sleep = NoOpSleep;
+        cfg.Rng = &rng;
+        cfg.CaChain = &trustedCa.Cert;
+        cfg.ServerName = kServerHostname;
+        return cfg;
+    }
 };
 
 // clang-format on
@@ -138,12 +154,7 @@ TEST_GROUP(SolidSyslogMbedTlsStreamIntegration)
 TEST(SolidSyslogMbedTlsStreamIntegration, HandshakeSucceedsWhenServerCertSignedByTrustedCaAndHostnameMatches)
 {
     struct SolidSyslogStream* transport = StartServerWithCert(&serverCert);
-    struct SolidSyslogMbedTlsStreamConfig config = {};
-    config.Transport = transport;
-    config.Sleep = NoOpSleep;
-    config.Rng = &rng;
-    config.CaChain = &trustedCa.Cert;
-    config.ServerName = kServerHostname;
+    struct SolidSyslogMbedTlsStreamConfig config = BuildBaseConfig(transport);
     tlsStream = SolidSyslogMbedTlsStream_Create(&config);
 
     SolidSyslogAddressStorage storage = {};
@@ -167,12 +178,8 @@ TEST(SolidSyslogMbedTlsStreamIntegration, HandshakeFailsWhenServerCertSignedByUn
     MbedTlsTestCert_Create(&untrustedConfig, &untrustedCa, &rng);
 
     struct SolidSyslogStream* transport = StartServerWithCert(&serverCert);
-    struct SolidSyslogMbedTlsStreamConfig config = {};
-    config.Transport = transport;
-    config.Sleep = NoOpSleep;
-    config.Rng = &rng;
+    struct SolidSyslogMbedTlsStreamConfig config = BuildBaseConfig(transport);
     config.CaChain = &untrustedCa.Cert;
-    config.ServerName = kServerHostname;
     tlsStream = SolidSyslogMbedTlsStream_Create(&config);
 
     SolidSyslogAddressStorage storage = {};
@@ -186,11 +193,7 @@ TEST(SolidSyslogMbedTlsStreamIntegration, HandshakeFailsWhenServerCertSignedByUn
 TEST(SolidSyslogMbedTlsStreamIntegration, HandshakeFailsWhenServerNameDoesNotMatchCert)
 {
     struct SolidSyslogStream* transport = StartServerWithCert(&serverCert);
-    struct SolidSyslogMbedTlsStreamConfig config = {};
-    config.Transport = transport;
-    config.Sleep = NoOpSleep;
-    config.Rng = &rng;
-    config.CaChain = &trustedCa.Cert;
+    struct SolidSyslogMbedTlsStreamConfig config = BuildBaseConfig(transport);
     config.ServerName = "wrong-host.example.com"; /* server cert has SAN syslog.example.com */
     tlsStream = SolidSyslogMbedTlsStream_Create(&config);
 
@@ -213,12 +216,7 @@ TEST(SolidSyslogMbedTlsStreamIntegration, MutualTlsHandshakeSucceedsWithClientCe
     CreateClientIdentitySignedBy(&clientCa, &clientCert);
 
     struct SolidSyslogStream* transport = StartServerRequiringClientCa(&serverCert, &clientCa);
-    struct SolidSyslogMbedTlsStreamConfig config = {};
-    config.Transport = transport;
-    config.Sleep = NoOpSleep;
-    config.Rng = &rng;
-    config.CaChain = &trustedCa.Cert;
-    config.ServerName = kServerHostname;
+    struct SolidSyslogMbedTlsStreamConfig config = BuildBaseConfig(transport);
     config.ClientCertChain = &clientCert.Cert;
     config.ClientKey = &clientCert.Key;
     tlsStream = SolidSyslogMbedTlsStream_Create(&config);
@@ -248,12 +246,7 @@ TEST(SolidSyslogMbedTlsStreamIntegration, MutualTlsHandshakeRejectedWhenClientSe
     MbedTlsTestCert_Create(&clientCaConfig, &clientCa, &rng);
 
     struct SolidSyslogStream* transport = StartServerRequiringClientCa(&serverCert, &clientCa);
-    struct SolidSyslogMbedTlsStreamConfig config = {};
-    config.Transport = transport;
-    config.Sleep = NoOpSleep;
-    config.Rng = &rng;
-    config.CaChain = &trustedCa.Cert;
-    config.ServerName = kServerHostname;
+    struct SolidSyslogMbedTlsStreamConfig config = BuildBaseConfig(transport);
     tlsStream = SolidSyslogMbedTlsStream_Create(&config);
 
     SolidSyslogAddressStorage storage = {};
@@ -286,12 +279,7 @@ TEST(SolidSyslogMbedTlsStreamIntegration, MutualTlsHandshakeRejectedWhenClientCe
     CreateClientIdentitySignedBy(&untrustedClientCa, &clientCert);
 
     struct SolidSyslogStream* transport = StartServerRequiringClientCa(&serverCert, &trustedClientCa);
-    struct SolidSyslogMbedTlsStreamConfig config = {};
-    config.Transport = transport;
-    config.Sleep = NoOpSleep;
-    config.Rng = &rng;
-    config.CaChain = &trustedCa.Cert;
-    config.ServerName = kServerHostname;
+    struct SolidSyslogMbedTlsStreamConfig config = BuildBaseConfig(transport);
     config.ClientCertChain = &clientCert.Cert;
     config.ClientKey = &clientCert.Key;
     tlsStream = SolidSyslogMbedTlsStream_Create(&config);

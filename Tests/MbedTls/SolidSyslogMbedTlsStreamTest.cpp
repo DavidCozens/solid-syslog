@@ -17,24 +17,23 @@ extern "C"
 
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings ONCE/NEVER/TWICE into scope for CALLED_FUNCTION / CALLED_FAKE
 
-namespace
-{
-int NoOpSleepCallCount;
-int g_lastSleepMs;
+static int NoOpSleepCallCount;
+static int g_lastSleepMs;
 
-void NoOpSleep(int milliseconds)
+static void NoOpSleep(int milliseconds)
 {
     NoOpSleepCallCount++;
     g_lastSleepMs = milliseconds;
 }
-} // namespace
 
 // clang-format off
 TEST_GROUP(SolidSyslogMbedTlsStream)
 {
-    struct SolidSyslogStream*         transport = nullptr;
-    struct SolidSyslogStream*         handle    = nullptr;
-    struct SolidSyslogMbedTlsStreamConfig config = {};
+    struct SolidSyslogStream*            transport   = nullptr;
+    struct SolidSyslogStream*            handle      = nullptr;
+    struct SolidSyslogMbedTlsStreamConfig config     = {};
+    SolidSyslogAddressStorage            addrStorage = {};
+    struct SolidSyslogAddress*           addr        = nullptr;
 
     void setup() override
     {
@@ -45,6 +44,8 @@ TEST_GROUP(SolidSyslogMbedTlsStream)
         config.Transport = transport;
         config.Sleep = NoOpSleep;
         handle = SolidSyslogMbedTlsStream_Create(&config);
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
+        addr = SolidSyslogAddress_FromStorage(&addrStorage);
     }
 
     void teardown() override
@@ -83,30 +84,22 @@ TEST_GROUP(SolidSyslogMbedTlsStream)
 
 TEST(SolidSyslogMbedTlsStream, OpenDelegatesToInjectedTransport)
 {
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
-
     SolidSyslogStream_Open(handle, addr);
 
     LONGS_EQUAL(1, StreamFake_OpenCallCount(transport));
     POINTERS_EQUAL(addr, StreamFake_LastOpenAddr(transport));
 }
 
-TEST(SolidSyslogMbedTlsStream, OpenInitialisesSslConfig)
+TEST(SolidSyslogMbedTlsStream, CreateInitialisesSslConfigForSafeFree)
 {
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
-
-    SolidSyslogStream_Open(handle, addr);
-
+    /* Init happens eagerly in Create (via MbedTlsStream_Initialise) so the
+     * symmetric *_free in Close is always safe — whether Open was reached,
+     * whether it succeeded, or whether Close is called more than once. */
     LONGS_EQUAL(1, MbedTlsFake_SslConfigInitCallCount());
 }
 
 TEST(SolidSyslogMbedTlsStream, OpenAppliesClientStreamDefaultsToSslConfig)
 {
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
-
     SolidSyslogStream_Open(handle, addr);
 
     LONGS_EQUAL(1, MbedTlsFake_SslConfigDefaultsCallCount());
@@ -116,21 +109,14 @@ TEST(SolidSyslogMbedTlsStream, OpenAppliesClientStreamDefaultsToSslConfig)
     LONGS_EQUAL(MBEDTLS_SSL_PRESET_DEFAULT, MbedTlsFake_LastSslConfigDefaultsPreset());
 }
 
-TEST(SolidSyslogMbedTlsStream, OpenInitialisesSslContext)
+TEST(SolidSyslogMbedTlsStream, CreateInitialisesSslContextForSafeFree)
 {
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
-
-    SolidSyslogStream_Open(handle, addr);
-
+    /* Same eager-init invariant as the SslConfig case above. */
     LONGS_EQUAL(1, MbedTlsFake_SslInitCallCount());
 }
 
-TEST(SolidSyslogMbedTlsStream, OpenSetupBindsSslContextToSslConfig)
+TEST(SolidSyslogMbedTlsStream, OpenBindsContextToConfig)
 {
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
-
     SolidSyslogStream_Open(handle, addr);
 
     LONGS_EQUAL(1, MbedTlsFake_SslSetupCallCount());
@@ -144,9 +130,6 @@ TEST(SolidSyslogMbedTlsStream, OpenWiresBioWithNonNullSendRecvAndNullRecvTimeout
      * we install the former (non-blocking would-block via WANT_READ) and
      * leave the latter NULL since we manage timeouts via PerformHandshake's
      * Sleep-based budget rather than mbedTLS's internal timer. */
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
-
     SolidSyslogStream_Open(handle, addr);
 
     LONGS_EQUAL(1, MbedTlsFake_SslSetBioCallCount());
@@ -159,9 +142,6 @@ TEST(SolidSyslogMbedTlsStream, OpenWiresBioWithNonNullSendRecvAndNullRecvTimeout
 
 TEST(SolidSyslogMbedTlsStream, OpenDrivesHandshakeOnTheSslContext)
 {
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
-
     SolidSyslogStream_Open(handle, addr);
 
     LONGS_EQUAL(1, MbedTlsFake_SslHandshakeCallCount());
@@ -170,8 +150,6 @@ TEST(SolidSyslogMbedTlsStream, OpenDrivesHandshakeOnTheSslContext)
 
 TEST(SolidSyslogMbedTlsStream, OpenReturnsTrueWhenHandshakeSucceeds)
 {
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
     MbedTlsFake_SetSslHandshakeReturn(0);
 
     CHECK_TRUE(SolidSyslogStream_Open(handle, addr));
@@ -179,8 +157,6 @@ TEST(SolidSyslogMbedTlsStream, OpenReturnsTrueWhenHandshakeSucceeds)
 
 TEST(SolidSyslogMbedTlsStream, OpenReturnsFalseWhenHandshakeFails)
 {
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
     MbedTlsFake_SetSslHandshakeReturn(-1);
 
     CHECK_FALSE(SolidSyslogStream_Open(handle, addr));
@@ -196,8 +172,6 @@ TEST(SolidSyslogMbedTlsStream, OpenReturnsFalseWhenHandshakeFails)
 
 TEST(SolidSyslogMbedTlsStream, OpenRetriesHandshakeOnWantRead)
 {
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
     ArrangeHandshakeRetryThenSucceed(MBEDTLS_ERR_SSL_WANT_READ);
 
     CHECK_TRUE(SolidSyslogStream_Open(handle, addr));
@@ -206,8 +180,6 @@ TEST(SolidSyslogMbedTlsStream, OpenRetriesHandshakeOnWantRead)
 
 TEST(SolidSyslogMbedTlsStream, OpenSleepsBetweenHandshakeRetries)
 {
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
     ArrangeHandshakeRetryThenSucceed(MBEDTLS_ERR_SSL_WANT_READ);
 
     SolidSyslogStream_Open(handle, addr);
@@ -219,8 +191,6 @@ TEST(SolidSyslogMbedTlsStream, OpenRetriesHandshakeOnWantWrite)
     /* WANT_WRITE arises when mbedTLS needs to send (e.g. ClientFinished
      * under non-blocking transport with a temporarily-full send buffer).
      * Same retry treatment as WANT_READ. */
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
     ArrangeHandshakeRetryThenSucceed(MBEDTLS_ERR_SSL_WANT_WRITE);
 
     CHECK_TRUE(SolidSyslogStream_Open(handle, addr));
@@ -231,8 +201,6 @@ TEST(SolidSyslogMbedTlsStream, OpenFailsWhenHandshakeNeverCompletes)
 {
     /* mbedtls_ssl_handshake always returns WANT_READ — handshake never makes
      * progress, so the bounded budget should expire and Open returns false. */
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
     ArrangePersistentHandshakeError(MBEDTLS_ERR_SSL_WANT_READ);
 
     CHECK_FALSE(SolidSyslogStream_Open(handle, addr));
@@ -242,8 +210,6 @@ TEST(SolidSyslogMbedTlsStream, OpenFailsImmediatelyOnHardSslError)
 {
     /* Non-WANT error (e.g. a verify/connection failure) is fail-fast — no
      * retry budget burn, no Sleep. */
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
     ArrangePersistentHandshakeError(MBEDTLS_ERR_SSL_BAD_INPUT_DATA);
 
     CHECK_FALSE(SolidSyslogStream_Open(handle, addr));
@@ -397,8 +363,6 @@ TEST(SolidSyslogMbedTlsStream, CloseAfterInternalCloseFromSendFailureDoesNotDoub
 
 TEST(SolidSyslogMbedTlsStream, CloseSendsSslCloseNotifyOnTheSslContextFromOpen)
 {
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
     SolidSyslogStream_Open(handle, addr);
 
     SolidSyslogStream_Close(handle);
@@ -409,8 +373,6 @@ TEST(SolidSyslogMbedTlsStream, CloseSendsSslCloseNotifyOnTheSslContextFromOpen)
 
 TEST(SolidSyslogMbedTlsStream, CloseFreesSslContextAndSslConfigFromOpen)
 {
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
     SolidSyslogStream_Open(handle, addr);
 
     SolidSyslogStream_Close(handle);
@@ -430,8 +392,6 @@ TEST(SolidSyslogMbedTlsStream, CloseDelegatesToInjectedTransport)
 
 TEST(SolidSyslogMbedTlsStream, BioSendCallbackForwardsBufferToTransport)
 {
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
     SolidSyslogStream_Open(handle, addr);
     auto* bioSend = MbedTlsFake_LastSslSetBioSendCallback();
     void* bioContext = MbedTlsFake_LastSslSetBioPBioArg();
@@ -447,8 +407,6 @@ TEST(SolidSyslogMbedTlsStream, BioSendCallbackForwardsBufferToTransport)
 
 TEST(SolidSyslogMbedTlsStream, BioRecvCallbackForwardsBufferToTransport)
 {
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
     SolidSyslogStream_Open(handle, addr);
     auto* bioRecv = MbedTlsFake_LastSslSetBioRecvCallback();
     void* bioContext = MbedTlsFake_LastSslSetBioPBioArg();
@@ -469,8 +427,6 @@ TEST(SolidSyslogMbedTlsStream, BioRecvReturnsWantReadWhenTransportWouldBlock)
      * needs MBEDTLS_ERR_SSL_WANT_READ to drive its retry loop; any other
      * negative is fatal. Returning -1 (or 0) here would abort the handshake
      * on the first non-blocking poll. */
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
     SolidSyslogStream_Open(handle, addr);
     auto* bioRecv = MbedTlsFake_LastSslSetBioRecvCallback();
     void* bioContext = MbedTlsFake_LastSslSetBioPBioArg();
@@ -486,8 +442,6 @@ TEST(SolidSyslogMbedTlsStream, BioRecvReturnsFatalWhenTransportFails)
 {
     /* Stream contract: negative is fatal. mbedTLS treats any negative other
      * than its own WANT_* sentinels as a transport error and aborts. */
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
     SolidSyslogStream_Open(handle, addr);
     auto* bioRecv = MbedTlsFake_LastSslSetBioRecvCallback();
     void* bioContext = MbedTlsFake_LastSslSetBioPBioArg();
@@ -502,9 +456,6 @@ TEST(SolidSyslogMbedTlsStream, BioRecvReturnsFatalWhenTransportFails)
 
 TEST(SolidSyslogMbedTlsStream, OpenSetsAuthmodeRequired)
 {
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
-
     SolidSyslogStream_Open(handle, addr);
 
     LONGS_EQUAL(1, MbedTlsFake_SslConfAuthmodeCallCount());
@@ -518,9 +469,6 @@ TEST(SolidSyslogMbedTlsStream, OpenWiresCaChainFromConfigAndNullCrl)
     static mbedtls_x509_crt caChainMarker;
     config.CaChain = &caChainMarker;
     ReCreateHandleWithUpdatedConfig();
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
-
     SolidSyslogStream_Open(handle, addr);
 
     LONGS_EQUAL(1, MbedTlsFake_SslConfCaChainCallCount());
@@ -534,9 +482,6 @@ TEST(SolidSyslogMbedTlsStream, OpenWiresRngFromConfigUsingCtrDrbgRandom)
     static mbedtls_ctr_drbg_context rngMarker;
     config.Rng = &rngMarker;
     ReCreateHandleWithUpdatedConfig();
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
-
     SolidSyslogStream_Open(handle, addr);
 
     LONGS_EQUAL(1, MbedTlsFake_SslConfRngCallCount());
@@ -549,9 +494,6 @@ TEST(SolidSyslogMbedTlsStream, OpenSetsHostnameWhenServerNameProvided)
 {
     config.ServerName = "syslog.example.com";
     ReCreateHandleWithUpdatedConfig();
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
-
     SolidSyslogStream_Open(handle, addr);
 
     LONGS_EQUAL(1, MbedTlsFake_SslSetHostnameCallCount());
@@ -562,9 +504,6 @@ TEST(SolidSyslogMbedTlsStream, OpenSetsHostnameWhenServerNameProvided)
 TEST(SolidSyslogMbedTlsStream, OpenSkipsHostnameWhenServerNameIsNull)
 {
     /* setup() left config.ServerName at NULL. */
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
-
     SolidSyslogStream_Open(handle, addr);
 
     LONGS_EQUAL(0, MbedTlsFake_SslSetHostnameCallCount());
@@ -584,9 +523,6 @@ TEST(SolidSyslogMbedTlsStream, OpenWiresOwnCertWhenClientCertAndKeyProvided)
     config.ClientCertChain = &clientCertMarker;
     config.ClientKey = &clientKeyMarker;
     ReCreateHandleWithUpdatedConfig();
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
-
     SolidSyslogStream_Open(handle, addr);
 
     LONGS_EQUAL(1, MbedTlsFake_SslConfOwnCertCallCount());
@@ -603,9 +539,6 @@ TEST(SolidSyslogMbedTlsStream, OpenSkipsOwnCertWhenClientCertChainIsNull)
     static mbedtls_pk_context clientKeyMarker;
     config.ClientKey = &clientKeyMarker;
     ReCreateHandleWithUpdatedConfig();
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
-
     SolidSyslogStream_Open(handle, addr);
 
     LONGS_EQUAL(0, MbedTlsFake_SslConfOwnCertCallCount());
@@ -617,9 +550,6 @@ TEST(SolidSyslogMbedTlsStream, OpenSkipsOwnCertWhenClientKeyIsNull)
     static mbedtls_x509_crt clientCertMarker;
     config.ClientCertChain = &clientCertMarker;
     ReCreateHandleWithUpdatedConfig();
-    SolidSyslogAddressStorage storage = {};
-    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
-
     SolidSyslogStream_Open(handle, addr);
 
     LONGS_EQUAL(0, MbedTlsFake_SslConfOwnCertCallCount());
