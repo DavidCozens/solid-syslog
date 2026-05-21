@@ -111,6 +111,49 @@ jobs:
           path: build/debug/cpputest_*.xml
           retention-days: 1
 
+  integration-linux-mbedtls:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    # cpputest-freertos image carries /opt/mbedtls (and exports MBEDTLS_DIR);
+    # Tests/MbedTlsIntegration/CMakeLists.txt requires that env var.
+    container:
+      image: ghcr.io/davidcozens/cpputest-freertos:sha-bbc958b
+      options: --user root
+    env:
+      GIT_CONFIG_COUNT: 1
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: '*'
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Configure
+        run: cmake --preset debug
+
+      - name: Build integration tests
+        run: cmake --build --preset debug --target MbedTlsIntegrationTests
+
+      - name: Run integration tests
+        run: cd build/debug && ./Tests/MbedTlsIntegration/MbedTlsIntegrationTests -v -ojunit -k MbedTlsIntegrationTests
+
+      - name: Test Report
+        uses: dorny/test-reporter@v3
+        if: success() || failure()
+        with:
+          name: Test Results (mbedTLS Integration)
+          path: build/debug/cpputest_*.xml
+          reporter: java-junit
+
+      - name: Upload JUnit XML
+        if: success() || failure()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: junit-integration-linux-mbedtls
+          path: build/debug/cpputest_*.xml
+          retention-days: 1
+
   integration-windows-openssl:
     runs-on: windows-latest
     permissions:
@@ -926,7 +969,7 @@ jobs:
 
   summary:
     if: always() && github.event_name == 'pull_request'
-    needs: [build-linux-gcc, build-linux-tunable-override, build-linux-clang, sanitize-linux-gcc, coverage-linux-gcc, analyze-tidy, analyze-cppcheck, analyze-format, analyze-iwyu, bdd-linux-syslog-ng, build-windows-msvc, bdd-windows-otel, integration-linux-openssl, integration-windows-openssl, build-freertos-host-tdd, build-freertos-target, bdd-freertos-qemu]
+    needs: [build-linux-gcc, build-linux-tunable-override, build-linux-clang, sanitize-linux-gcc, coverage-linux-gcc, analyze-tidy, analyze-cppcheck, analyze-format, analyze-iwyu, bdd-linux-syslog-ng, build-windows-msvc, bdd-windows-otel, integration-linux-openssl, integration-linux-mbedtls, integration-windows-openssl, build-freertos-host-tdd, build-freertos-target, bdd-freertos-qemu]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -998,6 +1041,11 @@ jobs:
                     "id": "junit",
                     "name": "integration-linux-openssl",
                     "pattern": "**/junit-integration-linux-openssl/cpputest_*.xml"
+                  },
+                  {
+                    "id": "junit",
+                    "name": "integration-linux-mbedtls",
+                    "pattern": "**/junit-integration-linux-mbedtls/cpputest_*.xml"
                   },
                   {
                     "id": "junit",
