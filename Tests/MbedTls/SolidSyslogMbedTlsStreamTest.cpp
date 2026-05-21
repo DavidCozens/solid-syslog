@@ -281,6 +281,34 @@ TEST(SolidSyslogMbedTlsStream, SendReturnsFalseWhenSslWriteFails)
     CHECK_FALSE(SolidSyslogStream_Send(handle, payload, sizeof(payload)));
 }
 
+TEST(SolidSyslogMbedTlsStream, SendClosesSslAndTransportOnWriteFailure)
+{
+    /* Fail-fast: a TLS-level write failure means the session state is
+     * unrecoverable. Mirror the OpenSSL TlsStream contract — close internally
+     * so the StreamSender reconnect path runs on the next tick. */
+    const unsigned char payload[] = {0x10, 0x20, 0x30};
+    MbedTlsFake_SetSslWriteReturn(-1);
+
+    SolidSyslogStream_Send(handle, payload, sizeof(payload));
+
+    LONGS_EQUAL(1, MbedTlsFake_SslFreeCallCount());
+    LONGS_EQUAL(1, StreamFake_CloseCallCount(transport));
+}
+
+TEST(SolidSyslogMbedTlsStream, SendClosesSslAndTransportOnShortWrite)
+{
+    /* mbedtls_ssl_write returning fewer bytes than requested is treated the
+     * same as outright failure — the application boundary requires
+     * all-or-nothing writes (syslog framing). */
+    const unsigned char payload[] = {0x10, 0x20, 0x30};
+    MbedTlsFake_SetSslWriteReturn(2); /* asked for 3, got 2 */
+
+    SolidSyslogStream_Send(handle, payload, sizeof(payload));
+
+    LONGS_EQUAL(1, MbedTlsFake_SslFreeCallCount());
+    LONGS_EQUAL(1, StreamFake_CloseCallCount(transport));
+}
+
 TEST(SolidSyslogMbedTlsStream, ReadForwardsBufferToSslRead)
 {
     unsigned char buffer[8];
@@ -315,6 +343,51 @@ TEST(SolidSyslogMbedTlsStream, ReadReturnsNegativeOnSslReadError)
     MbedTlsFake_SetSslReadReturn(-1);
 
     CHECK(SolidSyslogStream_Read(handle, buffer, sizeof(buffer)) < 0);
+}
+
+TEST(SolidSyslogMbedTlsStream, ReadClosesSslAndTransportOnHardError)
+{
+    /* Same fail-fast contract as Send: any read result other than positive
+     * bytes or WANT_READ (e.g. peer close_notify, fatal alert, transport
+     * error) closes internally so the next tick reopens. */
+    unsigned char buffer[8];
+    MbedTlsFake_SetSslReadReturn(-1);
+
+    SolidSyslogStream_Read(handle, buffer, sizeof(buffer));
+
+    LONGS_EQUAL(1, MbedTlsFake_SslFreeCallCount());
+    LONGS_EQUAL(1, StreamFake_CloseCallCount(transport));
+}
+
+TEST(SolidSyslogMbedTlsStream, ReadDoesNotCloseOnWantRead)
+{
+    /* WANT_READ is steady-state would-block, not a connection failure —
+     * leave the session intact so the caller can retry. */
+    unsigned char buffer[8];
+    MbedTlsFake_SetSslReadReturn(MBEDTLS_ERR_SSL_WANT_READ);
+
+    SolidSyslogStream_Read(handle, buffer, sizeof(buffer));
+
+    LONGS_EQUAL(0, MbedTlsFake_SslFreeCallCount());
+    LONGS_EQUAL(0, StreamFake_CloseCallCount(transport));
+}
+
+TEST(SolidSyslogMbedTlsStream, CloseAfterInternalCloseFromSendFailureDoesNotDoubleFree)
+{
+    /* Send and Read may close internally on failure; the subsequent Close
+     * from the StreamSender reconnect path or Destroy must not crash or
+     * double-free. mbedTLS's freed-equivalent zeroed state makes this safe. */
+    const unsigned char payload[] = {0x10};
+    MbedTlsFake_SetSslWriteReturn(-1);
+    SolidSyslogStream_Send(handle, payload, sizeof(payload)); /* internal close */
+
+    SolidSyslogStream_Close(handle); /* second close — must be safe */
+
+    /* Exactly one of each free per real session. The teardown's Destroy
+     * will add a third pair when this test ends, but that's outside the
+     * assertion window. */
+    LONGS_EQUAL(2, MbedTlsFake_SslFreeCallCount());
+    LONGS_EQUAL(2, MbedTlsFake_SslConfigFreeCallCount());
 }
 
 TEST(SolidSyslogMbedTlsStream, CloseSendsSslCloseNotifyOnTheSslContextFromOpen)
