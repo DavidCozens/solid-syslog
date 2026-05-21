@@ -28,6 +28,7 @@
 #include "BddTargetIps.h"
 #include "BddTargetLanguage.h"
 #include "BddTargetSwitchConfig.h"
+#include "BddTargetTlsSender.h"
 #include "SolidSyslog.h"
 #include "SolidSyslogAtomicCounter.h"
 #include "SolidSyslogStdAtomicCounter.h"
@@ -239,6 +240,7 @@ static struct SolidSyslogResolver* resolver = NULL;
 static struct SolidSyslogDatagram* datagram = NULL;
 static struct SolidSyslogStream* tcpStream = NULL;
 static struct SolidSyslogSender* tcpSender = NULL;
+static struct SolidSyslogSender* tlsSender = NULL;
 static struct SolidSyslogSender* udpSender = NULL;
 static struct SolidSyslogSender* switchingSender = NULL;
 static struct SolidSyslogBuffer* buffer = NULL;
@@ -793,16 +795,25 @@ static void InteractiveTask(void* argument)
     };
     tcpSender = SolidSyslogStreamSender_Create(&tcpConfig);
 
-    /* SwitchingSender lets `set transport <udp|tcp>` flip the active transport
-     * at runtime. Default to UDP so existing UDP-tagged scenarios stay green;
-     * `--transport tcp` flowing through the behave harness lands here as
-     * `set transport tcp` over the UART and switches before the first send. */
-    static struct SolidSyslogSender* inners[2];
+    /* TLS slot: SolidSyslogMbedTlsStream over SolidSyslogFreeRtosTcpStream,
+     * with the demo CA / client cert / client key baked into the ELF.
+     * Slice 6b ships TLS-only (mtls=false) — port 6514 on the BDD syslog-ng
+     * oracle, no client cert presented. mTLS support (port 6515, client
+     * cert wired) is slice 6c work and may require an extra
+     * BDD_TARGET_SWITCH_MTLS slot or a runtime endpoint-dispatch shim. */
+    tlsSender = BddTargetTlsSender_Create(resolver, false);
+
+    /* SwitchingSender lets `set transport <udp|tcp|tls>` flip the active
+     * transport at runtime. Default to UDP so existing UDP-tagged scenarios
+     * stay green; `--transport tcp|tls` flowing through the behave harness
+     * lands here as `set transport <value>` over the UART. */
+    static struct SolidSyslogSender* inners[BDD_TARGET_SWITCH_COUNT];
     inners[BDD_TARGET_SWITCH_UDP] = udpSender;
     inners[BDD_TARGET_SWITCH_TCP] = tcpSender;
+    inners[BDD_TARGET_SWITCH_TLS] = tlsSender;
     struct SolidSyslogSwitchingSenderConfig switchConfig = {
         .Senders = inners,
-        .SenderCount = sizeof(inners) / sizeof(inners[0]),
+        .SenderCount = BDD_TARGET_SWITCH_COUNT,
         .Selector = BddTargetSwitchConfig_Selector,
     };
     BddTargetSwitchConfig_SetByName("udp");

@@ -1,53 +1,228 @@
-/* MbedTLS-over-FreeRtosTcpStream variant of the BDD TLS sender.
+/* MbedTLS-over-FreeRtosTcpStream BDD TLS sender (slice 6b).
  *
- * Slice 6a (this file): scaffolding only. Returns a no-op sender so the
- * FreeRTOS BDD target compiles and links with mbedTLS wired into the build,
- * proving the platform / config / CMake stack is healthy before slice 6b
- * lands the real entropy + DRBG + PEM-parse + StreamSender wiring.
+ * Composes:
+ *   - SolidSyslogFreeRtosTcpStream  inner TCP transport
+ *   - SolidSyslogMbedTlsStream      TLS over the injected Stream
+ *   - SolidSyslogStreamSender       RFC 6587 octet-counting framing
  *
- * Once 6b lands, this file will compose:
- *   - SolidSyslogFreeRtosTcpStream                (inner TCP transport)
- *   - SolidSyslogMbedTlsStream                    (TLS, with handles passed
- *                                                  from main.c's CTR_DRBG +
- *                                                  parsed CA / client cert)
- *   - SolidSyslogStreamSender                     (octet-framed RFC 6587)
+ * Mirrors BddTargetTlsSender_OpenSsl_PosixTcp.c on the POSIX target. The
+ * mbedTLS adapter takes pre-built handles (mbedtls_ctr_drbg, mbedtls_x509_crt,
+ * mbedtls_pk_context) rather than file paths, because MBEDTLS_FS_IO is
+ * disabled in the integrator config — there is no host path reachable from
+ * QEMU. The demo CA / client cert / client key PEMs travel as `static const`
+ * arrays in rodata, baked at CMake-time by xxd -i from
+ * Bdd/syslog-ng/tls/ ca.pem / client.pem / client.key. The arrays are
+ * parsed once on first BddTargetTlsSender_Create call.
  *
- * Mirroring BddTargetTlsSender_OpenSsl_PosixTcp.c on the POSIX target. The
- * mbedTLS adapter takes pre-built handles rather than file paths (no
- * MBEDTLS_FS_IO on this target), so the demo PEMs are baked into the ELF
- * via xxd -i in slice 6b and parsed at first BddTargetTlsSender_Create call.
+ * Entropy + CTR_DRBG also live in this TU rather than in main.c so all
+ * mbedTLS-specific state is one file's responsibility. The entropy source
+ * is deliberately weak — see DemoEntropySource — and an audit-trail
+ * WARNING is emitted via SolidSyslog_Error on first init.
  */
 
 #include "BddTargetTlsSender.h"
-#include "SolidSyslogSenderDefinition.h"
 
+#include "BddTargetMtlsConfig.h"
+#include "BddTargetTlsConfig.h"
+#include "SolidSyslogFreeRtosTcpStream.h"
+#include "SolidSyslogMbedTlsStream.h"
+#include "SolidSyslogStream.h"
+#include "SolidSyslogStreamSender.h"
+
+#include <mbedtls/ctr_drbg.h>
+#include <mbedtls/entropy.h>
+#include <mbedtls/pk.h>
+#include <mbedtls/x509_crt.h>
+
+#include <FreeRTOS.h>
+#include <task.h>
+
+#include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "BddBakedCaPem.h"
+#include "BddBakedClientCertPem.h"
+#include "BddBakedClientKeyPem.h"
 
 struct SolidSyslogResolver;
 
-static bool MbedTlsBddSender_Send(struct SolidSyslogSender* self, const void* buffer, size_t size)
+static struct SolidSyslogStream* underlyingStream;
+static struct SolidSyslogStream* tlsStream;
+static struct SolidSyslogSender* sender;
+
+/* Entropy + CTR_DRBG live for the lifetime of the BDD target; one-shot init
+ * gated on `mbedTlsInitialised`. mbedTLS structs are zero-initialised by
+ * static storage; mbedtls_*_init is still called explicitly because the
+ * library treats post-init / post-free as the same state. */
+static mbedtls_entropy_context entropy;
+static mbedtls_ctr_drbg_context drbg;
+static bool mbedTlsInitialised;
+
+/* mbedtls_x509_crt_parse / mbedtls_pk_parse_key require NUL-terminated PEM
+ * input. xxd -i doesn't append a NUL, so we hold a +1-sized copy here and
+ * NUL-terminate at parse time. The cost is one extra byte per PEM in BSS;
+ * cheaper than the shell pipeline that would be needed to bake the NUL at
+ * CMake time. */
+static unsigned char caPemBuf[sizeof(bdd_baked_ca_pem) + 1U];
+static unsigned char clientCertPemBuf[sizeof(bdd_baked_client_cert_pem) + 1U];
+static unsigned char clientKeyPemBuf[sizeof(bdd_baked_client_key_pem) + 1U];
+
+static mbedtls_x509_crt caChain;
+static mbedtls_x509_crt clientCertChain;
+static mbedtls_pk_context clientKey;
+
+/* Demo-only entropy: XOR the FreeRTOS tick count, a per-call counter, and
+ * the destination address (which varies per call) into each output byte.
+ * Quality is intentionally terrible — QEMU has no real source — and the
+ * SolidSyslog_Error(WARNING, …) emit below makes that explicit. Real
+ * integrators on bare-metal would replace this with TRNG / HSM bytes. */
+static int DemoEntropySource(void* data, unsigned char* output, size_t len, size_t* olen)
 {
-    (void) self;
-    (void) buffer;
-    (void) size;
-    /* Slice 6a placeholder: drop on the floor. Real implementation in 6b. */
-    return false;
+    (void) data;
+    static uint32_t counter = 0U;
+    for (size_t i = 0; i < len; i++)
+    {
+        counter++;
+        uint32_t mix = (uint32_t) xTaskGetTickCount() ^ counter ^ (uint32_t) (uintptr_t) &output[i];
+        output[i] = (unsigned char) ((mix >> ((i % 4U) * 8U)) & 0xFFU);
+    }
+    *olen = len;
+    return 0;
 }
 
-static void MbedTlsBddSender_Disconnect(struct SolidSyslogSender* self)
+static void RtosSleep(int milliseconds)
 {
-    (void) self;
+    /* Same rounding rule as the CmsdkUart sleep in main.c — sub-tick requests
+     * must still block the task, otherwise vTaskDelay(0) just yields. */
+    TickType_t ticks = pdMS_TO_TICKS((TickType_t) milliseconds);
+    if ((milliseconds > 0) && (ticks == 0U))
+    {
+        ticks = 1U;
+    }
+    vTaskDelay(ticks);
 }
 
-static struct SolidSyslogSender mbedTlsBddSender = {MbedTlsBddSender_Send, MbedTlsBddSender_Disconnect};
+/* Idempotent: safe to call from BddTargetTlsSender_Create on every invocation
+ * even though the first call is the only one that does real work. mbedTLS
+ * state for entropy/DRBG/cert/key lives at file scope and survives across
+ * connect/disconnect cycles.
+ *
+ * Each major step emits a SolidSyslog_Error INFO message and yields one
+ * tick to the FreeRTOS scheduler. Under QEMU mps2-an385 the DRBG seed +
+ * cert/key parses can each take several seconds (mbedTLS does serious
+ * crypto work — RSA key parse, ECDHE primes, ASN.1 walks); without the
+ * yields, lower-priority tasks would starve until init finishes, and
+ * without the diagnostic prints the boot would appear to hang. */
+static void EnsureMbedTlsInitialised(void)
+{
+    if (mbedTlsInitialised)
+    {
+        return;
+    }
+
+    /* Boot diagnostics via printf rather than SolidSyslog_Error because main's
+     * error handler installation happens AFTER BddTargetTlsSender_Create —
+     * the default no-op handler would otherwise swallow these. */
+    (void) printf("[mbedtls] init entropy + DRBG seed (slow under QEMU)\r\n");
+    vTaskDelay(1U);
+
+    mbedtls_entropy_init(&entropy);
+    mbedtls_entropy_add_source(
+        &entropy,
+        DemoEntropySource,
+        NULL,
+        MBEDTLS_ENTROPY_BLOCK_SIZE,
+        MBEDTLS_ENTROPY_SOURCE_WEAK
+    );
+
+    mbedtls_ctr_drbg_init(&drbg);
+    static const unsigned char personalization[] = "solidsyslog-freertos-bdd";
+    (void) mbedtls_ctr_drbg_seed(&drbg, mbedtls_entropy_func, &entropy, personalization, sizeof(personalization) - 1U);
+    vTaskDelay(1U);
+
+    (void) printf("[mbedtls] parsing CA chain\r\n");
+
+    memcpy(caPemBuf, bdd_baked_ca_pem, sizeof(bdd_baked_ca_pem));
+    caPemBuf[sizeof(bdd_baked_ca_pem)] = '\0';
+    mbedtls_x509_crt_init(&caChain);
+    (void) mbedtls_x509_crt_parse(&caChain, caPemBuf, sizeof(caPemBuf));
+    vTaskDelay(1U);
+
+    (void) printf("[mbedtls] parsing client cert chain\r\n");
+
+    memcpy(clientCertPemBuf, bdd_baked_client_cert_pem, sizeof(bdd_baked_client_cert_pem));
+    clientCertPemBuf[sizeof(bdd_baked_client_cert_pem)] = '\0';
+    mbedtls_x509_crt_init(&clientCertChain);
+    (void) mbedtls_x509_crt_parse(&clientCertChain, clientCertPemBuf, sizeof(clientCertPemBuf));
+    vTaskDelay(1U);
+
+    (void) printf("[mbedtls] parsing client key (RSA — slowest step)\r\n");
+
+    memcpy(clientKeyPemBuf, bdd_baked_client_key_pem, sizeof(bdd_baked_client_key_pem));
+    clientKeyPemBuf[sizeof(bdd_baked_client_key_pem)] = '\0';
+    mbedtls_pk_init(&clientKey);
+    (void) mbedtls_pk_parse_key(
+        &clientKey,
+        clientKeyPemBuf,
+        sizeof(clientKeyPemBuf),
+        NULL,
+        0U,
+        mbedtls_ctr_drbg_random,
+        &drbg
+    );
+    vTaskDelay(1U);
+
+    /* Audit trail: every cold boot of this target announces the demo-only
+     * entropy explicitly. Integrators porting this off the BDD target should
+     * see this and replace DemoEntropySource with TRNG before shipping. */
+    (void) printf("[mbedtls] init complete. WARNING: demo-only entropy "
+                  "(xTaskGetTickCount + per-call counter). Not for production.\r\n");
+
+    mbedTlsInitialised = true;
+}
 
 struct SolidSyslogSender* BddTargetTlsSender_Create(struct SolidSyslogResolver* resolver, bool mtls)
 {
-    (void) resolver;
-    (void) mtls;
-    return &mbedTlsBddSender;
+    EnsureMbedTlsInitialised();
+
+    underlyingStream = SolidSyslogFreeRtosTcpStream_Create();
+
+    static struct SolidSyslogMbedTlsStreamConfig tlsStreamConfig;
+    tlsStreamConfig = (struct SolidSyslogMbedTlsStreamConfig) {0};
+    tlsStreamConfig.Transport = underlyingStream;
+    tlsStreamConfig.Sleep = RtosSleep;
+    tlsStreamConfig.Rng = &drbg;
+    tlsStreamConfig.CaChain = &caChain;
+    tlsStreamConfig.ServerName = mtls ? BddTargetMtlsConfig_GetServerName() : BddTargetTlsConfig_GetServerName();
+    if (mtls)
+    {
+        tlsStreamConfig.ClientCertChain = &clientCertChain;
+        tlsStreamConfig.ClientKey = &clientKey;
+    }
+    tlsStream = SolidSyslogMbedTlsStream_Create(&tlsStreamConfig);
+
+    static struct SolidSyslogStreamSenderConfig senderConfig;
+    senderConfig = (struct SolidSyslogStreamSenderConfig) {0};
+    senderConfig.Resolver = resolver;
+    senderConfig.Stream = tlsStream;
+    senderConfig.Endpoint = mtls ? BddTargetMtlsConfig_GetEndpoint : BddTargetTlsConfig_GetEndpoint;
+    senderConfig.EndpointVersion =
+        mtls ? BddTargetMtlsConfig_GetEndpointVersion : BddTargetTlsConfig_GetEndpointVersion;
+    sender = SolidSyslogStreamSender_Create(&senderConfig);
+
+    return sender;
 }
 
 void BddTargetTlsSender_Destroy(void)
 {
+    SolidSyslogStreamSender_Destroy(sender);
+    SolidSyslogMbedTlsStream_Destroy(tlsStream);
+    SolidSyslogFreeRtosTcpStream_Destroy(underlyingStream);
+
+    /* Entropy / DRBG / parsed certs survive across Destroy → Create cycles to
+     * avoid re-seeding on every reconnect. Real teardown only happens at
+     * process exit, which the FreeRTOS target never reaches. */
 }

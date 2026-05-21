@@ -203,6 +203,50 @@ foreach(_mbedtls_upstream_target IN ITEMS mbedtls mbedx509 mbedcrypto everest p2
     endif()
 endforeach()
 
+# --- Bake demo PEMs into the ELF -------------------------------------------
+#
+# QEMU has no path to the host filesystem, and the integrator config disables
+# MBEDTLS_FS_IO, so the demo CA + client identity travel as `static const`
+# arrays in rodata. xxd -i emits the array shape we want; mbedTLS's PEM parser
+# additionally requires a NUL-terminated input, which the wrapper TU adds at
+# parse time by copying into a +1-sized buffer (cheaper than a shell pipeline
+# to append the NUL at bake time, and keeps this CMake step simple).
+
+set(BAKED_PEMS_DIR "${CMAKE_CURRENT_BINARY_DIR}/baked_pems")
+file(MAKE_DIRECTORY ${BAKED_PEMS_DIR})
+
+function(bake_pem_into_header input_pem output_header symbol)
+    add_custom_command(
+        OUTPUT ${output_header}
+        COMMAND bash -c "xxd -i -n '${symbol}' '${input_pem}' > '${output_header}'"
+        DEPENDS ${input_pem}
+        COMMENT "Baking ${input_pem} -> ${output_header}"
+        VERBATIM
+    )
+endfunction()
+
+bake_pem_into_header(
+    ${CMAKE_SOURCE_DIR}/Bdd/syslog-ng/tls/ca.pem
+    ${BAKED_PEMS_DIR}/BddBakedCaPem.h
+    bdd_baked_ca_pem
+)
+bake_pem_into_header(
+    ${CMAKE_SOURCE_DIR}/Bdd/syslog-ng/tls/client.pem
+    ${BAKED_PEMS_DIR}/BddBakedClientCertPem.h
+    bdd_baked_client_cert_pem
+)
+bake_pem_into_header(
+    ${CMAKE_SOURCE_DIR}/Bdd/syslog-ng/tls/client.key
+    ${BAKED_PEMS_DIR}/BddBakedClientKeyPem.h
+    bdd_baked_client_key_pem
+)
+
+set(BAKED_PEM_HEADERS
+    ${BAKED_PEMS_DIR}/BddBakedCaPem.h
+    ${BAKED_PEMS_DIR}/BddBakedClientCertPem.h
+    ${BAKED_PEMS_DIR}/BddBakedClientKeyPem.h
+)
+
 # --- Executable ---------------------------------------------------------------
 #
 # Project code only. Inherits the full project warning set
@@ -232,8 +276,11 @@ add_executable(SolidSyslogBddTarget
     ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/BddTargetInteractive.c
     ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/BddTargetIps.c
     ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/BddTargetLanguage.c
+    ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/BddTargetMtlsConfig.c
     ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/BddTargetSwitchConfig.c
+    ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/BddTargetTlsConfig.c
     ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/BddTargetTlsSender_MbedTls_FreeRtosTcp.c
+    ${BAKED_PEM_HEADERS}
     $<TARGET_OBJECTS:solid_syslog_freertos_upstream>
 )
 
@@ -258,6 +305,7 @@ target_include_directories(SolidSyslogBddTarget PRIVATE
     ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Interface    # SolidSyslogMbedTlsStream.h
     ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source       # SolidSyslogMbedTlsStreamPrivate.h
     ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common            # BddTargetInteractive.h
+    ${BAKED_PEMS_DIR}                                 # BddBaked*.h (xxd -i output)
     ${FREERTOS_KERNEL_PATH}/include
     ${FREERTOS_PORT_DIR}                              # portmacro.h
     ${PLUS_TCP_SRC_DIR}/include
