@@ -39,9 +39,16 @@ static mbedtls_ssl_recv_t* lastSslSetBioRecvCallback;
 static mbedtls_ssl_recv_timeout_t* lastSslSetBioRecvTimeoutCallback;
 
 /* mbedtls_ssl_handshake */
+enum
+{
+    MBEDTLSFAKE_MAX_HANDSHAKE_RETURNS = 8
+};
+
 static int sslHandshakeCallCount;
 static mbedtls_ssl_context* lastSslHandshakeArg;
 static int sslHandshakeReturn;
+static int sslHandshakeReturnSequence[MBEDTLSFAKE_MAX_HANDSHAKE_RETURNS];
+static int sslHandshakeReturnSequenceLen;
 
 /* mbedtls_ssl_write */
 static int sslWriteCallCount;
@@ -120,6 +127,7 @@ void MbedTlsFake_Reset(void)
     sslHandshakeCallCount = 0;
     lastSslHandshakeArg = NULL;
     sslHandshakeReturn = 0;
+    sslHandshakeReturnSequenceLen = 0;
     sslWriteCallCount = 0;
     lastSslWriteContextArg = NULL;
     lastSslWriteBufArg = NULL;
@@ -251,6 +259,16 @@ mbedtls_ssl_context* MbedTlsFake_LastSslHandshakeArg(void)
 void MbedTlsFake_SetSslHandshakeReturn(int value)
 {
     sslHandshakeReturn = value;
+}
+
+void MbedTlsFake_SetSslHandshakeReturnSequence(const int* values, int count)
+{
+    int safe = (count < MBEDTLSFAKE_MAX_HANDSHAKE_RETURNS) ? count : MBEDTLSFAKE_MAX_HANDSHAKE_RETURNS;
+    for (int i = 0; i < safe; i++)
+    {
+        sslHandshakeReturnSequence[i] = values[i];
+    }
+    sslHandshakeReturnSequenceLen = safe;
 }
 
 int MbedTlsFake_SslWriteCallCount(void)
@@ -458,9 +476,16 @@ void mbedtls_ssl_set_bio(
 
 int mbedtls_ssl_handshake(mbedtls_ssl_context* ssl)
 {
+    int callIndex = sslHandshakeCallCount;
     sslHandshakeCallCount++;
     lastSslHandshakeArg = ssl;
-    return sslHandshakeReturn;
+    int rc = sslHandshakeReturn;
+    if (sslHandshakeReturnSequenceLen > 0)
+    {
+        int idx = (callIndex < sslHandshakeReturnSequenceLen) ? callIndex : (sslHandshakeReturnSequenceLen - 1);
+        rc = sslHandshakeReturnSequence[idx];
+    }
+    return rc;
 }
 
 int mbedtls_ssl_write(mbedtls_ssl_context* ssl, const unsigned char* buf, size_t len)

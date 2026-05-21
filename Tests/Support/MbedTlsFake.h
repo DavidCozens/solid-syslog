@@ -48,6 +48,11 @@ EXTERN_C_BEGIN
     int MbedTlsFake_SslHandshakeCallCount(void);
     struct mbedtls_ssl_context* MbedTlsFake_LastSslHandshakeArg(void);
     void MbedTlsFake_SetSslHandshakeReturn(int value);
+    /* Per-call return sequence — each handshake invocation gets the next
+     * value in `values`; once exhausted, every subsequent call returns the
+     * last entry. Used to drive WANT_READ/WANT_WRITE retry loops. Capped
+     * at MBEDTLSFAKE_MAX_HANDSHAKE_RETURNS (silently truncated). */
+    void MbedTlsFake_SetSslHandshakeReturnSequence(const int* values, int count);
 
     /* mbedtls_ssl_write */
     int MbedTlsFake_SslWriteCallCount(void);

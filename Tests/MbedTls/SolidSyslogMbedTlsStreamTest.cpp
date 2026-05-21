@@ -13,11 +13,19 @@ extern "C"
 #include "StreamFake.h"
 }
 
+#include "TestUtils.h"
+
+using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings ONCE/NEVER/TWICE into scope for CALLED_FUNCTION / CALLED_FAKE
+
 namespace
 {
+int NoOpSleepCallCount;
+int g_lastSleepMs;
+
 void NoOpSleep(int milliseconds)
 {
-    (void) milliseconds;
+    NoOpSleepCallCount++;
+    g_lastSleepMs = milliseconds;
 }
 } // namespace
 
@@ -31,6 +39,8 @@ TEST_GROUP(SolidSyslogMbedTlsStream)
     void setup() override
     {
         MbedTlsFake_Reset();
+        NoOpSleepCallCount = 0;
+        g_lastSleepMs = 0;
         transport = StreamFake_Create();
         config.Transport = transport;
         config.Sleep = NoOpSleep;
@@ -49,6 +59,23 @@ TEST_GROUP(SolidSyslogMbedTlsStream)
     {
         SolidSyslogMbedTlsStream_Destroy(handle);
         handle = SolidSyslogMbedTlsStream_Create(&config);
+    }
+
+    /* Arrange mbedtls_ssl_handshake to first emit `wantError`, then succeed on
+     * the next call — exercises the bounded handshake retry loop's progress
+     * path. mbedTLS returns the error code directly (no get_error indirection). */
+    static void ArrangeHandshakeRetryThenSucceed(int wantError)
+    {
+        int seq[] = {wantError, 0};
+        MbedTlsFake_SetSslHandshakeReturnSequence(seq, 2);
+    }
+
+    /* Arrange mbedtls_ssl_handshake to fail with `errorCode` on every call —
+     * used both for the persistent-WANT (budget-exhausted) and hard-error paths. */
+    static void ArrangePersistentHandshakeError(int errorCode)
+    {
+        int seq[] = {errorCode};
+        MbedTlsFake_SetSslHandshakeReturnSequence(seq, 1);
     }
 };
 
@@ -152,6 +179,71 @@ TEST(SolidSyslogMbedTlsStream, OpenReturnsFalseWhenHandshakeFails)
     MbedTlsFake_SetSslHandshakeReturn(-1);
 
     CHECK_FALSE(SolidSyslogStream_Open(handle, addr));
+}
+
+/* -------------------------------------------------------------------------
+ * Bounded handshake retry loop. mbedtls_ssl_handshake under non-blocking
+ * transport will emit MBEDTLS_ERR_SSL_WANT_READ / WANT_WRITE between RTTs;
+ * the loop must drive it to completion within a bounded budget so a wedged
+ * peer doesn't burn the service thread indefinitely. Mirrors the OpenSSL
+ * TlsStream pattern (Tests/SolidSyslogTlsStreamTest.cpp).
+ * ------------------------------------------------------------------------- */
+
+TEST(SolidSyslogMbedTlsStream, OpenRetriesHandshakeOnWantRead)
+{
+    SolidSyslogAddressStorage storage = {};
+    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
+    ArrangeHandshakeRetryThenSucceed(MBEDTLS_ERR_SSL_WANT_READ);
+
+    CHECK_TRUE(SolidSyslogStream_Open(handle, addr));
+    CALLED_FAKE(MbedTlsFake_SslHandshake, TWICE);
+}
+
+TEST(SolidSyslogMbedTlsStream, OpenSleepsBetweenHandshakeRetries)
+{
+    SolidSyslogAddressStorage storage = {};
+    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
+    ArrangeHandshakeRetryThenSucceed(MBEDTLS_ERR_SSL_WANT_READ);
+
+    SolidSyslogStream_Open(handle, addr);
+    CALLED_FUNCTION(NoOpSleep, ONCE);
+}
+
+TEST(SolidSyslogMbedTlsStream, OpenRetriesHandshakeOnWantWrite)
+{
+    /* WANT_WRITE arises when mbedTLS needs to send (e.g. ClientFinished
+     * under non-blocking transport with a temporarily-full send buffer).
+     * Same retry treatment as WANT_READ. */
+    SolidSyslogAddressStorage storage = {};
+    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
+    ArrangeHandshakeRetryThenSucceed(MBEDTLS_ERR_SSL_WANT_WRITE);
+
+    CHECK_TRUE(SolidSyslogStream_Open(handle, addr));
+    CALLED_FAKE(MbedTlsFake_SslHandshake, TWICE);
+}
+
+TEST(SolidSyslogMbedTlsStream, OpenFailsWhenHandshakeNeverCompletes)
+{
+    /* mbedtls_ssl_handshake always returns WANT_READ — handshake never makes
+     * progress, so the bounded budget should expire and Open returns false. */
+    SolidSyslogAddressStorage storage = {};
+    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
+    ArrangePersistentHandshakeError(MBEDTLS_ERR_SSL_WANT_READ);
+
+    CHECK_FALSE(SolidSyslogStream_Open(handle, addr));
+}
+
+TEST(SolidSyslogMbedTlsStream, OpenFailsImmediatelyOnHardSslError)
+{
+    /* Non-WANT error (e.g. a verify/connection failure) is fail-fast — no
+     * retry budget burn, no Sleep. */
+    SolidSyslogAddressStorage storage = {};
+    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
+    ArrangePersistentHandshakeError(MBEDTLS_ERR_SSL_BAD_INPUT_DATA);
+
+    CHECK_FALSE(SolidSyslogStream_Open(handle, addr));
+    CALLED_FAKE(MbedTlsFake_SslHandshake, ONCE);
+    CALLED_FUNCTION(NoOpSleep, NEVER);
 }
 
 TEST(SolidSyslogMbedTlsStream, SendForwardsBufferToSslWrite)

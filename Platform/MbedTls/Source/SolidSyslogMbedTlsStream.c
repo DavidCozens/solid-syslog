@@ -10,10 +10,23 @@
 #include "SolidSyslogStream.h"
 #include "SolidSyslogStreamDefinition.h"
 
+enum
+{
+    /* Bounded retry budget for the TLS handshake under non-blocking transport.
+       Mirrors the OpenSSL TlsStream constants (5s comfortably covers WAN
+       deployments without burning the service thread indefinitely on a
+       wedged peer). */
+    HANDSHAKE_TIMEOUT_MILLISECONDS = 5000,
+    HANDSHAKE_POLL_INTERVAL_MILLISECONDS = 1
+};
+
 struct SolidSyslogAddress;
 
 static inline struct SolidSyslogMbedTlsStream* MbedTlsStream_SelfFromBase(struct SolidSyslogStream* base);
 static inline bool MbedTlsStream_Open(struct SolidSyslogStream* base, const struct SolidSyslogAddress* addr);
+static inline bool MbedTlsStream_PerformHandshake(struct SolidSyslogMbedTlsStream* self);
+static inline bool MbedTlsStream_IsRetryableHandshakeRc(int rc);
+static inline bool MbedTlsStream_IsHandshakeBudgetExhausted(int totalSleptMs);
 static inline bool MbedTlsStream_Send(struct SolidSyslogStream* base, const void* buffer, size_t size);
 static inline SolidSyslogSsize MbedTlsStream_Read(struct SolidSyslogStream* base, void* buffer, size_t size);
 static inline void MbedTlsStream_Close(struct SolidSyslogStream* base);
@@ -86,9 +99,51 @@ static inline bool MbedTlsStream_Open(struct SolidSyslogStream* base, const stru
     if (ok)
     {
         mbedtls_ssl_set_bio(&self->SslContext, self, MbedTlsStream_BioSend, MbedTlsStream_BioRecv, NULL);
-        ok = mbedtls_ssl_handshake(&self->SslContext) == 0;
+        ok = MbedTlsStream_PerformHandshake(self);
     }
     return ok;
+}
+
+/* Drive mbedtls_ssl_handshake to completion under non-blocking transport.
+ * Each call may return WANT_READ/WANT_WRITE while waiting for the multi-RTT
+ * handshake to progress; we sleep briefly between attempts (avoiding a busy
+ * spin) until either the handshake completes, hits a hard error, or the
+ * bounded budget expires. Same shape as OpenSSL's TlsStream_PerformHandshake. */
+static inline bool MbedTlsStream_PerformHandshake(struct SolidSyslogMbedTlsStream* self)
+{
+    int totalSleptMs = 0;
+    bool result = false;
+    bool done = false;
+
+    while (!done)
+    {
+        int rc = mbedtls_ssl_handshake(&self->SslContext);
+        if (rc == 0)
+        {
+            result = true;
+            done = true;
+        }
+        else if (!MbedTlsStream_IsRetryableHandshakeRc(rc) || MbedTlsStream_IsHandshakeBudgetExhausted(totalSleptMs))
+        {
+            done = true;
+        }
+        else
+        {
+            self->Config.Sleep(HANDSHAKE_POLL_INTERVAL_MILLISECONDS);
+            totalSleptMs += HANDSHAKE_POLL_INTERVAL_MILLISECONDS;
+        }
+    }
+    return result;
+}
+
+static inline bool MbedTlsStream_IsRetryableHandshakeRc(int rc)
+{
+    return (rc == MBEDTLS_ERR_SSL_WANT_READ) || (rc == MBEDTLS_ERR_SSL_WANT_WRITE);
+}
+
+static inline bool MbedTlsStream_IsHandshakeBudgetExhausted(int totalSleptMs)
+{
+    return totalSleptMs >= HANDSHAKE_TIMEOUT_MILLISECONDS;
 }
 
 static int MbedTlsStream_BioSend(void* ctx, const unsigned char* buf, size_t len)
