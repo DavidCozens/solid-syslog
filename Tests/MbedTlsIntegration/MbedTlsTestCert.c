@@ -1,5 +1,6 @@
 #include "MbedTlsTestCert.h"
 
+#include <assert.h>
 #include <mbedtls/asn1.h>
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/oid.h>
@@ -18,6 +19,12 @@ enum
     RSA_EXPONENT = 65537,
     DER_BUFFER_BYTES = 4096
 };
+
+/* Obviously-fake test validity window — well outside any realistic clock skew
+ * and far enough out that the integration tests don't need wall-clock-aware
+ * regeneration. Named per the TEST_* convention. */
+static const char* const TEST_CERT_VALIDITY_FROM = "20240101000000";
+static const char* const TEST_CERT_VALIDITY_TO = "20990101000000";
 
 /* mbedtls_x509write_crt_der writes from the END of the buffer backwards,
  * so the DER blob occupies [Bytes + StartOffset, Bytes + StartOffset + Length).
@@ -94,8 +101,7 @@ static void WriteCertToDer(
     const unsigned char serial[] = {0x01};
     mbedtls_x509write_crt_set_serial_raw(&crt, (unsigned char*) serial, sizeof(serial));
 
-    /* Long-validity test certs: 2024-01-01 to 2099-01-01. */
-    mbedtls_x509write_crt_set_validity(&crt, "20240101000000", "20990101000000");
+    mbedtls_x509write_crt_set_validity(&crt, TEST_CERT_VALIDITY_FROM, TEST_CERT_VALIDITY_TO);
 
     mbedtls_x509write_crt_set_basic_constraints(&crt, config->IsCa, -1);
 
@@ -113,6 +119,10 @@ static void WriteCertToDer(
 
     /* mbedtls_x509write_crt_der writes from the END of the buffer backwards. */
     int written = mbedtls_x509write_crt_der(&crt, out->Bytes, out->Capacity, mbedtls_ctr_drbg_random, rng);
+    /* Surface generation failures loudly in debug. The conditional store is
+     * retained so release builds with NDEBUG don't compute a giant size_t
+     * from a negative `written` and corrupt the downstream parse_der. */
+    assert(written > 0);
     if (written > 0)
     {
         out->StartOffset = out->Capacity - (size_t) written;

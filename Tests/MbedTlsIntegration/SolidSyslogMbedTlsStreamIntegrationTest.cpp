@@ -20,9 +20,9 @@ extern "C"
 
 namespace
 {
-constexpr const char* kServerHostname = "syslog.example.com";
-constexpr const char* kCaSubject = "CN=Test Root CA";
-constexpr const char* kServerSubject = "CN=syslog.example.com";
+constexpr const char* TEST_SERVER_HOSTNAME = "syslog.example.com";
+constexpr const char* TEST_CA_SUBJECT = "CN=Test Root CA";
+constexpr const char* TEST_SERVER_SUBJECT = "CN=syslog.example.com";
 
 void NoOpSleep(int milliseconds)
 {
@@ -61,13 +61,13 @@ TEST_GROUP(SolidSyslogMbedTlsStreamIntegration)
         setsockopt(fds[1], SOL_SOCKET, SO_RCVTIMEO, &rcvTimeout, sizeof(rcvTimeout));
 
         struct MbedTlsTestCertConfig caConfig = {};
-        caConfig.SubjectName = kCaSubject;
+        caConfig.SubjectName = TEST_CA_SUBJECT;
         caConfig.IsCa = 1;
         MbedTlsTestCert_Create(&caConfig, &trustedCa, &rng);
 
         struct MbedTlsTestCertConfig serverConfig = {};
-        serverConfig.SubjectName = kServerSubject;
-        serverConfig.SubjectAltDns = kServerHostname;
+        serverConfig.SubjectName = TEST_SERVER_SUBJECT;
+        serverConfig.SubjectAltDns = TEST_SERVER_HOSTNAME;
         serverConfig.IsCa = 0;
         serverConfig.Issuer = &trustedCa;
         MbedTlsTestCert_Create(&serverConfig, &serverCert, &rng);
@@ -144,7 +144,7 @@ TEST_GROUP(SolidSyslogMbedTlsStreamIntegration)
         cfg.Sleep = NoOpSleep;
         cfg.Rng = &rng;
         cfg.CaChain = &trustedCa.Cert;
-        cfg.ServerName = kServerHostname;
+        cfg.ServerName = TEST_SERVER_HOSTNAME;
         return cfg;
     }
 };
