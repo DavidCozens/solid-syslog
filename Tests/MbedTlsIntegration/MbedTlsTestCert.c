@@ -10,6 +10,8 @@
 #include <stddef.h>
 #include <string.h>
 
+#include "SafeString.h"
+
 enum
 {
     RSA_KEY_BITS = 2048,
@@ -17,15 +19,25 @@ enum
     DER_BUFFER_BYTES = 4096
 };
 
+/* mbedtls_x509write_crt_der writes from the END of the buffer backwards,
+ * so the DER blob occupies [Bytes + StartOffset, Bytes + StartOffset + Length).
+ * Capacity is the underlying storage size. Bundling these four fields keeps
+ * WriteCertToDer's signature tight and dodges adjacent-size_t-parameter
+ * swappability hazards. */
+struct DerBuffer
+{
+    unsigned char* Bytes;
+    size_t Capacity;
+    size_t StartOffset;
+    size_t Length;
+};
+
 static void GenerateKey(mbedtls_pk_context* key, mbedtls_ctr_drbg_context* rng);
 static void WriteCertToDer(
     const struct MbedTlsTestCertConfig* config,
     mbedtls_pk_context* subjectKey,
-    unsigned char* derBuffer,
-    size_t bufferSize,
-    size_t* derStartOffset,
-    size_t* derLength,
-    mbedtls_ctr_drbg_context* rng
+    mbedtls_ctr_drbg_context* rng,
+    struct DerBuffer* out
 );
 
 void MbedTlsTestCert_Create(
@@ -36,17 +48,15 @@ void MbedTlsTestCert_Create(
 {
     mbedtls_pk_init(&out->Key);
     mbedtls_x509_crt_init(&out->Cert);
-    strncpy(out->SubjectName, config->SubjectName, sizeof(out->SubjectName) - 1U);
-    out->SubjectName[sizeof(out->SubjectName) - 1U] = '\0';
+    SafeString_Copy(out->SubjectName, sizeof(out->SubjectName), config->SubjectName);
 
     GenerateKey(&out->Key, rng);
 
-    unsigned char derBuffer[DER_BUFFER_BYTES];
-    size_t derStartOffset = 0U;
-    size_t derLength = 0U;
-    WriteCertToDer(config, &out->Key, derBuffer, sizeof(derBuffer), &derStartOffset, &derLength, rng);
+    unsigned char derBytes[DER_BUFFER_BYTES];
+    struct DerBuffer der = {derBytes, sizeof(derBytes), 0U, 0U};
+    WriteCertToDer(config, &out->Key, rng, &der);
 
-    mbedtls_x509_crt_parse_der(&out->Cert, &derBuffer[derStartOffset], derLength);
+    mbedtls_x509_crt_parse_der(&out->Cert, &der.Bytes[der.StartOffset], der.Length);
 }
 
 void MbedTlsTestCert_Destroy(struct MbedTlsTestCert* cert)
@@ -64,11 +74,8 @@ static void GenerateKey(mbedtls_pk_context* key, mbedtls_ctr_drbg_context* rng)
 static void WriteCertToDer(
     const struct MbedTlsTestCertConfig* config,
     mbedtls_pk_context* subjectKey,
-    unsigned char* derBuffer,
-    size_t bufferSize,
-    size_t* derStartOffset,
-    size_t* derLength,
-    mbedtls_ctr_drbg_context* rng
+    mbedtls_ctr_drbg_context* rng,
+    struct DerBuffer* out
 )
 {
     mbedtls_x509write_cert crt;
@@ -104,14 +111,12 @@ static void WriteCertToDer(
         mbedtls_x509write_crt_set_subject_alternative_name(&crt, &san);
     }
 
-    /* mbedtls_x509write_crt_der writes at the END of the buffer, returning
-     * the number of bytes written. The actual DER starts at offset
-     * (bufferSize - written). */
-    int written = mbedtls_x509write_crt_der(&crt, derBuffer, bufferSize, mbedtls_ctr_drbg_random, rng);
+    /* mbedtls_x509write_crt_der writes from the END of the buffer backwards. */
+    int written = mbedtls_x509write_crt_der(&crt, out->Bytes, out->Capacity, mbedtls_ctr_drbg_random, rng);
     if (written > 0)
     {
-        *derStartOffset = bufferSize - (size_t) written;
-        *derLength = (size_t) written;
+        out->StartOffset = out->Capacity - (size_t) written;
+        out->Length = (size_t) written;
     }
 
     mbedtls_x509write_crt_free(&crt);

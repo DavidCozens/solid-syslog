@@ -12,11 +12,6 @@
 
 #include "MbedTlsTestCert.h"
 
-enum
-{
-    RECEIVE_BUFFER_BYTES = 1024
-};
-
 struct MbedTlsTestServer
 {
     int Fd;
@@ -25,8 +20,6 @@ struct MbedTlsTestServer
     pthread_t Thread;
     bool ThreadJoined;
     bool HandshakeSucceeded;
-    unsigned char Received[RECEIVE_BUFFER_BYTES];
-    size_t ReceivedLength;
 };
 
 static void* RunServer(void* arg);
@@ -84,28 +77,27 @@ struct MbedTlsTestServer* MbedTlsTestServer_Create(const struct MbedTlsTestServe
 
 void MbedTlsTestServer_Destroy(struct MbedTlsTestServer* self)
 {
-    if (self == NULL)
+    if (self != NULL)
     {
-        return;
-    }
-    if (!self->ThreadJoined)
-    {
-        /* Worker might still be blocked in recv. Shutting the fd unblocks
-         * it; close gets called below after the join. */
+        if (!self->ThreadJoined)
+        {
+            /* Worker might still be blocked in recv. Shutting the fd
+             * unblocks it; close gets called below after the join. */
+            if (self->Fd >= 0)
+            {
+                shutdown(self->Fd, SHUT_RDWR);
+            }
+            pthread_join(self->Thread, NULL);
+            self->ThreadJoined = true;
+        }
+        mbedtls_ssl_free(&self->SslContext);
+        mbedtls_ssl_config_free(&self->SslConfig);
         if (self->Fd >= 0)
         {
-            shutdown(self->Fd, SHUT_RDWR);
+            close(self->Fd);
         }
-        pthread_join(self->Thread, NULL);
-        self->ThreadJoined = true;
+        free(self);
     }
-    mbedtls_ssl_free(&self->SslContext);
-    mbedtls_ssl_config_free(&self->SslConfig);
-    if (self->Fd >= 0)
-    {
-        close(self->Fd);
-    }
-    free(self);
 }
 
 bool MbedTlsTestServer_JoinAndHandshakeSucceeded(struct MbedTlsTestServer* self)
@@ -121,16 +113,9 @@ bool MbedTlsTestServer_JoinAndHandshakeSucceeded(struct MbedTlsTestServer* self)
     return self->HandshakeSucceeded;
 }
 
-const unsigned char* MbedTlsTestServer_ReceivedBytes(struct MbedTlsTestServer* self)
-{
-    return self->Received;
-}
-
-size_t MbedTlsTestServer_ReceivedLength(struct MbedTlsTestServer* self)
-{
-    return self->ReceivedLength;
-}
-
+/* The thread exits as soon as the handshake settles — the tests pin
+ * handshake outcome only. Reading application bytes after handshake (and
+ * the blocking that implies) is intentionally not implemented. */
 static void* RunServer(void* arg)
 {
     struct MbedTlsTestServer* self = (struct MbedTlsTestServer*) arg;
@@ -142,11 +127,6 @@ static void* RunServer(void* arg)
     } while ((handshakeRc == MBEDTLS_ERR_SSL_WANT_READ) || (handshakeRc == MBEDTLS_ERR_SSL_WANT_WRITE));
 
     self->HandshakeSucceeded = (handshakeRc == 0);
-
-    /* Slice 3 only pins handshake outcome; the thread exits as soon as the
-     * handshake settles. Reading TLS bytes from the server side (and any
-     * blocking that implies) is left for a future slice when a test actually
-     * needs it. */
     return NULL;
 }
 

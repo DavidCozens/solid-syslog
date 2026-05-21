@@ -100,10 +100,12 @@ TEST_GROUP(SolidSyslogMbedTlsStreamIntegration)
 
     /* mTLS variant: server requires + verifies a client cert against
      * `trustedClientCa`. Passing nullptr behaves like StartServerWithCert. */
+    // NOLINTBEGIN(bugprone-easily-swappable-parameters) -- both args are MbedTlsTestCert by domain; the function name distinguishes their roles
     struct SolidSyslogStream* StartServerRequiringClientCa(
         const struct MbedTlsTestCert* cert,
         const struct MbedTlsTestCert* trustedClientCa
     )
+    // NOLINTEND(bugprone-easily-swappable-parameters)
     {
         struct MbedTlsTestServerConfig serverConfig = {};
         serverConfig.ServerFd = fds[1];

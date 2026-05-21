@@ -16,38 +16,31 @@ struct SocketStream
     int Fd;
 };
 
-static bool Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr);
-static bool Send(struct SolidSyslogStream* self, const void* buffer, size_t size);
-static SolidSyslogSsize Read(struct SolidSyslogStream* self, void* buffer, size_t size);
-static void Close(struct SolidSyslogStream* self);
+static bool SocketStream_Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr);
+static bool SocketStream_Send(struct SolidSyslogStream* self, const void* buffer, size_t size);
+static SolidSyslogSsize SocketStream_Read(struct SolidSyslogStream* self, void* buffer, size_t size);
+static void SocketStream_Close(struct SolidSyslogStream* self);
 
 struct SolidSyslogStream* SocketStream_Create(int fd)
 {
     struct SocketStream* stream = (struct SocketStream*) calloc(1, sizeof(struct SocketStream));
-    stream->Base.Open = Open;
-    stream->Base.Send = Send;
-    stream->Base.Read = Read;
-    stream->Base.Close = Close;
+    stream->Base.Open = SocketStream_Open;
+    stream->Base.Send = SocketStream_Send;
+    stream->Base.Read = SocketStream_Read;
+    stream->Base.Close = SocketStream_Close;
     stream->Fd = fd;
     return &stream->Base;
 }
 
 void SocketStream_Destroy(struct SolidSyslogStream* self)
 {
-    struct SocketStream* stream = (struct SocketStream*) self;
-    /* Idempotent close: if the production Close path already ran it will
-     * have set Fd to -1. Otherwise (e.g. handshake failure where Close
-     * never runs) we still own the fd and must release it so the server's
-     * blocking recv unblocks promptly. */
-    if (stream->Fd >= 0)
-    {
-        close(stream->Fd);
-        stream->Fd = -1;
-    }
+    /* Idempotent: SocketStream_Close handles the fd lifecycle and sets Fd
+     * to -1 so this stays safe whether production Close ran first or not. */
+    SocketStream_Close(self);
     free(self);
 }
 
-static bool Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr)
+static bool SocketStream_Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress* addr)
 {
     /* The fd is pre-connected (e.g. socketpair); Open is a no-op so the test
      * harness fully controls connection lifecycle. */
@@ -56,7 +49,7 @@ static bool Open(struct SolidSyslogStream* self, const struct SolidSyslogAddress
     return true;
 }
 
-static bool Send(struct SolidSyslogStream* self, const void* buffer, size_t size)
+static bool SocketStream_Send(struct SolidSyslogStream* self, const void* buffer, size_t size)
 {
     struct SocketStream* stream = (struct SocketStream*) self;
     const unsigned char* bytes = (const unsigned char*) buffer;
@@ -74,14 +67,14 @@ static bool Send(struct SolidSyslogStream* self, const void* buffer, size_t size
     return true;
 }
 
-static SolidSyslogSsize Read(struct SolidSyslogStream* self, void* buffer, size_t size)
+static SolidSyslogSsize SocketStream_Read(struct SolidSyslogStream* self, void* buffer, size_t size)
 {
     struct SocketStream* stream = (struct SocketStream*) self;
     ssize_t n = recv(stream->Fd, buffer, size, 0);
     return (SolidSyslogSsize) n;
 }
 
-static void Close(struct SolidSyslogStream* self)
+static void SocketStream_Close(struct SolidSyslogStream* self)
 {
     struct SocketStream* stream = (struct SocketStream*) self;
     if (stream->Fd >= 0)
