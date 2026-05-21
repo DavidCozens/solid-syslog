@@ -2,6 +2,7 @@
 #define MBEDTLSFAKE_H
 
 #include <stddef.h>
+#include <stdint.h>
 
 #include "ExternC.h"
 
@@ -43,6 +44,7 @@ EXTERN_C_BEGIN
     void* MbedTlsFake_LastSslSetBioPBioArg(void);
     int (*MbedTlsFake_LastSslSetBioSendCallback(void))(void*, const unsigned char*, size_t);
     int (*MbedTlsFake_LastSslSetBioRecvCallback(void))(void*, unsigned char*, size_t);
+    int (*MbedTlsFake_LastSslSetBioRecvTimeoutCallback(void))(void*, unsigned char*, size_t, uint32_t);
 
     /* mbedtls_ssl_handshake */
     int MbedTlsFake_SslHandshakeCallCount(void);

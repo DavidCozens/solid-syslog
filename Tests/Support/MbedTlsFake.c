@@ -89,10 +89,9 @@ static mbedtls_x509_crt* lastSslConfCaChainArg;
 static mbedtls_x509_crl* lastSslConfCaChainCrlArg;
 
 /* mbedtls_ssl_conf_rng */
-typedef int (*RngFunc)(void*, unsigned char*, size_t);
 static int sslConfRngCallCount;
 static mbedtls_ssl_config* lastSslConfRngConfigArg;
-static RngFunc lastSslConfRngFuncArg;
+static int (*lastSslConfRngFuncArg)(void*, unsigned char*, size_t);
 static void* lastSslConfRngContextArg;
 
 /* mbedtls_ssl_set_hostname */
@@ -256,6 +255,11 @@ mbedtls_ssl_recv_t* MbedTlsFake_LastSslSetBioRecvCallback(void)
     return lastSslSetBioRecvCallback;
 }
 
+mbedtls_ssl_recv_timeout_t* MbedTlsFake_LastSslSetBioRecvTimeoutCallback(void)
+{
+    return lastSslSetBioRecvTimeoutCallback;
+}
+
 int MbedTlsFake_SslHandshakeCallCount(void)
 {
     return sslHandshakeCallCount;
@@ -407,7 +411,7 @@ mbedtls_ssl_config* MbedTlsFake_LastSslConfRngConfigArg(void)
     return lastSslConfRngConfigArg;
 }
 
-RngFunc MbedTlsFake_LastSslConfRngFuncArg(void)
+int (*MbedTlsFake_LastSslConfRngFuncArg(void))(void*, unsigned char*, size_t)
 {
     return lastSslConfRngFuncArg;
 }
@@ -580,7 +584,7 @@ int mbedtls_ssl_conf_own_cert(mbedtls_ssl_config* conf, mbedtls_x509_crt* own_ce
     return 0;
 }
 
-void mbedtls_ssl_conf_rng(mbedtls_ssl_config* conf, RngFunc f_rng, void* p_rng)
+void mbedtls_ssl_conf_rng(mbedtls_ssl_config* conf, int (*f_rng)(void*, unsigned char*, size_t), void* p_rng)
 {
     sslConfRngCallCount++;
     lastSslConfRngConfigArg = conf;
@@ -592,6 +596,7 @@ void mbedtls_ssl_conf_rng(mbedtls_ssl_config* conf, RngFunc f_rng, void* p_rng)
  * wiring conf_rng. The fake never actually invokes the function via the
  * captured pointer, so this body never runs at test time. Defined here so the
  * symbol resolves at link time without pulling in real libmbedcrypto. */
+// NOLINTNEXTLINE(readability-non-const-parameter) -- signature fixed by mbedTLS API; `output` is an out-buffer the contract writes to
 int mbedtls_ctr_drbg_random(void* p_rng, unsigned char* output, size_t output_len)
 {
     (void) p_rng;

@@ -140,6 +140,10 @@ TEST(SolidSyslogMbedTlsStream, OpenSetupBindsSslContextToSslConfig)
 
 TEST(SolidSyslogMbedTlsStream, OpenWiresBioWithNonNullSendRecvAndNullRecvTimeout)
 {
+    /* mbedTLS's set_bio takes both a recv and a recv_timeout callback;
+     * we install the former (non-blocking would-block via WANT_READ) and
+     * leave the latter NULL since we manage timeouts via PerformHandshake's
+     * Sleep-based budget rather than mbedTLS's internal timer. */
     SolidSyslogAddressStorage storage = {};
     struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
 
@@ -150,6 +154,7 @@ TEST(SolidSyslogMbedTlsStream, OpenWiresBioWithNonNullSendRecvAndNullRecvTimeout
     CHECK(MbedTlsFake_LastSslSetBioPBioArg() != nullptr);
     CHECK(MbedTlsFake_LastSslSetBioSendCallback() != nullptr);
     CHECK(MbedTlsFake_LastSslSetBioRecvCallback() != nullptr);
+    POINTERS_EQUAL(nullptr, (void*) MbedTlsFake_LastSslSetBioRecvTimeoutCallback());
 }
 
 TEST(SolidSyslogMbedTlsStream, OpenDrivesHandshakeOnTheSslContext)
