@@ -18,6 +18,9 @@ EXTERN_C_BEGIN
         int ServerFd; /* one end of a socketpair; ownership transferred to the server */
         const struct MbedTlsTestCert* ServerCert; /* server's cert + matching key */
         mbedtls_ctr_drbg_context* Rng; /* shared with the test fixture */
+        /* Non-NULL switches the server to require + verify a client cert
+         * against this CA — drives the mTLS scenarios. NULL = server-auth only. */
+        const struct MbedTlsTestCert* TrustedClientCa;
     };
 
     /* Spawns a worker thread that drives the server-side handshake and then

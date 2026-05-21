@@ -86,6 +86,10 @@ static inline bool MbedTlsStream_Open(struct SolidSyslogStream* base, const stru
         mbedtls_ssl_conf_authmode(&self->SslConfig, MBEDTLS_SSL_VERIFY_REQUIRED);
         mbedtls_ssl_conf_ca_chain(&self->SslConfig, self->Config.CaChain, NULL);
         mbedtls_ssl_conf_rng(&self->SslConfig, mbedtls_ctr_drbg_random, self->Config.Rng);
+        if ((self->Config.ClientCertChain != NULL) && (self->Config.ClientKey != NULL))
+        {
+            (void) mbedtls_ssl_conf_own_cert(&self->SslConfig, self->Config.ClientCertChain, self->Config.ClientKey);
+        }
     }
     if (ok)
     {

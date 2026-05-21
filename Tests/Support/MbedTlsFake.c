@@ -100,6 +100,12 @@ static int sslSetHostnameCallCount;
 static mbedtls_ssl_context* lastSslSetHostnameContextArg;
 static const char* lastSslSetHostnameNameArg;
 
+/* mbedtls_ssl_conf_own_cert */
+static int sslConfOwnCertCallCount;
+static mbedtls_ssl_config* lastSslConfOwnCertConfigArg;
+static mbedtls_x509_crt* lastSslConfOwnCertCertArg;
+static mbedtls_pk_context* lastSslConfOwnCertKeyArg;
+
 /* -------------------------------------------------------------------------
  * Test accessors.
  * ------------------------------------------------------------------------- */
@@ -159,6 +165,10 @@ void MbedTlsFake_Reset(void)
     sslSetHostnameCallCount = 0;
     lastSslSetHostnameContextArg = NULL;
     lastSslSetHostnameNameArg = NULL;
+    sslConfOwnCertCallCount = 0;
+    lastSslConfOwnCertConfigArg = NULL;
+    lastSslConfOwnCertCertArg = NULL;
+    lastSslConfOwnCertKeyArg = NULL;
 }
 
 int MbedTlsFake_SslConfigInitCallCount(void)
@@ -422,6 +432,26 @@ const char* MbedTlsFake_LastSslSetHostnameNameArg(void)
     return lastSslSetHostnameNameArg;
 }
 
+int MbedTlsFake_SslConfOwnCertCallCount(void)
+{
+    return sslConfOwnCertCallCount;
+}
+
+mbedtls_ssl_config* MbedTlsFake_LastSslConfOwnCertConfigArg(void)
+{
+    return lastSslConfOwnCertConfigArg;
+}
+
+mbedtls_x509_crt* MbedTlsFake_LastSslConfOwnCertCertArg(void)
+{
+    return lastSslConfOwnCertCertArg;
+}
+
+mbedtls_pk_context* MbedTlsFake_LastSslConfOwnCertKeyArg(void)
+{
+    return lastSslConfOwnCertKeyArg;
+}
+
 /* -------------------------------------------------------------------------
  * Link-interposed mbedTLS symbols. The test executable does not link
  * libmbedtls; the production code's calls to mbedtls_* resolve here.
@@ -539,6 +569,15 @@ void mbedtls_ssl_conf_ca_chain(mbedtls_ssl_config* conf, mbedtls_x509_crt* ca_ch
     lastSslConfCaChainConfigArg = conf;
     lastSslConfCaChainArg = ca_chain;
     lastSslConfCaChainCrlArg = ca_crl;
+}
+
+int mbedtls_ssl_conf_own_cert(mbedtls_ssl_config* conf, mbedtls_x509_crt* own_cert, mbedtls_pk_context* pk_key)
+{
+    sslConfOwnCertCallCount++;
+    lastSslConfOwnCertConfigArg = conf;
+    lastSslConfOwnCertCertArg = own_cert;
+    lastSslConfOwnCertKeyArg = pk_key;
+    return 0;
 }
 
 void mbedtls_ssl_conf_rng(mbedtls_ssl_config* conf, RngFunc f_rng, void* p_rng)

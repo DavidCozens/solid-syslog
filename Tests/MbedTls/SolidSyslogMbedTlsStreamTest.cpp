@@ -454,3 +454,58 @@ TEST(SolidSyslogMbedTlsStream, OpenSkipsHostnameWhenServerNameIsNull)
 
     LONGS_EQUAL(0, MbedTlsFake_SslSetHostnameCallCount());
 }
+
+/* -------------------------------------------------------------------------
+ * mTLS client identity wiring. When the integrator supplies both a
+ * ClientCertChain and a ClientKey, Open must call mbedtls_ssl_conf_own_cert
+ * so the client presents its cert during the handshake. Either pointer
+ * being NULL means "server-auth only" — skip the wiring.
+ * ------------------------------------------------------------------------- */
+
+TEST(SolidSyslogMbedTlsStream, OpenWiresOwnCertWhenClientCertAndKeyProvided)
+{
+    static mbedtls_x509_crt clientCertMarker;
+    static mbedtls_pk_context clientKeyMarker;
+    config.ClientCertChain = &clientCertMarker;
+    config.ClientKey = &clientKeyMarker;
+    ReCreateHandleWithUpdatedConfig();
+    SolidSyslogAddressStorage storage = {};
+    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
+
+    SolidSyslogStream_Open(handle, addr);
+
+    LONGS_EQUAL(1, MbedTlsFake_SslConfOwnCertCallCount());
+    POINTERS_EQUAL(MbedTlsFake_LastSslConfigInitArg(), MbedTlsFake_LastSslConfOwnCertConfigArg());
+    POINTERS_EQUAL(&clientCertMarker, MbedTlsFake_LastSslConfOwnCertCertArg());
+    POINTERS_EQUAL(&clientKeyMarker, MbedTlsFake_LastSslConfOwnCertKeyArg());
+}
+
+TEST(SolidSyslogMbedTlsStream, OpenSkipsOwnCertWhenClientCertChainIsNull)
+{
+    /* Key provided, cert NULL — caller hasn't fully opted in to mTLS, so
+     * the adapter must not tell mbedTLS anything. setup() leaves
+     * ClientCertChain at NULL; supplying just a Key is the incomplete case. */
+    static mbedtls_pk_context clientKeyMarker;
+    config.ClientKey = &clientKeyMarker;
+    ReCreateHandleWithUpdatedConfig();
+    SolidSyslogAddressStorage storage = {};
+    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
+
+    SolidSyslogStream_Open(handle, addr);
+
+    LONGS_EQUAL(0, MbedTlsFake_SslConfOwnCertCallCount());
+}
+
+TEST(SolidSyslogMbedTlsStream, OpenSkipsOwnCertWhenClientKeyIsNull)
+{
+    /* Cert provided, key NULL — still incomplete; same skip. */
+    static mbedtls_x509_crt clientCertMarker;
+    config.ClientCertChain = &clientCertMarker;
+    ReCreateHandleWithUpdatedConfig();
+    SolidSyslogAddressStorage storage = {};
+    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
+
+    SolidSyslogStream_Open(handle, addr);
+
+    LONGS_EQUAL(0, MbedTlsFake_SslConfOwnCertCallCount());
+}

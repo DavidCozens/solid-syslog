@@ -7,6 +7,7 @@ extern "C"
 #include <mbedtls/ssl.h>
 #include <mbedtls/version.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 #include "MbedTlsTestCert.h"
@@ -49,6 +50,15 @@ TEST_GROUP(SolidSyslogMbedTlsStreamIntegration)
         mbedtls_ctr_drbg_seed(&rng, mbedtls_entropy_func, &entropy, pers, sizeof(pers) - 1U);
 
         socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+        /* Bound both sides' blocking recv to 5s. The OpenSSL integration
+         * tests use an in-memory BIO pair that never blocks; our socketpair
+         * harness inherently can deadlock on negative-path handshakes (one
+         * side waits for a message the other won't send). The cap matches
+         * the production handshake retry budget — generous for any real
+         * handshake (sub-second), tight enough that a stuck test fails fast. */
+        struct timeval rcvTimeout = {5, 0};
+        setsockopt(fds[0], SOL_SOCKET, SO_RCVTIMEO, &rcvTimeout, sizeof(rcvTimeout));
+        setsockopt(fds[1], SOL_SOCKET, SO_RCVTIMEO, &rcvTimeout, sizeof(rcvTimeout));
 
         struct MbedTlsTestCertConfig caConfig = {};
         caConfig.SubjectName = kCaSubject;
@@ -85,13 +95,39 @@ TEST_GROUP(SolidSyslogMbedTlsStreamIntegration)
 
     struct SolidSyslogStream* StartServerWithCert(const struct MbedTlsTestCert* cert)
     {
+        return StartServerRequiringClientCa(cert, nullptr);
+    }
+
+    /* mTLS variant: server requires + verifies a client cert against
+     * `trustedClientCa`. Passing nullptr behaves like StartServerWithCert. */
+    struct SolidSyslogStream* StartServerRequiringClientCa(
+        const struct MbedTlsTestCert* cert,
+        const struct MbedTlsTestCert* trustedClientCa
+    )
+    {
         struct MbedTlsTestServerConfig serverConfig = {};
         serverConfig.ServerFd = fds[1];
         serverConfig.ServerCert = cert;
         serverConfig.Rng = &rng;
+        serverConfig.TrustedClientCa = trustedClientCa;
         server = MbedTlsTestServer_Create(&serverConfig);
         clientTransport = SocketStream_Create(fds[0]);
         return clientTransport;
+    }
+
+    /* Build a CA + leaf-cert pair signed by it, for the per-test mTLS
+     * material. Both outputs must be MbedTlsTestCert_Destroy'd by the
+     * test body before it returns. */
+    void CreateClientIdentitySignedBy(
+        const struct MbedTlsTestCert* signingCa,
+        struct MbedTlsTestCert* outClientCert
+    )
+    {
+        struct MbedTlsTestCertConfig leafConfig = {};
+        leafConfig.SubjectName = "CN=solidsyslog-test-client";
+        leafConfig.IsCa = 0;
+        leafConfig.Issuer = signingCa;
+        MbedTlsTestCert_Create(&leafConfig, outClientCert, &rng);
     }
 };
 
@@ -160,6 +196,112 @@ TEST(SolidSyslogMbedTlsStreamIntegration, HandshakeFailsWhenServerNameDoesNotMat
     bool opened = SolidSyslogStream_Open(tlsStream, SolidSyslogAddress_FromStorage(&storage));
 
     CHECK_FALSE_TEXT(opened, "client-side handshake must fail when ServerName does not match the cert's SAN");
+}
+
+TEST(SolidSyslogMbedTlsStreamIntegration, MutualTlsHandshakeSucceedsWithClientCertSignedByTrustedCa)
+{
+    /* Build per-test mTLS material: a client CA + a leaf cert signed by it.
+     * Server is told to require + verify client certs against this CA. */
+    struct MbedTlsTestCert clientCa = {};
+    struct MbedTlsTestCertConfig clientCaConfig = {};
+    clientCaConfig.SubjectName = "CN=Test Client CA";
+    clientCaConfig.IsCa = 1;
+    MbedTlsTestCert_Create(&clientCaConfig, &clientCa, &rng);
+    struct MbedTlsTestCert clientCert = {};
+    CreateClientIdentitySignedBy(&clientCa, &clientCert);
+
+    struct SolidSyslogStream* transport = StartServerRequiringClientCa(&serverCert, &clientCa);
+    struct SolidSyslogMbedTlsStreamConfig config = {};
+    config.Transport = transport;
+    config.Sleep = NoOpSleep;
+    config.Rng = &rng;
+    config.CaChain = &trustedCa.Cert;
+    config.ServerName = kServerHostname;
+    config.ClientCertChain = &clientCert.Cert;
+    config.ClientKey = &clientCert.Key;
+    tlsStream = SolidSyslogMbedTlsStream_Create(&config);
+
+    SolidSyslogAddressStorage storage = {};
+    bool opened = SolidSyslogStream_Open(tlsStream, SolidSyslogAddress_FromStorage(&storage));
+
+    CHECK_TRUE_TEXT(opened, "client-side mTLS Open should succeed against a server trusting the client CA");
+    CHECK_TRUE_TEXT(
+        MbedTlsTestServer_JoinAndHandshakeSucceeded(server),
+        "server-side mTLS handshake should mirror the client's success"
+    );
+
+    MbedTlsTestCert_Destroy(&clientCert);
+    MbedTlsTestCert_Destroy(&clientCa);
+}
+
+TEST(SolidSyslogMbedTlsStreamIntegration, MutualTlsHandshakeRejectedWhenClientSendsNoCert)
+{
+    /* Server requires a client cert but the integrator hasn't opted in to
+     * mTLS — ClientCertChain / ClientKey are NULL. Server-side verify must
+     * fail and the client's Open must return false. */
+    struct MbedTlsTestCert clientCa = {};
+    struct MbedTlsTestCertConfig clientCaConfig = {};
+    clientCaConfig.SubjectName = "CN=Test Client CA";
+    clientCaConfig.IsCa = 1;
+    MbedTlsTestCert_Create(&clientCaConfig, &clientCa, &rng);
+
+    struct SolidSyslogStream* transport = StartServerRequiringClientCa(&serverCert, &clientCa);
+    struct SolidSyslogMbedTlsStreamConfig config = {};
+    config.Transport = transport;
+    config.Sleep = NoOpSleep;
+    config.Rng = &rng;
+    config.CaChain = &trustedCa.Cert;
+    config.ServerName = kServerHostname;
+    tlsStream = SolidSyslogMbedTlsStream_Create(&config);
+
+    SolidSyslogAddressStorage storage = {};
+    bool opened = SolidSyslogStream_Open(tlsStream, SolidSyslogAddress_FromStorage(&storage));
+
+    CHECK_FALSE_TEXT(opened, "mTLS handshake must fail when the client does not present a cert");
+
+    MbedTlsTestCert_Destroy(&clientCa);
+}
+
+TEST(SolidSyslogMbedTlsStreamIntegration, MutualTlsHandshakeRejectedWhenClientCertSignedByUntrustedCa)
+{
+    /* Client cert is signed by a CA the server doesn't trust. Server-side
+     * chain validation fails and Open returns false on the client. */
+    struct MbedTlsTestCert trustedClientCa = {};
+    struct MbedTlsTestCertConfig trustedConfig = {};
+    trustedConfig.SubjectName = "CN=Trusted Client CA";
+    trustedConfig.IsCa = 1;
+    MbedTlsTestCert_Create(&trustedConfig, &trustedClientCa, &rng);
+
+    struct MbedTlsTestCert untrustedClientCa = {};
+    struct MbedTlsTestCertConfig untrustedConfig = {};
+    untrustedConfig.SubjectName = "CN=Untrusted Client CA";
+    untrustedConfig.IsCa = 1;
+    MbedTlsTestCert_Create(&untrustedConfig, &untrustedClientCa, &rng);
+
+    /* Client cert is signed by the *untrusted* CA — server only trusts
+     * trustedClientCa, so verify will reject this chain. */
+    struct MbedTlsTestCert clientCert = {};
+    CreateClientIdentitySignedBy(&untrustedClientCa, &clientCert);
+
+    struct SolidSyslogStream* transport = StartServerRequiringClientCa(&serverCert, &trustedClientCa);
+    struct SolidSyslogMbedTlsStreamConfig config = {};
+    config.Transport = transport;
+    config.Sleep = NoOpSleep;
+    config.Rng = &rng;
+    config.CaChain = &trustedCa.Cert;
+    config.ServerName = kServerHostname;
+    config.ClientCertChain = &clientCert.Cert;
+    config.ClientKey = &clientCert.Key;
+    tlsStream = SolidSyslogMbedTlsStream_Create(&config);
+
+    SolidSyslogAddressStorage storage = {};
+    bool opened = SolidSyslogStream_Open(tlsStream, SolidSyslogAddress_FromStorage(&storage));
+
+    CHECK_FALSE_TEXT(opened, "mTLS handshake must fail when the client cert chains to an untrusted CA");
+
+    MbedTlsTestCert_Destroy(&clientCert);
+    MbedTlsTestCert_Destroy(&untrustedClientCa);
+    MbedTlsTestCert_Destroy(&trustedClientCa);
 }
 
 TEST(SolidSyslogMbedTlsStreamIntegration, BinaryLinksAgainstRealLibMbedTls)

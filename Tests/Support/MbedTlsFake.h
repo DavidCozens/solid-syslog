@@ -102,6 +102,12 @@ EXTERN_C_BEGIN
     struct mbedtls_ssl_context* MbedTlsFake_LastSslSetHostnameContextArg(void);
     const char* MbedTlsFake_LastSslSetHostnameNameArg(void);
 
+    /* mbedtls_ssl_conf_own_cert (mTLS client identity wiring) */
+    int MbedTlsFake_SslConfOwnCertCallCount(void);
+    struct mbedtls_ssl_config* MbedTlsFake_LastSslConfOwnCertConfigArg(void);
+    struct mbedtls_x509_crt* MbedTlsFake_LastSslConfOwnCertCertArg(void);
+    struct mbedtls_pk_context* MbedTlsFake_LastSslConfOwnCertKeyArg(void);
+
 EXTERN_C_END
 
 #endif /* MBEDTLSFAKE_H */

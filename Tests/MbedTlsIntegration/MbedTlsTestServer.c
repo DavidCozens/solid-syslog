@@ -57,9 +57,17 @@ struct MbedTlsTestServer* MbedTlsTestServer_Create(const struct MbedTlsTestServe
      * worker exits cleanly. */
     mbedtls_ssl_conf_max_tls_version(&self->SslConfig, MBEDTLS_SSL_VERSION_TLS1_2);
     mbedtls_ssl_conf_rng(&self->SslConfig, mbedtls_ctr_drbg_random, config->Rng);
-    /* Server-auth-only: don't require a client cert in slice 3 (mTLS lands
-     * in slice 5). */
-    mbedtls_ssl_conf_authmode(&self->SslConfig, MBEDTLS_SSL_VERIFY_NONE);
+    if (config->TrustedClientCa != NULL)
+    {
+        /* mTLS: server requires + verifies a client cert against the supplied CA. */
+        mbedtls_ssl_conf_authmode(&self->SslConfig, MBEDTLS_SSL_VERIFY_REQUIRED);
+        mbedtls_ssl_conf_ca_chain(&self->SslConfig, (mbedtls_x509_crt*) &config->TrustedClientCa->Cert, NULL);
+    }
+    else
+    {
+        /* Server-auth only — no client cert requested. */
+        mbedtls_ssl_conf_authmode(&self->SslConfig, MBEDTLS_SSL_VERIFY_NONE);
+    }
     mbedtls_ssl_conf_own_cert(
         &self->SslConfig,
         (mbedtls_x509_crt*) &config->ServerCert->Cert,
