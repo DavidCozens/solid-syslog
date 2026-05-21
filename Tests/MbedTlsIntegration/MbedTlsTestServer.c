@@ -45,6 +45,17 @@ struct MbedTlsTestServer* MbedTlsTestServer_Create(const struct MbedTlsTestServe
         MBEDTLS_SSL_TRANSPORT_STREAM,
         MBEDTLS_SSL_PRESET_DEFAULT
     );
+    /* Pin TLS 1.2 — mirrors the rationale in the OpenSSL TlsTestServer
+     * (Tests/OpenSslIntegration/TlsTestServer.c:37). In TLS 1.3 the server
+     * sends Certificate/CertVerify/Finished in one flight and then blocks
+     * in recv waiting for ClientFinished. On the negative paths the client's
+     * verify fails after that flight is read; even if the client sends an
+     * Alert, the server's blocking recv on the socketpair lands the test in
+     * a teardown-order deadlock. TLS 1.2's request/response cadence keeps
+     * the rejection synchronous: the server is waiting for ClientKeyExchange
+     * when the client closes its end, so server-side recv returns 0 and the
+     * worker exits cleanly. */
+    mbedtls_ssl_conf_max_tls_version(&self->SslConfig, MBEDTLS_SSL_VERSION_TLS1_2);
     mbedtls_ssl_conf_rng(&self->SslConfig, mbedtls_ctr_drbg_random, config->Rng);
     /* Server-auth-only: don't require a client cert in slice 3 (mTLS lands
      * in slice 5). */

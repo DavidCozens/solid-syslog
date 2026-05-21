@@ -13,6 +13,7 @@ add_executable(SolidSyslogMbedTlsStreamPoolTest
     main.cpp
     ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsStream.c
     ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsStreamStatic.c
+    ${CMAKE_SOURCE_DIR}/Tests/StreamFake.c
 )
 
 target_link_libraries(SolidSyslogMbedTlsStreamPoolTest PRIVATE
@@ -28,6 +29,7 @@ target_include_directories(SolidSyslogMbedTlsStreamPoolTest PRIVATE
     ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Interface
     ${CMAKE_SOURCE_DIR}/Core/Interface
     ${CMAKE_SOURCE_DIR}/Core/Source
+    ${CMAKE_SOURCE_DIR}/Tests
 )
 
 # cppcheck cannot resolve mbedTLS's `#include MBEDTLS_USER_CONFIG_FILE`

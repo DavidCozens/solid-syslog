@@ -31,10 +31,15 @@ void MbedTlsStream_Initialise(struct SolidSyslogStream* base, const struct Solid
     self->Base.Read = MbedTlsStream_Read;
     self->Base.Close = MbedTlsStream_Close;
     self->Config = *config;
+    self->IsOpen = false;
 }
 
 void MbedTlsStream_Cleanup(struct SolidSyslogStream* base)
 {
+    /* Mirror the OpenSSL TlsStream pattern: an integrator who destroys a
+     * still-Open stream must not leak the underlying TLS state. Close
+     * guards on IsOpen so Cleanup is safe even when Open was never reached. */
+    MbedTlsStream_Close(base);
     /* Overwrite the abstract base with the shared NullStream vtable so
      * use-after-destroy is a safe no-op rather than a NULL-fn-pointer crash. */
     *base = *SolidSyslogNullStream_Get();
@@ -52,6 +57,10 @@ static inline bool MbedTlsStream_Open(struct SolidSyslogStream* base, const stru
     if (ok)
     {
         mbedtls_ssl_config_init(&self->SslConfig);
+        /* Flip IsOpen now so any subsequent allocation failure in this
+         * function still leaves the struct in a Close-safe state — the
+         * partially-initialised config/context must reach mbedtls_*_free. */
+        self->IsOpen = true;
         ok = mbedtls_ssl_config_defaults(
                  &self->SslConfig,
                  MBEDTLS_SSL_IS_CLIENT,
@@ -126,8 +135,12 @@ static inline SolidSyslogSsize MbedTlsStream_Read(struct SolidSyslogStream* base
 static inline void MbedTlsStream_Close(struct SolidSyslogStream* base)
 {
     struct SolidSyslogMbedTlsStream* self = MbedTlsStream_SelfFromBase(base);
-    (void) mbedtls_ssl_close_notify(&self->SslContext);
-    mbedtls_ssl_free(&self->SslContext);
-    mbedtls_ssl_config_free(&self->SslConfig);
+    if (self->IsOpen)
+    {
+        (void) mbedtls_ssl_close_notify(&self->SslContext);
+        mbedtls_ssl_free(&self->SslContext);
+        mbedtls_ssl_config_free(&self->SslConfig);
+        self->IsOpen = false;
+    }
     SolidSyslogStream_Close(self->Config.Transport);
 }

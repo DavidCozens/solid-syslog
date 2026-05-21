@@ -11,6 +11,7 @@ extern "C"
 #include "SolidSyslogStream.h"
 #include "SolidSyslogStreamDefinition.h"
 #include "SolidSyslogTunables.h"
+#include "StreamFake.h"
 }
 
 #include "TestUtils.h"
@@ -36,10 +37,20 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 // clang-format off
 TEST_GROUP(SolidSyslogMbedTlsStreamPool)
 {
-    struct SolidSyslogMbedTlsStreamConfig config = {};
+    struct SolidSyslogStream*             transport = nullptr;
+    struct SolidSyslogMbedTlsStreamConfig config    = {};
     // cppcheck-suppress constVariable -- assigned in test bodies; cppcheck does not model CppUTest lifecycle
     struct SolidSyslogStream* pooled[SOLIDSYSLOG_MBED_TLS_STREAM_POOL_SIZE] = {};
     struct SolidSyslogStream* overflow                                      = nullptr;
+
+    void setup() override
+    {
+        /* A real transport handle keeps Destroy → Cleanup → Close on the
+         * vtable-routed transport safe; mirrors the OpenSSL TlsStream
+         * pool-test pattern. */
+        transport        = StreamFake_Create();
+        config.Transport = transport;
+    }
 
     void teardown() override
     {
@@ -55,6 +66,7 @@ TEST_GROUP(SolidSyslogMbedTlsStreamPool)
         {
             SolidSyslogMbedTlsStream_Destroy(overflow);
         }
+        StreamFake_Destroy(transport);
         ConfigLockFake_Uninstall();
         ErrorHandlerFake_Uninstall();
     }

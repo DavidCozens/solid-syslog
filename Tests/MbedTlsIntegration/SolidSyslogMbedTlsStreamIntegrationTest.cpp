@@ -118,15 +118,7 @@ TEST(SolidSyslogMbedTlsStreamIntegration, HandshakeSucceedsWhenServerCertSignedB
     );
 }
 
-/* TODO(slice-3 follow-up): negative-path handshake currently deadlocks —
- * the client's mbedtls_ssl_handshake returns the verify error, but the server
- * thread is still blocked in the handshake (likely a TLS 1.3 vs 1.2 sequencing
- * issue mirroring the OpenSSL TlsTestServer "pin TLS 1.2 for negative tests"
- * comment). Re-enable after pinning the server's max version to TLS 1.2 or
- * after introducing an mbedtls_ssl_conf_max_tls_version-equivalent on the
- * server. The happy-path test above proves the full handshake works
- * end-to-end against real libmbedtls. */
-IGNORE_TEST(SolidSyslogMbedTlsStreamIntegration, HandshakeFailsWhenServerCertSignedByUntrustedCa)
+TEST(SolidSyslogMbedTlsStreamIntegration, HandshakeFailsWhenServerCertSignedByUntrustedCa)
 {
     /* Trust an unrelated CA: we hand the *client* a different CA chain than
      * the one that signed the server's cert, so the chain validation fails. */
@@ -153,8 +145,7 @@ IGNORE_TEST(SolidSyslogMbedTlsStreamIntegration, HandshakeFailsWhenServerCertSig
     MbedTlsTestCert_Destroy(&untrustedCa);
 }
 
-/* TODO(slice-3 follow-up): see comment above HandshakeFailsWhenServerCertSignedByUntrustedCa. */
-IGNORE_TEST(SolidSyslogMbedTlsStreamIntegration, HandshakeFailsWhenServerNameDoesNotMatchCert)
+TEST(SolidSyslogMbedTlsStreamIntegration, HandshakeFailsWhenServerNameDoesNotMatchCert)
 {
     struct SolidSyslogStream* transport = StartServerWithCert(&serverCert);
     struct SolidSyslogMbedTlsStreamConfig config = {};
