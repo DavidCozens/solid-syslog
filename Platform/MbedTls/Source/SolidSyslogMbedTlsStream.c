@@ -156,6 +156,12 @@ static int MbedTlsStream_BioSend(void* ctx, const unsigned char* buf, size_t len
     return SolidSyslogStream_Send(self->Config.Transport, buf, len) ? (int) len : -1;
 }
 
+/* Translate the non-blocking transport's Read contract into mbedTLS's BIO
+ * recv contract:
+ *   transport > 0 → bytes available, return the same positive count.
+ *   transport = 0 → would-block. Must return MBEDTLS_ERR_SSL_WANT_READ so
+ *                  the handshake retry loop polls; returning 0 or -1 would
+ *                  abort the handshake on the first non-blocking read. */
 static int MbedTlsStream_BioRecv(void* ctx, unsigned char* buf, size_t len)
 {
     struct SolidSyslogMbedTlsStream* self = (struct SolidSyslogMbedTlsStream*) ctx;
@@ -164,6 +170,10 @@ static int MbedTlsStream_BioRecv(void* ctx, unsigned char* buf, size_t len)
     if (n > 0)
     {
         result = (int) n;
+    }
+    else if (n == 0)
+    {
+        result = MBEDTLS_ERR_SSL_WANT_READ;
     }
     return result;
 }

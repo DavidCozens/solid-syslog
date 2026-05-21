@@ -385,6 +385,43 @@ TEST(SolidSyslogMbedTlsStream, BioRecvCallbackForwardsBufferToTransport)
     LONGS_EQUAL(sizeof(buffer), StreamFake_LastReadSize(transport));
 }
 
+TEST(SolidSyslogMbedTlsStream, BioRecvReturnsWantReadWhenTransportWouldBlock)
+{
+    /* Stream contract: transport Read returns 0 to signal would-block. mbedTLS
+     * needs MBEDTLS_ERR_SSL_WANT_READ to drive its retry loop; any other
+     * negative is fatal. Returning -1 (or 0) here would abort the handshake
+     * on the first non-blocking poll. */
+    SolidSyslogAddressStorage storage = {};
+    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
+    SolidSyslogStream_Open(handle, addr);
+    auto* bioRecv = MbedTlsFake_LastSslSetBioRecvCallback();
+    void* bioContext = MbedTlsFake_LastSslSetBioPBioArg();
+    unsigned char buffer[16];
+    StreamFake_SetReadReturn(transport, 0);
+
+    int rc = bioRecv(bioContext, buffer, sizeof(buffer));
+
+    LONGS_EQUAL(MBEDTLS_ERR_SSL_WANT_READ, rc);
+}
+
+TEST(SolidSyslogMbedTlsStream, BioRecvReturnsFatalWhenTransportFails)
+{
+    /* Stream contract: negative is fatal. mbedTLS treats any negative other
+     * than its own WANT_* sentinels as a transport error and aborts. */
+    SolidSyslogAddressStorage storage = {};
+    struct SolidSyslogAddress* addr = SolidSyslogAddress_FromStorage(&storage);
+    SolidSyslogStream_Open(handle, addr);
+    auto* bioRecv = MbedTlsFake_LastSslSetBioRecvCallback();
+    void* bioContext = MbedTlsFake_LastSslSetBioPBioArg();
+    unsigned char buffer[16];
+    StreamFake_SetReadReturn(transport, -1);
+
+    int rc = bioRecv(bioContext, buffer, sizeof(buffer));
+
+    CHECK_TRUE(rc < 0);
+    CHECK_FALSE(rc == MBEDTLS_ERR_SSL_WANT_READ);
+}
+
 TEST(SolidSyslogMbedTlsStream, OpenSetsAuthmodeRequired)
 {
     SolidSyslogAddressStorage storage = {};
