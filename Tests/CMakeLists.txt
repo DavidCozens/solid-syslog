@@ -253,6 +253,7 @@ endforeach()
 
 foreach(mbedtls_test_target IN ITEMS
     SolidSyslogMbedTlsStreamPoolTest
+    SolidSyslogMbedTlsStreamTest
     MbedTlsIntegrationTests
 )
     if(TARGET ${mbedtls_test_target})

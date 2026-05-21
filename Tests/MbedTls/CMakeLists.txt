@@ -19,6 +19,7 @@ target_link_libraries(SolidSyslogMbedTlsStreamPoolTest PRIVATE
     ${PROJECT_NAME}
     ConfigLockFake
     ErrorHandlerFake
+    MbedTlsFakes
     CppUTest
     CppUTestExt
 )
@@ -29,4 +30,47 @@ target_include_directories(SolidSyslogMbedTlsStreamPoolTest PRIVATE
     ${CMAKE_SOURCE_DIR}/Core/Source
 )
 
+# cppcheck cannot resolve mbedTLS's `#include MBEDTLS_USER_CONFIG_FILE`
+# macro indirection in build_info.h, so it errors on every TU that pulls
+# in <mbedtls/*.h>. Both test exes pull mbedtls headers via the production
+# adapter source and the MbedTlsFakes link; disable cppcheck per-target,
+# same as MbedTlsIntegrationTests.
+set_target_properties(SolidSyslogMbedTlsStreamPoolTest PROPERTIES
+    C_CPPCHECK ""
+    CXX_CPPCHECK ""
+)
+
 add_test(NAME SolidSyslogMbedTlsStreamPoolTest COMMAND SolidSyslogMbedTlsStreamPoolTest)
+
+# Slice-2 onward: vtable behaviour driven against MbedTlsFake (link-time
+# interposition of libmbedtls — separate binary from the integration test).
+add_executable(SolidSyslogMbedTlsStreamTest
+    SolidSyslogMbedTlsStreamTest.cpp
+    main.cpp
+    ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsStream.c
+    ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsStreamStatic.c
+    ${CMAKE_SOURCE_DIR}/Tests/StreamFake.c
+)
+
+target_link_libraries(SolidSyslogMbedTlsStreamTest PRIVATE
+    ${PROJECT_NAME}
+    ConfigLockFake
+    ErrorHandlerFake
+    MbedTlsFakes
+    CppUTest
+    CppUTestExt
+)
+
+target_include_directories(SolidSyslogMbedTlsStreamTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Interface
+    ${CMAKE_SOURCE_DIR}/Core/Interface
+    ${CMAKE_SOURCE_DIR}/Core/Source
+    ${CMAKE_SOURCE_DIR}/Tests
+)
+
+set_target_properties(SolidSyslogMbedTlsStreamTest PROPERTIES
+    C_CPPCHECK ""
+    CXX_CPPCHECK ""
+)
+
+add_test(NAME SolidSyslogMbedTlsStreamTest COMMAND SolidSyslogMbedTlsStreamTest)

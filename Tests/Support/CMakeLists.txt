@@ -41,3 +41,25 @@ if(SOLIDSYSLOG_OPENSSL)
 
     target_link_libraries(OpenSslFakes PUBLIC ${PROJECT_NAME})
 endif()
+
+# mbedTLS fake — same shape as OpenSslFakes. Headers come from $MBEDTLS_DIR;
+# we never link upstream libmbedtls into a target that pulls in this fake.
+if(SOLIDSYSLOG_MBEDTLS)
+    add_library(MbedTlsFakes STATIC MbedTlsFake.c)
+
+    target_include_directories(MbedTlsFakes PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        $ENV{MBEDTLS_DIR}/include
+    )
+
+    target_link_libraries(MbedTlsFakes PUBLIC ${PROJECT_NAME})
+
+    # cppcheck cannot resolve mbedTLS's `#include MBEDTLS_USER_CONFIG_FILE`
+    # macro indirection in build_info.h, so it errors on every TU that pulls
+    # in <mbedtls/*.h>. The fake's whole point is to interpose mbedTLS
+    # symbols — static-analysis value here is minimal. Disable per-target.
+    set_target_properties(MbedTlsFakes PROPERTIES
+        C_CPPCHECK ""
+        CXX_CPPCHECK ""
+    )
+endif()
