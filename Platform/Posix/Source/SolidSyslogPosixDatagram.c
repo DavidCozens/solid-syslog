@@ -95,11 +95,15 @@ static enum SolidSyslogDatagramSendResult PosixDatagram_SendTo(
     {
         const struct sockaddr_in* sin = SolidSyslogPosixAddress_AsConstSockaddrIn(addr);
         ssize_t sent = sendto(self->Fd, buffer, size, 0, (const struct sockaddr*) sin, sizeof(*sin));
+        /* Capture errno immediately after sendto so the EMSGSIZE test below
+         * satisfies MISRA 22.10 — no intervening C-library calls between
+         * the errno-setting function and the read. */
+        int sendErrno = (sent < 0) ? errno : 0;
         if (sent >= 0)
         {
             result = SOLIDSYSLOG_DATAGRAM_SEND_RESULT_SENT;
         }
-        else if (errno == EMSGSIZE)
+        else if (sendErrno == EMSGSIZE)
         {
             result = SOLIDSYSLOG_DATAGRAM_SEND_RESULT_OVERSIZE;
         }

@@ -58,7 +58,7 @@ static bool PosixTcpStream_Connect(int fd, const struct sockaddr_in* sin);
 static bool PosixTcpStream_WaitForConnectCompletion(int fd);
 static bool PosixTcpStream_ReadDeferredConnectError(int fd);
 static bool PosixTcpStream_WroteAllBytes(ssize_t sent, size_t expected);
-static inline bool PosixTcpStream_WouldBlock(void);
+static inline bool PosixTcpStream_WouldBlock(int err);
 
 void PosixTcpStream_Initialise(struct SolidSyslogStream* base)
 {
@@ -184,12 +184,16 @@ static bool PosixTcpStream_Connect(int fd, const struct sockaddr_in* sin)
 {
     bool connected = false;
     int rc = connect(fd, (const struct sockaddr*) sin, sizeof(*sin));
+    /* Capture errno immediately after connect so the EINPROGRESS test
+     * below satisfies MISRA 22.10 — no intervening C-library calls
+     * between the errno-setting function and the read. */
+    int connectErrno = (rc < 0) ? errno : 0;
 
     if (rc == 0)
     {
         connected = true;
     }
-    else if (errno == EINPROGRESS)
+    else if (connectErrno == EINPROGRESS)
     {
         connected = PosixTcpStream_WaitForConnectCompletion(fd) && PosixTcpStream_ReadDeferredConnectError(fd);
     }
@@ -248,13 +252,17 @@ static SolidSyslogSsize PosixTcpStream_Read(struct SolidSyslogStream* base, void
 {
     struct SolidSyslogPosixTcpStream* self = PosixTcpStream_SelfFromBase(base);
     ssize_t n = recv(self->Fd, buffer, size, 0);
+    /* Capture errno immediately after recv so the WouldBlock test below
+     * satisfies MISRA 22.10 — passing the captured value into the helper
+     * keeps the predicate pure and decouples it from errno's lifetime. */
+    int recvErrno = (n < 0) ? errno : 0;
     SolidSyslogSsize result = -1;
 
     if (n > 0)
     {
         result = (SolidSyslogSsize) n;
     }
-    else if ((n < 0) && PosixTcpStream_WouldBlock())
+    else if ((n < 0) && PosixTcpStream_WouldBlock(recvErrno))
     {
         result = 0;
     }
@@ -265,9 +273,9 @@ static SolidSyslogSsize PosixTcpStream_Read(struct SolidSyslogStream* base, void
     return result;
 }
 
-static inline bool PosixTcpStream_WouldBlock(void)
+static inline bool PosixTcpStream_WouldBlock(int err)
 {
-    return (errno == EAGAIN) || (errno == EWOULDBLOCK);
+    return (err == EAGAIN) || (err == EWOULDBLOCK);
 }
 
 static void PosixTcpStream_Close(struct SolidSyslogStream* base)
