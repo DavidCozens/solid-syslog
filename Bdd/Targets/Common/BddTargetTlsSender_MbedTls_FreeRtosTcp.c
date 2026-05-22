@@ -219,13 +219,12 @@ static void EnsureMbedTlsInitialised(void)
 
     mbedtls_ctr_drbg_init(&drbg);
     static const unsigned char personalization[] = "solidsyslog-freertos-bdd";
-    int drbgSeedRc = mbedtls_ctr_drbg_seed(
-        &drbg, mbedtls_entropy_func, &entropy, personalization, sizeof(personalization) - 1U
-    );
+    int drbgSeedRc =
+        mbedtls_ctr_drbg_seed(&drbg, mbedtls_entropy_func, &entropy, personalization, sizeof(personalization) - 1U);
     if (drbgSeedRc != 0)
     {
-        (void) printf("[mbedtls] ctr_drbg_seed FAILED rc=-0x%04x; TLS slot will be unusable\r\n",
-                      (unsigned) -drbgSeedRc);
+        (void
+        ) printf("[mbedtls] ctr_drbg_seed FAILED rc=-0x%04x; TLS slot will be unusable\r\n", (unsigned) -drbgSeedRc);
         return;
     }
     vTaskDelay(1U);
@@ -253,8 +252,8 @@ static void EnsureMbedTlsInitialised(void)
     int caParseRc = mbedtls_x509_crt_parse(&caChain, caPemBuf, sizeof(caPemBuf));
     if (caParseRc != 0)
     {
-        (void) printf("[mbedtls] CA chain parse FAILED rc=-0x%04x; TLS slot will be unusable\r\n",
-                      (unsigned) -caParseRc);
+        (void
+        ) printf("[mbedtls] CA chain parse FAILED rc=-0x%04x; TLS slot will be unusable\r\n", (unsigned) -caParseRc);
         return;
     }
     vTaskDelay(1U);
@@ -264,12 +263,13 @@ static void EnsureMbedTlsInitialised(void)
     memcpy(clientCertPemBuf, bdd_baked_client_cert_pem, sizeof(bdd_baked_client_cert_pem));
     clientCertPemBuf[sizeof(bdd_baked_client_cert_pem)] = '\0';
     mbedtls_x509_crt_init(&clientCertChain);
-    int clientCertParseRc =
-        mbedtls_x509_crt_parse(&clientCertChain, clientCertPemBuf, sizeof(clientCertPemBuf));
+    int clientCertParseRc = mbedtls_x509_crt_parse(&clientCertChain, clientCertPemBuf, sizeof(clientCertPemBuf));
     if (clientCertParseRc != 0)
     {
-        (void) printf("[mbedtls] client cert parse FAILED rc=-0x%04x; mTLS will be unusable\r\n",
-                      (unsigned) -clientCertParseRc);
+        (void) printf(
+            "[mbedtls] client cert parse FAILED rc=-0x%04x; mTLS will be unusable\r\n",
+            (unsigned) -clientCertParseRc
+        );
         return;
     }
     vTaskDelay(1U);
@@ -290,8 +290,10 @@ static void EnsureMbedTlsInitialised(void)
     );
     if (clientKeyParseRc != 0)
     {
-        (void) printf("[mbedtls] client key parse FAILED rc=-0x%04x; mTLS will be unusable\r\n",
-                      (unsigned) -clientKeyParseRc);
+        (void) printf(
+            "[mbedtls] client key parse FAILED rc=-0x%04x; mTLS will be unusable\r\n",
+            (unsigned) -clientKeyParseRc
+        );
         return;
     }
     vTaskDelay(1U);
