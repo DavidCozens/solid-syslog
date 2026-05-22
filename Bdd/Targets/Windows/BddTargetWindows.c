@@ -34,6 +34,7 @@
 #include "SolidSyslogWindowsProcessId.h"
 #include "SolidSyslogWindowsSleep.h"
 #include "SolidSyslogWindowsSysUpTime.h"
+#include "SolidSyslogWinsockAddress.h"
 #include "SolidSyslogWinsockDatagram.h"
 #include "SolidSyslogWinsockResolver.h"
 #include "SolidSyslogWinsockTcpStream.h"
@@ -74,6 +75,7 @@ static struct SolidSyslogResolver* resolver;
 static struct SolidSyslogStream* plainTcpStream;
 static struct SolidSyslogSender* plainTcpSender;
 static struct SolidSyslogDatagram* udpDatagram;
+static struct SolidSyslogAddress* udpAddress;
 static struct SolidSyslogSender* udpSender;
 static struct SolidSyslogSender* switchingSender;
 
@@ -181,9 +183,11 @@ static struct SolidSyslogSender* CreateSender(const struct BddTargetWindowsOptio
     resolver = SolidSyslogWinsockResolver_Create();
 
     udpDatagram = SolidSyslogWinsockDatagram_Create();
+    udpAddress = SolidSyslogWinsockAddress_Create();
     static struct SolidSyslogUdpSenderConfig udpConfig = {0};
     udpConfig.Resolver = resolver;
     udpConfig.Datagram = udpDatagram;
+    udpConfig.Address = udpAddress;
     udpConfig.Endpoint = GetEndpoint;
     udpConfig.EndpointVersion = GetEndpointVersion;
     udpSender = SolidSyslogUdpSender_Create(&udpConfig);
@@ -220,6 +224,7 @@ static void DestroySender(void)
     SolidSyslogStreamSender_Destroy(plainTcpSender);
     SolidSyslogWinsockTcpStream_Destroy(plainTcpStream);
     SolidSyslogUdpSender_Destroy(udpSender);
+    SolidSyslogWinsockAddress_Destroy(udpAddress);
     SolidSyslogWinsockDatagram_Destroy(udpDatagram);
     SolidSyslogWinsockResolver_Destroy(resolver);
 }

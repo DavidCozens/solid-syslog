@@ -42,6 +42,7 @@
 #include "SolidSyslogFatFsFile.h"
 #include "SolidSyslogFileBlockDevice.h"
 #include "SolidSyslogFormatter.h"
+#include "SolidSyslogFreeRtosAddress.h"
 #include "SolidSyslogFreeRtosDatagram.h"
 #include "SolidSyslogFreeRtosMutex.h"
 #include "SolidSyslogFreeRtosStaticResolver.h"
@@ -238,6 +239,7 @@ static struct SolidSyslogStructuredData* originSd = NULL;
  * TeardownAll then SemihostingExit). */
 static struct SolidSyslogResolver* resolver = NULL;
 static struct SolidSyslogDatagram* datagram = NULL;
+static struct SolidSyslogAddress* udpAddress = NULL;
 static struct SolidSyslogStream* tcpStream = NULL;
 static struct SolidSyslogSender* tcpSender = NULL;
 static struct SolidSyslogSender* tlsSender = NULL;
@@ -702,6 +704,7 @@ static void TeardownAll(void)
     SolidSyslogStreamSender_Destroy(tcpSender);
     SolidSyslogFreeRtosTcpStream_Destroy(tcpStream);
     SolidSyslogUdpSender_Destroy(udpSender);
+    SolidSyslogFreeRtosAddress_Destroy(udpAddress);
     SolidSyslogFreeRtosDatagram_Destroy(datagram);
     SolidSyslogFreeRtosStaticResolver_Destroy(resolver);
 }
@@ -805,10 +808,12 @@ static void InteractiveTask(void* argument)
 
     resolver = SolidSyslogFreeRtosStaticResolver_Create(TEST_DESTINATION_IPV4);
     datagram = SolidSyslogFreeRtosDatagram_Create();
+    udpAddress = SolidSyslogFreeRtosAddress_Create();
 
     struct SolidSyslogUdpSenderConfig udpConfig = {
         .Resolver = resolver,
         .Datagram = datagram,
+        .Address = udpAddress,
         .Endpoint = GetEndpoint,
         .EndpointVersion = GetEndpointVersion,
     };

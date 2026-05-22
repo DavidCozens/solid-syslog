@@ -38,6 +38,7 @@
 #include "SolidSyslogPosixSleep.h"
 #include "SolidSyslogPosixSysUpTime.h"
 #include "SolidSyslogGetAddrInfoResolver.h"
+#include "SolidSyslogPosixAddress.h"
 #include "SolidSyslogPosixDatagram.h"
 #include "SolidSyslogPosixTcpStream.h"
 #include "SolidSyslogSwitchingSender.h"
@@ -56,6 +57,7 @@ static struct SolidSyslogSender* plainTcpSender;
 static struct SolidSyslogSender* udpSender;
 static struct SolidSyslogSender* switchingSender;
 static struct SolidSyslogDatagram* udpDatagram;
+static struct SolidSyslogAddress* udpAddress;
 static struct SolidSyslogResolver* sharedResolver;
 
 static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
@@ -83,9 +85,11 @@ static struct SolidSyslogSender* CreateSender(const struct BddTargetOptions* opt
     struct SolidSyslogResolver* resolver = sharedResolver;
 
     udpDatagram = SolidSyslogPosixDatagram_Create();
+    udpAddress = SolidSyslogPosixAddress_Create();
     static struct SolidSyslogUdpSenderConfig udpConfig = {0};
     udpConfig.Resolver = resolver;
     udpConfig.Datagram = udpDatagram;
+    udpConfig.Address = udpAddress;
     udpConfig.Endpoint = BddTargetUdpConfig_GetEndpoint;
     udpConfig.EndpointVersion = BddTargetUdpConfig_GetEndpointVersion;
     udpSender = SolidSyslogUdpSender_Create(&udpConfig);
@@ -191,6 +195,7 @@ static void DestroySender(void)
     SolidSyslogStreamSender_Destroy(plainTcpSender);
     SolidSyslogPosixTcpStream_Destroy(plainTcpStream);
     SolidSyslogUdpSender_Destroy(udpSender);
+    SolidSyslogPosixAddress_Destroy(udpAddress);
     SolidSyslogPosixDatagram_Destroy(udpDatagram);
     SolidSyslogGetAddrInfoResolver_Destroy(sharedResolver);
 }

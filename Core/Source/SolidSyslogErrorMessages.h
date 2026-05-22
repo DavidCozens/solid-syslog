@@ -17,6 +17,7 @@
 #define SOLIDSYSLOG_ERROR_MSG_UDPSENDER_CREATE_NULL_CONFIG "SolidSyslogUdpSender_Create called with NULL config"
 #define SOLIDSYSLOG_ERROR_MSG_UDPSENDER_CREATE_NULL_RESOLVER "SolidSyslogUdpSender_Create config.Resolver is NULL"
 #define SOLIDSYSLOG_ERROR_MSG_UDPSENDER_CREATE_NULL_DATAGRAM "SolidSyslogUdpSender_Create config.Datagram is NULL"
+#define SOLIDSYSLOG_ERROR_MSG_UDPSENDER_CREATE_NULL_ADDRESS "SolidSyslogUdpSender_Create config.Address is NULL"
 #define SOLIDSYSLOG_ERROR_MSG_UDPSENDER_CREATE_NULL_ENDPOINT "SolidSyslogUdpSender_Create config.Endpoint is NULL"
 #define SOLIDSYSLOG_ERROR_MSG_UDPSENDER_SEND_NULL_BUFFER "SolidSyslogUdpSender_Send called with NULL buffer"
 #define SOLIDSYSLOG_ERROR_MSG_UDPSENDER_POOL_EXHAUSTED \
