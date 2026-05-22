@@ -928,12 +928,15 @@ static void InteractiveTask(void* argument)
     /* Linux defaults its TLS / mTLS host to "syslog-ng" (the docker DNS
      * alias) and overrides via SOLIDSYSLOG_BDD_{TLS,MTLS}_HOST env vars
      * when needed. FreeRTOS has no env-var access in QEMU and slirp DNS
-     * doesn't reach the docker DNS alias in CI, so override the host
-     * directly to the slirp gateway 10.0.2.2 — same path the UDP / TCP
-     * scenarios take. ServerName stays "syslog-ng" via _GetServerName so
-     * SNI / cert verification still match the oracle's TLS identity. */
+     * doesn't reach the docker DNS alias in CI, so route the connection
+     * via the slirp gateway 10.0.2.2 directly — same path UDP / TCP
+     * take. ServerName for SNI / cert verification is pinned separately
+     * to "syslog-ng" (the cert's subject); without that the handshake
+     * fails because the syslog-ng cert isn't issued for 10.0.2.2. */
     BddTargetTlsConfig_SetHost("10.0.2.2");
+    BddTargetTlsConfig_SetServerName("syslog-ng");
     BddTargetMtlsConfig_SetHost("10.0.2.2");
+    BddTargetMtlsConfig_SetServerName("syslog-ng");
 
     resolver = SolidSyslogFreeRtosResolver_Create();
     datagram = SolidSyslogFreeRtosDatagram_Create();
