@@ -12,6 +12,7 @@
 
 struct SolidSyslogAddress;
 
+static inline struct SolidSyslogAddress* PosixAddress_HandleFromIndex(size_t index);
 static inline size_t PosixAddress_IndexFromHandle(const struct SolidSyslogAddress* base);
 static inline void PosixAddress_CleanupAtIndex(size_t index, void* context);
 
@@ -32,7 +33,7 @@ struct SolidSyslogAddress* SolidSyslogPosixAddress_Create(void)
     struct SolidSyslogAddress* handle = (struct SolidSyslogAddress*) &PosixAddress_Fallback;
     if (SolidSyslogPoolAllocator_IndexIsValid(&PosixAddress_Allocator, index))
     {
-        handle = (struct SolidSyslogAddress*) &PosixAddress_Pool[index];
+        handle = PosixAddress_HandleFromIndex(index);
         PosixAddress_Initialise(handle);
     }
     else
@@ -54,12 +55,17 @@ void SolidSyslogPosixAddress_Destroy(struct SolidSyslogAddress* base)
     }
 }
 
+static inline struct SolidSyslogAddress* PosixAddress_HandleFromIndex(size_t index)
+{
+    return (struct SolidSyslogAddress*) &PosixAddress_Pool[index];
+}
+
 static inline size_t PosixAddress_IndexFromHandle(const struct SolidSyslogAddress* base)
 {
     size_t result = SOLIDSYSLOG_ADDRESS_POOL_SIZE;
     for (size_t poolIndex = 0; poolIndex < SOLIDSYSLOG_ADDRESS_POOL_SIZE; poolIndex++)
     {
-        if (base == (const struct SolidSyslogAddress*) &PosixAddress_Pool[poolIndex])
+        if (base == PosixAddress_HandleFromIndex(poolIndex))
         {
             result = poolIndex;
             break;
@@ -71,5 +77,5 @@ static inline size_t PosixAddress_IndexFromHandle(const struct SolidSyslogAddres
 static inline void PosixAddress_CleanupAtIndex(size_t index, void* context)
 {
     (void) context;
-    PosixAddress_Cleanup((struct SolidSyslogAddress*) &PosixAddress_Pool[index]);
+    PosixAddress_Cleanup(PosixAddress_HandleFromIndex(index));
 }

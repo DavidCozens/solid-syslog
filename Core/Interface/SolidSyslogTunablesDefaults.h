@@ -676,17 +676,16 @@
  * carries one platform sockaddr (struct sockaddr_in on POSIX/Windows,
  * struct freertos_sockaddr on FreeRTOS) — ~16 bytes per slot.
  *
- * Default 3 — covers the canonical BDD multi-transport wiring (one
- * Address per Sender: UDP + plain-TCP + TLS-stream). Single-transport
- * integrators pay ~32 bytes of unused slots; multi-transport integrators
- * are spared an override. Bump via SOLIDSYSLOG_USER_TUNABLES_FILE if
- * more than three concurrent senders are needed.
+ * Default 1 — typical integrator wires one Sender. Multi-transport
+ * integrators (e.g. the BDD targets wiring UDP + plain-TCP + TLS-stream)
+ * override this via SOLIDSYSLOG_USER_TUNABLES_FILE; the BDD wirings are
+ * deliberately the unusual case rather than the default.
  *
  * Floor: 1. Sub-floor values rejected at compile time.
  */
 #ifndef SOLIDSYSLOG_ADDRESS_POOL_SIZE
 /* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- macro form required for preprocessor visibility (floor #if) and C array-size const-expr. */
-#define SOLIDSYSLOG_ADDRESS_POOL_SIZE 3U
+#define SOLIDSYSLOG_ADDRESS_POOL_SIZE 1U
 #endif
 
 #if SOLIDSYSLOG_ADDRESS_POOL_SIZE < 1
