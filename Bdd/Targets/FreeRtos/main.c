@@ -147,7 +147,7 @@ static const uint8_t TEST_MAC[ipMAC_ADDRESS_LENGTH_BYTES] = {0x02U, 0x00U, 0x00U
 static char appName[49] = "SolidSyslogBddTarget";
 static char messageId[33] = "example";
 static char msg[SOLIDSYSLOG_MAX_MESSAGE_SIZE] = "Hello from FreeRTOS";
-static char host[16] = "10.0.2.2";
+static char host[16] = "syslog-ng";
 static uint16_t port = (uint16_t) BDD_TARGET_UDP_PORT;
 static uint32_t endpointVersion = 0U;
 
