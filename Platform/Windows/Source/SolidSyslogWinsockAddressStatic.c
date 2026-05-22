@@ -17,21 +17,21 @@ static inline size_t WinsockAddress_IndexFromHandle(const struct SolidSyslogAddr
 static inline void WinsockAddress_CleanupAtIndex(size_t index, void* context);
 
 static bool WinsockAddress_InUse[SOLIDSYSLOG_ADDRESS_POOL_SIZE];
-static struct SolidSyslogWinsockAddress WinsockAddress_Pool[SOLIDSYSLOG_ADDRESS_POOL_SIZE];
 static struct SolidSyslogPoolAllocator WinsockAddress_Allocator = {WinsockAddress_InUse, SOLIDSYSLOG_ADDRESS_POOL_SIZE};
-
-/* TU-private fallback returned when the pool is exhausted. Sized as a real
- * SolidSyslogWinsockAddress so a Resolver overwrite at the exhausted-fallback
- * call site is bounded — same sockaddr_in storage as any pooled slot. Not
- * a per-Sender slot: multi-overflow integrators share this storage and
- * race on it. Bumping SOLIDSYSLOG_ADDRESS_POOL_SIZE removes the race. */
-static struct SolidSyslogWinsockAddress WinsockAddress_Fallback;
 
 struct SolidSyslogAddress* SolidSyslogWinsockAddress_Create(void)
 {
+    /* TU-private fallback returned when the pool is exhausted. Sized as
+     * a real SolidSyslogWinsockAddress so a Resolver overwrite at the
+     * exhausted-fallback call site is bounded — same sockaddr_in storage
+     * as any pooled slot. Not a per-Sender slot: multi-overflow integrators
+     * share this storage and race on it. Bumping SOLIDSYSLOG_ADDRESS_POOL_SIZE
+     * removes the race. */
+    static struct SolidSyslogWinsockAddress fallback;
+
     size_t index = SolidSyslogPoolAllocator_AcquireFirstFree(&WinsockAddress_Allocator);
-    struct SolidSyslogAddress* handle = (struct SolidSyslogAddress*) &WinsockAddress_Fallback;
-    if (SolidSyslogPoolAllocator_IndexIsValid(&WinsockAddress_Allocator, index))
+    struct SolidSyslogAddress* handle = (struct SolidSyslogAddress*) &fallback;
+    if (SolidSyslogPoolAllocator_IndexIsValid(&WinsockAddress_Allocator, index) == true)
     {
         handle = WinsockAddress_HandleFromIndex(index);
         WinsockAddress_Initialise(handle);
@@ -45,7 +45,8 @@ struct SolidSyslogAddress* SolidSyslogWinsockAddress_Create(void)
 
 static inline struct SolidSyslogAddress* WinsockAddress_HandleFromIndex(size_t index)
 {
-    return (struct SolidSyslogAddress*) &WinsockAddress_Pool[index];
+    static struct SolidSyslogWinsockAddress pool[SOLIDSYSLOG_ADDRESS_POOL_SIZE];
+    return (struct SolidSyslogAddress*) &pool[index];
 }
 
 void SolidSyslogWinsockAddress_Destroy(struct SolidSyslogAddress* base)

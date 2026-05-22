@@ -17,21 +17,21 @@ static inline size_t PosixAddress_IndexFromHandle(const struct SolidSyslogAddres
 static inline void PosixAddress_CleanupAtIndex(size_t index, void* context);
 
 static bool PosixAddress_InUse[SOLIDSYSLOG_ADDRESS_POOL_SIZE];
-static struct SolidSyslogPosixAddress PosixAddress_Pool[SOLIDSYSLOG_ADDRESS_POOL_SIZE];
 static struct SolidSyslogPoolAllocator PosixAddress_Allocator = {PosixAddress_InUse, SOLIDSYSLOG_ADDRESS_POOL_SIZE};
-
-/* TU-private fallback returned when the pool is exhausted. Sized as a real
- * SolidSyslogPosixAddress so a Resolver overwrite at the exhausted-fallback
- * call site is bounded — same sockaddr_in storage as any pooled slot. Not
- * a per-Sender slot: multi-overflow integrators share this storage and
- * race on it. Bumping SOLIDSYSLOG_ADDRESS_POOL_SIZE removes the race. */
-static struct SolidSyslogPosixAddress PosixAddress_Fallback;
 
 struct SolidSyslogAddress* SolidSyslogPosixAddress_Create(void)
 {
+    /* TU-private fallback returned when the pool is exhausted. Sized as
+     * a real SolidSyslogPosixAddress so a Resolver overwrite at the
+     * exhausted-fallback call site is bounded — same sockaddr_in storage
+     * as any pooled slot. Not a per-Sender slot: multi-overflow integrators
+     * share this storage and race on it. Bumping SOLIDSYSLOG_ADDRESS_POOL_SIZE
+     * removes the race. */
+    static struct SolidSyslogPosixAddress fallback;
+
     size_t index = SolidSyslogPoolAllocator_AcquireFirstFree(&PosixAddress_Allocator);
-    struct SolidSyslogAddress* handle = (struct SolidSyslogAddress*) &PosixAddress_Fallback;
-    if (SolidSyslogPoolAllocator_IndexIsValid(&PosixAddress_Allocator, index))
+    struct SolidSyslogAddress* handle = (struct SolidSyslogAddress*) &fallback;
+    if (SolidSyslogPoolAllocator_IndexIsValid(&PosixAddress_Allocator, index) == true)
     {
         handle = PosixAddress_HandleFromIndex(index);
         PosixAddress_Initialise(handle);
@@ -45,7 +45,8 @@ struct SolidSyslogAddress* SolidSyslogPosixAddress_Create(void)
 
 static inline struct SolidSyslogAddress* PosixAddress_HandleFromIndex(size_t index)
 {
-    return (struct SolidSyslogAddress*) &PosixAddress_Pool[index];
+    static struct SolidSyslogPosixAddress pool[SOLIDSYSLOG_ADDRESS_POOL_SIZE];
+    return (struct SolidSyslogAddress*) &pool[index];
 }
 
 void SolidSyslogPosixAddress_Destroy(struct SolidSyslogAddress* base)

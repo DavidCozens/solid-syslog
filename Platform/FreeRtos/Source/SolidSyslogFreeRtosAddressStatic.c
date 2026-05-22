@@ -17,24 +17,24 @@ static inline size_t FreeRtosAddress_IndexFromHandle(const struct SolidSyslogAdd
 static inline void FreeRtosAddress_CleanupAtIndex(size_t index, void* context);
 
 static bool FreeRtosAddress_InUse[SOLIDSYSLOG_ADDRESS_POOL_SIZE];
-static struct SolidSyslogFreeRtosAddress FreeRtosAddress_Pool[SOLIDSYSLOG_ADDRESS_POOL_SIZE];
 static struct SolidSyslogPoolAllocator FreeRtosAddress_Allocator = {
     FreeRtosAddress_InUse,
     SOLIDSYSLOG_ADDRESS_POOL_SIZE
 };
 
-/* TU-private fallback returned when the pool is exhausted. Sized as a real
- * SolidSyslogFreeRtosAddress so a Resolver overwrite at the exhausted-fallback
- * call site is bounded — same freertos_sockaddr storage as any pooled slot.
- * Not a per-Sender slot: multi-overflow integrators share this storage and
- * race on it. Bumping SOLIDSYSLOG_ADDRESS_POOL_SIZE removes the race. */
-static struct SolidSyslogFreeRtosAddress FreeRtosAddress_Fallback;
-
 struct SolidSyslogAddress* SolidSyslogFreeRtosAddress_Create(void)
 {
+    /* TU-private fallback returned when the pool is exhausted. Sized as
+     * a real SolidSyslogFreeRtosAddress so a Resolver overwrite at the
+     * exhausted-fallback call site is bounded — same freertos_sockaddr
+     * storage as any pooled slot. Not a per-Sender slot: multi-overflow
+     * integrators share this storage and race on it. Bumping
+     * SOLIDSYSLOG_ADDRESS_POOL_SIZE removes the race. */
+    static struct SolidSyslogFreeRtosAddress fallback;
+
     size_t index = SolidSyslogPoolAllocator_AcquireFirstFree(&FreeRtosAddress_Allocator);
-    struct SolidSyslogAddress* handle = (struct SolidSyslogAddress*) &FreeRtosAddress_Fallback;
-    if (SolidSyslogPoolAllocator_IndexIsValid(&FreeRtosAddress_Allocator, index))
+    struct SolidSyslogAddress* handle = (struct SolidSyslogAddress*) &fallback;
+    if (SolidSyslogPoolAllocator_IndexIsValid(&FreeRtosAddress_Allocator, index) == true)
     {
         handle = FreeRtosAddress_HandleFromIndex(index);
         FreeRtosAddress_Initialise(handle);
@@ -48,7 +48,8 @@ struct SolidSyslogAddress* SolidSyslogFreeRtosAddress_Create(void)
 
 static inline struct SolidSyslogAddress* FreeRtosAddress_HandleFromIndex(size_t index)
 {
-    return (struct SolidSyslogAddress*) &FreeRtosAddress_Pool[index];
+    static struct SolidSyslogFreeRtosAddress pool[SOLIDSYSLOG_ADDRESS_POOL_SIZE];
+    return (struct SolidSyslogAddress*) &pool[index];
 }
 
 void SolidSyslogFreeRtosAddress_Destroy(struct SolidSyslogAddress* base)

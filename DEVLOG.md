@@ -1,5 +1,149 @@
 # Dev Log
 
+## 2026-05-22 — S10.17 Network primitives conformance
+
+Closes S10.17 (#428). Sixth per-group conformance story in E10. Network
+primitives cluster: `Datagram`, `Stream`, `Resolver`, `Address`, `Sleep`,
+plus their POSIX / Windows / FreeRTOS / OpenSSL impls. Started from the
+CI report at run 26303038083 (`main@2952760`, post-S08.08), which surfaced
+52 unsuppressed cppcheck-misra findings in scope; clang-tidy was clean.
+
+### Headline
+
+Seven commits, one per logical fix cluster. Two refactor-shaped fixes
+(Patterns B, C), two simple per-site fixes (D, E), one mechanical sweep
+(A), and two suppression-list reorganisations (G, F).
+
+### Pattern A — `== true` at pool-allocator IsValid call sites (MISRA 14.4)
+
+The S10.05 audit's verdict on rule 14.4 was "single site, fixable"; the
+E11 PoolAllocator rollout multiplied it to 22 sites across every pool-backed
+`*Static.c::_Create`. cppcheck-misra's essential-type tracker doesn't
+follow `bool`-returning function calls across the call boundary, so
+`if (IsValid(...))` is flagged even though the function genuinely returns
+`bool`.
+
+Two experiments before committing the form:
+
+1. De-inline `SolidSyslogPoolAllocator_IndexIsValid` from header into .c
+   — no effect. The cppcheck-misra tracker has the same limitation
+   against extern functions as against static inlines.
+2. Explicit `if (... == true)` — works. The comparison yields bool,
+   which the tracker unambiguously sees as essentially-Boolean.
+
+The `== true` form is a code-smell shape (redundant comparison on a
+`bool`) and David's first reaction was that he didn't like it; we
+preferred it to a new deviation D.012 on weighing-up. Tree-wide sweep
+applies it to all 23 sites (the 22 found in CI scope plus
+`MbedTlsStreamStatic.c` which CI doesn't currently include — applying
+the fix here means S10.20's CI scope widen verifies MbedTls pre-clean).
+
+### Pattern B — Address Static pool/fallback move (MISRA 8.9)
+
+Same 8.9 pattern S10.16 swept across the null-objects: file-scope
+storage that's only used inside a single helper. Each Address Static
+had two such statics — the pool array (used only inside
+`_HandleFromIndex`) and the pool-exhaustion fallback singleton (used
+only inside `_Create`). Both move inside their using function as
+function-scope `static`. Local names drop the `<Class>_` prefix per
+Tier 4 lowerCamelCase for locals. `InUse` and `Allocator` stay at
+file scope — `InUse` is referenced at file scope in the Allocator
+initializer (8.9 doesn't fire), and `Allocator` is referenced from
+both `_Create` and `_Destroy` (two functions — 8.9 doesn't fire).
+
+### Pattern C — FreeRtos timing constants move (MISRA 8.9)
+
+`FreeRtosTcpStream` and `FreeRtosDatagram` each had `static const
+TickType_t XXX = pdMS_TO_TICKS(N)` timing constants at file scope but
+each used inside one function. Move inside the using function as
+function-scope `static const`. `pdMS_TO_TICKS` is a compile-time
+constant expression given `configTICK_RATE_HZ`, so the initialiser
+stays valid.
+
+`READ_FAILED` in `FreeRtosTcpStream` stays at file scope — used by
+both `_Send` and `_Read`.
+
+### Pattern D — `(void) memset` in Address.c Initialise (MISRA 17.7)
+
+Three identical sites — `Posix`, `Winsock`, `FreeRtos` Address
+`_Initialise` — each calling `memset(&self->Sockaddr, 0, ...)` and
+discarding the `void*` return value implicitly. Explicit `(void)`
+cast satisfies 17.7.
+
+### Pattern E — Capture errno at the call site (MISRA 22.10)
+
+Three sites: PosixDatagram `sendto`, PosixTcpStream `connect`, and the
+shared `PosixTcpStream_WouldBlock` helper. cppcheck-misra rule 22.10
+requires errno reads to sit immediately after the C-library function
+that may set it, with no intervening calls — the `else if (errno == ...)`
+shape after a `>= 0` check trips the rule, and a helper that reads
+errno at the bottom of a call stack can't satisfy the locality test at
+all.
+
+Three fixes:
+- PosixDatagram_SendTo: `int sendErrno = (sent < 0) ? errno : 0;`
+  immediately after `sendto`; test the local.
+- PosixTcpStream_Connect: same shape with `connectErrno`.
+- PosixTcpStream_WouldBlock: change signature to take `int err` so
+  the helper is pure; `_Read` captures `recvErrno` immediately after
+  `recv` and passes it in.
+
+### Pattern G — D.009 widens to absorb 7 anonymous-enum 5.7 sites + 1 new entry + 1 unmasked 2.4
+
+Seven 5.7-on-anonymous-enum suppressions migrated from the D.003 block
+to the D.009 block: `TlsStream`, `GetAddrInfoResolver`, `PosixDatagram`,
+`PosixSleep`, `PosixTcpStream`, `WinsockResolver`, `WinsockTcpStream`,
+plus `FreeRtosTcpStream` whose anchor also shifted :45 → :27 after
+Pattern C removed three file-scope timing constants.
+
+One new D.009 entry for `FreeRtosResolver.c:21` — the
+`GETADDRINFO_SUCCESS` anonymous enum landed by S08.08.
+
+One new D.009 2.4 entry for `UdpPayload.h:15` — the 2.4 was always
+there but masked by cppcheck's dedup against the existing 5.7
+suppression; surfaced once Pattern C narrowed the FreeRtos transport
+inclusion chain. Same unmasking phenomenon S10.16's DEVLOG flagged.
+
+Only one true struct-tag 5.7 in scope (`SolidSyslogAddress.h:10`)
+stays in the D.003 block.
+
+### Pattern F — D.002 anchor refresh + new sites
+
+Pattern B/C/E moves shifted line numbers in several files. Anchor
+refresh on the affected D.002 11.2 / 11.3 / 11.5 suppressions
+(11 in-scope refreshes), plus:
+
+- 3 new 11.2 entries for Address.c sources — cppcheck-misra fires both
+  11.2 and 11.3 at the same opaque-impl downcast line in `_Initialise`;
+  only 11.3 was historically suppressed.
+- 4 11.3 orphan refreshes outside S10.17's strict scope
+  (StdAtomicCounter, WindowsAtomicCounter, FreeRtosMutex, FatFsFile) —
+  pre-existing anchor drift caused by the E11 `*Static.c` split. Same
+  fix-when-we-see-it precedent as S10.16's null-object sweep, no need
+  to revisit closed S10.13.
+
+### Acceptance
+
+- Zero in-scope cppcheck-misra unsuppressed findings.
+- Zero in-scope `analyze-tidy` warnings.
+- 1290 / 1290 tests pass on `debug` and `sanitize` (ASan + UBSan).
+- Tree-wide coverage 99.9% (2924 / 2928 lines, 602 / 602 functions);
+  uncovered lines sit in `BlockStoreStatic.c` and `PosixMutex.c` and
+  are pre-existing — none of the changed files lost coverage.
+- clang-format clean tree-wide.
+- No new deviation rows in `docs/misra-deviations.md`; count bumps on
+  D.002 (3 new 11.2 entries) and D.009 (1 new 5.7 + 1 new 2.4).
+
+### Carry-forward for S10.18 / S10.19 / S10.20
+
+- Same `== true` form will need extending to any new pool-backed class
+  that lands before S10.20 (rare — most classes are already split).
+- Sister anonymous-enum 5.7 sites in the D.003 block belong to storage
+  / engine groups (`BlockSequence`, `RecordStore`, `Circular*`, `Crc16`,
+  `FileBlockDevice`, etc.) — S10.18 / S10.19 migrate them.
+
+---
+
 ## 2026-05-22 — S10.16 Senders conformance
 
 Closes S10.16 (#389). Fifth per-group conformance story in E10,
