@@ -6,8 +6,8 @@ extern "C"
 #include <mbedtls/ssl.h>
 
 #include "MbedTlsFake.h"
-#include "SolidSyslogAddress.h"
 #include "SolidSyslogMbedTlsStream.h"
+#include "SolidSyslogPosixAddress.h"
 #include "SolidSyslogStream.h"
 #include "SolidSyslogStreamDefinition.h"
 #include "StreamFake.h"
@@ -29,11 +29,10 @@ static void NoOpSleep(int milliseconds)
 // clang-format off
 TEST_GROUP(SolidSyslogMbedTlsStream)
 {
-    struct SolidSyslogStream*            transport   = nullptr;
-    struct SolidSyslogStream*            handle      = nullptr;
-    struct SolidSyslogMbedTlsStreamConfig config     = {};
-    SolidSyslogAddressStorage            addrStorage = {};
-    struct SolidSyslogAddress*           addr        = nullptr;
+    struct SolidSyslogStream*            transport = nullptr;
+    struct SolidSyslogStream*            handle    = nullptr;
+    struct SolidSyslogMbedTlsStreamConfig config   = {};
+    struct SolidSyslogAddress*           addr      = nullptr;
 
     void setup() override
     {
@@ -45,12 +44,13 @@ TEST_GROUP(SolidSyslogMbedTlsStream)
         config.Sleep = NoOpSleep;
         handle = SolidSyslogMbedTlsStream_Create(&config);
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        addr = SolidSyslogAddress_FromStorage(&addrStorage);
+        addr = SolidSyslogPosixAddress_Create();
     }
 
     void teardown() override
     {
         SolidSyslogMbedTlsStream_Destroy(handle);
+        SolidSyslogPosixAddress_Destroy(addr);
         StreamFake_Destroy(transport);
     }
 

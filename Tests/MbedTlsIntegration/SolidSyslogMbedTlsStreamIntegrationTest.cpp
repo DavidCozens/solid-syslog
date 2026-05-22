@@ -13,8 +13,8 @@ extern "C"
 #include "MbedTlsTestCert.h"
 #include "MbedTlsTestServer.h"
 #include "SocketStream.h"
-#include "SolidSyslogAddress.h"
 #include "SolidSyslogMbedTlsStream.h"
+#include "SolidSyslogPosixAddress.h"
 #include "SolidSyslogStream.h"
 }
 
@@ -41,9 +41,11 @@ TEST_GROUP(SolidSyslogMbedTlsStreamIntegration)
     struct MbedTlsTestServer* server            = nullptr;
     struct SolidSyslogStream* clientTransport   = nullptr;
     struct SolidSyslogStream* tlsStream         = nullptr;
+    struct SolidSyslogAddress* addr             = nullptr;
 
     void setup() override
     {
+        addr = SolidSyslogPosixAddress_Create();
         mbedtls_entropy_init(&entropy);
         mbedtls_ctr_drbg_init(&rng);
         const unsigned char pers[] = "mbedtls-integration-test";
@@ -91,6 +93,7 @@ TEST_GROUP(SolidSyslogMbedTlsStreamIntegration)
         MbedTlsTestCert_Destroy(&trustedCa);
         mbedtls_ctr_drbg_free(&rng);
         mbedtls_entropy_free(&entropy);
+        SolidSyslogPosixAddress_Destroy(addr);
     }
 
     struct SolidSyslogStream* StartServerWithCert(const struct MbedTlsTestCert* cert)
@@ -157,8 +160,7 @@ TEST(SolidSyslogMbedTlsStreamIntegration, HandshakeSucceedsWhenServerCertSignedB
     struct SolidSyslogMbedTlsStreamConfig config = BuildBaseConfig(transport);
     tlsStream = SolidSyslogMbedTlsStream_Create(&config);
 
-    SolidSyslogAddressStorage storage = {};
-    bool opened = SolidSyslogStream_Open(tlsStream, SolidSyslogAddress_FromStorage(&storage));
+    bool opened = SolidSyslogStream_Open(tlsStream, addr);
 
     CHECK_TRUE_TEXT(opened, "client-side Open (incl. handshake) should succeed against a trusted server");
     CHECK_TRUE_TEXT(
@@ -182,8 +184,7 @@ TEST(SolidSyslogMbedTlsStreamIntegration, HandshakeFailsWhenServerCertSignedByUn
     config.CaChain = &untrustedCa.Cert;
     tlsStream = SolidSyslogMbedTlsStream_Create(&config);
 
-    SolidSyslogAddressStorage storage = {};
-    bool opened = SolidSyslogStream_Open(tlsStream, SolidSyslogAddress_FromStorage(&storage));
+    bool opened = SolidSyslogStream_Open(tlsStream, addr);
 
     CHECK_FALSE_TEXT(opened, "client-side handshake must fail when the server cert chains to an untrusted CA");
 
@@ -197,8 +198,7 @@ TEST(SolidSyslogMbedTlsStreamIntegration, HandshakeFailsWhenServerNameDoesNotMat
     config.ServerName = "wrong-host.example.com"; /* server cert has SAN syslog.example.com */
     tlsStream = SolidSyslogMbedTlsStream_Create(&config);
 
-    SolidSyslogAddressStorage storage = {};
-    bool opened = SolidSyslogStream_Open(tlsStream, SolidSyslogAddress_FromStorage(&storage));
+    bool opened = SolidSyslogStream_Open(tlsStream, addr);
 
     CHECK_FALSE_TEXT(opened, "client-side handshake must fail when ServerName does not match the cert's SAN");
 }
@@ -221,8 +221,7 @@ TEST(SolidSyslogMbedTlsStreamIntegration, MutualTlsHandshakeSucceedsWithClientCe
     config.ClientKey = &clientCert.Key;
     tlsStream = SolidSyslogMbedTlsStream_Create(&config);
 
-    SolidSyslogAddressStorage storage = {};
-    bool opened = SolidSyslogStream_Open(tlsStream, SolidSyslogAddress_FromStorage(&storage));
+    bool opened = SolidSyslogStream_Open(tlsStream, addr);
 
     CHECK_TRUE_TEXT(opened, "client-side mTLS Open should succeed against a server trusting the client CA");
     CHECK_TRUE_TEXT(
@@ -249,8 +248,7 @@ TEST(SolidSyslogMbedTlsStreamIntegration, MutualTlsHandshakeRejectedWhenClientSe
     struct SolidSyslogMbedTlsStreamConfig config = BuildBaseConfig(transport);
     tlsStream = SolidSyslogMbedTlsStream_Create(&config);
 
-    SolidSyslogAddressStorage storage = {};
-    bool opened = SolidSyslogStream_Open(tlsStream, SolidSyslogAddress_FromStorage(&storage));
+    bool opened = SolidSyslogStream_Open(tlsStream, addr);
 
     CHECK_FALSE_TEXT(opened, "mTLS handshake must fail when the client does not present a cert");
 
@@ -284,8 +282,7 @@ TEST(SolidSyslogMbedTlsStreamIntegration, MutualTlsHandshakeRejectedWhenClientCe
     config.ClientKey = &clientCert.Key;
     tlsStream = SolidSyslogMbedTlsStream_Create(&config);
 
-    SolidSyslogAddressStorage storage = {};
-    bool opened = SolidSyslogStream_Open(tlsStream, SolidSyslogAddress_FromStorage(&storage));
+    bool opened = SolidSyslogStream_Open(tlsStream, addr);
 
     CHECK_FALSE_TEXT(opened, "mTLS handshake must fail when the client cert chains to an untrusted CA");
 

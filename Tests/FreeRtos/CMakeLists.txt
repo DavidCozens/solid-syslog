@@ -14,6 +14,8 @@ else()
     add_executable(SolidSyslogFreeRtosDatagramTest
         SolidSyslogFreeRtosDatagramTest.cpp
         main.cpp
+        ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosAddress.c
+        ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosAddressStatic.c
         ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosDatagram.c
         ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosDatagramStatic.c
         ${CMAKE_SOURCE_DIR}/Tests/Support/FreeRtosFakes/Source/FreeRtosSocketsFake.c
@@ -31,6 +33,7 @@ else()
 
     target_include_directories(SolidSyslogFreeRtosDatagramTest PRIVATE
         ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Interface
+        ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source
         ${CMAKE_SOURCE_DIR}/Core/Interface
         ${CMAKE_SOURCE_DIR}/Core/Source
         ${CMAKE_SOURCE_DIR}/Tests/Support
@@ -44,6 +47,8 @@ else()
     add_executable(SolidSyslogFreeRtosTcpStreamTest
         SolidSyslogFreeRtosTcpStreamTest.cpp
         main.cpp
+        ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosAddress.c
+        ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosAddressStatic.c
         ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosTcpStream.c
         ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosTcpStreamStatic.c
         ${CMAKE_SOURCE_DIR}/Tests/Support/FreeRtosFakes/Source/FreeRtosSocketsFake.c
@@ -75,6 +80,8 @@ else()
     add_executable(SolidSyslogFreeRtosStaticResolverTest
         SolidSyslogFreeRtosStaticResolverTest.cpp
         main.cpp
+        ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosAddress.c
+        ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosAddressStatic.c
         ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosStaticResolver.c
         ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosStaticResolverStatic.c
     )
@@ -89,6 +96,7 @@ else()
 
     target_include_directories(SolidSyslogFreeRtosStaticResolverTest PRIVATE
         ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Interface
+        ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source
         ${CMAKE_SOURCE_DIR}/Core/Interface
         ${CMAKE_SOURCE_DIR}/Core/Source
         ${CMAKE_SOURCE_DIR}/Tests/Support

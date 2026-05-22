@@ -133,10 +133,6 @@ if(SOLIDSYSLOG_OPENSSL)
     )
 endif()
 
-if(SOLIDSYSLOG_POSIX OR SOLIDSYSLOG_WINSOCK)
-    list(APPEND TEST_SOURCES SolidSyslogAddressTest.cpp)
-endif()
-
 if(HAVE_WINDOWS_PLATFORM)
     list(APPEND TEST_SOURCES
         SolidSyslogWindowsClockTest.cpp

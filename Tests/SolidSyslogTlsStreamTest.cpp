@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include "OpenSslFake.h"
-#include "SolidSyslogAddress.h"
+#include "SolidSyslogPosixAddress.h"
 #include "SolidSyslogStream.h"
 #include "SolidSyslogTlsStream.h"
 #include "SolidSyslogTransport.h"
@@ -32,11 +32,10 @@ static void NoOpSleep(int milliseconds)
 // clang-format off
 TEST_GROUP(SolidSyslogTlsStream)
 {
-    struct SolidSyslogStream*         transport   = nullptr;
-    struct SolidSyslogTlsStreamConfig config      = {};
-    struct SolidSyslogStream*         stream      = nullptr;
-    SolidSyslogAddressStorage         addrStorage = {0};
-    struct SolidSyslogAddress*        addr        = nullptr;
+    struct SolidSyslogStream*         transport = nullptr;
+    struct SolidSyslogTlsStreamConfig config    = {};
+    struct SolidSyslogStream*         stream    = nullptr;
+    struct SolidSyslogAddress*        addr      = nullptr;
 
     void setup() override
     {
@@ -49,12 +48,13 @@ TEST_GROUP(SolidSyslogTlsStream)
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
         stream = SolidSyslogTlsStream_Create(&config);
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        addr = SolidSyslogAddress_FromStorage(&addrStorage);
+        addr = SolidSyslogPosixAddress_Create();
     }
 
     void teardown() override
     {
         SolidSyslogTlsStream_Destroy(stream);
+        SolidSyslogPosixAddress_Destroy(addr);
         StreamFake_Destroy(transport);
     }
 
