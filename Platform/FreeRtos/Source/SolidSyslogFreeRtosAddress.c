@@ -7,7 +7,7 @@ struct SolidSyslogAddress;
 void FreeRtosAddress_Initialise(struct SolidSyslogAddress* base)
 {
     struct SolidSyslogFreeRtosAddress* self = (struct SolidSyslogFreeRtosAddress*) base;
-    memset(&self->Sockaddr, 0, sizeof(self->Sockaddr));
+    (void) memset(&self->Sockaddr, 0, sizeof(self->Sockaddr));
 }
 
 void FreeRtosAddress_Cleanup(struct SolidSyslogAddress* base)
