@@ -148,7 +148,7 @@ misra-c2012-2.4:Core/Interface/SolidSyslogTransport.h:5
 misra-c2012-2.4:Core/Source/BlockSequence.c:13
 misra-c2012-2.4:Core/Source/BlockSequence.c:107
 misra-c2012-2.4:Core/Source/RecordStore.c:14
-misra-c2012-2.4:Core/Source/SolidSyslogStreamSender.c:20
+misra-c2012-2.4:Core/Source/SolidSyslogStreamSender.c:19
 # 5.7 anonymous-enum sites — migrated from the D.003 block as per-group
 # stories review their cluster. Historical sites still under D.003 will
 # move here as S10.17 / S10.18 / S10.19 land.
