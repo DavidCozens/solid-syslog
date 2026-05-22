@@ -52,12 +52,12 @@ struct SolidSyslogStore* SolidSyslogBlockStore_Create(const struct SolidSyslogBl
             else
             {
                 RecordStore_Destroy(recordStore);
-                SolidSyslogPoolAllocator_FreeIfInUse(&BlockStore_Allocator, index, NULL, NULL);
+                (void) SolidSyslogPoolAllocator_FreeIfInUse(&BlockStore_Allocator, index, NULL, NULL);
             }
         }
         else
         {
-            SolidSyslogPoolAllocator_FreeIfInUse(&BlockStore_Allocator, index, NULL, NULL);
+            (void) SolidSyslogPoolAllocator_FreeIfInUse(&BlockStore_Allocator, index, NULL, NULL);
         }
     }
 
