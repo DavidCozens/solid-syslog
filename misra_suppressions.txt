@@ -209,3 +209,7 @@ misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:136
 misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:138
 misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:140
 misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:142
+
+# D.012 — Rule 8.9: file-scope static const referenced from a file-scope enum + one function
+# See docs/misra-deviations.md#d012
+misra-c2012-8.9:Core/Source/SolidSyslogFileBlockDevice.c:20
