@@ -117,6 +117,7 @@ if(SOLIDSYSLOG_POSIX)
         SolidSyslogStreamSenderTest.cpp
         SolidSyslogPosixFileTest.cpp
         SolidSyslogBlockStorePosixTest.cpp
+        SolidSyslogPosixAddressTest.cpp
         SolidSyslogGetAddrInfoResolverTest.cpp
         SolidSyslogPosixDatagramTest.cpp
         SolidSyslogPosixTcpStreamTest.cpp
@@ -177,6 +178,7 @@ endif()
 
 if(SOLIDSYSLOG_POSIX)
     target_link_libraries(${PROJECT_NAME}Tests PRIVATE PosixFakes)
+    target_include_directories(${PROJECT_NAME}Tests PRIVATE ${CMAKE_SOURCE_DIR}/Platform/Posix/Source)
 endif()
 
 if(SOLIDSYSLOG_OPENSSL)

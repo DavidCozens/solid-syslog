@@ -69,6 +69,10 @@
     "SolidSyslogPosixMutex_Create pool exhausted; returning fallback mutex"
 #define SOLIDSYSLOG_ERROR_MSG_POSIXMUTEX_UNKNOWN_DESTROY \
     "SolidSyslogPosixMutex_Destroy called with a handle not issued by this pool"
+#define SOLIDSYSLOG_ERROR_MSG_POSIXADDRESS_POOL_EXHAUSTED \
+    "SolidSyslogPosixAddress_Create pool exhausted; returning fallback address"
+#define SOLIDSYSLOG_ERROR_MSG_POSIXADDRESS_UNKNOWN_DESTROY \
+    "SolidSyslogPosixAddress_Destroy called with a handle not issued by this pool"
 #define SOLIDSYSLOG_ERROR_MSG_POSIXDATAGRAM_POOL_EXHAUSTED \
     "SolidSyslogPosixDatagram_Create pool exhausted; returning fallback datagram"
 #define SOLIDSYSLOG_ERROR_MSG_POSIXDATAGRAM_UNKNOWN_DESTROY \
