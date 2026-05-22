@@ -828,3 +828,86 @@ The alternatives all regress:
 Project owner — David Cozens. Recorded under
 [S10.10](https://github.com/DavidCozens/solid-syslog/issues/375).
 
+---
+
+## D.012 — Rule 8.9: file-scope `static const` referenced from a file-scope enum + one function
+
+### Rule
+
+> **Rule 8.9 (Advisory)** — An object should be defined at block scope
+> if its identifier only appears in a single function.
+
+### Deviation
+
+`Core/Source/SolidSyslogFileBlockDevice.c:20` declares
+`static const char FILE_EXTENSION[] = ".log"`. The constant is the
+single source of truth for the on-disk filename extension and is
+referenced from two places in the translation unit:
+
+1. The file-scope enum at line 25 — `sizeof(FILE_EXTENSION) - 1U`
+   contributes to `FILENAME_SUFFIX`, which in turn computes
+   `MAX_PREFIX_LENGTH` (an integer constant expression consumed by
+   the formatter at the call site).
+2. `FileBlockDevice_FormatBlockFilename` at line 214 — both the
+   bytes pointer and the runtime length are derived from the same
+   constant.
+
+cppcheck-misra's 8.9 tracker counts only function-scope references.
+The file-scope enum reference at line 25 is invisible to it, so it
+sees a single function reference (line 214) and reports the constant
+as having "block-scope-only" usage — even though moving it into the
+function would break the enum's compile-time `sizeof()` evaluation.
+
+### Scope
+
+`Core/Source/SolidSyslogFileBlockDevice.c:20` — one declaration.
+
+A future per-component sweep may surface this shape on other
+file-scope `static const` objects whose identifier is used by a
+file-scope enum's `sizeof()`/value initialiser **and** exactly one
+function. When that happens, the deviation extends to those files;
+the rule still catches genuinely single-function-scoped objects.
+
+### Rationale
+
+The constant cannot move to block scope without regressing the code.
+Three alternatives were considered and rejected:
+
+- Inlining the literal at the enum site and at the call site would
+  introduce a second copy of `".log"`, violating DRY for what is
+  effectively a single on-disk format invariant.
+- Promoting the constant's dependents from enum entries to file-scope
+  `static const size_t` (verified experimentally during S10.18) does
+  **not** satisfy the rule — the tracker treats file-scope references
+  uniformly, so a new `static const size_t FILENAME_SUFFIX` trips a
+  *second* 8.9 finding for the same reason. The fix path amplifies
+  the problem rather than resolving it.
+- Promoting to `#define FILE_EXTENSION ".log"` would side-step rule
+  8.9 (macros are not objects) at the cost of introducing a string
+  macro where the codebase otherwise uses `static const`. Rejected
+  to keep the file-scope-const idiom consistent across the tree.
+
+Summary:
+
+| Alternative | Why rejected |
+|-------------|--------------|
+| Inline `cppcheck-suppress misra-c2012-8.9` at the declaration | Inline suppressions are weaker by MISRA Compliance:2020 §4.2 (rationale scattered, not centrally auditable). Project preference is structural deviations in this document. |
+| Inline the `".log"` literal at both use sites | DRY violation for a single-source-of-truth on-disk constant. |
+| Promote the dependent enum entries to `static const size_t` | Verified to **not** satisfy 8.9; instead surfaces a second false positive on the new constant. |
+| Promote to `#define FILE_EXTENSION ".log"` | Introduces a string macro inconsistent with the file-scope-const pattern used elsewhere in storage code. |
+
+### Risk and mitigation
+
+- **Genuinely single-function-scoped constants.** A new file-scope
+  `static const` whose identifier really appears in only one
+  function would still be a defect; this deviation is line-specific,
+  so a fresh 8.9 finding elsewhere still surfaces in CI.
+- **Elimination path.** If a future cppcheck-misra version teaches
+  its 8.9 tracker to count file-scope-initialiser references, the
+  suppression becomes unnecessary and can be removed.
+
+### Approval
+
+Project owner — David Cozens. Recorded under
+[S10.18](https://github.com/DavidCozens/solid-syslog/issues/430).
+

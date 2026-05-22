@@ -34,7 +34,8 @@ void BlockSequence_Destroy(struct BlockSequence* blockSequence)
         size_t index = BlockSequence_IndexFromHandle(blockSequence);
         if (SolidSyslogPoolAllocator_IndexIsValid(&BlockSequence_Allocator, index))
         {
-            SolidSyslogPoolAllocator_FreeIfInUse(&BlockSequence_Allocator, index, BlockSequence_CleanupAtIndex, NULL);
+            (void
+            ) SolidSyslogPoolAllocator_FreeIfInUse(&BlockSequence_Allocator, index, BlockSequence_CleanupAtIndex, NULL);
         }
     }
 }

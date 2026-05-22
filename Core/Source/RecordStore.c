@@ -122,9 +122,15 @@ static inline void RecordStore_AssembleRecord(struct RecordStore* recordStore, c
     RecordStore_MagicAddress(recordStore)[0] = MAGIC_BYTE_0;
     RecordStore_MagicAddress(recordStore)[1] = MAGIC_BYTE_1;
 
+    /* Length is packed little-endian into the byte buffer — the on-disk
+     * format is LE regardless of host (every supported target is LE; an
+     * explicit pack keeps that invariant readable and side-steps MISRA
+     * 21.15 which forbids memcpy between incompatible essential types). */
     uint16_t length = (uint16_t) size;
-    memcpy(RecordStore_LengthAddress(recordStore), &length, RECORD_LENGTH_SIZE);
-    memcpy(RecordStore_MessageAddress(recordStore), data, size);
+    uint8_t* lengthBytes = RecordStore_LengthAddress(recordStore);
+    lengthBytes[0] = (uint8_t) (length & 0xFFU);
+    lengthBytes[1] = (uint8_t) ((length >> 8) & 0xFFU);
+    (void) memcpy(RecordStore_MessageAddress(recordStore), data, size);
 
     recordStore->SecurityPolicy->ComputeIntegrity(
         RecordStore_IntegrityRegionAddress(recordStore),
@@ -246,9 +252,9 @@ static inline bool RecordStore_IsMagicValid(struct RecordStore* recordStore)
 
 static inline uint16_t RecordStore_RecordLength(struct RecordStore* recordStore)
 {
-    uint16_t length = 0;
-    memcpy(&length, RecordStore_LengthAddress(recordStore), RECORD_LENGTH_SIZE);
-    return length;
+    /* Little-endian unpack — see AssembleRecord for the format invariant. */
+    const uint8_t* lengthBytes = RecordStore_LengthAddress(recordStore);
+    return (uint16_t) (((uint16_t) lengthBytes[0]) | (((uint16_t) lengthBytes[1]) << 8));
 }
 
 static inline bool RecordStore_IsValidLength(uint16_t length)
@@ -329,7 +335,7 @@ static inline void RecordStore_CopyRecordData(
 )
 {
     size_t copySize = RecordStore_BoundedSize(length, maxSize);
-    memcpy(dst, RecordStore_MessageAddress(recordStore), copySize);
+    (void) memcpy(dst, RecordStore_MessageAddress(recordStore), copySize);
     *bytesRead = copySize;
 }
 
@@ -474,7 +480,7 @@ static inline bool RecordStore_IsRecordSent(
 )
 {
     uint8_t flag = SENT_FLAG_SENT;
-    SolidSyslogBlockDevice_Read(
+    (void) SolidSyslogBlockDevice_Read(
         blockDevice,
         blockIndex,
         RecordStore_SentFlagOffset(recordStore, recordStart, length),
