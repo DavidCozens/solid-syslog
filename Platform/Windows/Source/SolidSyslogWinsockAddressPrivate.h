@@ -16,6 +16,7 @@ void WinsockAddress_Cleanup(struct SolidSyslogAddress* base);
 
 static inline struct sockaddr_in* SolidSyslogWinsockAddress_AsSockaddrIn(struct SolidSyslogAddress* base)
 {
+    // cppcheck-suppress cstyleCast -- opaque-to-impl downcast: pool slot is a real SolidSyslogWinsockAddress
     return &((struct SolidSyslogWinsockAddress*) base)->Sockaddr;
 }
 
@@ -23,6 +24,7 @@ static inline const struct sockaddr_in* SolidSyslogWinsockAddress_AsConstSockadd
     const struct SolidSyslogAddress* base
 )
 {
+    // cppcheck-suppress cstyleCast -- opaque-to-impl downcast: pool slot is a real SolidSyslogWinsockAddress
     return &((const struct SolidSyslogWinsockAddress*) base)->Sockaddr;
 }
 

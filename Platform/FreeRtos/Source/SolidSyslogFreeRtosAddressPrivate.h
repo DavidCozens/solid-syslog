@@ -16,6 +16,7 @@ void FreeRtosAddress_Cleanup(struct SolidSyslogAddress* base);
 
 static inline struct freertos_sockaddr* SolidSyslogFreeRtosAddress_AsFreertosSockaddr(struct SolidSyslogAddress* base)
 {
+    // cppcheck-suppress cstyleCast -- opaque-to-impl downcast: pool slot is a real SolidSyslogFreeRtosAddress
     return &((struct SolidSyslogFreeRtosAddress*) base)->Sockaddr;
 }
 
@@ -23,6 +24,7 @@ static inline const struct freertos_sockaddr* SolidSyslogFreeRtosAddress_AsConst
     const struct SolidSyslogAddress* base
 )
 {
+    // cppcheck-suppress cstyleCast -- opaque-to-impl downcast: pool slot is a real SolidSyslogFreeRtosAddress
     return &((const struct SolidSyslogFreeRtosAddress*) base)->Sockaddr;
 }
 

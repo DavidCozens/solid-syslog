@@ -38,6 +38,7 @@ TEST_GROUP(SolidSyslogPosixAddress)
 
     void setup() override
     {
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
         address = SolidSyslogPosixAddress_Create();
     }
 
