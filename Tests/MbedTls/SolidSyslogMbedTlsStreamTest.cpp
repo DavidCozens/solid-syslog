@@ -7,7 +7,7 @@ extern "C"
 
 #include "MbedTlsFake.h"
 #include "SolidSyslogMbedTlsStream.h"
-#include "SolidSyslogPosixAddress.h"
+#include "AddressFake.h"
 #include "SolidSyslogStream.h"
 #include "SolidSyslogStreamDefinition.h"
 #include "StreamFake.h"
@@ -44,13 +44,12 @@ TEST_GROUP(SolidSyslogMbedTlsStream)
         config.Sleep = NoOpSleep;
         handle = SolidSyslogMbedTlsStream_Create(&config);
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        addr = SolidSyslogPosixAddress_Create();
+        addr = AddressFake_Get();
     }
 
     void teardown() override
     {
         SolidSyslogMbedTlsStream_Destroy(handle);
-        SolidSyslogPosixAddress_Destroy(addr);
         StreamFake_Destroy(transport);
     }
 

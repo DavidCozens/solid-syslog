@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include "OpenSslFake.h"
-#include "SolidSyslogPosixAddress.h"
+#include "AddressFake.h"
 #include "SolidSyslogStream.h"
 #include "SolidSyslogTlsStream.h"
 #include "SolidSyslogTransport.h"
@@ -48,13 +48,12 @@ TEST_GROUP(SolidSyslogTlsStream)
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
         stream = SolidSyslogTlsStream_Create(&config);
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
-        addr = SolidSyslogPosixAddress_Create();
+        addr = AddressFake_Get();
     }
 
     void teardown() override
     {
         SolidSyslogTlsStream_Destroy(stream);
-        SolidSyslogPosixAddress_Destroy(addr);
         StreamFake_Destroy(transport);
     }
 

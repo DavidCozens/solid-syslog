@@ -8,7 +8,7 @@
 #include <string>
 
 #include "BioPairStream.h"
-#include "SolidSyslogPosixAddress.h"
+#include "AddressFake.h"
 #include "SolidSyslogStream.h"
 #include "SolidSyslogTlsStream.h"
 #include "TlsTestCert.h"
@@ -42,12 +42,11 @@ TEST_GROUP(TlsStreamIntegration)
 
     void setup() override
     {
-        addr = SolidSyslogPosixAddress_Create();
+        addr = AddressFake_Get();
     }
 
     void teardown() override
     {
-        if (addr != nullptr)              { SolidSyslogPosixAddress_Destroy(addr); }
         if (tlsStream != nullptr)         { SolidSyslogTlsStream_Destroy(tlsStream); }
         if (transport != nullptr)         { BioPairStream_Destroy(transport); }
         if (server != nullptr)            { TlsTestServer_Destroy(server); }

@@ -1,4 +1,4 @@
-#include "SolidSyslogPosixAddress.h"
+#include "AddressFake.h"
 #include "SolidSyslogStream.h"
 #include "StreamFake.h"
 #include "TestUtils.h"
@@ -27,18 +27,16 @@ TEST(StreamFake, CreateSucceeds)
 
 TEST(StreamFake, OpenIncrementsCount)
 {
-    struct SolidSyslogAddress* addr = SolidSyslogPosixAddress_Create();
+    struct SolidSyslogAddress* addr = AddressFake_Get();
     SolidSyslogStream_Open(stream, addr);
     CALLED_FAKE_ON(StreamFake_Open, stream, ONCE);
-    SolidSyslogPosixAddress_Destroy(addr);
 }
 
 TEST(StreamFake, OpenCapturesAddr)
 {
-    struct SolidSyslogAddress* addr = SolidSyslogPosixAddress_Create();
+    struct SolidSyslogAddress* addr = AddressFake_Get();
     SolidSyslogStream_Open(stream, addr);
     POINTERS_EQUAL(addr, StreamFake_LastOpenAddr(stream));
-    SolidSyslogPosixAddress_Destroy(addr);
 }
 
 TEST(StreamFake, SendIncrementsCount)
@@ -99,15 +97,13 @@ TEST(StreamFake, CloseIncrementsCount)
 
 TEST(StreamFake, OpenDefaultsToSuccess)
 {
-    struct SolidSyslogAddress* addr = SolidSyslogPosixAddress_Create();
+    struct SolidSyslogAddress* addr = AddressFake_Get();
     CHECK_TRUE(SolidSyslogStream_Open(stream, addr));
-    SolidSyslogPosixAddress_Destroy(addr);
 }
 
 TEST(StreamFake, SetOpenFailsMakesOpenReturnFalse)
 {
     StreamFake_SetOpenFails(stream, true);
-    struct SolidSyslogAddress* addr = SolidSyslogPosixAddress_Create();
+    struct SolidSyslogAddress* addr = AddressFake_Get();
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
-    SolidSyslogPosixAddress_Destroy(addr);
 }

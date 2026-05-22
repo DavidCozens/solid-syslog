@@ -14,7 +14,7 @@ extern "C"
 #include "MbedTlsTestServer.h"
 #include "SocketStream.h"
 #include "SolidSyslogMbedTlsStream.h"
-#include "SolidSyslogPosixAddress.h"
+#include "AddressFake.h"
 #include "SolidSyslogStream.h"
 }
 
@@ -45,7 +45,7 @@ TEST_GROUP(SolidSyslogMbedTlsStreamIntegration)
 
     void setup() override
     {
-        addr = SolidSyslogPosixAddress_Create();
+        addr = AddressFake_Get();
         mbedtls_entropy_init(&entropy);
         mbedtls_ctr_drbg_init(&rng);
         const unsigned char pers[] = "mbedtls-integration-test";
@@ -93,7 +93,6 @@ TEST_GROUP(SolidSyslogMbedTlsStreamIntegration)
         MbedTlsTestCert_Destroy(&trustedCa);
         mbedtls_ctr_drbg_free(&rng);
         mbedtls_entropy_free(&entropy);
-        SolidSyslogPosixAddress_Destroy(addr);
     }
 
     struct SolidSyslogStream* StartServerWithCert(const struct MbedTlsTestCert* cert)

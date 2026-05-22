@@ -167,8 +167,7 @@ TEST(SolidSyslogFreeRtosTcpStream, OpenCallsConnectWithSocketAndAddress)
     openStream();
     CALLED_FAKE(FreeRtosSocketsFake_Connect, ONCE);
     POINTERS_EQUAL(FreeRtosSocketsFake_LastSocketReturned(), FreeRtosSocketsFake_LastConnectSocket());
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) -- platform-layout cast, see setup
-    POINTERS_EQUAL(reinterpret_cast<const struct freertos_sockaddr*>(addr), FreeRtosSocketsFake_LastConnectAddress());
+    POINTERS_EQUAL(SolidSyslogFreeRtosAddress_AsConstFreertosSockaddr(addr), FreeRtosSocketsFake_LastConnectAddress());
     LONGS_EQUAL(sizeof(struct freertos_sockaddr), FreeRtosSocketsFake_LastConnectAddressLength());
 }
 

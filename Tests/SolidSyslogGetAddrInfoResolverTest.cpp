@@ -37,7 +37,9 @@ TEST_GROUP(SolidSyslogGetAddrInfoResolver)
     void setup() override
     {
         SocketFake_Reset();
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
         resolver = SolidSyslogGetAddrInfoResolver_Create();
+        // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
         result   = SolidSyslogPosixAddress_Create();
     }
 
