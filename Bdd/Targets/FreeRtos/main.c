@@ -27,7 +27,9 @@
 #include "BddTargetInteractive.h"
 #include "BddTargetIps.h"
 #include "BddTargetLanguage.h"
+#include "BddTargetMtlsConfig.h"
 #include "BddTargetSwitchConfig.h"
+#include "BddTargetTlsConfig.h"
 #include "BddTargetTlsSender.h"
 #include "SolidSyslog.h"
 #include "SolidSyslogAtomicCounter.h"
@@ -147,7 +149,18 @@ static const uint8_t TEST_MAC[ipMAC_ADDRESS_LENGTH_BYTES] = {0x02U, 0x00U, 0x00U
 static char appName[49] = "SolidSyslogBddTarget";
 static char messageId[33] = "example";
 static char msg[SOLIDSYSLOG_MAX_MESSAGE_SIZE] = "Hello from FreeRTOS";
-static char host[16] = "syslog-ng";
+/* Numeric, not the docker-network hostname "syslog-ng" the Linux target
+ * uses. 10.0.2.2 is the slirp gateway IP, which slirp NATs to the host's
+ * loopback — and inside the docker-compose pair the QEMU host (the
+ * behave-freertos container) shares its network namespace with
+ * syslog-ng-freertos, so loopback is where the oracle listens. The
+ * resolver does still wrap FreeRTOS_getaddrinfo for parity with POSIX
+ * and Windows; FreeRTOS_getaddrinfo handles dotted-quads via its inline
+ * inet_addr path with no slirp DNS lookup needed. An earlier S08.08
+ * attempt to flip this to "syslog-ng" (matching the Linux default)
+ * broke every BDD scenario in CI — slirp DNS forwarder doesn't return
+ * a slirp-NAT-reachable address for the docker DNS alias. */
+static char host[16] = "10.0.2.2";
 static uint16_t port = (uint16_t) BDD_TARGET_UDP_PORT;
 static uint32_t endpointVersion = 0U;
 
@@ -911,6 +924,16 @@ static void SemihostingExit(int status)
 static void InteractiveTask(void* argument)
 {
     (void) argument;
+
+    /* Linux defaults its TLS / mTLS host to "syslog-ng" (the docker DNS
+     * alias) and overrides via SOLIDSYSLOG_BDD_{TLS,MTLS}_HOST env vars
+     * when needed. FreeRTOS has no env-var access in QEMU and slirp DNS
+     * doesn't reach the docker DNS alias in CI, so override the host
+     * directly to the slirp gateway 10.0.2.2 — same path the UDP / TCP
+     * scenarios take. ServerName stays "syslog-ng" via _GetServerName so
+     * SNI / cert verification still match the oracle's TLS identity. */
+    BddTargetTlsConfig_SetHost("10.0.2.2");
+    BddTargetMtlsConfig_SetHost("10.0.2.2");
 
     resolver = SolidSyslogFreeRtosResolver_Create();
     datagram = SolidSyslogFreeRtosDatagram_Create();
