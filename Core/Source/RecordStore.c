@@ -126,10 +126,10 @@ static inline void RecordStore_AssembleRecord(struct RecordStore* recordStore, c
      * format is LE regardless of host (every supported target is LE; an
      * explicit pack keeps that invariant readable and side-steps MISRA
      * 21.15 which forbids memcpy between incompatible essential types). */
-    uint16_t length      = (uint16_t) size;
+    uint16_t length = (uint16_t) size;
     uint8_t* lengthBytes = RecordStore_LengthAddress(recordStore);
-    lengthBytes[0]       = (uint8_t) (length & 0xFFU);
-    lengthBytes[1]       = (uint8_t) ((length >> 8) & 0xFFU);
+    lengthBytes[0] = (uint8_t) (length & 0xFFU);
+    lengthBytes[1] = (uint8_t) ((length >> 8) & 0xFFU);
     (void) memcpy(RecordStore_MessageAddress(recordStore), data, size);
 
     recordStore->SecurityPolicy->ComputeIntegrity(

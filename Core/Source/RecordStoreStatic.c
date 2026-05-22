@@ -33,7 +33,8 @@ void RecordStore_Destroy(struct RecordStore* recordStore)
         size_t index = RecordStore_IndexFromHandle(recordStore);
         if (SolidSyslogPoolAllocator_IndexIsValid(&RecordStore_Allocator, index))
         {
-            (void) SolidSyslogPoolAllocator_FreeIfInUse(&RecordStore_Allocator, index, RecordStore_CleanupAtIndex, NULL);
+            (void
+            ) SolidSyslogPoolAllocator_FreeIfInUse(&RecordStore_Allocator, index, RecordStore_CleanupAtIndex, NULL);
         }
     }
 }
