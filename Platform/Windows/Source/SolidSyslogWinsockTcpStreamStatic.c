@@ -34,7 +34,7 @@ struct SolidSyslogStream* SolidSyslogWinsockTcpStream_Create(void)
     }
     else
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &WinsockTcpStreamErrorSource,
             (uint8_t) WINSOCKTCPSTREAM_ERROR_POOL_EXHAUSTED
@@ -51,7 +51,7 @@ void SolidSyslogWinsockTcpStream_Destroy(struct SolidSyslogStream* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&WinsockTcpStream_Allocator, index, WinsockTcpStream_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_WARNING,
             &WinsockTcpStreamErrorSource,
             (uint8_t) WINSOCKTCPSTREAM_ERROR_UNKNOWN_DESTROY

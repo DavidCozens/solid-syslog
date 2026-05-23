@@ -34,7 +34,7 @@ struct SolidSyslogResolver* SolidSyslogWinsockResolver_Create(void)
     }
     else
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &WinsockResolverErrorSource,
             (uint8_t) WINSOCKRESOLVER_ERROR_POOL_EXHAUSTED
@@ -51,7 +51,7 @@ void SolidSyslogWinsockResolver_Destroy(struct SolidSyslogResolver* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&WinsockResolver_Allocator, index, WinsockResolver_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_WARNING,
             &WinsockResolverErrorSource,
             (uint8_t) WINSOCKRESOLVER_ERROR_UNKNOWN_DESTROY

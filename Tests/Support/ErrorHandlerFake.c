@@ -1,4 +1,4 @@
-#include "ErrorHandlerFakeEx.h"
+#include "ErrorHandlerFake.h"
 
 #include <stddef.h>
 
@@ -24,37 +24,37 @@ static void Handle(
     lastContext = context;
 }
 
-void ErrorHandlerFakeEx_Install(void* context)
+void ErrorHandlerFake_Install(void* context)
 {
     handleCallCount = 0;
     lastSeverity = SOLIDSYSLOG_SEVERITY_DEBUG;
     lastSource = NULL;
     lastCode = 0U;
     lastContext = NULL;
-    SolidSyslog_SetErrorHandlerEx(Handle, context);
+    SolidSyslog_SetErrorHandler(Handle, context);
 }
 
-int ErrorHandlerFakeEx_HandleCallCount(void)
+int ErrorHandlerFake_HandleCallCount(void)
 {
     return handleCallCount;
 }
 
-enum SolidSyslogSeverity ErrorHandlerFakeEx_LastSeverity(void)
+enum SolidSyslogSeverity ErrorHandlerFake_LastSeverity(void)
 {
     return lastSeverity;
 }
 
-const struct SolidSyslogErrorSource* ErrorHandlerFakeEx_LastSource(void)
+const struct SolidSyslogErrorSource* ErrorHandlerFake_LastSource(void)
 {
     return lastSource;
 }
 
-uint8_t ErrorHandlerFakeEx_LastCode(void)
+uint8_t ErrorHandlerFake_LastCode(void)
 {
     return lastCode;
 }
 
-const void* ErrorHandlerFakeEx_LastContext(void)
+const void* ErrorHandlerFake_LastContext(void)
 {
     return lastContext;
 }

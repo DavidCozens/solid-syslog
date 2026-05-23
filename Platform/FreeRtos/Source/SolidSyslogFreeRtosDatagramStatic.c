@@ -34,7 +34,7 @@ struct SolidSyslogDatagram* SolidSyslogFreeRtosDatagram_Create(void)
     }
     else
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &FreeRtosDatagramErrorSource,
             (uint8_t) FREERTOSDATAGRAM_ERROR_POOL_EXHAUSTED
@@ -51,7 +51,7 @@ void SolidSyslogFreeRtosDatagram_Destroy(struct SolidSyslogDatagram* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&FreeRtosDatagram_Allocator, index, FreeRtosDatagram_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_WARNING,
             &FreeRtosDatagramErrorSource,
             (uint8_t) FREERTOSDATAGRAM_ERROR_UNKNOWN_DESTROY

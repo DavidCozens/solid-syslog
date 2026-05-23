@@ -41,7 +41,7 @@ struct SolidSyslogAddress* SolidSyslogFreeRtosAddress_Create(void)
     }
     else
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &FreeRtosAddressErrorSource,
             (uint8_t) FREERTOSADDRESS_ERROR_POOL_EXHAUSTED
@@ -64,7 +64,7 @@ void SolidSyslogFreeRtosAddress_Destroy(struct SolidSyslogAddress* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&FreeRtosAddress_Allocator, index, FreeRtosAddress_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_WARNING,
             &FreeRtosAddressErrorSource,
             (uint8_t) FREERTOSADDRESS_ERROR_UNKNOWN_DESTROY

@@ -1,7 +1,7 @@
 #include "CppUTest/TestHarness.h"
 
 #include "ConfigLockFake.h"
-#include "ErrorHandlerFakeEx.h"
+#include "ErrorHandlerFake.h"
 #include "SenderFake.h"
 #include "SolidSyslog.h"
 #include "SolidSyslogConfig.h"
@@ -89,15 +89,15 @@ TEST(SolidSyslogPool, FillingPoolThenOverflowReturnsDistinctFallback)
 
 TEST(SolidSyslogPool, ExhaustedCreateReportsError)
 {
-    ErrorHandlerFakeEx_Install(nullptr);
+    ErrorHandlerFake_Install(nullptr);
     FillPool();
 
     overflow = SolidSyslog_Create(&config);
 
-    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFakeEx_LastSeverity());
-    POINTERS_EQUAL(&SolidSyslogErrorSource, ErrorHandlerFakeEx_LastSource());
-    UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_ERROR_POOL_EXHAUSTED, ErrorHandlerFakeEx_LastCode());
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&SolidSyslogErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogPool, FallbackLogSilentlyDropsTheMessage)
@@ -161,30 +161,30 @@ TEST(SolidSyslogPool, DestroyOfUnknownHandleDoesNotLock)
 
 TEST(SolidSyslogPool, DestroyOfUnknownHandleReportsWarning)
 {
-    ErrorHandlerFakeEx_Install(nullptr);
+    ErrorHandlerFake_Install(nullptr);
     char stackByte = 0;
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) -- forging an "unknown" handle to drive the bad-setup path
     auto* stranger = reinterpret_cast<struct SolidSyslog*>(&stackByte);
 
     SolidSyslog_Destroy(stranger);
 
-    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFakeEx_LastSeverity());
-    POINTERS_EQUAL(&SolidSyslogErrorSource, ErrorHandlerFakeEx_LastSource());
-    UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_ERROR_UNKNOWN_DESTROY, ErrorHandlerFakeEx_LastCode());
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&SolidSyslogErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogPool, DestroyOfStaleHandleReportsWarning)
 {
     pooled[0] = SolidSyslog_Create(&config);
     SolidSyslog_Destroy(pooled[0]);
-    ErrorHandlerFakeEx_Install(nullptr);
+    ErrorHandlerFake_Install(nullptr);
 
     SolidSyslog_Destroy(pooled[0]);
     pooled[0] = nullptr;
 
-    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFakeEx_LastSeverity());
-    POINTERS_EQUAL(&SolidSyslogErrorSource, ErrorHandlerFakeEx_LastSource());
-    UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_ERROR_UNKNOWN_DESTROY, ErrorHandlerFakeEx_LastCode());
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&SolidSyslogErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }

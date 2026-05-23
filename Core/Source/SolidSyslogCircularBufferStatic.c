@@ -40,7 +40,7 @@ struct SolidSyslogBuffer* SolidSyslogCircularBuffer_Create(
     }
     else
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &CircularBufferErrorSource,
             (uint8_t) CIRCULARBUFFER_ERROR_POOL_EXHAUSTED
@@ -57,7 +57,7 @@ void SolidSyslogCircularBuffer_Destroy(struct SolidSyslogBuffer* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&CircularBuffer_Allocator, index, CircularBuffer_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_WARNING,
             &CircularBufferErrorSource,
             (uint8_t) CIRCULARBUFFER_ERROR_UNKNOWN_DESTROY

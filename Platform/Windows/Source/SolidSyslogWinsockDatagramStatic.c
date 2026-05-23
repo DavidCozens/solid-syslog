@@ -34,7 +34,7 @@ struct SolidSyslogDatagram* SolidSyslogWinsockDatagram_Create(void)
     }
     else
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &WinsockDatagramErrorSource,
             (uint8_t) WINSOCKDATAGRAM_ERROR_POOL_EXHAUSTED
@@ -51,7 +51,7 @@ void SolidSyslogWinsockDatagram_Destroy(struct SolidSyslogDatagram* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&WinsockDatagram_Allocator, index, WinsockDatagram_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_WARNING,
             &WinsockDatagramErrorSource,
             (uint8_t) WINSOCKDATAGRAM_ERROR_UNKNOWN_DESTROY

@@ -36,7 +36,7 @@ struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config)
     struct SolidSyslog* result = &SolidSyslog_NullInstance;
     if (config == NULL)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &SolidSyslogErrorSource,
             (uint8_t) SOLIDSYSLOG_ERROR_CREATE_NULL_CONFIG
@@ -52,7 +52,7 @@ struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config)
         }
         else
         {
-            SolidSyslog_ErrorEx(
+            SolidSyslog_Error(
                 SOLIDSYSLOG_SEVERITY_ERROR,
                 &SolidSyslogErrorSource,
                 (uint8_t) SOLIDSYSLOG_ERROR_POOL_EXHAUSTED
@@ -87,7 +87,7 @@ void SolidSyslog_Destroy(struct SolidSyslog* handle)
         SolidSyslogPoolAllocator_FreeIfInUse(&SolidSyslog_Allocator, index, SolidSyslog_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_WARNING,
             &SolidSyslogErrorSource,
             (uint8_t) SOLIDSYSLOG_ERROR_UNKNOWN_DESTROY

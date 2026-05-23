@@ -34,7 +34,7 @@ struct SolidSyslogStream* SolidSyslogPosixTcpStream_Create(void)
     }
     else
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &PosixTcpStreamErrorSource,
             (uint8_t) POSIXTCPSTREAM_ERROR_POOL_EXHAUSTED
@@ -51,7 +51,7 @@ void SolidSyslogPosixTcpStream_Destroy(struct SolidSyslogStream* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&PosixTcpStream_Allocator, index, PosixTcpStream_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_WARNING,
             &PosixTcpStreamErrorSource,
             (uint8_t) POSIXTCPSTREAM_ERROR_UNKNOWN_DESTROY

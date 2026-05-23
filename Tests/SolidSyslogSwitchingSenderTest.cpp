@@ -1,7 +1,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "ErrorHandlerFakeEx.h"
+#include "ErrorHandlerFake.h"
 #include "SenderFake.h"
 #include "SolidSyslogSender.h"
 #include "SolidSyslogSwitchingSender.h"
@@ -371,7 +371,7 @@ TEST_GROUP(SolidSyslogSwitchingSenderBadSetup)
         inners[0] = innerA;
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
         config   = {inners, 1, TestSelector};
-        ErrorHandlerFakeEx_Install(&sentinel);
+        ErrorHandlerFake_Install(&sentinel);
     }
 
     void teardown() override
@@ -385,30 +385,30 @@ TEST_GROUP(SolidSyslogSwitchingSenderBadSetup)
 TEST(SolidSyslogSwitchingSenderBadSetup, CreateWithNullConfigReportsError)
 {
     SolidSyslogSwitchingSender_Create(nullptr);
-    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFakeEx_LastSeverity());
-    POINTERS_EQUAL(&SwitchingSenderErrorSource, ErrorHandlerFakeEx_LastSource());
-    UNSIGNED_LONGS_EQUAL(SWITCHINGSENDER_ERROR_NULL_CONFIG, ErrorHandlerFakeEx_LastCode());
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&SwitchingSenderErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(SWITCHINGSENDER_ERROR_NULL_CONFIG, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogSwitchingSenderBadSetup, CreateWithNullSendersReportsError)
 {
     config.Senders = nullptr;
     SolidSyslogSwitchingSender_Create(&config);
-    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFakeEx_LastSeverity());
-    POINTERS_EQUAL(&SwitchingSenderErrorSource, ErrorHandlerFakeEx_LastSource());
-    UNSIGNED_LONGS_EQUAL(SWITCHINGSENDER_ERROR_NULL_SENDERS, ErrorHandlerFakeEx_LastCode());
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&SwitchingSenderErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(SWITCHINGSENDER_ERROR_NULL_SENDERS, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogSwitchingSenderBadSetup, CreateWithNullSelectorReportsError)
 {
     config.Selector = nullptr;
     SolidSyslogSwitchingSender_Create(&config);
-    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFakeEx_LastSeverity());
-    POINTERS_EQUAL(&SwitchingSenderErrorSource, ErrorHandlerFakeEx_LastSource());
-    UNSIGNED_LONGS_EQUAL(SWITCHINGSENDER_ERROR_NULL_SELECTOR, ErrorHandlerFakeEx_LastCode());
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&SwitchingSenderErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(SWITCHINGSENDER_ERROR_NULL_SELECTOR, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogSwitchingSenderBadSetup, SendOnBadSetupSenderReturnsTrueAndDrops)

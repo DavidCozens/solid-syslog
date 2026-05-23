@@ -34,7 +34,7 @@ struct SolidSyslogAtomicCounter* SolidSyslogWindowsAtomicCounter_Create(void)
     }
     else
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &WindowsAtomicCounterErrorSource,
             (uint8_t) WINDOWSATOMICCOUNTER_ERROR_POOL_EXHAUSTED
@@ -55,7 +55,7 @@ void SolidSyslogWindowsAtomicCounter_Destroy(struct SolidSyslogAtomicCounter* ba
                     );
     if (!released)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_WARNING,
             &WindowsAtomicCounterErrorSource,
             (uint8_t) WINDOWSATOMICCOUNTER_ERROR_UNKNOWN_DESTROY

@@ -38,7 +38,7 @@ struct SolidSyslogAddress* SolidSyslogPosixAddress_Create(void)
     }
     else
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &PosixAddressErrorSource,
             (uint8_t) POSIXADDRESS_ERROR_POOL_EXHAUSTED
@@ -61,7 +61,7 @@ void SolidSyslogPosixAddress_Destroy(struct SolidSyslogAddress* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&PosixAddress_Allocator, index, PosixAddress_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_WARNING,
             &PosixAddressErrorSource,
             (uint8_t) POSIXADDRESS_ERROR_UNKNOWN_DESTROY

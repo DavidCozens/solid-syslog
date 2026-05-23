@@ -7,7 +7,7 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 #include <cstring>
 
 #include "ConfigLockFake.h"
-#include "ErrorHandlerFakeEx.h"
+#include "ErrorHandlerFake.h"
 #include "SolidSyslogFreeRtosAddress.h"
 #include "SolidSyslogFreeRtosAddressErrors.h"
 #include "SolidSyslogFreeRtosAddressPrivate.h"
@@ -131,15 +131,15 @@ TEST(SolidSyslogFreeRtosAddressPool, FillingPoolThenOverflowReturnsDistinctFallb
 
 TEST(SolidSyslogFreeRtosAddressPool, ExhaustedCreateReportsError)
 {
-    ErrorHandlerFakeEx_Install(nullptr);
+    ErrorHandlerFake_Install(nullptr);
     FillPool();
 
     overflow = SolidSyslogFreeRtosAddress_Create();
 
-    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFakeEx_LastSeverity());
-    POINTERS_EQUAL(&FreeRtosAddressErrorSource, ErrorHandlerFakeEx_LastSource());
-    UNSIGNED_LONGS_EQUAL(FREERTOSADDRESS_ERROR_POOL_EXHAUSTED, ErrorHandlerFakeEx_LastCode());
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&FreeRtosAddressErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(FREERTOSADDRESS_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogFreeRtosAddressPool, CreateAcquiresAndReleasesConfigLockOnFirstFreeSlot)
@@ -188,28 +188,28 @@ TEST(SolidSyslogFreeRtosAddressPool, DestroyOfUnknownHandleDoesNotLock)
 
 TEST(SolidSyslogFreeRtosAddressPool, DestroyOfUnknownHandleReportsWarning)
 {
-    ErrorHandlerFakeEx_Install(nullptr);
+    ErrorHandlerFake_Install(nullptr);
     char stranger = 0;
 
     SolidSyslogFreeRtosAddress_Destroy((struct SolidSyslogAddress*) &stranger);
 
-    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFakeEx_LastSeverity());
-    POINTERS_EQUAL(&FreeRtosAddressErrorSource, ErrorHandlerFakeEx_LastSource());
-    UNSIGNED_LONGS_EQUAL(FREERTOSADDRESS_ERROR_UNKNOWN_DESTROY, ErrorHandlerFakeEx_LastCode());
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&FreeRtosAddressErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(FREERTOSADDRESS_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogFreeRtosAddressPool, DestroyOfStaleHandleReportsWarning)
 {
     pooled[0] = SolidSyslogFreeRtosAddress_Create();
     SolidSyslogFreeRtosAddress_Destroy(pooled[0]);
-    ErrorHandlerFakeEx_Install(nullptr);
+    ErrorHandlerFake_Install(nullptr);
 
     SolidSyslogFreeRtosAddress_Destroy(pooled[0]);
     pooled[0] = nullptr;
 
-    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFakeEx_LastSeverity());
-    POINTERS_EQUAL(&FreeRtosAddressErrorSource, ErrorHandlerFakeEx_LastSource());
-    UNSIGNED_LONGS_EQUAL(FREERTOSADDRESS_ERROR_UNKNOWN_DESTROY, ErrorHandlerFakeEx_LastCode());
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&FreeRtosAddressErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(FREERTOSADDRESS_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }

@@ -34,7 +34,7 @@ struct SolidSyslogMutex* SolidSyslogFreeRtosMutex_Create(void)
     }
     else
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &FreeRtosMutexErrorSource,
             (uint8_t) FREERTOSMUTEX_ERROR_POOL_EXHAUSTED
@@ -51,7 +51,7 @@ void SolidSyslogFreeRtosMutex_Destroy(struct SolidSyslogMutex* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&FreeRtosMutex_Allocator, index, FreeRtosMutex_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_WARNING,
             &FreeRtosMutexErrorSource,
             (uint8_t) FREERTOSMUTEX_ERROR_UNKNOWN_DESTROY

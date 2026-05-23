@@ -1069,7 +1069,7 @@ static void InteractiveTask(void* argument)
          * any rebuild. */
         .SdCount = pendingNoSd ? 1U : (sizeof(sdList) / sizeof(sdList[0])),
     };
-    SolidSyslog_SetErrorHandlerEx(ErrorHandlerEx, NULL);
+    SolidSyslog_SetErrorHandler(ErrorHandlerEx, NULL);
     solidSyslog = SolidSyslog_Create(&solidSyslogConfig);
     solidSyslogReady = true;
 

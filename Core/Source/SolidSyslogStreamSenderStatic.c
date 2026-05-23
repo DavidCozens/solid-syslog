@@ -34,7 +34,7 @@ struct SolidSyslogSender* SolidSyslogStreamSender_Create(const struct SolidSyslo
     }
     else
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &StreamSenderErrorSource,
             (uint8_t) STREAMSENDER_ERROR_POOL_EXHAUSTED
@@ -51,7 +51,7 @@ void SolidSyslogStreamSender_Destroy(struct SolidSyslogSender* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&StreamSender_Allocator, index, StreamSender_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_WARNING,
             &StreamSenderErrorSource,
             (uint8_t) STREAMSENDER_ERROR_UNKNOWN_DESTROY

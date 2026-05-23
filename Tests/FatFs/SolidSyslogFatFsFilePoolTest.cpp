@@ -4,7 +4,7 @@
 extern "C"
 {
 #include "ConfigLockFake.h"
-#include "ErrorHandlerFakeEx.h"
+#include "ErrorHandlerFake.h"
 #include "FatFsFake.h"
 #include "SolidSyslogFatFsFile.h"
 #include "SolidSyslogFatFsFileErrors.h"
@@ -83,15 +83,15 @@ TEST(SolidSyslogFatFsFilePool, FillingPoolThenOverflowReturnsDistinctFallback)
 
 TEST(SolidSyslogFatFsFilePool, ExhaustedCreateReportsError)
 {
-    ErrorHandlerFakeEx_Install(nullptr);
+    ErrorHandlerFake_Install(nullptr);
     FillPool();
 
     overflow = SolidSyslogFatFsFile_Create();
 
-    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFakeEx_LastSeverity());
-    POINTERS_EQUAL(&FatFsFileErrorSource, ErrorHandlerFakeEx_LastSource());
-    UNSIGNED_LONGS_EQUAL(FATFSFILE_ERROR_POOL_EXHAUSTED, ErrorHandlerFakeEx_LastCode());
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&FatFsFileErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(FATFSFILE_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogFatFsFilePool, FallbackOpenReturnsFalse)
@@ -148,28 +148,28 @@ TEST(SolidSyslogFatFsFilePool, DestroyOfUnknownHandleDoesNotLock)
 
 TEST(SolidSyslogFatFsFilePool, DestroyOfUnknownHandleReportsWarning)
 {
-    ErrorHandlerFakeEx_Install(nullptr);
+    ErrorHandlerFake_Install(nullptr);
     struct SolidSyslogFile stranger = {};
 
     SolidSyslogFatFsFile_Destroy(&stranger);
 
-    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFakeEx_LastSeverity());
-    POINTERS_EQUAL(&FatFsFileErrorSource, ErrorHandlerFakeEx_LastSource());
-    UNSIGNED_LONGS_EQUAL(FATFSFILE_ERROR_UNKNOWN_DESTROY, ErrorHandlerFakeEx_LastCode());
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&FatFsFileErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(FATFSFILE_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogFatFsFilePool, DestroyOfStaleHandleReportsWarning)
 {
     pooled[0] = SolidSyslogFatFsFile_Create();
     SolidSyslogFatFsFile_Destroy(pooled[0]);
-    ErrorHandlerFakeEx_Install(nullptr);
+    ErrorHandlerFake_Install(nullptr);
 
     SolidSyslogFatFsFile_Destroy(pooled[0]);
     pooled[0] = nullptr;
 
-    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFakeEx_LastSeverity());
-    POINTERS_EQUAL(&FatFsFileErrorSource, ErrorHandlerFakeEx_LastSource());
-    UNSIGNED_LONGS_EQUAL(FATFSFILE_ERROR_UNKNOWN_DESTROY, ErrorHandlerFakeEx_LastCode());
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&FatFsFileErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(FATFSFILE_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }

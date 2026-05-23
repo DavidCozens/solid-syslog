@@ -46,7 +46,7 @@ struct SolidSyslogBuffer* SolidSyslogPosixMessageQueueBuffer_Create(size_t maxMe
     }
     else
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &PosixMessageQueueBufferErrorSource,
             (uint8_t) POSIXMESSAGEQUEUEBUFFER_ERROR_POOL_EXHAUSTED
@@ -67,7 +67,7 @@ void SolidSyslogPosixMessageQueueBuffer_Destroy(struct SolidSyslogBuffer* base)
                     );
     if (!released)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_WARNING,
             &PosixMessageQueueBufferErrorSource,
             (uint8_t) POSIXMESSAGEQUEUEBUFFER_ERROR_UNKNOWN_DESTROY

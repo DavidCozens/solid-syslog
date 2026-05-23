@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-static void Error_NoOpErrorHandlerEx(
+static void Error_NoOpErrorHandler(
     void* context,
     enum SolidSyslogSeverity severity,
     const struct SolidSyslogErrorSource* source,
@@ -15,23 +15,23 @@ static void Error_NoOpErrorHandlerEx(
     (void) code;
 }
 
-static SolidSyslogErrorHandlerEx currentHandlerEx = Error_NoOpErrorHandlerEx;
-static void* currentContextEx = NULL;
+static SolidSyslogErrorHandler currentHandler = Error_NoOpErrorHandler;
+static void* currentContext = NULL;
 
-void SolidSyslog_SetErrorHandlerEx(SolidSyslogErrorHandlerEx handler, void* context)
+void SolidSyslog_SetErrorHandler(SolidSyslogErrorHandler handler, void* context)
 {
     if (handler == NULL)
     {
-        currentHandlerEx = Error_NoOpErrorHandlerEx;
+        currentHandler = Error_NoOpErrorHandler;
     }
     else
     {
-        currentHandlerEx = handler;
+        currentHandler = handler;
     }
-    currentContextEx = context;
+    currentContext = context;
 }
 
-void SolidSyslog_ErrorEx(enum SolidSyslogSeverity severity, const struct SolidSyslogErrorSource* source, uint8_t code)
+void SolidSyslog_Error(enum SolidSyslogSeverity severity, const struct SolidSyslogErrorSource* source, uint8_t code)
 {
-    currentHandlerEx(currentContextEx, severity, source, code);
+    currentHandler(currentContext, severity, source, code);
 }

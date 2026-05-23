@@ -37,7 +37,7 @@ struct SolidSyslogSender* SolidSyslogSwitchingSender_Create(const struct SolidSy
         }
         else
         {
-            SolidSyslog_ErrorEx(
+            SolidSyslog_Error(
                 SOLIDSYSLOG_SEVERITY_ERROR,
                 &SwitchingSenderErrorSource,
                 (uint8_t) SWITCHINGSENDER_ERROR_POOL_EXHAUSTED
@@ -52,7 +52,7 @@ static bool SwitchingSender_IsValidConfig(const struct SolidSyslogSwitchingSende
     bool valid = false;
     if (config == NULL)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &SwitchingSenderErrorSource,
             (uint8_t) SWITCHINGSENDER_ERROR_NULL_CONFIG
@@ -60,7 +60,7 @@ static bool SwitchingSender_IsValidConfig(const struct SolidSyslogSwitchingSende
     }
     else if (config->Senders == NULL)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &SwitchingSenderErrorSource,
             (uint8_t) SWITCHINGSENDER_ERROR_NULL_SENDERS
@@ -68,7 +68,7 @@ static bool SwitchingSender_IsValidConfig(const struct SolidSyslogSwitchingSende
     }
     else if (config->Selector == NULL)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &SwitchingSenderErrorSource,
             (uint8_t) SWITCHINGSENDER_ERROR_NULL_SELECTOR
@@ -89,7 +89,7 @@ void SolidSyslogSwitchingSender_Destroy(struct SolidSyslogSender* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&SwitchingSender_Allocator, index, SwitchingSender_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_WARNING,
             &SwitchingSenderErrorSource,
             (uint8_t) SWITCHINGSENDER_ERROR_UNKNOWN_DESTROY

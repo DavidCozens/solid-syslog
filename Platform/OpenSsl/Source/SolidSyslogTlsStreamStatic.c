@@ -31,11 +31,7 @@ struct SolidSyslogStream* SolidSyslogTlsStream_Create(const struct SolidSyslogTl
     }
     else
     {
-        SolidSyslog_ErrorEx(
-            SOLIDSYSLOG_SEVERITY_ERROR,
-            &TlsStreamErrorSource,
-            (uint8_t) TLSSTREAM_ERROR_POOL_EXHAUSTED
-        );
+        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, &TlsStreamErrorSource, (uint8_t) TLSSTREAM_ERROR_POOL_EXHAUSTED);
     }
     return handle;
 }
@@ -47,7 +43,7 @@ void SolidSyslogTlsStream_Destroy(struct SolidSyslogStream* base)
                     SolidSyslogPoolAllocator_FreeIfInUse(&TlsStream_Allocator, index, TlsStream_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_WARNING,
             &TlsStreamErrorSource,
             (uint8_t) TLSSTREAM_ERROR_UNKNOWN_DESTROY

@@ -2,7 +2,7 @@
 #include <cstring>
 
 #include "CppUTest/TestHarness.h"
-#include "ErrorHandlerFakeEx.h"
+#include "ErrorHandlerFake.h"
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogStructuredData.h"
 #include "SolidSyslogTimeQuality.h"
@@ -225,7 +225,7 @@ TEST_GROUP(SolidSyslogTimeQualitySdBadSetup)
 
     void setup() override
     {
-        ErrorHandlerFakeEx_Install(&sentinel);
+        ErrorHandlerFake_Install(&sentinel);
     }
 
     void teardown() override
@@ -238,8 +238,8 @@ TEST_GROUP(SolidSyslogTimeQualitySdBadSetup)
 TEST(SolidSyslogTimeQualitySdBadSetup, CreateWithNullCallbackReportsError)
 {
     SolidSyslogTimeQualitySd_Create(nullptr);
-    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFakeEx_LastSeverity());
-    POINTERS_EQUAL(&TimeQualitySdErrorSource, ErrorHandlerFakeEx_LastSource());
-    UNSIGNED_LONGS_EQUAL(TIMEQUALITYSD_ERROR_NULL_CALLBACK, ErrorHandlerFakeEx_LastCode());
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&TimeQualitySdErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(TIMEQUALITYSD_ERROR_NULL_CALLBACK, ErrorHandlerFake_LastCode());
 }

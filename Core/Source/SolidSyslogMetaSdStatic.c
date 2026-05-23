@@ -34,7 +34,7 @@ struct SolidSyslogStructuredData* SolidSyslogMetaSd_Create(const struct SolidSys
         }
         else
         {
-            SolidSyslog_ErrorEx(SOLIDSYSLOG_SEVERITY_ERROR, &MetaSdErrorSource, (uint8_t) METASD_ERROR_POOL_EXHAUSTED);
+            SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, &MetaSdErrorSource, (uint8_t) METASD_ERROR_POOL_EXHAUSTED);
         }
     }
     return result;
@@ -45,11 +45,11 @@ static bool MetaSd_IsValidConfig(const struct SolidSyslogMetaSdConfig* config)
     bool valid = false;
     if (config == NULL)
     {
-        SolidSyslog_ErrorEx(SOLIDSYSLOG_SEVERITY_WARNING, &MetaSdErrorSource, (uint8_t) METASD_ERROR_NULL_CONFIG);
+        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, &MetaSdErrorSource, (uint8_t) METASD_ERROR_NULL_CONFIG);
     }
     else if (config->Counter == NULL)
     {
-        SolidSyslog_ErrorEx(SOLIDSYSLOG_SEVERITY_WARNING, &MetaSdErrorSource, (uint8_t) METASD_ERROR_NULL_COUNTER);
+        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, &MetaSdErrorSource, (uint8_t) METASD_ERROR_NULL_COUNTER);
     }
     else
     {
@@ -65,7 +65,7 @@ void SolidSyslogMetaSd_Destroy(struct SolidSyslogStructuredData* base)
                     SolidSyslogPoolAllocator_FreeIfInUse(&MetaSd_Allocator, index, MetaSd_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_ErrorEx(SOLIDSYSLOG_SEVERITY_WARNING, &MetaSdErrorSource, (uint8_t) METASD_ERROR_UNKNOWN_DESTROY);
+        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, &MetaSdErrorSource, (uint8_t) METASD_ERROR_UNKNOWN_DESTROY);
     }
 }
 

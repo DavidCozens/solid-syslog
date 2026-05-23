@@ -38,7 +38,7 @@ struct SolidSyslogAddress* SolidSyslogWinsockAddress_Create(void)
     }
     else
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &WinsockAddressErrorSource,
             (uint8_t) WINSOCKADDRESS_ERROR_POOL_EXHAUSTED
@@ -61,7 +61,7 @@ void SolidSyslogWinsockAddress_Destroy(struct SolidSyslogAddress* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&WinsockAddress_Allocator, index, WinsockAddress_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_WARNING,
             &WinsockAddressErrorSource,
             (uint8_t) WINSOCKADDRESS_ERROR_UNKNOWN_DESTROY

@@ -34,7 +34,7 @@ struct SolidSyslogResolver* SolidSyslogFreeRtosResolver_Create(void)
     }
     else
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &FreeRtosResolverErrorSource,
             (uint8_t) FREERTOSRESOLVER_ERROR_POOL_EXHAUSTED
@@ -51,7 +51,7 @@ void SolidSyslogFreeRtosResolver_Destroy(struct SolidSyslogResolver* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&FreeRtosResolver_Allocator, index, FreeRtosResolver_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_WARNING,
             &FreeRtosResolverErrorSource,
             (uint8_t) FREERTOSRESOLVER_ERROR_UNKNOWN_DESTROY

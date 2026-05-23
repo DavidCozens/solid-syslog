@@ -45,5 +45,5 @@ static void StderrErrorHandlerEx(
 
 void BddTargetStderrErrorHandler_Install(void)
 {
-    SolidSyslog_SetErrorHandlerEx(StderrErrorHandlerEx, NULL);
+    SolidSyslog_SetErrorHandler(StderrErrorHandlerEx, NULL);
 }

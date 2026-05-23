@@ -34,7 +34,7 @@ struct SolidSyslogStream* SolidSyslogFreeRtosTcpStream_Create(void)
     }
     else
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &FreeRtosTcpStreamErrorSource,
             (uint8_t) FREERTOSTCPSTREAM_ERROR_POOL_EXHAUSTED
@@ -55,7 +55,7 @@ void SolidSyslogFreeRtosTcpStream_Destroy(struct SolidSyslogStream* base)
                     );
     if (!released)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_WARNING,
             &FreeRtosTcpStreamErrorSource,
             (uint8_t) FREERTOSTCPSTREAM_ERROR_UNKNOWN_DESTROY

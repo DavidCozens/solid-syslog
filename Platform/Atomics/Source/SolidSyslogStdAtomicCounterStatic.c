@@ -34,7 +34,7 @@ struct SolidSyslogAtomicCounter* SolidSyslogStdAtomicCounter_Create(void)
     }
     else
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &StdAtomicCounterErrorSource,
             (uint8_t) STDATOMICCOUNTER_ERROR_POOL_EXHAUSTED
@@ -51,7 +51,7 @@ void SolidSyslogStdAtomicCounter_Destroy(struct SolidSyslogAtomicCounter* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&StdAtomicCounter_Allocator, index, StdAtomicCounter_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_WARNING,
             &StdAtomicCounterErrorSource,
             (uint8_t) STDATOMICCOUNTER_ERROR_UNKNOWN_DESTROY

@@ -34,7 +34,7 @@ struct SolidSyslogDatagram* SolidSyslogPosixDatagram_Create(void)
     }
     else
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &PosixDatagramErrorSource,
             (uint8_t) POSIXDATAGRAM_ERROR_POOL_EXHAUSTED
@@ -51,7 +51,7 @@ void SolidSyslogPosixDatagram_Destroy(struct SolidSyslogDatagram* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&PosixDatagram_Allocator, index, PosixDatagram_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_WARNING,
             &PosixDatagramErrorSource,
             (uint8_t) POSIXDATAGRAM_ERROR_UNKNOWN_DESTROY

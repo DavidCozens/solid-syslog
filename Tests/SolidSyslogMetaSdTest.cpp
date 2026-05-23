@@ -1,7 +1,7 @@
 #include <cstdint>
 #include <cstring>
 
-#include "ErrorHandlerFakeEx.h"
+#include "ErrorHandlerFake.h"
 #include "SolidSyslogAtomicCounterTestHelper.h"
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogMetaSd.h"
@@ -74,12 +74,12 @@ TEST_GROUP(SolidSyslogMetaSd)
     SolidSyslogFormatterStorage storage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(TEST_BUFFER_SIZE)];
     // cppcheck-suppress variableScope -- member of TEST_GROUP; scope managed by CppUTest macro
     SolidSyslogFormatter* formatter;
-    // cppcheck-suppress unreadVariable -- read via context-propagation through ErrorHandlerFakeEx_Install
+    // cppcheck-suppress unreadVariable -- read via context-propagation through ErrorHandlerFake_Install
     int sentinel = 0;
 
     void setup() override
     {
-        ErrorHandlerFakeEx_Install(&sentinel);
+        ErrorHandlerFake_Install(&sentinel);
         formatter = SolidSyslogFormatter_Create(storage, TEST_BUFFER_SIZE);
         counter = TestAtomicCounter_Create();
         fakeSysUpTimeValue = 0;
@@ -281,10 +281,10 @@ TEST(SolidSyslogMetaSd, CreateWithNullConfigReportsWarning)
 {
     recreateWith(nullptr);
 
-    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFakeEx_LastSeverity());
-    POINTERS_EQUAL(&MetaSdErrorSource, ErrorHandlerFakeEx_LastSource());
-    UNSIGNED_LONGS_EQUAL(METASD_ERROR_NULL_CONFIG, ErrorHandlerFakeEx_LastCode());
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&MetaSdErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(METASD_ERROR_NULL_CONFIG, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogMetaSd, CreateWithNullCounterReportsWarning)
@@ -292,10 +292,10 @@ TEST(SolidSyslogMetaSd, CreateWithNullCounterReportsWarning)
     config.Counter = nullptr;
     recreate();
 
-    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFakeEx_LastSeverity());
-    POINTERS_EQUAL(&MetaSdErrorSource, ErrorHandlerFakeEx_LastSource());
-    UNSIGNED_LONGS_EQUAL(METASD_ERROR_NULL_COUNTER, ErrorHandlerFakeEx_LastCode());
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&MetaSdErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(METASD_ERROR_NULL_COUNTER, ErrorHandlerFake_LastCode());
 }
 
 // Pool tests — prove SOLIDSYSLOG_META_SD_POOL_SIZE caps live instances

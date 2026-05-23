@@ -34,7 +34,7 @@ struct SolidSyslogStream* SolidSyslogMbedTlsStream_Create(const struct SolidSysl
     }
     else
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &MbedTlsStreamErrorSource,
             (uint8_t) MBEDTLSSTREAM_ERROR_POOL_EXHAUSTED
@@ -51,7 +51,7 @@ void SolidSyslogMbedTlsStream_Destroy(struct SolidSyslogStream* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&MbedTlsStream_Allocator, index, MbedTlsStream_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_WARNING,
             &MbedTlsStreamErrorSource,
             (uint8_t) MBEDTLSSTREAM_ERROR_UNKNOWN_DESTROY

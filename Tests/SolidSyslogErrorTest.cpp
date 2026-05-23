@@ -1,6 +1,6 @@
 #include "CppUTest/TestHarness.h"
 
-#include "ErrorHandlerFakeEx.h"
+#include "ErrorHandlerFake.h"
 #include "SolidSyslogError.h"
 #include "SolidSyslogPrival.h"
 #include "TestUtils.h"
@@ -20,30 +20,30 @@ TEST_GROUP(SolidSyslogErrorEx)
 TEST(SolidSyslogErrorEx, ErrorExWithDefaultHandlerDoesNotCrash)
 {
     static const struct SolidSyslogErrorSource source = {"test", nullptr};
-    SolidSyslog_ErrorEx(SOLIDSYSLOG_SEVERITY_ERROR, &source, 0U);
+    SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, &source, 0U);
 }
 
 TEST(SolidSyslogErrorEx, InstalledHandlerReceivesSeveritySourceCodeAndContext)
 {
     static const struct SolidSyslogErrorSource source = {"test", nullptr};
-    ErrorHandlerFakeEx_Install(&sentinel);
+    ErrorHandlerFake_Install(&sentinel);
 
-    SolidSyslog_ErrorEx(SOLIDSYSLOG_SEVERITY_WARNING, &source, 7U);
+    SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, &source, 7U);
 
-    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFakeEx_LastSeverity());
-    POINTERS_EQUAL(&source, ErrorHandlerFakeEx_LastSource());
-    UNSIGNED_LONGS_EQUAL(7U, ErrorHandlerFakeEx_LastCode());
-    POINTERS_EQUAL(&sentinel, ErrorHandlerFakeEx_LastContext());
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&source, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(7U, ErrorHandlerFake_LastCode());
+    POINTERS_EQUAL(&sentinel, ErrorHandlerFake_LastContext());
 }
 
 TEST(SolidSyslogErrorEx, SetErrorHandlerExWithNullHandlerRestoresDefault)
 {
     static const struct SolidSyslogErrorSource source = {"test", nullptr};
-    ErrorHandlerFakeEx_Install(&sentinel);
+    ErrorHandlerFake_Install(&sentinel);
 
-    SolidSyslog_SetErrorHandlerEx(nullptr, &sentinel);
-    SolidSyslog_ErrorEx(SOLIDSYSLOG_SEVERITY_ERROR, &source, 0U);
+    SolidSyslog_SetErrorHandler(nullptr, &sentinel);
+    SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, &source, 0U);
 
-    CALLED_FAKE(ErrorHandlerFakeEx_Handle, NEVER);
+    CALLED_FAKE(ErrorHandlerFake_Handle, NEVER);
 }

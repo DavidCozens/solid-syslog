@@ -63,7 +63,7 @@ struct SolidSyslogStore* SolidSyslogBlockStore_Create(const struct SolidSyslogBl
 
     if (result == SolidSyslogNullStore_Get())
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &BlockStoreErrorSource,
             (uint8_t) BLOCKSTORE_ERROR_POOL_EXHAUSTED
@@ -134,7 +134,7 @@ void SolidSyslogBlockStore_Destroy(struct SolidSyslogStore* base)
 
     if (!released)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_WARNING,
             &BlockStoreErrorSource,
             (uint8_t) BLOCKSTORE_ERROR_UNKNOWN_DESTROY

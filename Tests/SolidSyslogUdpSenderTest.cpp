@@ -5,7 +5,7 @@
 #include <cstdint>
 
 #include "DatagramFake.h"
-#include "ErrorHandlerFakeEx.h"
+#include "ErrorHandlerFake.h"
 #include "SolidSyslogEndpoint.h"
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogGetAddrInfoResolver.h"
@@ -420,15 +420,15 @@ TEST(SolidSyslogUdpSenderDestroy, SimpleScenario)
 
 TEST(SolidSyslogUdpSenderDestroy, DestroyOfUnknownHandleReportsWarning)
 {
-    ErrorHandlerFakeEx_Install(nullptr);
+    ErrorHandlerFake_Install(nullptr);
     struct SolidSyslogSender stranger = {};
 
     SolidSyslogUdpSender_Destroy(&stranger);
 
-    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFakeEx_LastSeverity());
-    POINTERS_EQUAL(&UdpSenderErrorSource, ErrorHandlerFakeEx_LastSource());
-    UNSIGNED_LONGS_EQUAL(UDPSENDER_ERROR_UNKNOWN_DESTROY, ErrorHandlerFakeEx_LastCode());
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&UdpSenderErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(UDPSENDER_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }
 
 // clang-format off
@@ -746,7 +746,7 @@ TEST_GROUP_BASE(SolidSyslogUdpSenderBadSetup, UdpSenderTestBase)
     void setup() override
     {
         setupFakesWithPosixDatagram();
-        ErrorHandlerFakeEx_Install(&sentinel);
+        ErrorHandlerFake_Install(&sentinel);
     }
 
     void teardown() override
@@ -761,10 +761,10 @@ TEST_GROUP_BASE(SolidSyslogUdpSenderBadSetup, UdpSenderTestBase)
 TEST(SolidSyslogUdpSenderBadSetup, CreateWithNullConfigReportsError)
 {
     SolidSyslogUdpSender_Create(nullptr);
-    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFakeEx_LastSeverity());
-    POINTERS_EQUAL(&UdpSenderErrorSource, ErrorHandlerFakeEx_LastSource());
-    UNSIGNED_LONGS_EQUAL(UDPSENDER_ERROR_NULL_CONFIG, ErrorHandlerFakeEx_LastCode());
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&UdpSenderErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(UDPSENDER_ERROR_NULL_CONFIG, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogUdpSenderBadSetup, SendOnBadSetupSenderReturnsTrue)
@@ -783,47 +783,47 @@ TEST(SolidSyslogUdpSenderBadSetup, CreateWithNullResolverReportsError)
 {
     config.Resolver = nullptr;
     SolidSyslogUdpSender_Create(&config);
-    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFakeEx_LastSeverity());
-    POINTERS_EQUAL(&UdpSenderErrorSource, ErrorHandlerFakeEx_LastSource());
-    UNSIGNED_LONGS_EQUAL(UDPSENDER_ERROR_NULL_RESOLVER, ErrorHandlerFakeEx_LastCode());
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&UdpSenderErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(UDPSENDER_ERROR_NULL_RESOLVER, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogUdpSenderBadSetup, CreateWithNullDatagramReportsError)
 {
     config.Datagram = nullptr;
     SolidSyslogUdpSender_Create(&config);
-    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFakeEx_LastSeverity());
-    POINTERS_EQUAL(&UdpSenderErrorSource, ErrorHandlerFakeEx_LastSource());
-    UNSIGNED_LONGS_EQUAL(UDPSENDER_ERROR_NULL_DATAGRAM, ErrorHandlerFakeEx_LastCode());
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&UdpSenderErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(UDPSENDER_ERROR_NULL_DATAGRAM, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogUdpSenderBadSetup, CreateWithNullEndpointReportsError)
 {
     config.Endpoint = nullptr;
     SolidSyslogUdpSender_Create(&config);
-    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFakeEx_LastSeverity());
-    POINTERS_EQUAL(&UdpSenderErrorSource, ErrorHandlerFakeEx_LastSource());
-    UNSIGNED_LONGS_EQUAL(UDPSENDER_ERROR_NULL_ENDPOINT, ErrorHandlerFakeEx_LastCode());
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&UdpSenderErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(UDPSENDER_ERROR_NULL_ENDPOINT, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogUdpSenderBadSetup, CreateWithNullAddressReportsError)
 {
     config.Address = nullptr;
     SolidSyslogUdpSender_Create(&config);
-    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFakeEx_LastSeverity());
-    POINTERS_EQUAL(&UdpSenderErrorSource, ErrorHandlerFakeEx_LastSource());
-    UNSIGNED_LONGS_EQUAL(UDPSENDER_ERROR_NULL_ADDRESS, ErrorHandlerFakeEx_LastCode());
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&UdpSenderErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(UDPSENDER_ERROR_NULL_ADDRESS, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogUdpSenderBadSetup, NullEndpointVersionIsOptional)
 {
     config.EndpointVersion = nullptr;
     sender = SolidSyslogUdpSender_Create(&config);
-    CALLED_FAKE(ErrorHandlerFakeEx_Handle, NEVER);
+    CALLED_FAKE(ErrorHandlerFake_Handle, NEVER);
     CHECK_TRUE(Send());
 }
 
@@ -831,10 +831,10 @@ TEST(SolidSyslogUdpSenderBadSetup, SendWithNullBufferReportsErrorAndDoesNotSend)
 {
     sender = SolidSyslogUdpSender_Create(&config);
     CHECK_FALSE(Send(nullptr, 5));
-    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFakeEx_LastSeverity());
-    POINTERS_EQUAL(&UdpSenderErrorSource, ErrorHandlerFakeEx_LastSource());
-    UNSIGNED_LONGS_EQUAL(UDPSENDER_ERROR_SEND_NULL_BUFFER, ErrorHandlerFakeEx_LastCode());
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&UdpSenderErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(UDPSENDER_ERROR_SEND_NULL_BUFFER, ErrorHandlerFake_LastCode());
     CALLED_FAKE(SocketFake_Sendto, NEVER);
 }
 
@@ -902,15 +902,15 @@ TEST(SolidSyslogUdpSenderPool, FillingPoolThenOverflowReturnsDistinctFallback)
 
 TEST(SolidSyslogUdpSenderPool, ExhaustedCreateReportsError)
 {
-    ErrorHandlerFakeEx_Install(nullptr);
+    ErrorHandlerFake_Install(nullptr);
     FillPool();
 
     overflow = MakeSender();
 
-    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFakeEx_LastSeverity());
-    POINTERS_EQUAL(&UdpSenderErrorSource, ErrorHandlerFakeEx_LastSource());
-    UNSIGNED_LONGS_EQUAL(UDPSENDER_ERROR_POOL_EXHAUSTED, ErrorHandlerFakeEx_LastCode());
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&UdpSenderErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(UDPSENDER_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastCode());
 }
 
 TEST_GROUP(SolidSyslogUdpSenderErrorSource){};

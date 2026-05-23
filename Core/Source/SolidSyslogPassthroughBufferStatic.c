@@ -35,7 +35,7 @@ struct SolidSyslogBuffer* SolidSyslogPassthroughBuffer_Create(struct SolidSyslog
     }
     else
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &PassthroughBufferErrorSource,
             (uint8_t) PASSTHROUGHBUFFER_ERROR_POOL_EXHAUSTED
@@ -56,7 +56,7 @@ void SolidSyslogPassthroughBuffer_Destroy(struct SolidSyslogBuffer* base)
                     );
     if (!released)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_WARNING,
             &PassthroughBufferErrorSource,
             (uint8_t) PASSTHROUGHBUFFER_ERROR_UNKNOWN_DESTROY

@@ -126,7 +126,7 @@ static void SolidSyslog_InstallBuffer(struct SolidSyslog* self, struct SolidSysl
 {
     if (configured == NULL)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &SolidSyslogErrorSource,
             (uint8_t) SOLIDSYSLOG_ERROR_CREATE_NULL_BUFFER
@@ -142,7 +142,7 @@ static void SolidSyslog_InstallSender(struct SolidSyslog* self, struct SolidSysl
 {
     if (configured == NULL)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &SolidSyslogErrorSource,
             (uint8_t) SOLIDSYSLOG_ERROR_CREATE_NULL_SENDER
@@ -158,7 +158,7 @@ static void SolidSyslog_InstallStore(struct SolidSyslog* self, struct SolidSyslo
 {
     if (configured == NULL)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &SolidSyslogErrorSource,
             (uint8_t) SOLIDSYSLOG_ERROR_CREATE_NULL_STORE
@@ -216,7 +216,7 @@ void SolidSyslog_Service(struct SolidSyslog* handle)
 {
     if (handle == NULL)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &SolidSyslogErrorSource,
             (uint8_t) SOLIDSYSLOG_ERROR_SERVICE_NULL_HANDLE
@@ -282,7 +282,7 @@ void SolidSyslog_Log(struct SolidSyslog* handle, const struct SolidSyslogMessage
 {
     if (handle == NULL)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &SolidSyslogErrorSource,
             (uint8_t) SOLIDSYSLOG_ERROR_LOG_NULL_HANDLE
@@ -290,7 +290,7 @@ void SolidSyslog_Log(struct SolidSyslog* handle, const struct SolidSyslogMessage
     }
     else if (message == NULL)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &SolidSyslogErrorSource,
             (uint8_t) SOLIDSYSLOG_ERROR_LOG_NULL_MESSAGE

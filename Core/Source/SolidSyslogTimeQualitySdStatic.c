@@ -29,7 +29,7 @@ struct SolidSyslogStructuredData* SolidSyslogTimeQualitySd_Create(SolidSyslogTim
     struct SolidSyslogStructuredData* handle = SolidSyslogNullSd_Get();
     if (getTimeQuality == NULL)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &TimeQualitySdErrorSource,
             (uint8_t) TIMEQUALITYSD_ERROR_NULL_CALLBACK
@@ -45,7 +45,7 @@ struct SolidSyslogStructuredData* SolidSyslogTimeQualitySd_Create(SolidSyslogTim
         }
         else
         {
-            SolidSyslog_ErrorEx(
+            SolidSyslog_Error(
                 SOLIDSYSLOG_SEVERITY_ERROR,
                 &TimeQualitySdErrorSource,
                 (uint8_t) TIMEQUALITYSD_ERROR_POOL_EXHAUSTED
@@ -63,7 +63,7 @@ void SolidSyslogTimeQualitySd_Destroy(struct SolidSyslogStructuredData* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&TimeQualitySd_Allocator, index, TimeQualitySd_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_ErrorEx(
+        SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_WARNING,
             &TimeQualitySdErrorSource,
             (uint8_t) TIMEQUALITYSD_ERROR_UNKNOWN_DESTROY
