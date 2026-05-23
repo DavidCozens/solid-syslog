@@ -1,5 +1,136 @@
 # Dev Log
 
+## 2026-05-23 — S12.22 Per-source error dispatch
+
+Closes S12.22 (#433). Restructures `SolidSyslog_Error` from a single
+string-literal-carrying dispatch into a per-source-namespaced API
+where each module owns its own enum of error codes and exposes a
+source descriptor (`Name` + `AsString`) that integrators can
+pointer-identity-match in their handler. Started as the cheap fix
+for 46 D.011 entries (string-literal `#define`s flagged as unused
+by cppcheck-misra because their consumers live outside scope); grew
+into a structural change once we accepted that integrator-written
+components must be able to participate in the dispatch without
+forking a central enum.
+
+### Design journey before any code
+
+Three threads of discussion settled the shape before phase 1:
+
+- **Same dispatch for diagnostic hooks?** Yes — the mTLS-troubleshooting
+  use case (frequency counters, last-occurrence timestamps, escalation,
+  logging-via-solidsyslog) is just "what the integrator does with the
+  events", not a different library API. Frequency/aggregation stays
+  integrator-side; library remains stateless on this surface.
+- **Per-source vs. per-platform vs. single library-wide enum?**
+  Per-source. Each module owns its enum, its source descriptor, its
+  messages. Integrator components declare their own descriptor and
+  slot in with zero coordination.
+- **MISRA-clean naming?** Bookended enum (`<MODULE>_ERROR_MAX`) used
+  inside `<Module>Error_AsString` via a typed local cast — satisfies
+  2.4 (tag used), 10.3 (explicit `(uint8_t)` cast at call sites),
+  and 8.9 (function-scope messages table). cppcheck-misra empirically
+  doesn't track 10.5 advisory across this boundary; no deviation
+  needed.
+
+### Five-phase rollout
+
+- **Phase 1 (commit f896778):** add `_ErrorEx` parallel API alongside
+  the old. Three TDD-driven tests covering zero-state, happy-path,
+  NULL-restore. No production code migrated; old API untouched.
+- **Phase 2 (commits 38d7608, e99153d):** pilot UdpSender end-to-end.
+  All 8 sites in UdpSender's two production TUs migrated under TDD;
+  two previously untested sites (POOL_EXHAUSTED + UNKNOWN_DESTROY)
+  gained TDD coverage. `struct SolidSyslogErrorSource` grew an
+  `AsString` member — demanded by the empirical MISRA check
+  (without the typed local, the tagged enum tripped 2.4). Header
+  restructure: per-module Errors.h moved from Private to public
+  Interface so integrators can include it.
+- **Phase 3 (commits f8cba11, f7859aa, f65c3ec, 299bf49):** 33
+  modules migrated in four batches by stack layer. Subagents handled
+  the mechanical replication once the pattern was concrete; spot
+  checks plus a full cppcheck-misra sweep verified pattern fidelity.
+- **Phase 4 (commit 52eb7c8):** delete old API — `SolidSyslog_Error`
+  (string variant), `SolidSyslog_SetErrorHandler` (old typedef),
+  `ErrorHandlerFake.{c,h}` (old test fake), `SolidSyslogErrorMessages.h`
+  (already retired in b841983 alongside its 38 D.011 entries).
+- **Phase 5 (commit 786c074):** mechanical sed rename
+  `_ErrorEx` → `_Error` everywhere. Final public surface now lives
+  at the natural names.
+
+### Important scope miss caught mid-flight (commit d72730e)
+
+BDD targets install `SolidSyslog_SetErrorHandler` so test runs print
+errors to stderr (Linux/Windows) or QEMU console (FreeRTOS). After
+phase 3 migrated every production emit to `_ErrorEx`, the old-shape
+BDD handlers received nothing — silent regression in BDD visibility.
+Caught by David. Fix: install BOTH handlers during the migration
+window. Old install retired in phase 4 once all modules were on the
+new API.
+
+### Decisions
+
+- **Source descriptor lives in its own TU.** Initial draft put
+  `<Module>ErrorSource` + `AsString` + messages table inside the
+  module's existing `Static.c`. David pushed back: `Static.c` is for
+  pool/static-allocation responsibilities, not error-message
+  translation. Moved to a new `Messages.c` TU per module. Cleanly
+  separated — a future footprint-stripping story can replace one TU
+  rather than touching pool plumbing.
+- **Enum + extern goes in a public Errors.h header.** Initial draft
+  put them in the existing `*Private.h` (tests could include it
+  fine). David called the placement bug: integrator code can't
+  include Private headers, so the integrator-facing API was
+  unreachable. New `Core/Interface/SolidSyslog<Module>Errors.h`
+  (or `Platform/<dir>/Interface/` for platform sources) per module,
+  carrying the enum and an `extern const struct SolidSyslogErrorSource
+  <Module>ErrorSource;`. Two audiences, two headers.
+- **Errors.h uses forward decl, not full include.** IWYU surfaced
+  this at the end — the header only needs `struct SolidSyslogErrorSource;`
+  for an `extern` declaration. Integrators who call `source->AsString(code)`
+  include `SolidSyslogError.h` directly (they already do for the
+  handler typedef). Matches existing `SolidSyslogConfig.h` /
+  `SolidSyslogNullSender.h` convention.
+
+### Deferred
+
+- Structured-context payload on the handler signature for richer
+  mTLS-style diagnostics (`(severity, source, code, void* details)`).
+  Forward-compatible with the current shape; will land as either an
+  additive break or parallel `_ErrorWithDetails` call when there's
+  a concrete need.
+- Category accessor on the source descriptor
+  (`SolidSyslogErrorCategory (*Category)(uint8_t)`) for integrators
+  who want per-source-aggregated categorisation. Lightweight version
+  (integrator hand-rolls per `(source, code)`) works today; library
+  helper deferred until the category vocabulary needs design work
+  in its own story.
+- BDD targets' old-shape handlers were carried through phases 3
+  and 3.5 even though Linux runs only touch migrated modules; the
+  parallel install was cheap insurance against Windows/FreeRtos
+  paths still on the old API. Removed cleanly in phase 4.
+
+### Open questions
+
+- None. CI will surface anything the cross-compile-only modules
+  (Windows / FreeRtos / FatFs / MbedTls — 14 TUs) need that wasn't
+  caught by the gcc/clang debug presets.
+
+### Local verification before push
+
+- 1296 unit tests passing under the `debug` preset (was 1299 pre-S12.22;
+  net −3 from the deleted old-API tests, balanced by +2 new pool-error
+  TDD tests for UdpSender's previously-untested POOL_EXHAUSTED and
+  UNKNOWN_DESTROY paths).
+- 2877 checks (up from the pre-S12.22 baseline by the per-test
+  `POINTERS_EQUAL(&Source)` + `UNSIGNED_LONGS_EQUAL(code)` additions
+  across every translated assertion).
+- cppcheck-misra: zero new findings introduced by S12.22 across the
+  full tree. 38 D.011 entries retired with `SolidSyslogErrorMessages.h`.
+- IWYU clean: forward-decl-in-Errors.h pattern + explicit `<stdint.h>`
+  added to all call-site TUs.
+- Format clean across `Core/`, `Platform/`, `Bdd/`, `Tests/`.
+
 ## 2026-05-22 — S10.18 Storage stack conformance
 
 Closes S10.18 (#430). Seventh per-group conformance story in E10. Storage
