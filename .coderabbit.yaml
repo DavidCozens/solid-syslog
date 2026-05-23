@@ -1,13 +1,23 @@
 reviews:
   path_filters:
-    # Boilerplate 2-code message tables for cross-compile-only modules.
-    # The pattern is fully covered by other *Messages.c files CodeRabbit
-    # still reviews (e.g. PosixMutexMessages.c, CircularBufferMessages.c).
-    # Excluded only to bring file count under CodeRabbit's per-PR limit;
-    # remove these entries if the limit ever increases.
+    # Boilerplate 2-code per-source error files for cross-compile-only modules.
+    # The pattern (enum + extern + 2-entry messages table) is fully covered
+    # by sibling files CodeRabbit still reviews (PosixMutexMessages.c,
+    # CircularBufferMessages.c, UdpSenderErrors.h, etc.). Excluded only to
+    # bring file count under CodeRabbit's per-PR limit; remove these entries
+    # if the limit ever increases.
+    - "!Platform/FreeRtos/Interface/SolidSyslogFreeRtosAddressErrors.h"
+    - "!Platform/FreeRtos/Interface/SolidSyslogFreeRtosDatagramErrors.h"
+    - "!Platform/FreeRtos/Interface/SolidSyslogFreeRtosMutexErrors.h"
+    - "!Platform/FreeRtos/Interface/SolidSyslogFreeRtosResolverErrors.h"
+    - "!Platform/FreeRtos/Interface/SolidSyslogFreeRtosTcpStreamErrors.h"
     - "!Platform/FreeRtos/Source/SolidSyslogFreeRtosAddressMessages.c"
     - "!Platform/FreeRtos/Source/SolidSyslogFreeRtosDatagramMessages.c"
     - "!Platform/FreeRtos/Source/SolidSyslogFreeRtosMutexMessages.c"
     - "!Platform/FreeRtos/Source/SolidSyslogFreeRtosResolverMessages.c"
     - "!Platform/FreeRtos/Source/SolidSyslogFreeRtosTcpStreamMessages.c"
+    - "!Platform/FatFs/Interface/SolidSyslogFatFsFileErrors.h"
     - "!Platform/FatFs/Source/SolidSyslogFatFsFileMessages.c"
+    # Self-exclude this config file (purely a CodeRabbit budget knob —
+    # nothing here for it to review).
+    - "!.coderabbit.yaml"
