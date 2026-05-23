@@ -16,7 +16,8 @@
 #include "SolidSyslogTunables.h"
 #include "BufferFake.h"
 #include "ErrorHandlerFake.h"
-#include "SolidSyslogErrorMessages.h"
+#include "ErrorHandlerFakeEx.h"
+#include "SolidSyslogErrors.h"
 #include "StoreFake.h"
 #include "SenderFake.h"
 #include "StringFake.h"
@@ -1684,73 +1685,94 @@ TEST_GROUP(SolidSyslogLifecycle)
 
 TEST(SolidSyslogLifecycle, ServiceWithNullHandleReportsError)
 {
-    ErrorHandlerFake_Install(nullptr);
+    ErrorHandlerFakeEx_Install(nullptr);
 
     SolidSyslog_Service(nullptr);
 
-    CHECK_REPORTED_ERROR(SOLIDSYSLOG_ERROR_MSG_SERVICE_NULL_HANDLE);
+    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFakeEx_LastSeverity());
+    POINTERS_EQUAL(&SolidSyslogErrorSource, ErrorHandlerFakeEx_LastSource());
+    UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_ERROR_SERVICE_NULL_HANDLE, ErrorHandlerFakeEx_LastCode());
 }
 
 TEST(SolidSyslogLifecycle, LogWithNullHandleReportsError)
 {
-    ErrorHandlerFake_Install(nullptr);
+    ErrorHandlerFakeEx_Install(nullptr);
 
     SolidSyslog_Log(nullptr, &message);
 
-    CHECK_REPORTED_ERROR(SOLIDSYSLOG_ERROR_MSG_LOG_NULL_HANDLE);
+    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFakeEx_LastSeverity());
+    POINTERS_EQUAL(&SolidSyslogErrorSource, ErrorHandlerFakeEx_LastSource());
+    UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_ERROR_LOG_NULL_HANDLE, ErrorHandlerFakeEx_LastCode());
 }
 
 TEST(SolidSyslogLifecycle, LogWithNullMessageReportsError)
 {
     SolidSyslogConfig config = validConfig();
     solidSyslog = SolidSyslog_Create(&config);
-    ErrorHandlerFake_Install(nullptr);
+    ErrorHandlerFakeEx_Install(nullptr);
 
     SolidSyslog_Log(solidSyslog, nullptr);
 
-    CHECK_REPORTED_ERROR(SOLIDSYSLOG_ERROR_MSG_LOG_NULL_MESSAGE);
+    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFakeEx_LastSeverity());
+    POINTERS_EQUAL(&SolidSyslogErrorSource, ErrorHandlerFakeEx_LastSource());
+    UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_ERROR_LOG_NULL_MESSAGE, ErrorHandlerFakeEx_LastCode());
 }
 
 TEST(SolidSyslogLifecycle, CreateWithNullConfigReportsError)
 {
-    ErrorHandlerFake_Install(nullptr);
+    ErrorHandlerFakeEx_Install(nullptr);
 
     SolidSyslog_Create(nullptr);
 
-    CHECK_REPORTED_ERROR(SOLIDSYSLOG_ERROR_MSG_CREATE_NULL_CONFIG);
+    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFakeEx_LastSeverity());
+    POINTERS_EQUAL(&SolidSyslogErrorSource, ErrorHandlerFakeEx_LastSource());
+    UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_ERROR_CREATE_NULL_CONFIG, ErrorHandlerFakeEx_LastCode());
 }
 
 TEST(SolidSyslogLifecycle, CreateWithNullBufferReportsError)
 {
-    ErrorHandlerFake_Install(nullptr);
+    ErrorHandlerFakeEx_Install(nullptr);
     SolidSyslogConfig config = validConfig();
     config.Buffer = nullptr;
 
     solidSyslog = SolidSyslog_Create(&config);
 
-    CHECK_REPORTED_ERROR(SOLIDSYSLOG_ERROR_MSG_CREATE_NULL_BUFFER);
+    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFakeEx_LastSeverity());
+    POINTERS_EQUAL(&SolidSyslogErrorSource, ErrorHandlerFakeEx_LastSource());
+    UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_ERROR_CREATE_NULL_BUFFER, ErrorHandlerFakeEx_LastCode());
 }
 
 TEST(SolidSyslogLifecycle, CreateWithNullSenderReportsError)
 {
-    ErrorHandlerFake_Install(nullptr);
+    ErrorHandlerFakeEx_Install(nullptr);
     SolidSyslogConfig config = validConfig();
     config.Sender = nullptr;
 
     solidSyslog = SolidSyslog_Create(&config);
 
-    CHECK_REPORTED_ERROR(SOLIDSYSLOG_ERROR_MSG_CREATE_NULL_SENDER);
+    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFakeEx_LastSeverity());
+    POINTERS_EQUAL(&SolidSyslogErrorSource, ErrorHandlerFakeEx_LastSource());
+    UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_ERROR_CREATE_NULL_SENDER, ErrorHandlerFakeEx_LastCode());
 }
 
 TEST(SolidSyslogLifecycle, CreateWithNullStoreReportsError)
 {
-    ErrorHandlerFake_Install(nullptr);
+    ErrorHandlerFakeEx_Install(nullptr);
     SolidSyslogConfig config = validConfig();
     config.Store = nullptr;
 
     solidSyslog = SolidSyslog_Create(&config);
 
-    CHECK_REPORTED_ERROR(SOLIDSYSLOG_ERROR_MSG_CREATE_NULL_STORE);
+    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFakeEx_LastSeverity());
+    POINTERS_EQUAL(&SolidSyslogErrorSource, ErrorHandlerFakeEx_LastSource());
+    UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_ERROR_CREATE_NULL_STORE, ErrorHandlerFakeEx_LastCode());
 }
 
 TEST(SolidSyslogLifecycle, ServiceWithDefaultStoreDrainsThroughToRealSender)
@@ -1772,24 +1794,26 @@ TEST(SolidSyslogLifecycle, DestroyWithUnknownHandleReportsWarning)
     char stackByte = 0;
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) -- forging an "unknown" handle to drive the bad-setup path
     auto* notAHandle = reinterpret_cast<struct SolidSyslog*>(&stackByte);
-    ErrorHandlerFake_Install(nullptr);
+    ErrorHandlerFakeEx_Install(nullptr);
 
     SolidSyslog_Destroy(notAHandle);
 
-    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_SOLIDSYSLOG_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFakeEx_LastSeverity());
+    POINTERS_EQUAL(&SolidSyslogErrorSource, ErrorHandlerFakeEx_LastSource());
+    UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_ERROR_UNKNOWN_DESTROY, ErrorHandlerFakeEx_LastCode());
 }
 
 TEST(SolidSyslogLifecycle, DestroyWithNullHandleReportsWarning)
 {
-    ErrorHandlerFake_Install(nullptr);
+    ErrorHandlerFakeEx_Install(nullptr);
 
     SolidSyslog_Destroy(nullptr);
 
-    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_SOLIDSYSLOG_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFakeEx_LastSeverity());
+    POINTERS_EQUAL(&SolidSyslogErrorSource, ErrorHandlerFakeEx_LastSource());
+    UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_ERROR_UNKNOWN_DESTROY, ErrorHandlerFakeEx_LastCode());
 }
 
 TEST(SolidSyslogLifecycle, CreateWithNullConfigDoesNotBlockSubsequentCreate)
@@ -1809,12 +1833,12 @@ TEST(SolidSyslogLifecycle, DestroyClearsInitialisedFlagSoCreateSucceedsAgain)
     SolidSyslogConfig config = validConfig();
     solidSyslog = SolidSyslog_Create(&config);
     SolidSyslog_Destroy(solidSyslog);
-    ErrorHandlerFake_Install(nullptr);
+    ErrorHandlerFakeEx_Install(nullptr);
 
     solidSyslog = SolidSyslog_Create(&config);
     SolidSyslog_Log(solidSyslog, &message);
     SolidSyslog_Service(solidSyslog);
 
-    CHECK_NOTHING_REPORTED();
+    CALLED_FAKE(ErrorHandlerFakeEx_Handle, NEVER);
     CALLED_FAKE_ON(SenderFake_Send, sender, ONCE);
 }

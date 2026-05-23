@@ -1,13 +1,16 @@
 set(SOURCES
     SolidSyslog.c
+    SolidSyslogMessages.c
     SolidSyslogStatic.c
     SolidSyslogError.c
     SolidSyslogConfigLock.c
     SolidSyslogSwitchingSender.c
+    SolidSyslogSwitchingSenderMessages.c
     SolidSyslogSwitchingSenderStatic.c
     SolidSyslogBuffer.c
     SolidSyslogFormatter.c
     SolidSyslogMetaSd.c
+    SolidSyslogMetaSdMessages.c
     SolidSyslogMetaSdStatic.c
     SolidSyslogPassthroughBuffer.c
     SolidSyslogPassthroughBufferMessages.c
@@ -32,6 +35,7 @@ set(SOURCES
     SolidSyslogNullStream.c
     SolidSyslogStructuredData.c
     SolidSyslogTimeQualitySd.c
+    SolidSyslogTimeQualitySdMessages.c
     SolidSyslogTimeQualitySdStatic.c
     SolidSyslogOriginSd.c
     SolidSyslogOriginSdMessages.c
