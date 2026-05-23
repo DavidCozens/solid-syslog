@@ -1,5 +1,124 @@
 # Dev Log
 
+## 2026-05-23 — S10.20 close-out: flip MISRA + naming gates to error mode
+
+Closes S10.20 (#437) and E10 (#12). Bundle of CI gate flips and audit-
+phase paperwork now that S10.12–S10.19 have left the tree with zero
+cppcheck-misra findings and zero clang-tidy naming warnings.
+
+### What landed
+
+1. **cppcheck-misra now gates CI.** `analyze-cppcheck` job — both the
+   "Run cppcheck-misra" and "Generate cppcheck-misra XML report" steps
+   flipped `--error-exitcode=0` → `1`. The stale "warning mode" comment
+   block was replaced with a one-paragraph note describing the current
+   contract.
+2. **MbedTls added to the cppcheck-misra invocation.**
+   `-IPlatform/MbedTls/Interface` and `Platform/MbedTls/Source/`
+   appended to both invocations.
+3. **Non-MISRA cppcheck XML pass widened.** Diagnostic XML pass scoped
+   from `Core/Source/` only to the full `Core/Source/` +
+   `Platform/*/Source/` tree (matches the cppcheck-misra scope).
+   Build-time cppcheck via `CMAKE_C_CPPCHECK` already gated Platform/;
+   this widens the artefact upload to match.
+4. **clang-tidy `readability-identifier-naming` now gates CI.** Root
+   `.clang-tidy` flipped `WarningsAsErrors: '*,-readability-identifier-naming'`
+   → `'*'`. The soft-freeze paragraph (which referenced the wrong story
+   number — S10.18 vs S10.20) was replaced with a single-line current-
+   state comment.
+5. **`analyze-format` scope widened** to include `Platform/`. The
+   find-root list went from `Core/Interface Core/Source Tests Bdd/Targets`
+   to `Core/Interface Core/Source Platform Tests Bdd/Targets`.
+6. **`docs/misra-conformance.md` deleted.** Audit working doc, frozen
+   since S10.12, slated for removal at the gate flip. Live truth lives
+   in `docs/misra-deviations.md` (rationales) and
+   `misra_suppressions.txt` (per-site state). DEVLOG history retains
+   references — those are point-in-time records and don't need rewriting.
+7. **DatagramFake.h comment nit** from the S10.22 deferred list
+   reworded for clarity (`Tests/DatagramFake.h:18-21`).
+
+### MbedTls verification turned into a small cleanup
+
+The MbedTls inclusion was framed in the story body as a verification
+step — the assumption was that the adapter had been developed against
+the local cppcheck-misra check and would land clean. Re-running
+revealed 7 findings, all in `SolidSyslogMbedTlsStream.c`:
+
+| Site | Rule | Disposition |
+|------|------|-------------|
+| line 14 — anon `enum { HANDSHAKE_TIMEOUT_MILLISECONDS, … }` | 5.7 | D.009 extension (anonymous-enum named-constant container; identical shape to `PosixSleep.c:6`). |
+| line 60 — `(struct SolidSyslogMbedTlsStream*) base` in SelfFromBase | 11.3 | D.002 extension (vtable downcast). |
+| line 190 — `(struct SolidSyslogMbedTlsStream*) ctx` in BioSend | 11.5 | D.002 extension (opaque-handle downcast — mbedTLS BIO `void*` ctx carries our `self`). |
+| line 202 — same in BioRecv | 11.5 | D.002 extension. |
+| line 211 — `if (n > 0) { … } else if (n == 0) { … }` no trailing `else` | 15.7 | **Real per-site fix.** Added `else { /* n < 0 — transport-level error; keep result = -1 to signal a hard failure to mbedTLS … */ }`. No behaviour change — the `int result = -1;` initialiser already covered the n<0 path; the trailing `else` just makes it explicit. Same shape as the ~10 sites cleared in S10.10. |
+| line 227 — `(const unsigned char*) buffer` in MbedTlsStream_Send | 11.5 | **New deviation D.013** (see below). |
+| line 246 — `(unsigned char*) buffer` in MbedTlsStream_Read | 11.5 | New D.013. |
+
+### New deviation D.013
+
+`void* ↔ unsigned char*` at third-party byte-buffer API boundaries.
+
+`SolidSyslogStream::Send`/`Read` use `void*` byte buffers (the
+conventional C transport-API idiom — matches POSIX `send`/`recv` and
+OpenSSL `SSL_write`/`SSL_read`). mbedTLS types its byte buffers as
+`const unsigned char*` / `unsigned char*`, so the implementation cast
+bridging the two is unavoidable at the API boundary. Rule 11.5 fires
+on each.
+
+Alternatives considered and rejected:
+
+- Refactor `SolidSyslogStream` to use `unsigned char*` — ABI change
+  propagating to every Stream impl and `SolidSyslogStreamSender`;
+  wrong direction (one third-party API's typing choice shouldn't
+  drive a public-interface change).
+- `memcpy` shim — runtime cost on the hot send/receive path.
+- Inline suppressions — weaker than a centrally-auditable deviation
+  per MISRA Compliance:2020 §4.2.
+
+The cast is well-defined under C99 §6.5 ¶7 (`unsigned char` may alias
+any object type), so reinterpreting a `void*` byte buffer as
+`unsigned char*` at the third-party API boundary is a no-op at the
+abstract-machine level.
+
+Scope: 2 sites today in `SolidSyslogMbedTlsStream.c`. Deviation
+extends to any future Stream / Datagram / hash / MAC implementation
+wrapping a byte-typed third-party C API. OpenSSL's `TlsStream.c`
+explicitly **doesn't** fall under D.013 because `SSL_write`/`SSL_read`
+already take `void*`.
+
+### Decisions
+
+- **Did not split out the MbedTls cleanup as a separate pre-PR.**
+  The work is small (6 suppression lines + 1 trailing-else + 1 new
+  deviation section) and the per-group conformance workflow that
+  S10.12 established is the standard recipe for exactly this case
+  (extend existing deviations, fix per-site, document). David
+  approved rolling into S10.20 after a per-site walkthrough.
+- **Did not re-prove the gates fail on a deliberate violation.** The
+  gates fired dozens of times during S10.07–S10.19; re-proving here
+  would add PR churn without information.
+- **Kept the non-MISRA XML pass scope-widen in scope** even though
+  build-time cppcheck already covers Platform/ via
+  `CMAKE_C_CPPCHECK`. The XML artefact should report the same surface
+  the gates do.
+- **Kept the `analyze-format` Platform/ widening in scope** (epic
+  body listed it as "optional"). E10 close-out is the natural moment
+  and there's nothing pushing it back.
+
+### Deferred / follow-ups
+
+- **None for E10.** This closes the epic.
+- A possible E10-successor refactor that adopts `unsigned char*` in
+  `SolidSyslogStream::Send`/`Read` would retire D.013, but is not
+  scheduled and the trade-offs (see D.013 rationale) suggest leaving
+  the `void*` contract in place.
+
+### Open questions
+
+None.
+
+---
+
 ## 2026-05-23 — S10.19 Engine + Formatter conformance
 
 Closes S10.19 (#432). Last per-group conformance story in E10. Engine +

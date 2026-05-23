@@ -31,11 +31,8 @@ Checks: >
   -modernize-deprecated-headers,
   -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling
 
-# Treat all clang-tidy warnings as errors EXCEPT the new naming check,
-# which lands in warning mode for the duration of E10's soft-freeze
-# (S10.02 through S10.18). S10.18 will flip it back to error mode once
-# the sweeps in S10.07 onwards have cleared the backlog.
-WarningsAsErrors: '*,-readability-identifier-naming'
+# Treat all clang-tidy warnings as errors.
+WarningsAsErrors: '*'
 
 # Only apply to project headers, not third-party or system headers.
 HeaderFilterRegex: '.*Interface/.*'

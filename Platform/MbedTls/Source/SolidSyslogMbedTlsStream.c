@@ -210,6 +210,11 @@ static int MbedTlsStream_BioRecv(void* ctx, unsigned char* buf, size_t len)
     {
         result = MBEDTLS_ERR_SSL_WANT_READ;
     }
+    else
+    {
+        /* n < 0 — transport-level error; keep result = -1 to signal a
+           hard failure to mbedTLS so the handshake / read aborts. */
+    }
     return result;
 }
 

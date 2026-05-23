@@ -486,7 +486,7 @@ jobs:
 
       - name: Check clang-format
         run: |
-          find Core/Interface Core/Source Tests Bdd/Targets -name '*.c' -o -name '*.cpp' -o -name '*.h' \
+          find Core/Interface Core/Source Platform Tests Bdd/Targets -name '*.c' -o -name '*.cpp' -o -name '*.h' \
             | xargs clang-format --dry-run --Werror
 
   analyze-cppcheck:
@@ -517,8 +517,22 @@ jobs:
           --inline-suppr
           --std=c11
           -ICore/Interface
+          -IPlatform/Atomics/Interface
+          -IPlatform/Posix/Interface
+          -IPlatform/Windows/Interface
+          -IPlatform/OpenSsl/Interface
+          -IPlatform/MbedTls/Interface
+          -IPlatform/FreeRtos/Interface
+          -IPlatform/FatFs/Interface
           --xml --xml-version=2
           Core/Source/
+          Platform/Atomics/Source/
+          Platform/Posix/Source/
+          Platform/Windows/Source/
+          Platform/OpenSsl/Source/
+          Platform/MbedTls/Source/
+          Platform/FreeRtos/Source/
+          Platform/FatFs/Source/
           2> build/cppcheck/cppcheck-report.xml
 
       - name: Upload cppcheck report
@@ -530,26 +544,19 @@ jobs:
           retention-days: 1
 
       # ----------------------------------------------------------------
-      # cppcheck-misra addon — S10.03, warning mode.
-      #
-      # Runs the MISRA C:2012 addon over Strict + Pragmatic tiers
-      # (Core/Source/ + Platform/*/Source/). --error-exitcode=0 keeps
-      # the step non-fatal: diagnostics print to the CI log and an XML
-      # artifact uploads, but the job continues regardless.
-      #
-      # S10.18 will collapse this and the non-MISRA pass above into a
-      # single invocation when both reach the same weight (error mode);
-      # the existing pass's scope will widen to Platform/*/Source/ at
-      # that point — see project_e10_accumulated_scope.md.
+      # cppcheck-misra addon — runs the MISRA C:2012 addon over Strict +
+      # Pragmatic tiers (Core/Source/ + Platform/*/Source/). Findings
+      # fail CI (--error-exitcode=1); suppressions live in
+      # misra_suppressions.txt with rationales in docs/misra-deviations.md.
       # ----------------------------------------------------------------
 
-      - name: Run cppcheck-misra (warning mode)
+      - name: Run cppcheck-misra
         if: success() || failure()
         run: >
           cppcheck
           --addon=misra
           --suppressions-list=misra_suppressions.txt
-          --error-exitcode=0
+          --error-exitcode=1
           --inline-suppr
           --std=c11
           -ICore/Interface
@@ -557,6 +564,7 @@ jobs:
           -IPlatform/Posix/Interface
           -IPlatform/Windows/Interface
           -IPlatform/OpenSsl/Interface
+          -IPlatform/MbedTls/Interface
           -IPlatform/FreeRtos/Interface
           -IPlatform/FatFs/Interface
           Core/Source/
@@ -564,6 +572,7 @@ jobs:
           Platform/Posix/Source/
           Platform/Windows/Source/
           Platform/OpenSsl/Source/
+          Platform/MbedTls/Source/
           Platform/FreeRtos/Source/
           Platform/FatFs/Source/
 
@@ -574,7 +583,7 @@ jobs:
           cppcheck \
             --addon=misra \
             --suppressions-list=misra_suppressions.txt \
-            --error-exitcode=0 \
+            --error-exitcode=1 \
             --inline-suppr \
             --std=c11 \
             -ICore/Interface \
@@ -582,6 +591,7 @@ jobs:
             -IPlatform/Posix/Interface \
             -IPlatform/Windows/Interface \
             -IPlatform/OpenSsl/Interface \
+            -IPlatform/MbedTls/Interface \
             -IPlatform/FreeRtos/Interface \
             -IPlatform/FatFs/Interface \
             --xml --xml-version=2 \
@@ -590,6 +600,7 @@ jobs:
             Platform/Posix/Source/ \
             Platform/Windows/Source/ \
             Platform/OpenSsl/Source/ \
+            Platform/MbedTls/Source/ \
             Platform/FreeRtos/Source/ \
             Platform/FatFs/Source/ \
             2> build/cppcheck-misra/cppcheck-misra-report.xml

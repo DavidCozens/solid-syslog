@@ -861,3 +861,71 @@ Summary:
 Project owner — David Cozens. Recorded under
 [S10.18](https://github.com/DavidCozens/solid-syslog/issues/430).
 
+---
+
+## D.013 — Rule 11.5: `void*` ↔ `unsigned char*` at third-party byte-buffer API boundaries
+
+### Rule
+
+> **Rule 11.5 (Advisory)** — A conversion should not be performed from
+> pointer to `void` into pointer to object.
+
+### Deviation
+
+`SolidSyslogStream::Send` takes `const void*` and `SolidSyslogStream::Read`
+takes `void*` — the project-wide byte-buffer contract used by every
+Stream implementation. Some third-party C libraries (notably mbedTLS)
+type their byte buffers as `const unsigned char*` / `unsigned char*`
+rather than `void*`. The implementation cast bridging the two is
+unavoidable at the API boundary:
+
+```c
+int rc = mbedtls_ssl_write(&self->SslContext, (const unsigned char*) buffer, size);
+```
+
+Rule 11.5 fires on each such adapter cast.
+
+### Scope
+
+`Platform/MbedTls/Source/SolidSyslogMbedTlsStream.c` — two sites
+(`MbedTlsStream_Send`, `MbedTlsStream_Read`).
+
+The deviation extends to any future Stream / Datagram / hash / MAC
+implementation that wraps a byte-typed third-party C API
+(`unsigned char*` rather than `void*`). The OpenSSL adapter
+(`Platform/OpenSsl/Source/SolidSyslogTlsStream.c`) does **not** fall
+under this deviation — `SSL_write` / `SSL_read` take `void*` and so no
+cast is needed.
+
+### Rationale
+
+The alternatives all regress:
+
+| Alternative | Why rejected |
+|-------------|--------------|
+| Refactor `SolidSyslogStream::Send`/`Read` to use `unsigned char*` | Public-API ABI change that propagates to every Stream implementation (Posix TCP, Winsock TCP, FreeRTOS TCP, OpenSSL TLS, mbedTLS TLS, NullStream) and every Stream caller (`SolidSyslogStreamSender`). The `void*` byte-buffer contract is the conventional C idiom for transport interfaces and matches POSIX `send`/`recv`, OpenSSL `SSL_write`/`SSL_read`, etc. Changing it for the sake of one third-party API's typing choice is the wrong direction. |
+| Copy through an `unsigned char` scratch buffer per call | Runtime cost on the hot send/receive path; adds a fixed-size scratch or a stack-allocated VLA in a critical-path function. Defeats the zero-copy intent of the Stream contract. |
+| Inline `cppcheck-suppress misra-c2012-11.5` at each site | Inline suppressions are weaker by MISRA Compliance:2020 §4.2 (rationale scattered, not centrally auditable). Project preference is structural deviations in this document. |
+
+The cast is well-defined: `unsigned char` may alias any object type
+(C99 §6.5 ¶7), so reinterpreting a `void*` byte buffer as
+`unsigned char*` and back is a no-op at the abstract-machine level.
+
+### Risk and mitigation
+
+- **Alignment** — Both representations are byte-addressed; no
+  alignment promotion occurs. The cast targets `unsigned char*`, which
+  has the weakest alignment requirement of any object pointer.
+- **Type safety** — The caller-supplied buffer originates as a
+  contiguous byte sequence (typically the formatted syslog record);
+  treating it as `unsigned char*` at the third-party API boundary is
+  the same byte sequence under a different pointer type.
+- **Elimination path** — A future revision of the Stream API that
+  adopts `unsigned char*` directly would retire this deviation.
+  Tracked as a possible E10-successor refactor, not scheduled.
+
+### Approval
+
+Project owner — David Cozens. Recorded under
+[S10.20](https://github.com/DavidCozens/solid-syslog/issues/437).
+
