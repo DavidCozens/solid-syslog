@@ -9,8 +9,23 @@ static void Error_NoOpErrorHandler(void* context, enum SolidSyslogSeverity sever
     (void) message;
 }
 
+static void Error_NoOpErrorHandlerEx(
+    void* context,
+    enum SolidSyslogSeverity severity,
+    const struct SolidSyslogErrorSource* source,
+    uint8_t code
+)
+{
+    (void) context;
+    (void) severity;
+    (void) source;
+    (void) code;
+}
+
 static SolidSyslogErrorHandler currentHandler = Error_NoOpErrorHandler;
 static void* currentContext = NULL;
+static SolidSyslogErrorHandlerEx currentHandlerEx = Error_NoOpErrorHandlerEx;
+static void* currentContextEx = NULL;
 
 void SolidSyslog_SetErrorHandler(SolidSyslogErrorHandler handler, void* context)
 {
@@ -28,4 +43,22 @@ void SolidSyslog_SetErrorHandler(SolidSyslogErrorHandler handler, void* context)
 void SolidSyslog_Error(enum SolidSyslogSeverity severity, const char* message)
 {
     currentHandler(currentContext, severity, message);
+}
+
+void SolidSyslog_SetErrorHandlerEx(SolidSyslogErrorHandlerEx handler, void* context)
+{
+    if (handler == NULL)
+    {
+        currentHandlerEx = Error_NoOpErrorHandlerEx;
+    }
+    else
+    {
+        currentHandlerEx = handler;
+    }
+    currentContextEx = context;
+}
+
+void SolidSyslog_ErrorEx(enum SolidSyslogSeverity severity, const struct SolidSyslogErrorSource* source, uint8_t code)
+{
+    currentHandlerEx(currentContextEx, severity, source, code);
 }
