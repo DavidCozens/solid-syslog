@@ -466,6 +466,27 @@ static void ErrorHandler(void* context, enum SolidSyslogSeverity severity, const
     (void) printf("[solidsyslog] severity=%d %s\n", (int) severity, message);
 }
 
+static void ErrorHandlerEx(
+    void* context,
+    enum SolidSyslogSeverity severity,
+    const struct SolidSyslogErrorSource* source,
+    uint8_t code
+)
+{
+    (void) context;
+    const char* sourceName = "<unknown>";
+    const char* message = "<no translation>";
+    if (source != NULL)
+    {
+        sourceName = source->Name;
+        if (source->AsString != NULL)
+        {
+            message = source->AsString(code);
+        }
+    }
+    (void) printf("[solidsyslog] severity=%d [%s/%u] %s\n", (int) severity, sourceName, (unsigned) code, message);
+}
+
 static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
 {
     timeQuality->TzKnown = false;
@@ -1055,6 +1076,7 @@ static void InteractiveTask(void* argument)
         .SdCount = pendingNoSd ? 1U : (sizeof(sdList) / sizeof(sdList[0])),
     };
     SolidSyslog_SetErrorHandler(ErrorHandler, NULL);
+    SolidSyslog_SetErrorHandlerEx(ErrorHandlerEx, NULL);
     solidSyslog = SolidSyslog_Create(&solidSyslogConfig);
     solidSyslogReady = true;
 
