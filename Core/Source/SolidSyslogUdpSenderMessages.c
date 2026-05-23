@@ -1,7 +1,7 @@
 #include <stdint.h>
 
 #include "SolidSyslogError.h"
-#include "SolidSyslogUdpSenderPrivate.h"
+#include "SolidSyslogUdpSenderErrors.h"
 
 static const char* UdpSenderError_AsString(uint8_t code)
 {

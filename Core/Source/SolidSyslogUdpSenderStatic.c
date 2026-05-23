@@ -8,6 +8,7 @@
 #include "SolidSyslogPoolAllocator.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
+#include "SolidSyslogUdpSenderErrors.h"
 #include "SolidSyslogUdpSenderPrivate.h"
 
 struct SolidSyslogSender;

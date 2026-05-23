@@ -13,6 +13,7 @@
 #include "SolidSyslogTransport.h"
 #include "SolidSyslogUdpPayload.h"
 #include "SolidSyslogUdpSender.h"
+#include "SolidSyslogUdpSenderErrors.h"
 #include "SolidSyslogUdpSenderPrivate.h"
 
 struct SolidSyslogFormatter;
