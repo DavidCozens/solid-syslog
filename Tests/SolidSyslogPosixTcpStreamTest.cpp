@@ -13,7 +13,6 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
 #include "ErrorHandlerFakeEx.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogPosixAddress.h"
 #include "SolidSyslogPosixAddressPrivate.h"
 #include "SolidSyslogPosixTcpStream.h"

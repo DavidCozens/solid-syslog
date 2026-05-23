@@ -3,7 +3,6 @@
 #include "ErrorHandlerFake.h"
 #include "ErrorHandlerFakeEx.h"
 #include "SocketFake.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogFile.h"
 #include "SolidSyslogFileDefinition.h"
 #include "SolidSyslogPosixFile.h"

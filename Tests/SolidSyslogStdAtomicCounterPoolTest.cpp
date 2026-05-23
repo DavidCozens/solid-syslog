@@ -5,7 +5,6 @@
 #include "ErrorHandlerFakeEx.h"
 #include "SolidSyslogAtomicCounter.h"
 #include "SolidSyslogAtomicCounterDefinition.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogStdAtomicCounter.h"
 #include "SolidSyslogStdAtomicCounterErrors.h"

@@ -6,7 +6,6 @@
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
 #include "ErrorHandlerFakeEx.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogGetAddrInfoResolver.h"
 #include "SolidSyslogGetAddrInfoResolverErrors.h"
 #include "SolidSyslogPosixAddress.h"

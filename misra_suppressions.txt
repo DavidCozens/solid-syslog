@@ -172,44 +172,6 @@ misra-c2012-20.10:Core/Source/SolidSyslogMacros.h:9
 # D.011 — Rule 2.5: public API macros consumed outside cppcheck-misra scope
 # See docs/misra-deviations.md#d011
 misra-c2012-2.5:Core/Interface/SolidSyslogCircularBuffer.h:22
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:68
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:70
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:72
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:74
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:76
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:78
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:80
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:82
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:84
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:86
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:88
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:90
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:92
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:94
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:96
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:98
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:100
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:102
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:104
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:106
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:108
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:110
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:112
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:114
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:116
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:118
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:120
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:122
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:124
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:126
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:128
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:130
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:132
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:134
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:136
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:138
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:140
-misra-c2012-2.5:Core/Source/SolidSyslogErrorMessages.h:142
 
 # D.012 — Rule 8.9: file-scope static const referenced from a file-scope enum + one function
 # See docs/misra-deviations.md#d012

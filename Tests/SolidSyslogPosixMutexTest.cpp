@@ -3,7 +3,6 @@
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
 #include "ErrorHandlerFakeEx.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogMutex.h"
 #include "SolidSyslogMutexDefinition.h"
 #include "SolidSyslogPosixMutex.h"

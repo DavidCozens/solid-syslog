@@ -10,7 +10,6 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 #include "ErrorHandlerFakeEx.h"
 #include "SolidSyslogBuffer.h"
 #include "SolidSyslogBufferDefinition.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogPosixMessageQueueBuffer.h"
 #include "SolidSyslogPosixMessageQueueBufferErrors.h"
 #include "SolidSyslog.h"
