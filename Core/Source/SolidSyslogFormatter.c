@@ -17,25 +17,11 @@ SOLIDSYSLOG_STATIC_ASSERT(
     "SOLIDSYSLOG_FORMATTER_OVERHEAD does not match struct layout"
 );
 
-static const char QUOTE = '"';
-static const char BACKSLASH = '\\';
-static const char CLOSE_BRACKET = ']';
-static const char ESCAPE_PREFIX = '\\';
-static const char LOWEST_PRINTABLE_US_ASCII = '!';
-static const char HIGHEST_PRINTABLE_US_ASCII = '~';
 static const char NON_PRINTABLE_SUBSTITUTE = '?';
 
 /* UTF-8 replacement character U+FFFD, emitted in place of each invalid
  * byte per Unicode §3.9 best practice for per-byte maximal subpart. */
 static const char REPLACEMENT_CHARACTER[] = {'\xEF', '\xBF', '\xBD'};
-
-/* UTF-8 byte order mark U+FEFF, required at the start of a UTF-8 MSG
- * by RFC 5424 §6.4. */
-static const char UTF8_BOM[] = {'\xEF', '\xBB', '\xBF'};
-
-/* An escape pair on the wire ('\' + char) decodes back to the single
- * character it was escaping — one byte in the reader's decoder buffer. */
-static const size_t ESCAPED_CHARACTER_DECODED_LENGTH = 1;
 
 /* Mutable state threaded through the EscapedString writer helpers.
  * sourcePos walks the source until NUL; decodedLength counts bytes the
@@ -107,16 +93,20 @@ static inline void Formatter_NullTerminate(struct SolidSyslogFormatter* formatte
 
 void SolidSyslogFormatter_AsciiCharacter(struct SolidSyslogFormatter* formatter, char value)
 {
-    if (!Formatter_IsAsciiCharacter(value))
+    char emitted = value;
+    if (!Formatter_IsAsciiCharacter(emitted))
     {
-        value = NON_PRINTABLE_SUBSTITUTE;
+        emitted = NON_PRINTABLE_SUBSTITUTE;
     }
-    Formatter_WriteChar(formatter, value);
+    Formatter_WriteChar(formatter, emitted);
     Formatter_NullTerminate(formatter);
 }
 
 void SolidSyslogFormatter_Bom(struct SolidSyslogFormatter* formatter)
 {
+    /* UTF-8 byte order mark U+FEFF, required at the start of a UTF-8 MSG
+     * by RFC 5424 §6.4. */
+    static const char UTF8_BOM[] = {'\xEF', '\xBB', '\xBF'};
     Formatter_WriteBytes(formatter, UTF8_BOM, sizeof(UTF8_BOM));
     Formatter_NullTerminate(formatter);
 }
@@ -307,6 +297,9 @@ void SolidSyslogFormatter_EscapedString(
 
 static inline bool Formatter_NeedsEscape(char value)
 {
+    static const char QUOTE = '"';
+    static const char BACKSLASH = '\\';
+    static const char CLOSE_BRACKET = ']';
     return (value == QUOTE) || (value == BACKSLASH) || (value == CLOSE_BRACKET);
 }
 
@@ -317,13 +310,19 @@ static inline bool Formatter_IsExhausted(const struct EscapedContext* context)
 
 static inline void Formatter_WriteEscaped(struct EscapedContext* context)
 {
+    static const char ESCAPE_PREFIX = '\\';
+    /* An escape pair on the wire ('\' + char) decodes back to the single
+     * character it was escaping — one byte in the reader's decoder buffer. */
+    static const size_t ESCAPED_CHARACTER_DECODED_LENGTH = 1;
     if (Formatter_Fits(context, ESCAPED_CHARACTER_DECODED_LENGTH))
     {
         char escaped[] = {ESCAPE_PREFIX, context->Source[context->SourcePos]};
         Formatter_WriteContext(context, escaped, sizeof(escaped), 1, ESCAPED_CHARACTER_DECODED_LENGTH);
-        return;
     }
-    Formatter_Exhaust(context);
+    else
+    {
+        Formatter_Exhaust(context);
+    }
 }
 
 static inline bool Formatter_Fits(const struct EscapedContext* context, size_t decodedAdvance)
@@ -368,9 +367,11 @@ static inline void Formatter_WriteCodepoint(struct EscapedContext* context)
             codepointLength,
             codepointLength
         );
-        return;
     }
-    Formatter_WriteReplacement(context);
+    else
+    {
+        Formatter_WriteReplacement(context);
+    }
 }
 
 static inline void Formatter_WriteReplacement(struct EscapedContext* context)
@@ -384,9 +385,11 @@ static inline void Formatter_WriteReplacement(struct EscapedContext* context)
             1,
             sizeof(REPLACEMENT_CHARACTER)
         );
-        return;
     }
-    Formatter_Exhaust(context);
+    else
+    {
+        Formatter_Exhaust(context);
+    }
 }
 
 void SolidSyslogFormatter_PrintUsAsciiString(
@@ -419,6 +422,8 @@ static inline void Formatter_WritePrintableUsAsciiChar(struct SolidSyslogFormatt
 
 static inline bool Formatter_IsPrintableUsAscii(char value)
 {
+    static const char LOWEST_PRINTABLE_US_ASCII = '!';
+    static const char HIGHEST_PRINTABLE_US_ASCII = '~';
     return (value >= LOWEST_PRINTABLE_US_ASCII) && (value <= HIGHEST_PRINTABLE_US_ASCII);
 }
 
@@ -426,6 +431,7 @@ void SolidSyslogFormatter_Uint32(struct SolidSyslogFormatter* formatter, uint32_
 {
     size_t digits = Formatter_CountDigits(value);
     uint32_t divisor = 1;
+    uint32_t remaining = value;
 
     for (size_t i = 1; i < digits; i++)
     {
@@ -434,8 +440,8 @@ void SolidSyslogFormatter_Uint32(struct SolidSyslogFormatter* formatter, uint32_
 
     for (size_t i = 0; i < digits; i++)
     {
-        Formatter_WriteChar(formatter, Formatter_DigitToChar(value / divisor));
-        value %= divisor;
+        Formatter_WriteChar(formatter, Formatter_DigitToChar(remaining / divisor));
+        remaining %= divisor;
         divisor /= 10U;
     }
     Formatter_NullTerminate(formatter);
@@ -444,11 +450,12 @@ void SolidSyslogFormatter_Uint32(struct SolidSyslogFormatter* formatter, uint32_
 static size_t Formatter_CountDigits(uint32_t value)
 {
     size_t count = 1;
+    uint32_t remaining = value;
 
-    while (value >= 10U)
+    while (remaining >= 10U)
     {
         count++;
-        value /= 10U;
+        remaining /= 10U;
     }
 
     return count;

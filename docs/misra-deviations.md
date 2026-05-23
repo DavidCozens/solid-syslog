@@ -284,63 +284,6 @@ Project owner — David Cozens. Recorded under
 
 ---
 
-## D.004 — Rule 18.4: pointer arithmetic on record buffers
-
-### Rule
-
-> **Rule 18.4 (Advisory)** — The `+`, `-`, `+=` and `-=` operators
-> should not be applied to an expression of pointer type.
-
-### Deviation
-
-`Core/Source/RecordStore.c` traverses record buffers using
-`uint8_t*` pointer arithmetic to step from the magic-byte header to
-the length field to the message body.
-
-### Scope
-
-`Core/Source/RecordStore.c` only. Four call sites.
-
-### Rationale
-
-RecordStore implements a simple binary record layout
-(`[magic][length][message]`) that has to be walked byte-by-byte during
-read and written byte-by-byte during write. The natural C expression
-is pointer arithmetic on `uint8_t*`:
-
-```c
-uint8_t* cursor = buffer;
-cursor += MAGIC_SIZE;
-const uint16_t length = ReadLengthAt(cursor);
-cursor += LENGTH_SIZE;
-/* cursor now points at the message body */
-```
-
-The alternative (array-index arithmetic against the base pointer,
-`buffer[MAGIC_SIZE]`, `buffer[MAGIC_SIZE + LENGTH_SIZE]`, …) trades
-visually-obvious offsets at the call site for repeated arithmetic on
-the index; it produces the same compiled code with less-readable C.
-The advisory rule discourages pointer arithmetic to protect against
-out-of-bounds drift; the function-local nature of these cursors
-(initialised, walked, dropped — never stored or returned) makes that
-risk minimal.
-
-### Risk and mitigation
-
-- **Out-of-bounds walking.** Every `cursor += N` advance is paired
-  with a bound check against the buffer's known total length. The
-  unit tests in `Tests/RecordStoreTest.cpp` cover the boundary
-  cases (zero-length record, max-length record, truncated input).
-- **Future ports.** The deviation is RecordStore-local; other Core
-  classes use array indexing throughout.
-
-### Approval
-
-Project owner — David Cozens. Recorded under
-[S10.06](https://github.com/DavidCozens/solid-syslog/issues/367).
-
----
-
 ## D.005 — Rule 18.7: flexible array members
 
 ### Rule
@@ -440,7 +383,7 @@ Two distinct site categories trigger this rule:
    a non-`const`-qualified pointer rvalue.
 
 2. **Platform-API const-strip (1 site)** —
-   `Platform/Windows/Source/SolidSyslogWinsockTcpStream.c:82`:
+   `Platform/Windows/Source/SolidSyslogWinsockTcpStream.c`:
 
    ```c
    return select(nfds, readfds, writefds, exceptfds, (struct timeval*) timeout);
@@ -454,10 +397,17 @@ Two distinct site categories trigger this rule:
 
 ### Scope
 
-- **Strict tier** — 10 field-access sites in `Core/Source/SolidSyslog.c`
-  (`InstallBuffer` and siblings, 8 sites),
-  `Core/Source/BlockSequence.c:438`, `Core/Source/SolidSyslogBlockStore.c:62`.
-- **Pragmatic tier** — 1 site, `SolidSyslogWinsockTcpStream.c:82`.
+- **Strict tier** — 10 field-access sites: 8 in `Core/Source/SolidSyslog.c`
+  (the `SolidSyslog_Install*` functions reading `config->` pointer
+  fields), 1 in `Core/Source/BlockSequence.c`
+  (`BlockSequence_IsReadBlockFullyDrained` passing
+  `blockSequence->BlockDevice` to `SolidSyslogBlockDevice_Size`), and
+  1 in `Core/Source/SolidSyslogBlockStoreStatic.c`
+  (`BlockStore_ResolveSecurityPolicy` accepting
+  `config->SecurityPolicy`).
+- **Pragmatic tier** — 1 site in
+  `Platform/Windows/Source/SolidSyslogWinsockTcpStream.c` (the
+  `select()` timeout cast).
 
 ### Rationale
 

@@ -34,22 +34,26 @@ static inline uint8_t* RecordStore_MagicAddress(struct RecordStore* recordStore)
 
 static inline uint8_t* RecordStore_LengthAddress(struct RecordStore* recordStore)
 {
-    return RecordStore_MagicAddress(recordStore) + MAGIC_SIZE;
+    uint8_t* magic = RecordStore_MagicAddress(recordStore);
+    return &magic[MAGIC_SIZE];
 }
 
 static inline uint8_t* RecordStore_MessageAddress(struct RecordStore* recordStore)
 {
-    return RecordStore_LengthAddress(recordStore) + RECORD_LENGTH_SIZE;
+    uint8_t* length = RecordStore_LengthAddress(recordStore);
+    return &length[RECORD_LENGTH_SIZE];
 }
 
 static inline uint8_t* RecordStore_IntegrityChecksumAddress(struct RecordStore* recordStore, size_t dataSize)
 {
-    return RecordStore_MessageAddress(recordStore) + dataSize;
+    uint8_t* message = RecordStore_MessageAddress(recordStore);
+    return &message[dataSize];
 }
 
 static inline uint8_t* RecordStore_SentFlagAddress(struct RecordStore* recordStore, size_t dataSize)
 {
-    return RecordStore_IntegrityChecksumAddress(recordStore, dataSize) + recordStore->SecurityPolicy->IntegritySize;
+    uint8_t* integrity = RecordStore_IntegrityChecksumAddress(recordStore, dataSize);
+    return &integrity[recordStore->SecurityPolicy->IntegritySize];
 }
 
 static inline uint8_t* RecordStore_IntegrityRegionAddress(struct RecordStore* recordStore)

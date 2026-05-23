@@ -1,5 +1,188 @@
 # Dev Log
 
+## 2026-05-23 — S10.19 Engine + Formatter conformance
+
+Closes S10.19 (#432). Last per-group conformance story in E10. Engine +
+Formatter cluster: `SolidSyslog.c`, `SolidSyslogStatic.c`,
+`SolidSyslogFormatter.c`, plus the public headers (`SolidSyslog.h`,
+`SolidSyslogConfig.h`, `SolidSyslogFormatter.h`, `SolidSyslogPrival.h`,
+`SolidSyslogStringFunction.h`, `SolidSyslogTunables.h`,
+`SolidSyslogTunablesDefaults.h`, `ExternC.h`) and TU-private helpers
+(`SolidSyslogPrivate.h`, `SolidSyslogMacros.h`, `SolidSyslogUtf8.h`,
+`SolidSyslogPoolAllocator.{c,h}`).
+
+Started from CI run 26313396537 against `main@1d8d6a2` (post-S10.18):
+17 unsuppressed cppcheck-misra findings in scope, clang-tidy clean.
+Paused mid-flight while #434 (S12.22 per-source error dispatch) landed,
+which mooted Pattern E entirely (the 46 D.011 macro suppressions on
+`SolidSyslogErrorMessages.h` evaporated when the error API moved to
+integral codes). Resumed by rebasing onto `main@c121eee`.
+
+### Headline
+
+Nine code/suppressions commits across nine patterns. Tree-wide
+unsuppressed dropped from 75 (pre-S10.19 main) to 0. Two deviations
+retired (D.004, D.011-on-ErrorMessages — the latter via #434), one
+deviation doc tidied (D.006 prose).
+
+### Pattern A — file-scope `static const` into using functions (8.9, 8 sites)
+
+`Core/Source/SolidSyslogFormatter.c` lines 20–25, 34, 38 were file-scope
+`static const` declarations each used in exactly one function. Each moved
+inside its using function as a function-scope `static const`: same
+address, same lifetime, just block-scoped. `NON_PRINTABLE_SUBSTITUTE`
+(line 26) and `REPLACEMENT_CHARACTER` (line 30) stayed at file scope —
+multi-function users, 8.9 doesn't fire.
+
+### Pattern B — (void) on `SolidSyslogSender_Send` fallback discard (17.7, 1 site)
+
+`SolidSyslog.c::SolidSyslog_DrainBufferIntoStore`'s direct-Sender_Send
+fallback path discards the bool return intentionally — same shape as
+S10.18 Pattern B's `RecordStore_IsRecordSent` Read discard. The function
+doc-block already explains the semantics; `(void)` cast suffices.
+
+### Pattern C — single-point-of-exit at 4 sites (15.5)
+
+`SolidSyslog.c::SkipLeadingBom` rewrote as `result`-local + `if`; three
+`SolidSyslogFormatter.c` helpers (`WriteEscaped`, `WriteCodepoint`,
+`WriteReplacement`) rewrote as `if/else`. Mechanical control-flow
+restructure; CLAUDE.md production-code guidance pattern.
+
+**Addendum (rule-dedup unmask):** fixing the `SkipLeadingBom` 15.5
+unmasked an 18.4 on `result = msg + 3`. Rewritten as `&msg[3]` — same
+trick we'd use again for Pattern I below.
+
+### Pattern D — local copy instead of modifying parameter (17.8, 3 sites)
+
+`SolidSyslogFormatter_AsciiCharacter` substitution, `Uint32` per-digit
+consumption, and `Formatter_CountDigits` loop — each modified its
+`value` parameter. Replaced with `emitted` / `remaining` locals. The
+`remaining` name communicates the consumption-during-loop intent.
+
+### Pattern A addendum — NullInstancePopulated 8.9
+
+`SolidSyslog_NullInstancePopulated` in `Static.c` was a file-scope `static
+bool` lazy-init flag used inside one function. Moved into
+`SolidSyslog_EnsureNullInstancePopulated` as a function-scope
+`static bool populated = false`. Same persistence semantics.
+`SolidSyslog_NullInstance` itself (the struct) stays at file scope —
+two consumers, 8.9 doesn't fire.
+
+### Pattern E — mooted by #434
+
+The original story body planned re-anchoring 38 D.011 suppressions on
+`SolidSyslogErrorMessages.h` (off-by-one drift) and adding 8 new entries
+for post-S10.14 macros. #434 deleted all 46 `#define` macros wholesale
+in favour of integral error codes via a per-source dispatch table; the
+suppressions deleted themselves. Pattern E became a no-op verification
+on resume.
+
+### Pattern H — make AtomicCounter `_Init` static (8.7, 2 sites)
+
+`StdAtomicCounter_Init` and `WindowsAtomicCounter_Init` were exported
+with external linkage purely as test seams (the test helper
+`#include`s the source TU whitebox to drive non-zero starting values
+for the wraparound test). cppcheck-misra's 8.7 scope doesn't see
+`Tests/`, so it saw only one TU's use and flagged "should be static".
+The whitebox-include pattern works equally with the function `static`
+— the helper's include resolves the symbol textually rather than via
+the linker. Made `_Init` `static` in both platform TUs; removed the
+prototype + test-only comment block from `*Private.h`. No deviation
+needed.
+
+### Pattern F — tree-wide D.003 → D.009 5.7 migration close-out (20 sites)
+
+Final pass of the migration started by S10.16 / S10.17 / S10.18. All 20
+remaining D.003 5.7 sites confirmed by per-site reading as
+anonymous-enum named-constant containers (not the genuine struct-tag
+repetition D.003 originally covered). Migrated to D.009.
+
+D.003 now contains exactly one entry —
+`Core/Interface/SolidSyslogAddress.h:10`, the only genuine struct
+forward-declaration site tree-wide. D.009 absorbs every anonymous-enum
+5.7 site. Tree-wide 5.7 ownership is clean for S10.20's
+warning→error flip.
+
+No 2.4 entries unmasked by the migration (verified post-edit).
+
+### Pattern G — anchor refresh on 12 suppressions
+
+Cumulative anchor drift caused by:
+- Pattern A's removal of 14 file-scope lines from `Formatter.c`
+- Pattern H's added forward declarations
+- #434's per-source error dispatch — every `_Create` path that emits
+  pool-exhausted / null-config errors gained 4–6 lines for the new
+  `(severity, &Source, code)` signature, drifting D.002 / D.006 anchors
+  in `BlockStoreStatic.c`, `UdpSender.c`, and the per-platform Address
+  Static TUs.
+
+Per-site rationale unchanged. Tree-wide unsuppressed: 0 after this commit.
+
+### Pattern I — retire D.004 via array-subscript rewrite (18.4, 4 sites)
+
+`RecordStore.c`'s four field-offset helpers each returned
+`SiblingAddress(...) + OFFSET` — pointer arithmetic that 18.4 forbids.
+Same trick as Pattern C addendum (`&buffer[offset]`); applied at all
+four sites with a sibling-named local for readability:
+
+```c
+static inline uint8_t* RecordStore_LengthAddress(struct RecordStore* recordStore)
+{
+    uint8_t* magic = RecordStore_MagicAddress(recordStore);
+    return &magic[MAGIC_SIZE];
+}
+```
+
+The local also documents what the cursor refers to at each step,
+giving the record layout a self-describing read.
+
+D.004 retires entirely — 4 suppressions removed from
+`misra_suppressions.txt`, D.004 row removed from
+`docs/misra-deviations.md`.
+
+**Bundled fix-up:** the `# ` bare-hash separator lines in
+`misra_suppressions.txt` had their trailing whitespace stripped by a
+format-on-save, breaking cppcheck's parser ("Failed to add suppression.
+No id."). Restored as `# -` so the visual paragraph separation survives
+the next format-on-save.
+
+### D.006 deviation-doc tidy
+
+`docs/misra-deviations.md` D.006's scope text was quoting stale line
+anchors (`BlockSequence.c:438`, `SolidSyslogBlockStore.c:62`,
+`WinsockTcpStream.c:82`) — line numbers had drifted via #434 and the
+E11 `BlockStore.c` → `BlockStoreStatic.c` split. Rewrote the scope text
+to describe each site by its role (`Install*`,
+`IsReadBlockFullyDrained`, `BlockStore_ResolveSecurityPolicy`, the
+`select()` timeout cast) so the prose survives future line drift.
+`misra_suppressions.txt` remains authoritative for exact anchors.
+
+### Acceptance
+
+- Tree-wide cppcheck-misra unsuppressed total: 0 (down from 12
+  post-rebase / 75 pre-S10.19).
+- 1294/1296 tests green on `debug` and `sanitize` (ASan + UBSan).
+- IWYU clean tree-wide (`cmake --build --preset iwyu --target iwyu`).
+- clang-format clean across all `.c` / `.cpp` / `.h` in the tree.
+- Deviation count went from 12 to 11 (D.004 retired; D.011 narrowed
+  to a single site after #434 deleted the ErrorMessages macros).
+- All small-footprint deviations reviewed; D.003, D.005, D.007, D.008,
+  D.010, D.011, D.012 confirmed structural and necessary.
+
+### Carry-forward for S10.20
+
+E10's close-out story still owns:
+- Warning→error flip on cppcheck-misra and clang-tidy gates.
+- Widen non-MISRA cppcheck scope to `Platform/*/Source/`.
+- Add `Platform/MbedTls/Source/` to the cppcheck-misra invocation
+  (verification — adapter already developed against the check locally).
+- Delete `docs/misra-conformance.md` (audit-phase doc; frozen since
+  S10.12, now superseded by `docs/misra-deviations.md` +
+  `misra_suppressions.txt`).
+- Optional: widen `analyze-format` CI scope to include `Platform/`.
+
+---
+
 ## 2026-05-23 — S12.22 Per-source error dispatch
 
 Closes S12.22 (#433). Restructures `SolidSyslog_Error` from a single
