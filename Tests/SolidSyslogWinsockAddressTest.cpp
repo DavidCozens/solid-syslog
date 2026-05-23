@@ -9,10 +9,10 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
 #include "SolidSyslogWinsockAddress.h"
+#include "SolidSyslogWinsockAddressErrors.h"
 #include "SolidSyslogWinsockAddressPrivate.h"
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while) -- macros preserve __FILE__/__LINE__ at the call site
@@ -104,7 +104,6 @@ TEST_GROUP(SolidSyslogWinsockAddressPool)
             SolidSyslogWinsockAddress_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()
@@ -136,7 +135,8 @@ TEST(SolidSyslogWinsockAddressPool, ExhaustedCreateReportsError)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_WINSOCKADDRESS_POOL_EXHAUSTED, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&WinsockAddressErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(WINSOCKADDRESS_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogWinsockAddressPool, CreateAcquiresAndReleasesConfigLockOnFirstFreeSlot)
@@ -192,7 +192,8 @@ TEST(SolidSyslogWinsockAddressPool, DestroyOfUnknownHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_WINSOCKADDRESS_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&WinsockAddressErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(WINSOCKADDRESS_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogWinsockAddressPool, DestroyOfStaleHandleReportsWarning)
@@ -206,5 +207,6 @@ TEST(SolidSyslogWinsockAddressPool, DestroyOfStaleHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_WINSOCKADDRESS_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&WinsockAddressErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(WINSOCKADDRESS_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }

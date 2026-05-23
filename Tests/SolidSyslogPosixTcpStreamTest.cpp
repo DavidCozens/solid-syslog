@@ -12,10 +12,10 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
     // macros
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogPosixAddress.h"
 #include "SolidSyslogPosixAddressPrivate.h"
 #include "SolidSyslogPosixTcpStream.h"
+#include "SolidSyslogPosixTcpStreamErrors.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogStream.h"
 #include "SolidSyslogStreamDefinition.h"
@@ -543,7 +543,6 @@ TEST_GROUP(SolidSyslogPosixTcpStreamPool)
             SolidSyslogPosixTcpStream_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()
@@ -575,7 +574,8 @@ TEST(SolidSyslogPosixTcpStreamPool, ExhaustedCreateReportsError)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_POSIXTCPSTREAM_POOL_EXHAUSTED, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&PosixTcpStreamErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(POSIXTCPSTREAM_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogPosixTcpStreamPool, FallbackSendReturnsTrue)
@@ -639,7 +639,8 @@ TEST(SolidSyslogPosixTcpStreamPool, DestroyOfUnknownHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_POSIXTCPSTREAM_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&PosixTcpStreamErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(POSIXTCPSTREAM_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogPosixTcpStreamPool, DestroyOfStaleHandleReportsWarning)
@@ -653,5 +654,6 @@ TEST(SolidSyslogPosixTcpStreamPool, DestroyOfStaleHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_POSIXTCPSTREAM_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&PosixTcpStreamErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(POSIXTCPSTREAM_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }

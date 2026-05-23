@@ -12,6 +12,7 @@ add_executable(SolidSyslogMbedTlsStreamPoolTest
     SolidSyslogMbedTlsStreamPoolTest.cpp
     main.cpp
     ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsStream.c
+    ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsStreamMessages.c
     ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsStreamStatic.c
     ${CMAKE_SOURCE_DIR}/Tests/StreamFake.c
 )
@@ -50,6 +51,7 @@ add_executable(SolidSyslogMbedTlsStreamTest
     SolidSyslogMbedTlsStreamTest.cpp
     main.cpp
     ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsStream.c
+    ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsStreamMessages.c
     ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsStreamStatic.c
     ${CMAKE_SOURCE_DIR}/Tests/AddressFake.c
     ${CMAKE_SOURCE_DIR}/Tests/StreamFake.c

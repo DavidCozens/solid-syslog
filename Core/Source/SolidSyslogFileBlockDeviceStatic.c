@@ -2,9 +2,10 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include "SolidSyslogError.h"
-#include "SolidSyslogErrorMessages.h"
+#include "SolidSyslogFileBlockDeviceErrors.h"
 #include "SolidSyslogFileBlockDevicePrivate.h"
 #include "SolidSyslogNullBlockDevice.h"
 #include "SolidSyslogPoolAllocator.h"
@@ -35,7 +36,11 @@ struct SolidSyslogBlockDevice* SolidSyslogFileBlockDevice_Create(struct SolidSys
     }
     else
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_FILEBLOCKDEVICE_POOL_EXHAUSTED);
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &FileBlockDeviceErrorSource,
+            (uint8_t) FILEBLOCKDEVICE_ERROR_POOL_EXHAUSTED
+        );
     }
     return result;
 }
@@ -48,7 +53,11 @@ void SolidSyslogFileBlockDevice_Destroy(struct SolidSyslogBlockDevice* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&FileBlockDevice_Allocator, index, FileBlockDevice_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_ERROR_MSG_FILEBLOCKDEVICE_UNKNOWN_DESTROY);
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_WARNING,
+            &FileBlockDeviceErrorSource,
+            (uint8_t) FILEBLOCKDEVICE_ERROR_UNKNOWN_DESTROY
+        );
     }
 }
 

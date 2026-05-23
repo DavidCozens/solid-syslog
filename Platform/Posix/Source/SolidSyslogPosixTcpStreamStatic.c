@@ -2,11 +2,12 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include "SolidSyslogError.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogNullStream.h"
 #include "SolidSyslogPoolAllocator.h"
+#include "SolidSyslogPosixTcpStreamErrors.h"
 #include "SolidSyslogPosixTcpStreamPrivate.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
@@ -34,7 +35,11 @@ struct SolidSyslogStream* SolidSyslogPosixTcpStream_Create(void)
     }
     else
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_POSIXTCPSTREAM_POOL_EXHAUSTED);
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &PosixTcpStreamErrorSource,
+            (uint8_t) POSIXTCPSTREAM_ERROR_POOL_EXHAUSTED
+        );
     }
     return handle;
 }
@@ -47,7 +52,11 @@ void SolidSyslogPosixTcpStream_Destroy(struct SolidSyslogStream* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&PosixTcpStream_Allocator, index, PosixTcpStream_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_ERROR_MSG_POSIXTCPSTREAM_UNKNOWN_DESTROY);
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_WARNING,
+            &PosixTcpStreamErrorSource,
+            (uint8_t) POSIXTCPSTREAM_ERROR_UNKNOWN_DESTROY
+        );
     }
 }
 

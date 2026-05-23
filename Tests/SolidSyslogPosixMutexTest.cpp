@@ -2,10 +2,10 @@
 
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogMutex.h"
 #include "SolidSyslogMutexDefinition.h"
 #include "SolidSyslogPosixMutex.h"
+#include "SolidSyslogPosixMutexErrors.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
 #include "TestUtils.h"
@@ -79,7 +79,6 @@ TEST_GROUP(SolidSyslogPosixMutexPool)
             SolidSyslogPosixMutex_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()
@@ -111,7 +110,8 @@ TEST(SolidSyslogPosixMutexPool, ExhaustedCreateReportsError)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_POSIXMUTEX_POOL_EXHAUSTED, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&PosixMutexErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(POSIXMUTEX_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogPosixMutexPool, FallbackLockUnlockAreNoOps)
@@ -176,7 +176,8 @@ TEST(SolidSyslogPosixMutexPool, DestroyOfUnknownHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_POSIXMUTEX_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&PosixMutexErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(POSIXMUTEX_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogPosixMutexPool, DestroyOfStaleHandleReportsWarning)
@@ -190,5 +191,6 @@ TEST(SolidSyslogPosixMutexPool, DestroyOfStaleHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_POSIXMUTEX_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&PosixMutexErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(POSIXMUTEX_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }

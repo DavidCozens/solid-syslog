@@ -2,13 +2,14 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include "SolidSyslogError.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogNullSd.h"
 #include "SolidSyslogPoolAllocator.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTimeQuality.h"
+#include "SolidSyslogTimeQualitySdErrors.h"
 #include "SolidSyslogTimeQualitySdPrivate.h"
 #include "SolidSyslogTunables.h"
 
@@ -29,7 +30,11 @@ struct SolidSyslogStructuredData* SolidSyslogTimeQualitySd_Create(SolidSyslogTim
     struct SolidSyslogStructuredData* handle = SolidSyslogNullSd_Get();
     if (getTimeQuality == NULL)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_TIMEQUALITYSD_CREATE_NULL_CALLBACK);
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &TimeQualitySdErrorSource,
+            (uint8_t) TIMEQUALITYSD_ERROR_NULL_CALLBACK
+        );
     }
     else
     {
@@ -41,7 +46,11 @@ struct SolidSyslogStructuredData* SolidSyslogTimeQualitySd_Create(SolidSyslogTim
         }
         else
         {
-            SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_TIMEQUALITYSD_POOL_EXHAUSTED);
+            SolidSyslog_Error(
+                SOLIDSYSLOG_SEVERITY_ERROR,
+                &TimeQualitySdErrorSource,
+                (uint8_t) TIMEQUALITYSD_ERROR_POOL_EXHAUSTED
+            );
         }
     }
     return handle;
@@ -55,7 +64,11 @@ void SolidSyslogTimeQualitySd_Destroy(struct SolidSyslogStructuredData* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&TimeQualitySd_Allocator, index, TimeQualitySd_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_ERROR_MSG_TIMEQUALITYSD_UNKNOWN_DESTROY);
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_WARNING,
+            &TimeQualitySdErrorSource,
+            (uint8_t) TIMEQUALITYSD_ERROR_UNKNOWN_DESTROY
+        );
     }
 }
 

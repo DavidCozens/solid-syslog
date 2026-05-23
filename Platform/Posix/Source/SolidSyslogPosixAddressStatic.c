@@ -2,10 +2,11 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include "SolidSyslogError.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogPoolAllocator.h"
+#include "SolidSyslogPosixAddressErrors.h"
 #include "SolidSyslogPosixAddressPrivate.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
@@ -38,7 +39,11 @@ struct SolidSyslogAddress* SolidSyslogPosixAddress_Create(void)
     }
     else
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_POSIXADDRESS_POOL_EXHAUSTED);
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &PosixAddressErrorSource,
+            (uint8_t) POSIXADDRESS_ERROR_POOL_EXHAUSTED
+        );
     }
     return handle;
 }
@@ -57,7 +62,11 @@ void SolidSyslogPosixAddress_Destroy(struct SolidSyslogAddress* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&PosixAddress_Allocator, index, PosixAddress_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_ERROR_MSG_POSIXADDRESS_UNKNOWN_DESTROY);
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_WARNING,
+            &PosixAddressErrorSource,
+            (uint8_t) POSIXADDRESS_ERROR_UNKNOWN_DESTROY
+        );
     }
 }
 

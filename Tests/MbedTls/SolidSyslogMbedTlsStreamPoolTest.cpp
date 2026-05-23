@@ -4,8 +4,8 @@ extern "C"
 {
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogMbedTlsStream.h"
+#include "SolidSyslogMbedTlsStreamErrors.h"
 #include "SolidSyslogNullStream.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogStream.h"
@@ -68,7 +68,6 @@ TEST_GROUP(SolidSyslogMbedTlsStreamPool)
         }
         StreamFake_Destroy(transport);
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()
@@ -110,7 +109,8 @@ TEST(SolidSyslogMbedTlsStreamPool, ExhaustedCreateReportsError)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_MBEDTLSSTREAM_POOL_EXHAUSTED, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&MbedTlsStreamErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(MBEDTLSSTREAM_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogMbedTlsStreamPool, FallbackSendReturnsTrueToDropOnTheFloor)
@@ -174,7 +174,8 @@ TEST(SolidSyslogMbedTlsStreamPool, DestroyOfUnknownHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_MBEDTLSSTREAM_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&MbedTlsStreamErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(MBEDTLSSTREAM_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogMbedTlsStreamPool, DestroyOfStaleHandleReportsWarning)
@@ -188,5 +189,6 @@ TEST(SolidSyslogMbedTlsStreamPool, DestroyOfStaleHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_MBEDTLSSTREAM_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&MbedTlsStreamErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(MBEDTLSSTREAM_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }

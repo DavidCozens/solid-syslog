@@ -1,0 +1,21 @@
+#ifndef SOLIDSYSLOGWINDOWSATOMICCOUNTERERRORS_H
+#define SOLIDSYSLOGWINDOWSATOMICCOUNTERERRORS_H
+
+#include "ExternC.h"
+
+EXTERN_C_BEGIN
+
+    struct SolidSyslogErrorSource;
+
+    enum SolidSyslogWindowsAtomicCounterErrors
+    {
+        WINDOWSATOMICCOUNTER_ERROR_POOL_EXHAUSTED,
+        WINDOWSATOMICCOUNTER_ERROR_UNKNOWN_DESTROY,
+        WINDOWSATOMICCOUNTER_ERROR_MAX
+    };
+
+    extern const struct SolidSyslogErrorSource WindowsAtomicCounterErrorSource;
+
+EXTERN_C_END
+
+#endif /* SOLIDSYSLOGWINDOWSATOMICCOUNTERERRORS_H */

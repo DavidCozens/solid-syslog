@@ -4,9 +4,9 @@
 #include "ErrorHandlerFake.h"
 #include "SolidSyslogAtomicCounter.h"
 #include "SolidSyslogAtomicCounterDefinition.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogStdAtomicCounter.h"
+#include "SolidSyslogStdAtomicCounterErrors.h"
 #include "SolidSyslogTunables.h"
 #include "TestUtils.h"
 
@@ -50,7 +50,6 @@ TEST_GROUP(SolidSyslogStdAtomicCounterPool)
             SolidSyslogStdAtomicCounter_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()
@@ -82,7 +81,8 @@ TEST(SolidSyslogStdAtomicCounterPool, ExhaustedCreateReportsError)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_STDATOMICCOUNTER_POOL_EXHAUSTED, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&StdAtomicCounterErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(STDATOMICCOUNTER_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogStdAtomicCounterPool, FallbackIncrementReturnsOne)
@@ -146,7 +146,8 @@ TEST(SolidSyslogStdAtomicCounterPool, DestroyOfUnknownHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_STDATOMICCOUNTER_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&StdAtomicCounterErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(STDATOMICCOUNTER_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogStdAtomicCounterPool, DestroyOfStaleHandleReportsWarning)
@@ -160,5 +161,6 @@ TEST(SolidSyslogStdAtomicCounterPool, DestroyOfStaleHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_STDATOMICCOUNTER_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&StdAtomicCounterErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(STDATOMICCOUNTER_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }

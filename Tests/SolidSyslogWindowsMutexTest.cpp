@@ -2,12 +2,12 @@
 
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogMutex.h"
 #include "SolidSyslogMutexDefinition.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
 #include "SolidSyslogWindowsMutex.h"
+#include "SolidSyslogWindowsMutexErrors.h"
 #include "TestUtils.h"
 
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings ONCE/NEVER into scope for CALLED_FAKE
@@ -79,7 +79,6 @@ TEST_GROUP(SolidSyslogWindowsMutexPool)
             SolidSyslogWindowsMutex_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()
@@ -111,7 +110,8 @@ TEST(SolidSyslogWindowsMutexPool, ExhaustedCreateReportsError)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_WINDOWSMUTEX_POOL_EXHAUSTED, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&WindowsMutexErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(WINDOWSMUTEX_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogWindowsMutexPool, FallbackLockUnlockAreNoOps)
@@ -176,7 +176,8 @@ TEST(SolidSyslogWindowsMutexPool, DestroyOfUnknownHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_WINDOWSMUTEX_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&WindowsMutexErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(WINDOWSMUTEX_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogWindowsMutexPool, DestroyOfStaleHandleReportsWarning)
@@ -190,5 +191,6 @@ TEST(SolidSyslogWindowsMutexPool, DestroyOfStaleHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_WINDOWSMUTEX_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&WindowsMutexErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(WINDOWSMUTEX_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }

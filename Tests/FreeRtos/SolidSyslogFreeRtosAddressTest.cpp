@@ -8,8 +8,8 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogFreeRtosAddress.h"
+#include "SolidSyslogFreeRtosAddressErrors.h"
 #include "SolidSyslogFreeRtosAddressPrivate.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
@@ -107,7 +107,6 @@ TEST_GROUP(SolidSyslogFreeRtosAddressPool)
             SolidSyslogFreeRtosAddress_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()
@@ -139,7 +138,8 @@ TEST(SolidSyslogFreeRtosAddressPool, ExhaustedCreateReportsError)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_FREERTOSADDRESS_POOL_EXHAUSTED, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&FreeRtosAddressErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(FREERTOSADDRESS_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogFreeRtosAddressPool, CreateAcquiresAndReleasesConfigLockOnFirstFreeSlot)
@@ -195,7 +195,8 @@ TEST(SolidSyslogFreeRtosAddressPool, DestroyOfUnknownHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_FREERTOSADDRESS_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&FreeRtosAddressErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(FREERTOSADDRESS_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogFreeRtosAddressPool, DestroyOfStaleHandleReportsWarning)
@@ -209,5 +210,6 @@ TEST(SolidSyslogFreeRtosAddressPool, DestroyOfStaleHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_FREERTOSADDRESS_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&FreeRtosAddressErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(FREERTOSADDRESS_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }

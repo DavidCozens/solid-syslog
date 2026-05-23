@@ -2,10 +2,11 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include "SolidSyslogError.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogNullSd.h"
+#include "SolidSyslogOriginSdErrors.h"
 #include "SolidSyslogOriginSdPrivate.h"
 #include "SolidSyslogPoolAllocator.h"
 #include "SolidSyslogPrival.h"
@@ -31,7 +32,7 @@ struct SolidSyslogStructuredData* SolidSyslogOriginSd_Create(const struct SolidS
     }
     else
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_ORIGINSD_POOL_EXHAUSTED);
+        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, &OriginSdErrorSource, (uint8_t) ORIGINSD_ERROR_POOL_EXHAUSTED);
     }
     return handle;
 }
@@ -43,7 +44,7 @@ void SolidSyslogOriginSd_Destroy(struct SolidSyslogStructuredData* base)
                     SolidSyslogPoolAllocator_FreeIfInUse(&OriginSd_Allocator, index, OriginSd_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_ERROR_MSG_ORIGINSD_UNKNOWN_DESTROY);
+        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, &OriginSdErrorSource, (uint8_t) ORIGINSD_ERROR_UNKNOWN_DESTROY);
     }
 }
 

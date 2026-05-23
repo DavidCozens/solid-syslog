@@ -8,10 +8,10 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 #include "ErrorHandlerFake.h"
 #include "SolidSyslogDatagram.h"
 #include "SolidSyslogDatagramDefinition.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogFreeRtosAddress.h"
 #include "SolidSyslogFreeRtosAddressPrivate.h"
 #include "SolidSyslogFreeRtosDatagram.h"
+#include "SolidSyslogFreeRtosDatagramErrors.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
 #include "SolidSyslogUdpPayload.h"
@@ -285,7 +285,6 @@ TEST_GROUP(SolidSyslogFreeRtosDatagramPool)
             SolidSyslogFreeRtosDatagram_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()
@@ -317,7 +316,8 @@ TEST(SolidSyslogFreeRtosDatagramPool, ExhaustedCreateReportsError)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_FREERTOSDATAGRAM_POOL_EXHAUSTED, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&FreeRtosDatagramErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(FREERTOSDATAGRAM_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogFreeRtosDatagramPool, FallbackVtableMethodsAreNoOps)
@@ -393,7 +393,8 @@ TEST(SolidSyslogFreeRtosDatagramPool, DestroyOfUnknownHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_FREERTOSDATAGRAM_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&FreeRtosDatagramErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(FREERTOSDATAGRAM_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogFreeRtosDatagramPool, DestroyOfStaleHandleReportsWarning)
@@ -407,5 +408,6 @@ TEST(SolidSyslogFreeRtosDatagramPool, DestroyOfStaleHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_FREERTOSDATAGRAM_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&FreeRtosDatagramErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(FREERTOSDATAGRAM_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }

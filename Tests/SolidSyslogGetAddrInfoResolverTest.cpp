@@ -5,8 +5,8 @@
 
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogGetAddrInfoResolver.h"
+#include "SolidSyslogGetAddrInfoResolverErrors.h"
 #include "SolidSyslogPosixAddress.h"
 #include "SolidSyslogPosixAddressPrivate.h"
 #include "SolidSyslogPrival.h"
@@ -166,7 +166,6 @@ TEST_GROUP(SolidSyslogGetAddrInfoResolverPool)
             SolidSyslogGetAddrInfoResolver_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()
@@ -198,7 +197,8 @@ TEST(SolidSyslogGetAddrInfoResolverPool, ExhaustedCreateReportsError)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_GETADDRINFORESOLVER_POOL_EXHAUSTED, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&GetAddrInfoResolverErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(GETADDRINFORESOLVER_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogGetAddrInfoResolverPool, FallbackResolveReturnsFalse)
@@ -264,7 +264,8 @@ TEST(SolidSyslogGetAddrInfoResolverPool, DestroyOfUnknownHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_GETADDRINFORESOLVER_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&GetAddrInfoResolverErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(GETADDRINFORESOLVER_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogGetAddrInfoResolverPool, DestroyOfStaleHandleReportsWarning)
@@ -278,5 +279,6 @@ TEST(SolidSyslogGetAddrInfoResolverPool, DestroyOfStaleHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_GETADDRINFORESOLVER_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&GetAddrInfoResolverErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(GETADDRINFORESOLVER_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }

@@ -9,11 +9,11 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 #include "SolidSyslogWinsockAddressPrivate.h"
 #include "SolidSyslogDatagram.h"
 #include "SolidSyslogDatagramDefinition.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
 #include "SolidSyslogUdpPayload.h"
 #include "SolidSyslogWinsockDatagram.h"
+#include "SolidSyslogWinsockDatagramErrors.h"
 #include "SolidSyslogWinsockDatagramInternal.h"
 #include "WinsockFake.h"
 #include <cstdint>
@@ -297,7 +297,6 @@ TEST_GROUP(SolidSyslogWinsockDatagramPool)
             SolidSyslogWinsockDatagram_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()
@@ -329,7 +328,8 @@ TEST(SolidSyslogWinsockDatagramPool, ExhaustedCreateReportsError)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_WINSOCKDATAGRAM_POOL_EXHAUSTED, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&WinsockDatagramErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(WINSOCKDATAGRAM_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogWinsockDatagramPool, FallbackSendToIsNoOp)
@@ -399,7 +399,8 @@ TEST(SolidSyslogWinsockDatagramPool, DestroyOfUnknownHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_WINSOCKDATAGRAM_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&WinsockDatagramErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(WINSOCKDATAGRAM_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogWinsockDatagramPool, DestroyOfStaleHandleReportsWarning)
@@ -413,5 +414,6 @@ TEST(SolidSyslogWinsockDatagramPool, DestroyOfStaleHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_WINSOCKDATAGRAM_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&WinsockDatagramErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(WINSOCKDATAGRAM_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }

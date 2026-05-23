@@ -1,0 +1,21 @@
+#ifndef SOLIDSYSLOGPOSIXMESSAGEQUEUEBUFFERERRORS_H
+#define SOLIDSYSLOGPOSIXMESSAGEQUEUEBUFFERERRORS_H
+
+#include "ExternC.h"
+
+EXTERN_C_BEGIN
+
+    struct SolidSyslogErrorSource;
+
+    enum SolidSyslogPosixMessageQueueBufferErrors
+    {
+        POSIXMESSAGEQUEUEBUFFER_ERROR_POOL_EXHAUSTED,
+        POSIXMESSAGEQUEUEBUFFER_ERROR_UNKNOWN_DESTROY,
+        POSIXMESSAGEQUEUEBUFFER_ERROR_MAX
+    };
+
+    extern const struct SolidSyslogErrorSource PosixMessageQueueBufferErrorSource;
+
+EXTERN_C_END
+
+#endif /* SOLIDSYSLOGPOSIXMESSAGEQUEUEBUFFERERRORS_H */

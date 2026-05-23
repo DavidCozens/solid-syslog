@@ -2,9 +2,10 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include "SolidSyslogError.h"
-#include "SolidSyslogErrorMessages.h"
+#include "SolidSyslogMbedTlsStreamErrors.h"
 #include "SolidSyslogMbedTlsStreamPrivate.h"
 #include "SolidSyslogNullStream.h"
 #include "SolidSyslogPoolAllocator.h"
@@ -34,7 +35,11 @@ struct SolidSyslogStream* SolidSyslogMbedTlsStream_Create(const struct SolidSysl
     }
     else
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_MBEDTLSSTREAM_POOL_EXHAUSTED);
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &MbedTlsStreamErrorSource,
+            (uint8_t) MBEDTLSSTREAM_ERROR_POOL_EXHAUSTED
+        );
     }
     return handle;
 }
@@ -47,7 +52,11 @@ void SolidSyslogMbedTlsStream_Destroy(struct SolidSyslogStream* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&MbedTlsStream_Allocator, index, MbedTlsStream_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_ERROR_MSG_MBEDTLSSTREAM_UNKNOWN_DESTROY);
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_WARNING,
+            &MbedTlsStreamErrorSource,
+            (uint8_t) MBEDTLSSTREAM_ERROR_UNKNOWN_DESTROY
+        );
     }
 }
 

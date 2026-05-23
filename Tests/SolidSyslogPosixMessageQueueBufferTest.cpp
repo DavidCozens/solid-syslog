@@ -9,8 +9,8 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 #include "ErrorHandlerFake.h"
 #include "SolidSyslogBuffer.h"
 #include "SolidSyslogBufferDefinition.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogPosixMessageQueueBuffer.h"
+#include "SolidSyslogPosixMessageQueueBufferErrors.h"
 #include "SolidSyslog.h"
 #include "SolidSyslogConfig.h"
 #include "SolidSyslogTunables.h"
@@ -172,7 +172,6 @@ TEST_GROUP(SolidSyslogPosixMessageQueueBufferPool)
             SolidSyslogPosixMessageQueueBuffer_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     static struct SolidSyslogBuffer* MakeBuffer()
@@ -209,7 +208,8 @@ TEST(SolidSyslogPosixMessageQueueBufferPool, ExhaustedCreateReportsError)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_POSIXMESSAGEQUEUEBUFFER_POOL_EXHAUSTED, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&PosixMessageQueueBufferErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(POSIXMESSAGEQUEUEBUFFER_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogPosixMessageQueueBufferPool, FallbackReadAndWriteAreNoOps)
@@ -278,7 +278,8 @@ TEST(SolidSyslogPosixMessageQueueBufferPool, DestroyOfUnknownHandleReportsWarnin
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_POSIXMESSAGEQUEUEBUFFER_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&PosixMessageQueueBufferErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(POSIXMESSAGEQUEUEBUFFER_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogPosixMessageQueueBufferPool, DestroyOfStaleHandleReportsWarning)
@@ -292,7 +293,8 @@ TEST(SolidSyslogPosixMessageQueueBufferPool, DestroyOfStaleHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_POSIXMESSAGEQUEUEBUFFER_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&PosixMessageQueueBufferErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(POSIXMESSAGEQUEUEBUFFER_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }
 
 /* Slot-indexed queue names are only observable with at least two pool

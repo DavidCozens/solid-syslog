@@ -1,0 +1,21 @@
+#ifndef SOLIDSYSLOGPOSIXMUTEXERRORS_H
+#define SOLIDSYSLOGPOSIXMUTEXERRORS_H
+
+#include "ExternC.h"
+
+EXTERN_C_BEGIN
+
+    struct SolidSyslogErrorSource;
+
+    enum SolidSyslogPosixMutexErrors
+    {
+        POSIXMUTEX_ERROR_POOL_EXHAUSTED,
+        POSIXMUTEX_ERROR_UNKNOWN_DESTROY,
+        POSIXMUTEX_ERROR_MAX
+    };
+
+    extern const struct SolidSyslogErrorSource PosixMutexErrorSource;
+
+EXTERN_C_END
+
+#endif /* SOLIDSYSLOGPOSIXMUTEXERRORS_H */

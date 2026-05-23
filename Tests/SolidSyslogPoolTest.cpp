@@ -5,7 +5,7 @@
 #include "SenderFake.h"
 #include "SolidSyslog.h"
 #include "SolidSyslogConfig.h"
-#include "SolidSyslogErrorMessages.h"
+#include "SolidSyslogErrors.h"
 #include "SolidSyslogNullStore.h"
 #include "SolidSyslogPassthroughBuffer.h"
 #include "SolidSyslogPrival.h"
@@ -65,7 +65,6 @@ TEST_GROUP(SolidSyslogPool)
         SolidSyslogPassthroughBuffer_Destroy(buffer);
         SenderFake_Destroy(fakeSender);
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()
@@ -97,7 +96,8 @@ TEST(SolidSyslogPool, ExhaustedCreateReportsError)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_SOLIDSYSLOG_POOL_EXHAUSTED, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&SolidSyslogErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogPool, FallbackLogSilentlyDropsTheMessage)
@@ -170,7 +170,8 @@ TEST(SolidSyslogPool, DestroyOfUnknownHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_SOLIDSYSLOG_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&SolidSyslogErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogPool, DestroyOfStaleHandleReportsWarning)
@@ -184,5 +185,6 @@ TEST(SolidSyslogPool, DestroyOfStaleHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_SOLIDSYSLOG_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&SolidSyslogErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }

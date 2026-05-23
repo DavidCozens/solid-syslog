@@ -6,14 +6,21 @@
 
 static int handleCallCount;
 static enum SolidSyslogSeverity lastSeverity;
-static const char* lastMessage;
+static const struct SolidSyslogErrorSource* lastSource;
+static uint8_t lastCode;
 static const void* lastContext;
 
-static void Handle(void* context, enum SolidSyslogSeverity severity, const char* message)
+static void Handle(
+    void* context,
+    enum SolidSyslogSeverity severity,
+    const struct SolidSyslogErrorSource* source,
+    uint8_t code
+)
 {
     handleCallCount++;
     lastSeverity = severity;
-    lastMessage = message;
+    lastSource = source;
+    lastCode = code;
     lastContext = context;
 }
 
@@ -21,14 +28,10 @@ void ErrorHandlerFake_Install(void* context)
 {
     handleCallCount = 0;
     lastSeverity = SOLIDSYSLOG_SEVERITY_DEBUG;
-    lastMessage = NULL;
+    lastSource = NULL;
+    lastCode = 0U;
     lastContext = NULL;
     SolidSyslog_SetErrorHandler(Handle, context);
-}
-
-void ErrorHandlerFake_Uninstall(void)
-{
-    SolidSyslog_SetErrorHandler(NULL, NULL);
 }
 
 int ErrorHandlerFake_HandleCallCount(void)
@@ -41,9 +44,14 @@ enum SolidSyslogSeverity ErrorHandlerFake_LastSeverity(void)
     return lastSeverity;
 }
 
-const char* ErrorHandlerFake_LastMessage(void)
+const struct SolidSyslogErrorSource* ErrorHandlerFake_LastSource(void)
 {
-    return lastMessage;
+    return lastSource;
+}
+
+uint8_t ErrorHandlerFake_LastCode(void)
+{
+    return lastCode;
 }
 
 const void* ErrorHandlerFake_LastContext(void)

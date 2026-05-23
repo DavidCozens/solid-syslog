@@ -439,7 +439,7 @@ TEST(SolidSyslogTlsStream, DestroyClosesTransportWhenStillOpen)
 
     CALLED_FAKE_ON(StreamFake_Close, transport, ONCE);
     /* Re-create so teardown's Destroy targets a live slot rather than a
-       stale handle (which would fire SOLIDSYSLOG_ERROR_MSG_TLSSTREAM_UNKNOWN_DESTROY). */
+       stale handle (which would fire TLSSTREAM_ERROR_UNKNOWN_DESTROY). */
     stream = SolidSyslogTlsStream_Create(&config);
 }
 

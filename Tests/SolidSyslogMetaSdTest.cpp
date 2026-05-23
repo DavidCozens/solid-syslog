@@ -5,6 +5,7 @@
 #include "SolidSyslogAtomicCounterTestHelper.h"
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogMetaSd.h"
+#include "SolidSyslogMetaSdErrors.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogStructuredData.h"
 #include "SolidSyslogTunables.h"
@@ -93,7 +94,6 @@ TEST_GROUP(SolidSyslogMetaSd)
     {
         SolidSyslogMetaSd_Destroy(sd);
         TestAtomicCounter_Destroy(counter);
-        ErrorHandlerFake_Uninstall();
     }
 
     void recreateWith(const SolidSyslogMetaSdConfig* configPtr)
@@ -283,7 +283,8 @@ TEST(SolidSyslogMetaSd, CreateWithNullConfigReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL("SolidSyslogMetaSd_Create called with NULL config", ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&MetaSdErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(METASD_ERROR_NULL_CONFIG, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogMetaSd, CreateWithNullCounterReportsWarning)
@@ -293,7 +294,8 @@ TEST(SolidSyslogMetaSd, CreateWithNullCounterReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL("SolidSyslogMetaSd_Create config.Counter is NULL", ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&MetaSdErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(METASD_ERROR_NULL_COUNTER, ErrorHandlerFake_LastCode());
 }
 
 // Pool tests — prove SOLIDSYSLOG_META_SD_POOL_SIZE caps live instances

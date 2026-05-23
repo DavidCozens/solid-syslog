@@ -2,9 +2,10 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include "SolidSyslogError.h"
-#include "SolidSyslogErrorMessages.h"
+#include "SolidSyslogFatFsFileErrors.h"
 #include "SolidSyslogFatFsFilePrivate.h"
 #include "SolidSyslogNullFile.h"
 #include "SolidSyslogPoolAllocator.h"
@@ -31,7 +32,7 @@ struct SolidSyslogFile* SolidSyslogFatFsFile_Create(void)
     }
     else
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_FATFSFILE_POOL_EXHAUSTED);
+        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, &FatFsFileErrorSource, (uint8_t) FATFSFILE_ERROR_POOL_EXHAUSTED);
     }
     return handle;
 }
@@ -39,12 +40,15 @@ struct SolidSyslogFile* SolidSyslogFatFsFile_Create(void)
 void SolidSyslogFatFsFile_Destroy(struct SolidSyslogFile* base)
 {
     size_t index = FatFsFile_IndexFromHandle(base);
-    bool released =
-        SolidSyslogPoolAllocator_IndexIsValid(&FatFsFile_Allocator, index) &&
-        SolidSyslogPoolAllocator_FreeIfInUse(&FatFsFile_Allocator, index, FatFsFile_CleanupAtIndex, NULL);
+    bool released = SolidSyslogPoolAllocator_IndexIsValid(&FatFsFile_Allocator, index) &&
+                    SolidSyslogPoolAllocator_FreeIfInUse(&FatFsFile_Allocator, index, FatFsFile_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_ERROR_MSG_FATFSFILE_UNKNOWN_DESTROY);
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_WARNING,
+            &FatFsFileErrorSource,
+            (uint8_t) FATFSFILE_ERROR_UNKNOWN_DESTROY
+        );
     }
 }
 

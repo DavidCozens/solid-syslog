@@ -7,7 +7,7 @@
 #include "SolidSyslogBuffer.h"
 #include "SolidSyslogConfig.h"
 #include "SolidSyslogError.h"
-#include "SolidSyslogErrorMessages.h"
+#include "SolidSyslogErrors.h"
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogNullBuffer.h"
 #include "SolidSyslogNullSender.h"
@@ -126,7 +126,11 @@ static void SolidSyslog_InstallBuffer(struct SolidSyslog* self, struct SolidSysl
 {
     if (configured == NULL)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_CREATE_NULL_BUFFER);
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &SolidSyslogErrorSource,
+            (uint8_t) SOLIDSYSLOG_ERROR_CREATE_NULL_BUFFER
+        );
     }
     else
     {
@@ -138,7 +142,11 @@ static void SolidSyslog_InstallSender(struct SolidSyslog* self, struct SolidSysl
 {
     if (configured == NULL)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_CREATE_NULL_SENDER);
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &SolidSyslogErrorSource,
+            (uint8_t) SOLIDSYSLOG_ERROR_CREATE_NULL_SENDER
+        );
     }
     else
     {
@@ -150,7 +158,11 @@ static void SolidSyslog_InstallStore(struct SolidSyslog* self, struct SolidSyslo
 {
     if (configured == NULL)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_CREATE_NULL_STORE);
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &SolidSyslogErrorSource,
+            (uint8_t) SOLIDSYSLOG_ERROR_CREATE_NULL_STORE
+        );
     }
     else
     {
@@ -204,7 +216,11 @@ void SolidSyslog_Service(struct SolidSyslog* handle)
 {
     if (handle == NULL)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_SERVICE_NULL_HANDLE);
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &SolidSyslogErrorSource,
+            (uint8_t) SOLIDSYSLOG_ERROR_SERVICE_NULL_HANDLE
+        );
     }
     else if (SolidSyslog_IsServiceEnabled(handle))
     {
@@ -266,11 +282,19 @@ void SolidSyslog_Log(struct SolidSyslog* handle, const struct SolidSyslogMessage
 {
     if (handle == NULL)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_LOG_NULL_HANDLE);
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &SolidSyslogErrorSource,
+            (uint8_t) SOLIDSYSLOG_ERROR_LOG_NULL_HANDLE
+        );
     }
     else if (message == NULL)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_LOG_NULL_MESSAGE);
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &SolidSyslogErrorSource,
+            (uint8_t) SOLIDSYSLOG_ERROR_LOG_NULL_MESSAGE
+        );
     }
     else
     {

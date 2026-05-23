@@ -2,10 +2,10 @@
 #include "CppUTest/TestHarness.h"
 #include "ErrorHandlerFake.h"
 #include "SocketFake.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogFile.h"
 #include "SolidSyslogFileDefinition.h"
 #include "SolidSyslogPosixFile.h"
+#include "SolidSyslogPosixFileErrors.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
 #include "TestUtils.h"
@@ -153,7 +153,6 @@ TEST_GROUP(SolidSyslogPosixFilePool)
             SolidSyslogPosixFile_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()
@@ -185,7 +184,8 @@ TEST(SolidSyslogPosixFilePool, ExhaustedCreateReportsError)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_POSIXFILE_POOL_EXHAUSTED, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&PosixFileErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(POSIXFILE_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogPosixFilePool, FallbackOpenReturnsFalse)
@@ -249,7 +249,8 @@ TEST(SolidSyslogPosixFilePool, DestroyOfUnknownHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_POSIXFILE_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&PosixFileErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(POSIXFILE_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogPosixFilePool, DestroyOfStaleHandleReportsWarning)
@@ -263,5 +264,6 @@ TEST(SolidSyslogPosixFilePool, DestroyOfStaleHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_POSIXFILE_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&PosixFileErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(POSIXFILE_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }

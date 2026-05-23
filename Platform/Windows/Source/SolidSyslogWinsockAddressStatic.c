@@ -2,12 +2,13 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include "SolidSyslogError.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogPoolAllocator.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
+#include "SolidSyslogWinsockAddressErrors.h"
 #include "SolidSyslogWinsockAddressPrivate.h"
 
 struct SolidSyslogAddress;
@@ -38,7 +39,11 @@ struct SolidSyslogAddress* SolidSyslogWinsockAddress_Create(void)
     }
     else
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_WINSOCKADDRESS_POOL_EXHAUSTED);
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &WinsockAddressErrorSource,
+            (uint8_t) WINSOCKADDRESS_ERROR_POOL_EXHAUSTED
+        );
     }
     return handle;
 }
@@ -57,7 +62,11 @@ void SolidSyslogWinsockAddress_Destroy(struct SolidSyslogAddress* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&WinsockAddress_Allocator, index, WinsockAddress_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_ERROR_MSG_WINSOCKADDRESS_UNKNOWN_DESTROY);
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_WARNING,
+            &WinsockAddressErrorSource,
+            (uint8_t) WINSOCKADDRESS_ERROR_UNKNOWN_DESTROY
+        );
     }
 }
 

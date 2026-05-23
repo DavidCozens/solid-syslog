@@ -2,13 +2,14 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include "SolidSyslogError.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogNullAtomicCounter.h"
 #include "SolidSyslogPoolAllocator.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
+#include "SolidSyslogWindowsAtomicCounterErrors.h"
 #include "SolidSyslogWindowsAtomicCounterPrivate.h"
 
 struct SolidSyslogAtomicCounter;
@@ -34,7 +35,11 @@ struct SolidSyslogAtomicCounter* SolidSyslogWindowsAtomicCounter_Create(void)
     }
     else
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_WINDOWSATOMICCOUNTER_POOL_EXHAUSTED);
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &WindowsAtomicCounterErrorSource,
+            (uint8_t) WINDOWSATOMICCOUNTER_ERROR_POOL_EXHAUSTED
+        );
     }
     return handle;
 }
@@ -51,7 +56,11 @@ void SolidSyslogWindowsAtomicCounter_Destroy(struct SolidSyslogAtomicCounter* ba
                     );
     if (!released)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_ERROR_MSG_WINDOWSATOMICCOUNTER_UNKNOWN_DESTROY);
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_WARNING,
+            &WindowsAtomicCounterErrorSource,
+            (uint8_t) WINDOWSATOMICCOUNTER_ERROR_UNKNOWN_DESTROY
+        );
     }
 }
 

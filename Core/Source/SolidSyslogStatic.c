@@ -2,9 +2,10 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include "SolidSyslogError.h"
-#include "SolidSyslogErrorMessages.h"
+#include "SolidSyslogErrors.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogNullBuffer.h"
 #include "SolidSyslogNullSender.h"
@@ -36,7 +37,11 @@ struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config)
     struct SolidSyslog* result = &SolidSyslog_NullInstance;
     if (config == NULL)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_CREATE_NULL_CONFIG);
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &SolidSyslogErrorSource,
+            (uint8_t) SOLIDSYSLOG_ERROR_CREATE_NULL_CONFIG
+        );
     }
     else
     {
@@ -48,7 +53,11 @@ struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config)
         }
         else
         {
-            SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_SOLIDSYSLOG_POOL_EXHAUSTED);
+            SolidSyslog_Error(
+                SOLIDSYSLOG_SEVERITY_ERROR,
+                &SolidSyslogErrorSource,
+                (uint8_t) SOLIDSYSLOG_ERROR_POOL_EXHAUSTED
+            );
         }
     }
     return result;
@@ -79,7 +88,11 @@ void SolidSyslog_Destroy(struct SolidSyslog* handle)
         SolidSyslogPoolAllocator_FreeIfInUse(&SolidSyslog_Allocator, index, SolidSyslog_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_ERROR_MSG_SOLIDSYSLOG_UNKNOWN_DESTROY);
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_WARNING,
+            &SolidSyslogErrorSource,
+            (uint8_t) SOLIDSYSLOG_ERROR_UNKNOWN_DESTROY
+        );
     }
 }
 

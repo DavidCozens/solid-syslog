@@ -5,7 +5,6 @@
 #include "SolidSyslogDatagram.h"
 #include "SolidSyslogEndpoint.h"
 #include "SolidSyslogError.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogNullSender.h"
 #include "SolidSyslogPrival.h"
@@ -14,6 +13,7 @@
 #include "SolidSyslogTransport.h"
 #include "SolidSyslogUdpPayload.h"
 #include "SolidSyslogUdpSender.h"
+#include "SolidSyslogUdpSenderErrors.h"
 #include "SolidSyslogUdpSenderPrivate.h"
 
 struct SolidSyslogFormatter;
@@ -72,7 +72,11 @@ static bool UdpSender_Send(struct SolidSyslogSender* base, const void* buffer, s
     bool result = false;
     if (buffer == NULL)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_UDPSENDER_SEND_NULL_BUFFER);
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &UdpSenderErrorSource,
+            (uint8_t) UDPSENDER_ERROR_SEND_NULL_BUFFER
+        );
     }
     else
     {

@@ -2,12 +2,12 @@
 
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogFile.h"
 #include "SolidSyslogFileDefinition.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
 #include "SolidSyslogWindowsFile.h"
+#include "SolidSyslogWindowsFileErrors.h"
 #include "TestUtils.h"
 
 #include <cstdio>
@@ -182,7 +182,6 @@ TEST_GROUP(SolidSyslogWindowsFilePool)
             SolidSyslogWindowsFile_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()
@@ -214,7 +213,8 @@ TEST(SolidSyslogWindowsFilePool, ExhaustedCreateReportsError)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_WINDOWSFILE_POOL_EXHAUSTED, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&WindowsFileErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(WINDOWSFILE_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogWindowsFilePool, FallbackOpenReturnsFalse)
@@ -278,7 +278,8 @@ TEST(SolidSyslogWindowsFilePool, DestroyOfUnknownHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_WINDOWSFILE_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&WindowsFileErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(WINDOWSFILE_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogWindowsFilePool, DestroyOfStaleHandleReportsWarning)
@@ -292,5 +293,6 @@ TEST(SolidSyslogWindowsFilePool, DestroyOfStaleHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_WINDOWSFILE_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&WindowsFileErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(WINDOWSFILE_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }

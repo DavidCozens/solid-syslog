@@ -13,6 +13,7 @@ add_executable(SolidSyslogFatFsFileTest
     SolidSyslogFatFsFilePoolTest.cpp
     main.cpp
     ${CMAKE_SOURCE_DIR}/Platform/FatFs/Source/SolidSyslogFatFsFile.c
+    ${CMAKE_SOURCE_DIR}/Platform/FatFs/Source/SolidSyslogFatFsFileMessages.c
     ${CMAKE_SOURCE_DIR}/Platform/FatFs/Source/SolidSyslogFatFsFileStatic.c
     ${CMAKE_SOURCE_DIR}/Tests/Support/FatFsFakes/Source/FatFsFake.c
 )

@@ -9,7 +9,7 @@
 #include "SolidSyslogBuffer.h"
 #include "SolidSyslogBufferDefinition.h"
 #include "SolidSyslogCircularBuffer.h"
-#include "SolidSyslogErrorMessages.h"
+#include "SolidSyslogCircularBufferErrors.h"
 #include "SolidSyslogNullMutex.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
@@ -405,7 +405,6 @@ TEST_GROUP(SolidSyslogCircularBufferPool)
             SolidSyslogCircularBuffer_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     struct SolidSyslogBuffer* MakeBuffer()
@@ -442,6 +441,8 @@ TEST(SolidSyslogCircularBufferPool, ExhaustedCreateReportsError)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&CircularBufferErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(CIRCULARBUFFER_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogCircularBufferPool, FallbackWriteAndReadAreNoOps)
@@ -510,7 +511,8 @@ TEST(SolidSyslogCircularBufferPool, DestroyOfUnknownHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_CIRCULARBUFFER_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&CircularBufferErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(CIRCULARBUFFER_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogCircularBufferPool, DestroyOfStaleHandleReportsWarning)
@@ -524,5 +526,6 @@ TEST(SolidSyslogCircularBufferPool, DestroyOfStaleHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_CIRCULARBUFFER_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&CircularBufferErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(CIRCULARBUFFER_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }

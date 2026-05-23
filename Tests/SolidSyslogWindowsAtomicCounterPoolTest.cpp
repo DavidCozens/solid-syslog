@@ -4,10 +4,10 @@
 #include "ErrorHandlerFake.h"
 #include "SolidSyslogAtomicCounter.h"
 #include "SolidSyslogAtomicCounterDefinition.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
 #include "SolidSyslogWindowsAtomicCounter.h"
+#include "SolidSyslogWindowsAtomicCounterErrors.h"
 #include "TestUtils.h"
 
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings ONCE/NEVER into scope for CALLED_FAKE
@@ -50,7 +50,6 @@ TEST_GROUP(SolidSyslogWindowsAtomicCounterPool)
             SolidSyslogWindowsAtomicCounter_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()
@@ -82,7 +81,8 @@ TEST(SolidSyslogWindowsAtomicCounterPool, ExhaustedCreateReportsError)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_WINDOWSATOMICCOUNTER_POOL_EXHAUSTED, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&WindowsAtomicCounterErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(WINDOWSATOMICCOUNTER_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogWindowsAtomicCounterPool, FallbackIncrementReturnsOne)
@@ -146,7 +146,8 @@ TEST(SolidSyslogWindowsAtomicCounterPool, DestroyOfUnknownHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_WINDOWSATOMICCOUNTER_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&WindowsAtomicCounterErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(WINDOWSATOMICCOUNTER_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogWindowsAtomicCounterPool, DestroyOfStaleHandleReportsWarning)
@@ -160,5 +161,6 @@ TEST(SolidSyslogWindowsAtomicCounterPool, DestroyOfStaleHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_WINDOWSATOMICCOUNTER_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&WindowsAtomicCounterErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(WINDOWSATOMICCOUNTER_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }

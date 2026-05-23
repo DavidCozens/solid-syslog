@@ -7,8 +7,8 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
 #include "FreeRtosSemaphoreFake.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogFreeRtosMutex.h"
+#include "SolidSyslogFreeRtosMutexErrors.h"
 #include "SolidSyslogMutex.h"
 #include "SolidSyslogMutexDefinition.h"
 #include "SolidSyslogPrival.h"
@@ -107,7 +107,6 @@ TEST_GROUP(SolidSyslogFreeRtosMutexPool)
             SolidSyslogFreeRtosMutex_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()
@@ -139,7 +138,8 @@ TEST(SolidSyslogFreeRtosMutexPool, ExhaustedCreateReportsError)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_FREERTOSMUTEX_POOL_EXHAUSTED, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&FreeRtosMutexErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(FREERTOSMUTEX_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogFreeRtosMutexPool, FallbackLockUnlockAreNoOps)
@@ -208,7 +208,8 @@ TEST(SolidSyslogFreeRtosMutexPool, DestroyOfUnknownHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_FREERTOSMUTEX_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&FreeRtosMutexErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(FREERTOSMUTEX_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogFreeRtosMutexPool, DestroyOfStaleHandleReportsWarning)
@@ -222,5 +223,6 @@ TEST(SolidSyslogFreeRtosMutexPool, DestroyOfStaleHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_FREERTOSMUTEX_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&FreeRtosMutexErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(FREERTOSMUTEX_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }

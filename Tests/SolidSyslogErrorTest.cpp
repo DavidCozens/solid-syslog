@@ -9,42 +9,41 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
     // macros
 
 // clang-format off
-TEST_GROUP(SolidSyslogError)
+TEST_GROUP(SolidSyslogErrorEx)
 {
     // cppcheck-suppress unreadVariable -- read via context-propagation test through CppUTest macros
     int sentinel = 0;
-
-    void teardown() override
-    {
-        ErrorHandlerFake_Uninstall();
-    }
 };
 
 // clang-format on
 
-TEST(SolidSyslogError, ErrorWithDefaultHandlerDoesNotCrash)
+TEST(SolidSyslogErrorEx, ErrorExWithDefaultHandlerDoesNotCrash)
 {
-    SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, "test message");
+    static const struct SolidSyslogErrorSource source = {"test", nullptr};
+    SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, &source, 0U);
 }
 
-TEST(SolidSyslogError, InstalledHandlerReceivesSeverityMessageAndContext)
+TEST(SolidSyslogErrorEx, InstalledHandlerReceivesSeveritySourceCodeAndContext)
 {
+    static const struct SolidSyslogErrorSource source = {"test", nullptr};
     ErrorHandlerFake_Install(&sentinel);
 
-    SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, "warning message");
+    SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, &source, 7U);
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL("warning message", ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&source, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(7U, ErrorHandlerFake_LastCode());
     POINTERS_EQUAL(&sentinel, ErrorHandlerFake_LastContext());
 }
 
-TEST(SolidSyslogError, SetErrorHandlerWithNullHandlerRestoresDefault)
+TEST(SolidSyslogErrorEx, SetErrorHandlerExWithNullHandlerRestoresDefault)
 {
+    static const struct SolidSyslogErrorSource source = {"test", nullptr};
     ErrorHandlerFake_Install(&sentinel);
 
     SolidSyslog_SetErrorHandler(nullptr, &sentinel);
-    SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, "should not be observed");
+    SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, &source, 0U);
 
-    CHECK_NOTHING_REPORTED();
+    CALLED_FAKE(ErrorHandlerFake_Handle, NEVER);
 }

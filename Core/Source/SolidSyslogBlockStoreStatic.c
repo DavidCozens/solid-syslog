@@ -2,12 +2,13 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include "BlockSequencePrivate.h"
 #include "RecordStorePrivate.h"
+#include "SolidSyslogBlockStoreErrors.h"
 #include "SolidSyslogBlockStorePrivate.h"
 #include "SolidSyslogError.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogNullSecurityPolicy.h"
 #include "SolidSyslogNullStore.h"
 #include "SolidSyslogPoolAllocator.h"
@@ -63,7 +64,11 @@ struct SolidSyslogStore* SolidSyslogBlockStore_Create(const struct SolidSyslogBl
 
     if (result == SolidSyslogNullStore_Get())
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_BLOCKSTORE_POOL_EXHAUSTED);
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &BlockStoreErrorSource,
+            (uint8_t) BLOCKSTORE_ERROR_POOL_EXHAUSTED
+        );
     }
 
     return result;
@@ -130,7 +135,11 @@ void SolidSyslogBlockStore_Destroy(struct SolidSyslogStore* base)
 
     if (!released)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_ERROR_MSG_BLOCKSTORE_UNKNOWN_DESTROY);
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_WARNING,
+            &BlockStoreErrorSource,
+            (uint8_t) BLOCKSTORE_ERROR_UNKNOWN_DESTROY
+        );
     }
 }
 

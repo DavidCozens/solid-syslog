@@ -5,11 +5,11 @@ extern "C"
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
 #include "OpenSslFake.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogStream.h"
 #include "SolidSyslogStreamDefinition.h"
 #include "SolidSyslogTlsStream.h"
+#include "SolidSyslogTlsStreamErrors.h"
 #include "SolidSyslogTunables.h"
 #include "StreamFake.h"
 }
@@ -75,7 +75,6 @@ TEST_GROUP(SolidSyslogTlsStreamPool)
         }
         StreamFake_Destroy(transport);
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()
@@ -107,7 +106,8 @@ TEST(SolidSyslogTlsStreamPool, ExhaustedCreateReportsError)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_TLSSTREAM_POOL_EXHAUSTED, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&TlsStreamErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(TLSSTREAM_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogTlsStreamPool, FallbackSendReturnsTrueToDropOnTheFloor)
@@ -171,7 +171,8 @@ TEST(SolidSyslogTlsStreamPool, DestroyOfUnknownHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_TLSSTREAM_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&TlsStreamErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(TLSSTREAM_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogTlsStreamPool, DestroyOfStaleHandleReportsWarning)
@@ -185,5 +186,6 @@ TEST(SolidSyslogTlsStreamPool, DestroyOfStaleHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_TLSSTREAM_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&TlsStreamErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(TLSSTREAM_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }

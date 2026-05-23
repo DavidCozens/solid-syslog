@@ -6,8 +6,8 @@ extern "C"
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
 #include "FatFsFake.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogFatFsFile.h"
+#include "SolidSyslogFatFsFileErrors.h"
 #include "SolidSyslogFile.h"
 #include "SolidSyslogFileDefinition.h"
 #include "SolidSyslogPrival.h"
@@ -59,7 +59,6 @@ TEST_GROUP(SolidSyslogFatFsFilePool)
             SolidSyslogFatFsFile_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()
@@ -91,7 +90,8 @@ TEST(SolidSyslogFatFsFilePool, ExhaustedCreateReportsError)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_FATFSFILE_POOL_EXHAUSTED, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&FatFsFileErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(FATFSFILE_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogFatFsFilePool, FallbackOpenReturnsFalse)
@@ -155,7 +155,8 @@ TEST(SolidSyslogFatFsFilePool, DestroyOfUnknownHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_FATFSFILE_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&FatFsFileErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(FATFSFILE_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }
 
 TEST(SolidSyslogFatFsFilePool, DestroyOfStaleHandleReportsWarning)
@@ -169,5 +170,6 @@ TEST(SolidSyslogFatFsFilePool, DestroyOfStaleHandleReportsWarning)
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_FATFSFILE_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    POINTERS_EQUAL(&FatFsFileErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(FATFSFILE_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
 }
