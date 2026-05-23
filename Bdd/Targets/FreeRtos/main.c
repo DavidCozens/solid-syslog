@@ -460,12 +460,6 @@ static void GetAppName(struct SolidSyslogFormatter* formatter)
  * tzKnown=0, isSynced=0. SolidSyslogConfig.Clock=NULL drops through to the
  * library's NilClock; the resulting all-zero SolidSyslogTimestamp fails
  * TimestampIsValid in Core/Source/SolidSyslog.c and emits "-" on the wire. */
-static void ErrorHandler(void* context, enum SolidSyslogSeverity severity, const char* message)
-{
-    (void) context;
-    (void) printf("[solidsyslog] severity=%d %s\n", (int) severity, message);
-}
-
 static void ErrorHandlerEx(
     void* context,
     enum SolidSyslogSeverity severity,
@@ -1075,7 +1069,6 @@ static void InteractiveTask(void* argument)
          * any rebuild. */
         .SdCount = pendingNoSd ? 1U : (sizeof(sdList) / sizeof(sdList[0])),
     };
-    SolidSyslog_SetErrorHandler(ErrorHandler, NULL);
     SolidSyslog_SetErrorHandlerEx(ErrorHandlerEx, NULL);
     solidSyslog = SolidSyslog_Create(&solidSyslogConfig);
     solidSyslogReady = true;

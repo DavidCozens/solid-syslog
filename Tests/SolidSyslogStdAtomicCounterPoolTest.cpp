@@ -1,7 +1,6 @@
 #include "CppUTest/TestHarness.h"
 
 #include "ConfigLockFake.h"
-#include "ErrorHandlerFake.h"
 #include "ErrorHandlerFakeEx.h"
 #include "SolidSyslogAtomicCounter.h"
 #include "SolidSyslogAtomicCounterDefinition.h"
@@ -51,7 +50,6 @@ TEST_GROUP(SolidSyslogStdAtomicCounterPool)
             SolidSyslogStdAtomicCounter_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()

@@ -4,7 +4,6 @@
 extern "C"
 {
 #include "ConfigLockFake.h"
-#include "ErrorHandlerFake.h"
 #include "ErrorHandlerFakeEx.h"
 #include "FatFsFake.h"
 #include "SolidSyslogFatFsFile.h"
@@ -60,7 +59,6 @@ TEST_GROUP(SolidSyslogFatFsFilePool)
             SolidSyslogFatFsFile_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()

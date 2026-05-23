@@ -8,7 +8,6 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 #include <winsock2.h>
 
 #include "ConfigLockFake.h"
-#include "ErrorHandlerFake.h"
 #include "ErrorHandlerFakeEx.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
@@ -105,7 +104,6 @@ TEST_GROUP(SolidSyslogWinsockAddressPool)
             SolidSyslogWinsockAddress_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()

@@ -5,7 +5,6 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
     // macros
 
 #include "ConfigLockFake.h"
-#include "ErrorHandlerFake.h"
 #include "ErrorHandlerFakeEx.h"
 #include "SolidSyslogDatagram.h"
 #include "SolidSyslogDatagramDefinition.h"
@@ -286,7 +285,6 @@ TEST_GROUP(SolidSyslogFreeRtosDatagramPool)
             SolidSyslogFreeRtosDatagram_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()

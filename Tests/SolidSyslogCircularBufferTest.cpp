@@ -4,7 +4,6 @@
 #include "CppUTest/TestHarness.h"
 
 #include "ConfigLockFake.h"
-#include "ErrorHandlerFake.h"
 #include "ErrorHandlerFakeEx.h"
 #include "MutexFake.h"
 #include "SolidSyslogBuffer.h"
@@ -406,7 +405,6 @@ TEST_GROUP(SolidSyslogCircularBufferPool)
             SolidSyslogCircularBuffer_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     struct SolidSyslogBuffer* MakeBuffer()

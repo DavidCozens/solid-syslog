@@ -5,7 +5,6 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
     // macros
 
 #include "ConfigLockFake.h"
-#include "ErrorHandlerFake.h"
 #include "ErrorHandlerFakeEx.h"
 #include "FreeRtosSemaphoreFake.h"
 #include "SolidSyslogFreeRtosMutex.h"
@@ -108,7 +107,6 @@ TEST_GROUP(SolidSyslogFreeRtosMutexPool)
             SolidSyslogFreeRtosMutex_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()

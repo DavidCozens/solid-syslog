@@ -2,7 +2,6 @@
 #include <cstring>
 
 #include "CppUTest/TestHarness.h"
-#include "ErrorHandlerFake.h"
 #include "ErrorHandlerFakeEx.h"
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogStructuredData.h"
@@ -231,7 +230,6 @@ TEST_GROUP(SolidSyslogTimeQualitySdBadSetup)
 
     void teardown() override
     {
-        ErrorHandlerFake_Uninstall();
     }
 };
 

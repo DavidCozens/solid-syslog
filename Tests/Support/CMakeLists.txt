@@ -1,7 +1,3 @@
-add_library(ErrorHandlerFake STATIC ErrorHandlerFake.c)
-target_include_directories(ErrorHandlerFake PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(ErrorHandlerFake PUBLIC ${PROJECT_NAME})
-
 add_library(ErrorHandlerFakeEx STATIC ErrorHandlerFakeEx.c)
 target_include_directories(ErrorHandlerFakeEx PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(ErrorHandlerFakeEx PUBLIC ${PROJECT_NAME})

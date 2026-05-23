@@ -1,7 +1,6 @@
 #include <cstdint>
 #include <cstring>
 
-#include "ErrorHandlerFake.h"
 #include "ErrorHandlerFakeEx.h"
 #include "SolidSyslogAtomicCounterTestHelper.h"
 #include "SolidSyslogFormatter.h"
@@ -95,7 +94,6 @@ TEST_GROUP(SolidSyslogMetaSd)
     {
         SolidSyslogMetaSd_Destroy(sd);
         TestAtomicCounter_Destroy(counter);
-        ErrorHandlerFake_Uninstall();
     }
 
     void recreateWith(const SolidSyslogMetaSdConfig* configPtr)

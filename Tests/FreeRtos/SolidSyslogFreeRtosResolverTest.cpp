@@ -7,7 +7,6 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 #include <cstdint>
 
 #include "ConfigLockFake.h"
-#include "ErrorHandlerFake.h"
 #include "ErrorHandlerFakeEx.h"
 #include "FreeRtosDnsFake.h"
 #include "SolidSyslogFreeRtosAddress.h"
@@ -166,7 +165,6 @@ TEST_GROUP(SolidSyslogFreeRtosResolverPoolTest)
             SolidSyslogFreeRtosResolver_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()

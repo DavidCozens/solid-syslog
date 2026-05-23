@@ -9,7 +9,6 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 #include <sys/socket.h>
 
 #include "ConfigLockFake.h"
-#include "ErrorHandlerFake.h"
 #include "ErrorHandlerFakeEx.h"
 #include "SolidSyslogPosixAddress.h"
 #include "SolidSyslogPosixAddressErrors.h"
@@ -107,7 +106,6 @@ TEST_GROUP(SolidSyslogPosixAddressPool)
             SolidSyslogPosixAddress_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()

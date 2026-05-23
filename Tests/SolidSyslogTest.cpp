@@ -15,7 +15,6 @@
 #include "SolidSyslogStructuredDataDefinition.h"
 #include "SolidSyslogTunables.h"
 #include "BufferFake.h"
-#include "ErrorHandlerFake.h"
 #include "ErrorHandlerFakeEx.h"
 #include "SolidSyslogErrors.h"
 #include "StoreFake.h"
@@ -1666,7 +1665,6 @@ TEST_GROUP(SolidSyslogLifecycle)
 
     void teardown() override
     {
-        ErrorHandlerFake_Uninstall();
         if (solidSyslog != nullptr)
         {
             SolidSyslog_Destroy(solidSyslog);

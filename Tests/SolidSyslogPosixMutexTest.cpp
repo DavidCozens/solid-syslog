@@ -1,7 +1,6 @@
 #include "CppUTest/TestHarness.h"
 
 #include "ConfigLockFake.h"
-#include "ErrorHandlerFake.h"
 #include "ErrorHandlerFakeEx.h"
 #include "SolidSyslogMutex.h"
 #include "SolidSyslogMutexDefinition.h"
@@ -80,7 +79,6 @@ TEST_GROUP(SolidSyslogPosixMutexPool)
             SolidSyslogPosixMutex_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()

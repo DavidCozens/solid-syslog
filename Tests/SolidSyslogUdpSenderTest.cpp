@@ -5,7 +5,6 @@
 #include <cstdint>
 
 #include "DatagramFake.h"
-#include "ErrorHandlerFake.h"
 #include "ErrorHandlerFakeEx.h"
 #include "SolidSyslogEndpoint.h"
 #include "SolidSyslogFormatter.h"

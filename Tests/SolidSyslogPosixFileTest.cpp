@@ -1,6 +1,5 @@
 #include "ConfigLockFake.h"
 #include "CppUTest/TestHarness.h"
-#include "ErrorHandlerFake.h"
 #include "ErrorHandlerFakeEx.h"
 #include "SocketFake.h"
 #include "SolidSyslogFile.h"
@@ -154,7 +153,6 @@ TEST_GROUP(SolidSyslogPosixFilePool)
             SolidSyslogPosixFile_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()

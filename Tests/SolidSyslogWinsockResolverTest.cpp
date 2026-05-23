@@ -4,7 +4,6 @@
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
     // macros
 #include "ConfigLockFake.h"
-#include "ErrorHandlerFake.h"
 #include "ErrorHandlerFakeEx.h"
 #include "SolidSyslogWinsockAddress.h"
 #include "SolidSyslogWinsockAddressPrivate.h"
@@ -167,7 +166,6 @@ TEST_GROUP(SolidSyslogWinsockResolverPool)
             SolidSyslogWinsockResolver_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()

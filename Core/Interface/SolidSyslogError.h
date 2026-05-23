@@ -14,7 +14,6 @@ EXTERN_C_BEGIN
         const char* (*AsString)(uint8_t code);
     };
 
-    typedef void (*SolidSyslogErrorHandler)(void* context, enum SolidSyslogSeverity severity, const char* message);
     typedef void (*SolidSyslogErrorHandlerEx)(
         void* context,
         enum SolidSyslogSeverity severity,
@@ -22,9 +21,7 @@ EXTERN_C_BEGIN
         uint8_t code
     );
 
-    void SolidSyslog_SetErrorHandler(SolidSyslogErrorHandler handler, void* context);
     void SolidSyslog_SetErrorHandlerEx(SolidSyslogErrorHandlerEx handler, void* context);
-    void SolidSyslog_Error(enum SolidSyslogSeverity severity, const char* message);
     void SolidSyslog_ErrorEx(
         enum SolidSyslogSeverity severity,
         const struct SolidSyslogErrorSource* source,

@@ -1,7 +1,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "ErrorHandlerFake.h"
 #include "ErrorHandlerFakeEx.h"
 #include "SenderFake.h"
 #include "SolidSyslogSender.h"
@@ -377,7 +376,6 @@ TEST_GROUP(SolidSyslogSwitchingSenderBadSetup)
 
     void teardown() override
     {
-        ErrorHandlerFake_Uninstall();
         SenderFake_Destroy(innerA);
     }
 };

@@ -1,7 +1,6 @@
 #include "CppUTest/TestHarness.h"
 
 #include "ConfigLockFake.h"
-#include "ErrorHandlerFake.h"
 #include "ErrorHandlerFakeEx.h"
 #include "SenderFake.h"
 #include "SolidSyslog.h"
@@ -66,7 +65,6 @@ TEST_GROUP(SolidSyslogPool)
         SolidSyslogPassthroughBuffer_Destroy(buffer);
         SenderFake_Destroy(fakeSender);
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()

@@ -4,7 +4,6 @@
 #include <cstdint>
 
 #include "ConfigLockFake.h"
-#include "ErrorHandlerFake.h"
 #include "ErrorHandlerFakeEx.h"
 #include "SolidSyslogGetAddrInfoResolver.h"
 #include "SolidSyslogGetAddrInfoResolverErrors.h"
@@ -167,7 +166,6 @@ TEST_GROUP(SolidSyslogGetAddrInfoResolverPool)
             SolidSyslogGetAddrInfoResolver_Destroy(overflow);
         }
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()

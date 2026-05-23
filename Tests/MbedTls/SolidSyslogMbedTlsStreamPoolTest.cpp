@@ -3,7 +3,6 @@
 extern "C"
 {
 #include "ConfigLockFake.h"
-#include "ErrorHandlerFake.h"
 #include "ErrorHandlerFakeEx.h"
 #include "SolidSyslogMbedTlsStream.h"
 #include "SolidSyslogMbedTlsStreamErrors.h"
@@ -69,7 +68,6 @@ TEST_GROUP(SolidSyslogMbedTlsStreamPool)
         }
         StreamFake_Destroy(transport);
         ConfigLockFake_Uninstall();
-        ErrorHandlerFake_Uninstall();
     }
 
     void FillPool()
