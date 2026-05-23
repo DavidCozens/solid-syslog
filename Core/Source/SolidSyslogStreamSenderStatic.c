@@ -4,10 +4,10 @@
 #include <stddef.h>
 
 #include "SolidSyslogError.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogNullSender.h"
 #include "SolidSyslogPoolAllocator.h"
 #include "SolidSyslogPrival.h"
+#include "SolidSyslogStreamSenderErrors.h"
 #include "SolidSyslogStreamSenderPrivate.h"
 #include "SolidSyslogTunables.h"
 
@@ -34,7 +34,11 @@ struct SolidSyslogSender* SolidSyslogStreamSender_Create(const struct SolidSyslo
     }
     else
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_STREAMSENDER_POOL_EXHAUSTED);
+        SolidSyslog_ErrorEx(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &StreamSenderErrorSource,
+            (uint8_t) STREAMSENDER_ERROR_POOL_EXHAUSTED
+        );
     }
     return result;
 }
@@ -47,7 +51,11 @@ void SolidSyslogStreamSender_Destroy(struct SolidSyslogSender* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&StreamSender_Allocator, index, StreamSender_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_ERROR_MSG_STREAMSENDER_UNKNOWN_DESTROY);
+        SolidSyslog_ErrorEx(
+            SOLIDSYSLOG_SEVERITY_WARNING,
+            &StreamSenderErrorSource,
+            (uint8_t) STREAMSENDER_ERROR_UNKNOWN_DESTROY
+        );
     }
 }
 

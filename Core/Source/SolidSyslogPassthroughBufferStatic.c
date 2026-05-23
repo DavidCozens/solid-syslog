@@ -4,8 +4,8 @@
 #include <stddef.h>
 
 #include "SolidSyslogError.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogNullBuffer.h"
+#include "SolidSyslogPassthroughBufferErrors.h"
 #include "SolidSyslogPassthroughBufferPrivate.h"
 #include "SolidSyslogPoolAllocator.h"
 #include "SolidSyslogPrival.h"
@@ -35,7 +35,11 @@ struct SolidSyslogBuffer* SolidSyslogPassthroughBuffer_Create(struct SolidSyslog
     }
     else
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_PASSTHROUGHBUFFER_POOL_EXHAUSTED);
+        SolidSyslog_ErrorEx(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &PassthroughBufferErrorSource,
+            (uint8_t) PASSTHROUGHBUFFER_ERROR_POOL_EXHAUSTED
+        );
     }
     return handle;
 }
@@ -52,7 +56,11 @@ void SolidSyslogPassthroughBuffer_Destroy(struct SolidSyslogBuffer* base)
                     );
     if (!released)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_ERROR_MSG_PASSTHROUGHBUFFER_UNKNOWN_DESTROY);
+        SolidSyslog_ErrorEx(
+            SOLIDSYSLOG_SEVERITY_WARNING,
+            &PassthroughBufferErrorSource,
+            (uint8_t) PASSTHROUGHBUFFER_ERROR_UNKNOWN_DESTROY
+        );
     }
 }
 
