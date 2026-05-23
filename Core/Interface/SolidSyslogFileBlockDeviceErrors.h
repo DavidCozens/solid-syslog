@@ -2,9 +2,10 @@
 #define SOLIDSYSLOGFILEBLOCKDEVICEERRORS_H
 
 #include "ExternC.h"
-#include "SolidSyslogError.h"
 
 EXTERN_C_BEGIN
+
+    struct SolidSyslogErrorSource;
 
     enum SolidSyslogFileBlockDeviceErrors
     {

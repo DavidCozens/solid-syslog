@@ -4,10 +4,11 @@
 #include <stdint.h>
 
 #include "ExternC.h"
-#include "SolidSyslogError.h"
 #include "SolidSyslogPrival.h"
 
 EXTERN_C_BEGIN
+
+    struct SolidSyslogErrorSource;
 
     void ErrorHandlerFake_Install(void* context);
     int ErrorHandlerFake_HandleCallCount(void);

@@ -4,6 +4,7 @@
 #include "CppUTest/TestHarness.h"
 #include "ErrorHandlerFake.h"
 #include "SolidSyslogFormatter.h"
+#include "SolidSyslogPrival.h"
 #include "SolidSyslogStructuredData.h"
 #include "SolidSyslogTimeQuality.h"
 #include "SolidSyslogTimeQualitySd.h"

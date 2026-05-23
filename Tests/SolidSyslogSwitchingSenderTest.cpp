@@ -3,6 +3,7 @@
 
 #include "ErrorHandlerFake.h"
 #include "SenderFake.h"
+#include "SolidSyslogPrival.h"
 #include "SolidSyslogSender.h"
 #include "SolidSyslogSwitchingSender.h"
 #include "SolidSyslogSwitchingSenderErrors.h"
