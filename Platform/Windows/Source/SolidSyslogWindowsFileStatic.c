@@ -4,11 +4,11 @@
 #include <stddef.h>
 
 #include "SolidSyslogError.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogNullFile.h"
 #include "SolidSyslogPoolAllocator.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
+#include "SolidSyslogWindowsFileErrors.h"
 #include "SolidSyslogWindowsFilePrivate.h"
 
 struct SolidSyslogFile;
@@ -31,7 +31,11 @@ struct SolidSyslogFile* SolidSyslogWindowsFile_Create(void)
     }
     else
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_WINDOWSFILE_POOL_EXHAUSTED);
+        SolidSyslog_ErrorEx(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &WindowsFileErrorSource,
+            (uint8_t) WINDOWSFILE_ERROR_POOL_EXHAUSTED
+        );
     }
     return handle;
 }
@@ -44,7 +48,11 @@ void SolidSyslogWindowsFile_Destroy(struct SolidSyslogFile* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&WindowsFile_Allocator, index, WindowsFile_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_ERROR_MSG_WINDOWSFILE_UNKNOWN_DESTROY);
+        SolidSyslog_ErrorEx(
+            SOLIDSYSLOG_SEVERITY_WARNING,
+            &WindowsFileErrorSource,
+            (uint8_t) WINDOWSFILE_ERROR_UNKNOWN_DESTROY
+        );
     }
 }
 

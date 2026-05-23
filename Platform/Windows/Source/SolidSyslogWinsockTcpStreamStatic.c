@@ -4,11 +4,11 @@
 #include <stddef.h>
 
 #include "SolidSyslogError.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogNullStream.h"
 #include "SolidSyslogPoolAllocator.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
+#include "SolidSyslogWinsockTcpStreamErrors.h"
 #include "SolidSyslogWinsockTcpStreamPrivate.h"
 
 struct SolidSyslogStream;
@@ -34,7 +34,11 @@ struct SolidSyslogStream* SolidSyslogWinsockTcpStream_Create(void)
     }
     else
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_WINSOCKTCPSTREAM_POOL_EXHAUSTED);
+        SolidSyslog_ErrorEx(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &WinsockTcpStreamErrorSource,
+            (uint8_t) WINSOCKTCPSTREAM_ERROR_POOL_EXHAUSTED
+        );
     }
     return handle;
 }
@@ -47,7 +51,11 @@ void SolidSyslogWinsockTcpStream_Destroy(struct SolidSyslogStream* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&WinsockTcpStream_Allocator, index, WinsockTcpStream_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_ERROR_MSG_WINSOCKTCPSTREAM_UNKNOWN_DESTROY);
+        SolidSyslog_ErrorEx(
+            SOLIDSYSLOG_SEVERITY_WARNING,
+            &WinsockTcpStreamErrorSource,
+            (uint8_t) WINSOCKTCPSTREAM_ERROR_UNKNOWN_DESTROY
+        );
     }
 }
 

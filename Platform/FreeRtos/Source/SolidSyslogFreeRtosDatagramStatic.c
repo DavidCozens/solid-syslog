@@ -4,7 +4,7 @@
 #include <stddef.h>
 
 #include "SolidSyslogError.h"
-#include "SolidSyslogErrorMessages.h"
+#include "SolidSyslogFreeRtosDatagramErrors.h"
 #include "SolidSyslogFreeRtosDatagramPrivate.h"
 #include "SolidSyslogNullDatagram.h"
 #include "SolidSyslogPoolAllocator.h"
@@ -34,7 +34,11 @@ struct SolidSyslogDatagram* SolidSyslogFreeRtosDatagram_Create(void)
     }
     else
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_FREERTOSDATAGRAM_POOL_EXHAUSTED);
+        SolidSyslog_ErrorEx(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &FreeRtosDatagramErrorSource,
+            (uint8_t) FREERTOSDATAGRAM_ERROR_POOL_EXHAUSTED
+        );
     }
     return handle;
 }
@@ -47,7 +51,11 @@ void SolidSyslogFreeRtosDatagram_Destroy(struct SolidSyslogDatagram* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&FreeRtosDatagram_Allocator, index, FreeRtosDatagram_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_ERROR_MSG_FREERTOSDATAGRAM_UNKNOWN_DESTROY);
+        SolidSyslog_ErrorEx(
+            SOLIDSYSLOG_SEVERITY_WARNING,
+            &FreeRtosDatagramErrorSource,
+            (uint8_t) FREERTOSDATAGRAM_ERROR_UNKNOWN_DESTROY
+        );
     }
 }
 

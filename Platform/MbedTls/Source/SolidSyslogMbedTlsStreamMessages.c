@@ -1,0 +1,23 @@
+#include <stdint.h>
+
+#include "SolidSyslogError.h"
+#include "SolidSyslogMbedTlsStreamErrors.h"
+
+static const char* MbedTlsStreamError_AsString(uint8_t code)
+{
+    static const char* const messages[MBEDTLSSTREAM_ERROR_MAX] = {
+        [MBEDTLSSTREAM_ERROR_POOL_EXHAUSTED] =
+            "SolidSyslogMbedTlsStream_Create pool exhausted; returning fallback stream",
+        [MBEDTLSSTREAM_ERROR_UNKNOWN_DESTROY] =
+            "SolidSyslogMbedTlsStream_Destroy called with a handle not issued by this pool",
+    };
+    const char* result = "unknown";
+    if (code < (uint8_t) MBEDTLSSTREAM_ERROR_MAX)
+    {
+        enum SolidSyslogMbedTlsStreamErrors typed = (enum SolidSyslogMbedTlsStreamErrors) code;
+        result = messages[typed];
+    }
+    return result;
+}
+
+const struct SolidSyslogErrorSource MbedTlsStreamErrorSource = {"MbedTlsStream", MbedTlsStreamError_AsString};

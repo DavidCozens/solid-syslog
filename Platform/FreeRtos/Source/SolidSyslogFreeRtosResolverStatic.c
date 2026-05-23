@@ -4,7 +4,7 @@
 #include <stddef.h>
 
 #include "SolidSyslogError.h"
-#include "SolidSyslogErrorMessages.h"
+#include "SolidSyslogFreeRtosResolverErrors.h"
 #include "SolidSyslogFreeRtosResolverPrivate.h"
 #include "SolidSyslogNullResolver.h"
 #include "SolidSyslogPoolAllocator.h"
@@ -34,7 +34,11 @@ struct SolidSyslogResolver* SolidSyslogFreeRtosResolver_Create(void)
     }
     else
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_FREERTOSRESOLVER_POOL_EXHAUSTED);
+        SolidSyslog_ErrorEx(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &FreeRtosResolverErrorSource,
+            (uint8_t) FREERTOSRESOLVER_ERROR_POOL_EXHAUSTED
+        );
     }
     return handle;
 }
@@ -47,7 +51,11 @@ void SolidSyslogFreeRtosResolver_Destroy(struct SolidSyslogResolver* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&FreeRtosResolver_Allocator, index, FreeRtosResolver_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_ERROR_MSG_FREERTOSRESOLVER_UNKNOWN_DESTROY);
+        SolidSyslog_ErrorEx(
+            SOLIDSYSLOG_SEVERITY_WARNING,
+            &FreeRtosResolverErrorSource,
+            (uint8_t) FREERTOSRESOLVER_ERROR_UNKNOWN_DESTROY
+        );
     }
 }
 

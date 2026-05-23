@@ -6,10 +6,11 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
-#include "SolidSyslogErrorMessages.h"
+#include "ErrorHandlerFakeEx.h"
 #include "SolidSyslogFreeRtosAddress.h"
 #include "SolidSyslogFreeRtosAddressPrivate.h"
 #include "SolidSyslogFreeRtosTcpStream.h"
+#include "SolidSyslogFreeRtosTcpStreamErrors.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogStream.h"
 #include "SolidSyslogStreamDefinition.h"
@@ -416,14 +417,15 @@ TEST(SolidSyslogFreeRtosTcpStreamPool, FillingPoolThenOverflowReturnsDistinctFal
 
 TEST(SolidSyslogFreeRtosTcpStreamPool, ExhaustedCreateReportsError)
 {
-    ErrorHandlerFake_Install(nullptr);
+    ErrorHandlerFakeEx_Install(nullptr);
     FillPool();
 
     overflow = SolidSyslogFreeRtosTcpStream_Create();
 
-    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_FREERTOSTCPSTREAM_POOL_EXHAUSTED, ErrorHandlerFake_LastMessage());
+    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFakeEx_LastSeverity());
+    POINTERS_EQUAL(&FreeRtosTcpStreamErrorSource, ErrorHandlerFakeEx_LastSource());
+    UNSIGNED_LONGS_EQUAL(FREERTOSTCPSTREAM_ERROR_POOL_EXHAUSTED, ErrorHandlerFakeEx_LastCode());
 }
 
 TEST(SolidSyslogFreeRtosTcpStreamPool, FallbackVtableMethodsAreNoOps)
@@ -495,26 +497,28 @@ TEST(SolidSyslogFreeRtosTcpStreamPool, DestroyOfUnknownHandleDoesNotLock)
 
 TEST(SolidSyslogFreeRtosTcpStreamPool, DestroyOfUnknownHandleReportsWarning)
 {
-    ErrorHandlerFake_Install(nullptr);
+    ErrorHandlerFakeEx_Install(nullptr);
     struct SolidSyslogStream stranger = {};
 
     SolidSyslogFreeRtosTcpStream_Destroy(&stranger);
 
-    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_FREERTOSTCPSTREAM_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFakeEx_LastSeverity());
+    POINTERS_EQUAL(&FreeRtosTcpStreamErrorSource, ErrorHandlerFakeEx_LastSource());
+    UNSIGNED_LONGS_EQUAL(FREERTOSTCPSTREAM_ERROR_UNKNOWN_DESTROY, ErrorHandlerFakeEx_LastCode());
 }
 
 TEST(SolidSyslogFreeRtosTcpStreamPool, DestroyOfStaleHandleReportsWarning)
 {
     pooled[0] = SolidSyslogFreeRtosTcpStream_Create();
     SolidSyslogFreeRtosTcpStream_Destroy(pooled[0]);
-    ErrorHandlerFake_Install(nullptr);
+    ErrorHandlerFakeEx_Install(nullptr);
 
     SolidSyslogFreeRtosTcpStream_Destroy(pooled[0]);
     pooled[0] = nullptr;
 
-    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_FREERTOSTCPSTREAM_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFakeEx_LastSeverity());
+    POINTERS_EQUAL(&FreeRtosTcpStreamErrorSource, ErrorHandlerFakeEx_LastSource());
+    UNSIGNED_LONGS_EQUAL(FREERTOSTCPSTREAM_ERROR_UNKNOWN_DESTROY, ErrorHandlerFakeEx_LastCode());
 }

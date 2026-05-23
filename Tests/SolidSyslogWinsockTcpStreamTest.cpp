@@ -5,15 +5,16 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
     // macros
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
+#include "ErrorHandlerFakeEx.h"
 #include "SolidSyslogWinsockAddress.h"
 #include "SolidSyslogWinsockAddressPrivate.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogStream.h"
 #include "SolidSyslogStreamDefinition.h"
 #include "SolidSyslogTransport.h"
 #include "SolidSyslogTunables.h"
 #include "SolidSyslogWinsockTcpStream.h"
+#include "SolidSyslogWinsockTcpStreamErrors.h"
 #include "SolidSyslogWinsockTcpStreamInternal.h"
 #include "WinsockFake.h"
 #include <cstdint>
@@ -526,14 +527,15 @@ TEST(SolidSyslogWinsockTcpStreamPool, FillingPoolThenOverflowReturnsDistinctFall
 
 TEST(SolidSyslogWinsockTcpStreamPool, ExhaustedCreateReportsError)
 {
-    ErrorHandlerFake_Install(nullptr);
+    ErrorHandlerFakeEx_Install(nullptr);
     FillPool();
 
     overflow = SolidSyslogWinsockTcpStream_Create();
 
-    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_WINSOCKTCPSTREAM_POOL_EXHAUSTED, ErrorHandlerFake_LastMessage());
+    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFakeEx_LastSeverity());
+    POINTERS_EQUAL(&WinsockTcpStreamErrorSource, ErrorHandlerFakeEx_LastSource());
+    UNSIGNED_LONGS_EQUAL(WINSOCKTCPSTREAM_ERROR_POOL_EXHAUSTED, ErrorHandlerFakeEx_LastCode());
 }
 
 TEST(SolidSyslogWinsockTcpStreamPool, FallbackSendIsNoOp)
@@ -590,28 +592,30 @@ TEST(SolidSyslogWinsockTcpStreamPool, DestroyOfUnknownHandleDoesNotLock)
 
 TEST(SolidSyslogWinsockTcpStreamPool, DestroyOfUnknownHandleReportsWarning)
 {
-    ErrorHandlerFake_Install(nullptr);
+    ErrorHandlerFakeEx_Install(nullptr);
     struct SolidSyslogStream stranger = {};
 
     SolidSyslogWinsockTcpStream_Destroy(&stranger);
 
-    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_WINSOCKTCPSTREAM_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFakeEx_LastSeverity());
+    POINTERS_EQUAL(&WinsockTcpStreamErrorSource, ErrorHandlerFakeEx_LastSource());
+    UNSIGNED_LONGS_EQUAL(WINSOCKTCPSTREAM_ERROR_UNKNOWN_DESTROY, ErrorHandlerFakeEx_LastCode());
 }
 
 TEST(SolidSyslogWinsockTcpStreamPool, DestroyOfStaleHandleReportsWarning)
 {
     pooled[0] = SolidSyslogWinsockTcpStream_Create();
     SolidSyslogWinsockTcpStream_Destroy(pooled[0]);
-    ErrorHandlerFake_Install(nullptr);
+    ErrorHandlerFakeEx_Install(nullptr);
 
     SolidSyslogWinsockTcpStream_Destroy(pooled[0]);
     pooled[0] = nullptr;
 
-    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_WINSOCKTCPSTREAM_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFakeEx_LastSeverity());
+    POINTERS_EQUAL(&WinsockTcpStreamErrorSource, ErrorHandlerFakeEx_LastSource());
+    UNSIGNED_LONGS_EQUAL(WINSOCKTCPSTREAM_ERROR_UNKNOWN_DESTROY, ErrorHandlerFakeEx_LastCode());
 }
 
 TEST(SolidSyslogWinsockTcpStream, DestroyClosesWithSocketFd)

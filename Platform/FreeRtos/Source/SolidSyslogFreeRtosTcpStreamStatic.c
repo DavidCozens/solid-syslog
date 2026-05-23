@@ -4,7 +4,7 @@
 #include <stddef.h>
 
 #include "SolidSyslogError.h"
-#include "SolidSyslogErrorMessages.h"
+#include "SolidSyslogFreeRtosTcpStreamErrors.h"
 #include "SolidSyslogFreeRtosTcpStreamPrivate.h"
 #include "SolidSyslogNullStream.h"
 #include "SolidSyslogPoolAllocator.h"
@@ -34,7 +34,11 @@ struct SolidSyslogStream* SolidSyslogFreeRtosTcpStream_Create(void)
     }
     else
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_FREERTOSTCPSTREAM_POOL_EXHAUSTED);
+        SolidSyslog_ErrorEx(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &FreeRtosTcpStreamErrorSource,
+            (uint8_t) FREERTOSTCPSTREAM_ERROR_POOL_EXHAUSTED
+        );
     }
     return handle;
 }
@@ -51,7 +55,11 @@ void SolidSyslogFreeRtosTcpStream_Destroy(struct SolidSyslogStream* base)
                     );
     if (!released)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_ERROR_MSG_FREERTOSTCPSTREAM_UNKNOWN_DESTROY);
+        SolidSyslog_ErrorEx(
+            SOLIDSYSLOG_SEVERITY_WARNING,
+            &FreeRtosTcpStreamErrorSource,
+            (uint8_t) FREERTOSTCPSTREAM_ERROR_UNKNOWN_DESTROY
+        );
     }
 }
 

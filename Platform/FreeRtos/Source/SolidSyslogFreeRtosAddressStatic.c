@@ -4,7 +4,7 @@
 #include <stddef.h>
 
 #include "SolidSyslogError.h"
-#include "SolidSyslogErrorMessages.h"
+#include "SolidSyslogFreeRtosAddressErrors.h"
 #include "SolidSyslogFreeRtosAddressPrivate.h"
 #include "SolidSyslogPoolAllocator.h"
 #include "SolidSyslogPrival.h"
@@ -41,7 +41,11 @@ struct SolidSyslogAddress* SolidSyslogFreeRtosAddress_Create(void)
     }
     else
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_FREERTOSADDRESS_POOL_EXHAUSTED);
+        SolidSyslog_ErrorEx(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &FreeRtosAddressErrorSource,
+            (uint8_t) FREERTOSADDRESS_ERROR_POOL_EXHAUSTED
+        );
     }
     return handle;
 }
@@ -60,7 +64,11 @@ void SolidSyslogFreeRtosAddress_Destroy(struct SolidSyslogAddress* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&FreeRtosAddress_Allocator, index, FreeRtosAddress_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_ERROR_MSG_FREERTOSADDRESS_UNKNOWN_DESTROY);
+        SolidSyslog_ErrorEx(
+            SOLIDSYSLOG_SEVERITY_WARNING,
+            &FreeRtosAddressErrorSource,
+            (uint8_t) FREERTOSADDRESS_ERROR_UNKNOWN_DESTROY
+        );
     }
 }
 

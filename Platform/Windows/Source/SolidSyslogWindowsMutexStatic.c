@@ -4,11 +4,11 @@
 #include <stddef.h>
 
 #include "SolidSyslogError.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogNullMutex.h"
 #include "SolidSyslogPoolAllocator.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
+#include "SolidSyslogWindowsMutexErrors.h"
 #include "SolidSyslogWindowsMutexPrivate.h"
 
 struct SolidSyslogMutex;
@@ -34,7 +34,11 @@ struct SolidSyslogMutex* SolidSyslogWindowsMutex_Create(void)
     }
     else
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_WINDOWSMUTEX_POOL_EXHAUSTED);
+        SolidSyslog_ErrorEx(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &WindowsMutexErrorSource,
+            (uint8_t) WINDOWSMUTEX_ERROR_POOL_EXHAUSTED
+        );
     }
     return handle;
 }
@@ -47,7 +51,11 @@ void SolidSyslogWindowsMutex_Destroy(struct SolidSyslogMutex* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&WindowsMutex_Allocator, index, WindowsMutex_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_ERROR_MSG_WINDOWSMUTEX_UNKNOWN_DESTROY);
+        SolidSyslog_ErrorEx(
+            SOLIDSYSLOG_SEVERITY_WARNING,
+            &WindowsMutexErrorSource,
+            (uint8_t) WINDOWSMUTEX_ERROR_UNKNOWN_DESTROY
+        );
     }
 }
 

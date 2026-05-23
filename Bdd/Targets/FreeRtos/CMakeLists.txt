@@ -260,19 +260,26 @@ add_executable(SolidSyslogBddTarget
     ${CMAKE_CURRENT_SOURCE_DIR}/Common/CmsdkUart.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Common/Syscalls.c
     ${CMAKE_SOURCE_DIR}/Platform/FatFs/Source/SolidSyslogFatFsFile.c
+    ${CMAKE_SOURCE_DIR}/Platform/FatFs/Source/SolidSyslogFatFsFileMessages.c
     ${CMAKE_SOURCE_DIR}/Platform/FatFs/Source/SolidSyslogFatFsFileStatic.c
     ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosAddress.c
+    ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosAddressMessages.c
     ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosAddressStatic.c
     ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosDatagram.c
+    ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosDatagramMessages.c
     ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosDatagramStatic.c
     ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosMutex.c
+    ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosMutexMessages.c
     ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosMutexStatic.c
     ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosResolver.c
+    ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosResolverMessages.c
     ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosResolverStatic.c
     ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosSysUpTime.c
     ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosTcpStream.c
+    ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosTcpStreamMessages.c
     ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosTcpStreamStatic.c
     ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsStream.c
+    ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsStreamMessages.c
     ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsStreamStatic.c
     ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/BddTargetInteractive.c
     ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/BddTargetIps.c

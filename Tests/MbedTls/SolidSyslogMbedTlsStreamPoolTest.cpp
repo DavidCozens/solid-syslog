@@ -4,8 +4,9 @@ extern "C"
 {
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
-#include "SolidSyslogErrorMessages.h"
+#include "ErrorHandlerFakeEx.h"
 #include "SolidSyslogMbedTlsStream.h"
+#include "SolidSyslogMbedTlsStreamErrors.h"
 #include "SolidSyslogNullStream.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogStream.h"
@@ -103,14 +104,15 @@ TEST(SolidSyslogMbedTlsStreamPool, FillingPoolThenOverflowReturnsDistinctFallbac
 
 TEST(SolidSyslogMbedTlsStreamPool, ExhaustedCreateReportsError)
 {
-    ErrorHandlerFake_Install(nullptr);
+    ErrorHandlerFakeEx_Install(nullptr);
     FillPool();
 
     overflow = SolidSyslogMbedTlsStream_Create(&config);
 
-    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_MBEDTLSSTREAM_POOL_EXHAUSTED, ErrorHandlerFake_LastMessage());
+    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFakeEx_LastSeverity());
+    POINTERS_EQUAL(&MbedTlsStreamErrorSource, ErrorHandlerFakeEx_LastSource());
+    UNSIGNED_LONGS_EQUAL(MBEDTLSSTREAM_ERROR_POOL_EXHAUSTED, ErrorHandlerFakeEx_LastCode());
 }
 
 TEST(SolidSyslogMbedTlsStreamPool, FallbackSendReturnsTrueToDropOnTheFloor)
@@ -167,26 +169,28 @@ TEST(SolidSyslogMbedTlsStreamPool, DestroyOfUnknownHandleDoesNotLock)
 
 TEST(SolidSyslogMbedTlsStreamPool, DestroyOfUnknownHandleReportsWarning)
 {
-    ErrorHandlerFake_Install(nullptr);
+    ErrorHandlerFakeEx_Install(nullptr);
     struct SolidSyslogStream stranger = {};
 
     SolidSyslogMbedTlsStream_Destroy(&stranger);
 
-    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_MBEDTLSSTREAM_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFakeEx_LastSeverity());
+    POINTERS_EQUAL(&MbedTlsStreamErrorSource, ErrorHandlerFakeEx_LastSource());
+    UNSIGNED_LONGS_EQUAL(MBEDTLSSTREAM_ERROR_UNKNOWN_DESTROY, ErrorHandlerFakeEx_LastCode());
 }
 
 TEST(SolidSyslogMbedTlsStreamPool, DestroyOfStaleHandleReportsWarning)
 {
     pooled[0] = SolidSyslogMbedTlsStream_Create(&config);
     SolidSyslogMbedTlsStream_Destroy(pooled[0]);
-    ErrorHandlerFake_Install(nullptr);
+    ErrorHandlerFakeEx_Install(nullptr);
 
     SolidSyslogMbedTlsStream_Destroy(pooled[0]);
     pooled[0] = nullptr;
 
-    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_MBEDTLSSTREAM_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFakeEx_LastSeverity());
+    POINTERS_EQUAL(&MbedTlsStreamErrorSource, ErrorHandlerFakeEx_LastSource());
+    UNSIGNED_LONGS_EQUAL(MBEDTLSSTREAM_ERROR_UNKNOWN_DESTROY, ErrorHandlerFakeEx_LastCode());
 }

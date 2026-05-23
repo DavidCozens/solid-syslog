@@ -4,11 +4,11 @@
 #include <stddef.h>
 
 #include "SolidSyslogError.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogNullResolver.h"
 #include "SolidSyslogPoolAllocator.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
+#include "SolidSyslogWinsockResolverErrors.h"
 #include "SolidSyslogWinsockResolverPrivate.h"
 
 struct SolidSyslogResolver;
@@ -34,7 +34,11 @@ struct SolidSyslogResolver* SolidSyslogWinsockResolver_Create(void)
     }
     else
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_WINSOCKRESOLVER_POOL_EXHAUSTED);
+        SolidSyslog_ErrorEx(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &WinsockResolverErrorSource,
+            (uint8_t) WINSOCKRESOLVER_ERROR_POOL_EXHAUSTED
+        );
     }
     return handle;
 }
@@ -47,7 +51,11 @@ void SolidSyslogWinsockResolver_Destroy(struct SolidSyslogResolver* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&WinsockResolver_Allocator, index, WinsockResolver_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_ERROR_MSG_WINSOCKRESOLVER_UNKNOWN_DESTROY);
+        SolidSyslog_ErrorEx(
+            SOLIDSYSLOG_SEVERITY_WARNING,
+            &WinsockResolverErrorSource,
+            (uint8_t) WINSOCKRESOLVER_ERROR_UNKNOWN_DESTROY
+        );
     }
 }
 

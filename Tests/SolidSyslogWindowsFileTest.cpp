@@ -2,12 +2,13 @@
 
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
-#include "SolidSyslogErrorMessages.h"
+#include "ErrorHandlerFakeEx.h"
 #include "SolidSyslogFile.h"
 #include "SolidSyslogFileDefinition.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
 #include "SolidSyslogWindowsFile.h"
+#include "SolidSyslogWindowsFileErrors.h"
 #include "TestUtils.h"
 
 #include <cstdio>
@@ -207,14 +208,15 @@ TEST(SolidSyslogWindowsFilePool, FillingPoolThenOverflowReturnsDistinctFallback)
 
 TEST(SolidSyslogWindowsFilePool, ExhaustedCreateReportsError)
 {
-    ErrorHandlerFake_Install(nullptr);
+    ErrorHandlerFakeEx_Install(nullptr);
     FillPool();
 
     overflow = SolidSyslogWindowsFile_Create();
 
-    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_WINDOWSFILE_POOL_EXHAUSTED, ErrorHandlerFake_LastMessage());
+    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFakeEx_LastSeverity());
+    POINTERS_EQUAL(&WindowsFileErrorSource, ErrorHandlerFakeEx_LastSource());
+    UNSIGNED_LONGS_EQUAL(WINDOWSFILE_ERROR_POOL_EXHAUSTED, ErrorHandlerFakeEx_LastCode());
 }
 
 TEST(SolidSyslogWindowsFilePool, FallbackOpenReturnsFalse)
@@ -271,26 +273,28 @@ TEST(SolidSyslogWindowsFilePool, DestroyOfUnknownHandleDoesNotLock)
 
 TEST(SolidSyslogWindowsFilePool, DestroyOfUnknownHandleReportsWarning)
 {
-    ErrorHandlerFake_Install(nullptr);
+    ErrorHandlerFakeEx_Install(nullptr);
     struct SolidSyslogFile stranger = {};
 
     SolidSyslogWindowsFile_Destroy(&stranger);
 
-    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_WINDOWSFILE_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFakeEx_LastSeverity());
+    POINTERS_EQUAL(&WindowsFileErrorSource, ErrorHandlerFakeEx_LastSource());
+    UNSIGNED_LONGS_EQUAL(WINDOWSFILE_ERROR_UNKNOWN_DESTROY, ErrorHandlerFakeEx_LastCode());
 }
 
 TEST(SolidSyslogWindowsFilePool, DestroyOfStaleHandleReportsWarning)
 {
     pooled[0] = SolidSyslogWindowsFile_Create();
     SolidSyslogWindowsFile_Destroy(pooled[0]);
-    ErrorHandlerFake_Install(nullptr);
+    ErrorHandlerFakeEx_Install(nullptr);
 
     SolidSyslogWindowsFile_Destroy(pooled[0]);
     pooled[0] = nullptr;
 
-    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    STRCMP_EQUAL(SOLIDSYSLOG_ERROR_MSG_WINDOWSFILE_UNKNOWN_DESTROY, ErrorHandlerFake_LastMessage());
+    CALLED_FAKE(ErrorHandlerFakeEx_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFakeEx_LastSeverity());
+    POINTERS_EQUAL(&WindowsFileErrorSource, ErrorHandlerFakeEx_LastSource());
+    UNSIGNED_LONGS_EQUAL(WINDOWSFILE_ERROR_UNKNOWN_DESTROY, ErrorHandlerFakeEx_LastCode());
 }

@@ -4,11 +4,11 @@
 #include <stddef.h>
 
 #include "SolidSyslogError.h"
-#include "SolidSyslogErrorMessages.h"
 #include "SolidSyslogNullDatagram.h"
 #include "SolidSyslogPoolAllocator.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
+#include "SolidSyslogWinsockDatagramErrors.h"
 #include "SolidSyslogWinsockDatagramPrivate.h"
 
 struct SolidSyslogDatagram;
@@ -34,7 +34,11 @@ struct SolidSyslogDatagram* SolidSyslogWinsockDatagram_Create(void)
     }
     else
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_ERROR_MSG_WINSOCKDATAGRAM_POOL_EXHAUSTED);
+        SolidSyslog_ErrorEx(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &WinsockDatagramErrorSource,
+            (uint8_t) WINSOCKDATAGRAM_ERROR_POOL_EXHAUSTED
+        );
     }
     return handle;
 }
@@ -47,7 +51,11 @@ void SolidSyslogWinsockDatagram_Destroy(struct SolidSyslogDatagram* base)
         SolidSyslogPoolAllocator_FreeIfInUse(&WinsockDatagram_Allocator, index, WinsockDatagram_CleanupAtIndex, NULL);
     if (!released)
     {
-        SolidSyslog_Error(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_ERROR_MSG_WINSOCKDATAGRAM_UNKNOWN_DESTROY);
+        SolidSyslog_ErrorEx(
+            SOLIDSYSLOG_SEVERITY_WARNING,
+            &WinsockDatagramErrorSource,
+            (uint8_t) WINSOCKDATAGRAM_ERROR_UNKNOWN_DESTROY
+        );
     }
 }
 
