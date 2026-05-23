@@ -1,11 +1,11 @@
 # MISRA C:2012 cppcheck suppressions
-# 
+# -
 # Each suppression block is grouped by the deviation that authorises it.
 # Deviations are documented in docs/misra-deviations.md; the comment header
 # of each block names the deviation number and links to the corresponding
 # section. The suppressions themselves are line-specific so a new finding
 # in the same file (other than the documented site) still surfaces in CI.
-# 
+# -
 # Format: misra-c2012-<rule>:<file>:<line>
 # Lines starting with # are comments.
 
@@ -74,13 +74,6 @@ misra-c2012-11.5:Platform/Windows/Source/SolidSyslogWinsockTcpStream.c:342
 # See docs/misra-deviations.md#d003
 misra-c2012-5.7:Core/Interface/SolidSyslogAddress.h:10
 
-# D.004 — Rule 18.4: pointer arithmetic on record buffers
-# See docs/misra-deviations.md#d004
-misra-c2012-18.4:Core/Source/RecordStore.c:37
-misra-c2012-18.4:Core/Source/RecordStore.c:42
-misra-c2012-18.4:Core/Source/RecordStore.c:47
-misra-c2012-18.4:Core/Source/RecordStore.c:52
-
 # D.005 — Rule 18.7: flexible array members
 # See docs/misra-deviations.md#d005
 misra-c2012-18.7:Core/Source/SolidSyslogFormatter.c:12
@@ -116,13 +109,7 @@ misra-c2012-2.4:Core/Source/BlockSequence.c:13
 misra-c2012-2.4:Core/Source/BlockSequence.c:107
 misra-c2012-2.4:Core/Source/RecordStore.c:14
 misra-c2012-2.4:Core/Source/SolidSyslogStreamSender.c:19
-# 2.4 anonymous-enum site that surfaced after S10.17 narrowed the
-# FreeRtos transport timing-constant scope; UdpPayload.h:15 had a 5.7
-# suppression from S10.16 but the 2.4 was masked by cppcheck dedup.
 misra-c2012-2.4:Core/Interface/SolidSyslogUdpPayload.h:15
-# 5.7 anonymous-enum sites — migrated from the D.003 block as per-group
-# stories review their cluster. Historical sites still under D.003 will
-# move here as S10.18 / S10.19 land.
 misra-c2012-5.7:Core/Interface/SolidSyslogUdpPayload.h:15
 misra-c2012-5.7:Core/Source/SolidSyslogStreamSender.c:19
 misra-c2012-5.7:Core/Source/SolidSyslogUdpPayload.c:5
@@ -135,7 +122,6 @@ misra-c2012-5.7:Platform/Posix/Source/SolidSyslogPosixSleep.c:6
 misra-c2012-5.7:Platform/Posix/Source/SolidSyslogPosixTcpStream.c:24
 misra-c2012-5.7:Platform/Windows/Source/SolidSyslogWinsockResolver.c:37
 misra-c2012-5.7:Platform/Windows/Source/SolidSyslogWinsockTcpStream.c:100
-# Storage stack anonymous-enum 5.7 sites — migrated from D.003 by S10.18.
 misra-c2012-5.7:Core/Source/BlockSequence.c:13
 misra-c2012-5.7:Core/Source/BlockSequence.c:107
 misra-c2012-5.7:Core/Source/RecordStore.c:14
@@ -144,8 +130,6 @@ misra-c2012-5.7:Core/Source/SolidSyslogFileBlockDevice.c:16
 misra-c2012-5.7:Core/Source/SolidSyslogFileBlockDevice.c:23
 misra-c2012-5.7:Platform/Posix/Source/SolidSyslogPosixFile.c:18
 misra-c2012-5.7:Platform/Windows/Source/SolidSyslogWindowsFile.c:24
-# Carry-forward anonymous-enum 5.7 sites — migrated from D.003 by S10.19
-# as the last per-group story. Closes the migration tree-wide before S10.20.
 misra-c2012-5.7:Core/Interface/SolidSyslogAtomicCounter.h:11
 misra-c2012-5.7:Core/Interface/SolidSyslogCircularBuffer.h:17
 misra-c2012-5.7:Core/Interface/SolidSyslogEndpoint.h:11
