@@ -672,6 +672,7 @@ TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenSslNewFails)
 {
     OpenSslFake_SetSslNewFails(true);
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+    CHECK_OPEN_UNWOUND_WITH_ERROR(transport, TLSSTREAM_ERROR_SESSION_INIT_FAILED);
 }
 
 TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenLoadVerifyLocationsFails)
@@ -706,12 +707,14 @@ TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenBioMethNewFails)
 {
     OpenSslFake_SetBioMethNewFails(true);
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+    CHECK_OPEN_UNWOUND_WITH_ERROR(transport, TLSSTREAM_ERROR_SESSION_INIT_FAILED);
 }
 
 TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenBioNewFails)
 {
     OpenSslFake_SetBioNewFails(true);
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+    CHECK_OPEN_UNWOUND_WITH_ERROR(transport, TLSSTREAM_ERROR_SESSION_INIT_FAILED);
 }
 
 TEST(SolidSyslogTlsStream, BioNewFailureFreesBioMethodInline)

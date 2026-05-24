@@ -233,7 +233,16 @@ static inline bool TlsStream_ConfigureCipherList(SSL_CTX* ctx, const char* ciphe
 static inline bool TlsStream_InitSslSession(struct SolidSyslogTlsStream* self)
 {
     self->Ssl = SSL_new(self->Ctx);
-    return self->Ssl != NULL;
+    bool ok = self->Ssl != NULL;
+    if (!ok)
+    {
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &TlsStreamErrorSource,
+            (uint8_t) TLSSTREAM_ERROR_SESSION_INIT_FAILED
+        );
+    }
+    return ok;
 }
 
 static inline bool TlsStream_AttachTransportBio(struct SolidSyslogTlsStream* self)
@@ -244,6 +253,14 @@ static inline bool TlsStream_AttachTransportBio(struct SolidSyslogTlsStream* sel
     {
         BIO_set_data(bio, self->Config.Transport);
         SSL_set_bio(self->Ssl, bio, bio);
+    }
+    else
+    {
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &TlsStreamErrorSource,
+            (uint8_t) TLSSTREAM_ERROR_SESSION_INIT_FAILED
+        );
     }
     return ok;
 }
