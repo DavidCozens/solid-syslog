@@ -166,6 +166,22 @@ TEST(SolidSyslogPosixMessageQueueBuffer, ReadWithNullBytesReadDoesNotCrash)
     CHECK_FALSE(SolidSyslogBuffer_Read(buffer, data, sizeof(data), nullptr));
 }
 
+/* After Destroy the slot's abstract-base vtable is the shared NullBuffer's, so
+ * Write/Read through the stale handle is a safe no-op rather than a NULL-fn-pointer
+ * crash. NullBuffer.Write swallows; NullBuffer.Read returns false with bytesRead=0. */
+TEST(SolidSyslogPosixMessageQueueBuffer, UseAfterDestroyIsCrashSafeViaNullBufferVtable)
+{
+    SolidSyslogPosixMessageQueueBuffer_Destroy(buffer);
+
+    SolidSyslogBuffer_Write(buffer, "x", 1);
+    char data[16] = {};
+    size_t bytesRead = 99;
+    CHECK_FALSE(SolidSyslogBuffer_Read(buffer, data, sizeof(data), &bytesRead));
+    LONGS_EQUAL(0, bytesRead);
+
+    buffer = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10); // for teardown
+}
+
 TEST(SolidSyslogPosixMessageQueueBuffer, ServiceSendsMessageWrittenViaLog)
 {
     struct SolidSyslogSender* fakeSender = SenderFake_Create();
@@ -374,6 +390,22 @@ TEST(SolidSyslogPosixMessageQueueBufferPool, DestroyOfUnknownHandleReportsWarnin
     struct SolidSyslogBuffer stranger = {};
 
     SolidSyslogPosixMessageQueueBuffer_Destroy(&stranger);
+
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&PosixMessageQueueBufferErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(POSIXMESSAGEQUEUEBUFFER_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
+}
+
+/* Destroy(NULL) is reachable from any integrator who keeps a NullBuffer-fallback
+ * handle and later releases it. The IndexFromHandle search returns POOL_SIZE
+ * (no slot matches NULL), IndexIsValid returns false, so the FreeIfInUse branch
+ * is skipped — caller sees an UNKNOWN_DESTROY warning, no crash. */
+TEST(SolidSyslogPosixMessageQueueBufferPool, DestroyOfNullHandleReportsWarningWithoutCrashing)
+{
+    ErrorHandlerFake_Install(nullptr);
+
+    SolidSyslogPosixMessageQueueBuffer_Destroy(nullptr);
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
