@@ -118,6 +118,21 @@ TEST(SolidSyslogPosixMessageQueueBuffer, WriteWhenMqSendFailsReportsError)
     UNSIGNED_LONGS_EQUAL(POSIXMESSAGEQUEUEBUFFER_ERROR_SEND_FAILED, ErrorHandlerFake_LastCode());
 }
 
+/* Regression guard: the production check is errno-agnostic
+ * (`if (mq_send(...) != 0)`), so EAGAIN and EMSGSIZE flow through
+ * the same branch today. A future contributor who adds errno-specific
+ * handling has to deliberately drop one of these cases. */
+TEST(SolidSyslogPosixMessageQueueBuffer, WriteWithOversizedMessageReportsError)
+{
+    ErrorHandlerFake_Install(nullptr);
+    MqFake_FailNextSend(EMSGSIZE);
+
+    Write();
+
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    UNSIGNED_LONGS_EQUAL(POSIXMESSAGEQUEUEBUFFER_ERROR_SEND_FAILED, ErrorHandlerFake_LastCode());
+}
+
 TEST(SolidSyslogPosixMessageQueueBuffer, ServiceSendsMessageWrittenViaLog)
 {
     struct SolidSyslogSender* fakeSender = SenderFake_Create();
