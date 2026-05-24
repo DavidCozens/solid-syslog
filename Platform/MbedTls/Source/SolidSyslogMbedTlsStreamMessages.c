@@ -12,6 +12,8 @@ static const char* MbedTlsStreamError_AsString(uint8_t code)
             "SolidSyslogMbedTlsStream_Destroy called with a handle not issued by this pool",
         [MBEDTLSSTREAM_ERROR_DEFAULTS_NOT_APPLIED] =
             "TLS client could not be configured with its default protocol settings; connection not established",
+        [MBEDTLSSTREAM_ERROR_SESSION_INIT_FAILED] =
+            "TLS session could not be initialised against the configured context; connection not established",
     };
     const char* result = "unknown";
     if (code < (uint8_t) MBEDTLSSTREAM_ERROR_MAX)

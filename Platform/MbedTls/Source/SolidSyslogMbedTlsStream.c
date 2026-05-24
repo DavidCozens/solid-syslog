@@ -142,7 +142,16 @@ static inline void MbedTlsStream_ApplyTlsPolicy(struct SolidSyslogMbedTlsStream*
 
 static inline bool MbedTlsStream_BindContextToConfig(struct SolidSyslogMbedTlsStream* self)
 {
-    return mbedtls_ssl_setup(&self->SslContext, &self->SslConfig) == 0;
+    bool ok = mbedtls_ssl_setup(&self->SslContext, &self->SslConfig) == 0;
+    if (!ok)
+    {
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &MbedTlsStreamErrorSource,
+            (uint8_t) MBEDTLSSTREAM_ERROR_SESSION_INIT_FAILED
+        );
+    }
+    return ok;
 }
 
 static inline bool MbedTlsStream_ConfigureExpectedHostname(struct SolidSyslogMbedTlsStream* self)

@@ -20,6 +20,20 @@ extern "C"
 
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings ONCE/NEVER/TWICE into scope for CALLED_FUNCTION / CALLED_FAKE
 
+// NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while) -- macro preserves __FILE__/__LINE__ in failure output; do-while wraps the multi-statement body for safe single-statement use
+#define CHECK_OPEN_UNWOUND_WITH_ERROR(transport, expectedCode)                    \
+    do                                                                            \
+    {                                                                             \
+        LONGS_EQUAL(1, StreamFake_CloseCallCount(transport));                     \
+        LONGS_EQUAL(1, MbedTlsFake_SslFreeCallCount());                           \
+        LONGS_EQUAL(1, MbedTlsFake_SslConfigFreeCallCount());                     \
+        CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);                               \
+        POINTERS_EQUAL(&MbedTlsStreamErrorSource, ErrorHandlerFake_LastSource()); \
+        UNSIGNED_LONGS_EQUAL((expectedCode), ErrorHandlerFake_LastCode());        \
+        LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity()); \
+    } while (0)
+// NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
+
 static int NoOpSleepCallCount;
 static int g_lastSleepMs;
 
@@ -232,13 +246,15 @@ TEST(SolidSyslogMbedTlsStream, OpenClosesTransportAndFreesSslStateWhenSslConfigD
     MbedTlsFake_SetSslConfigDefaultsReturn(-1);
 
     CHECK_FALSE(SolidSyslogStream_Open(handle, addr));
-    LONGS_EQUAL(1, StreamFake_CloseCallCount(transport));
-    LONGS_EQUAL(1, MbedTlsFake_SslFreeCallCount());
-    LONGS_EQUAL(1, MbedTlsFake_SslConfigFreeCallCount());
-    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    POINTERS_EQUAL(&MbedTlsStreamErrorSource, ErrorHandlerFake_LastSource());
-    UNSIGNED_LONGS_EQUAL(MBEDTLSSTREAM_ERROR_DEFAULTS_NOT_APPLIED, ErrorHandlerFake_LastCode());
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    CHECK_OPEN_UNWOUND_WITH_ERROR(transport, MBEDTLSSTREAM_ERROR_DEFAULTS_NOT_APPLIED);
+}
+
+TEST(SolidSyslogMbedTlsStream, OpenClosesTransportAndFreesSslStateWhenSslSetupFails)
+{
+    MbedTlsFake_SetSslSetupReturn(-1);
+
+    CHECK_FALSE(SolidSyslogStream_Open(handle, addr));
+    CHECK_OPEN_UNWOUND_WITH_ERROR(transport, MBEDTLSSTREAM_ERROR_SESSION_INIT_FAILED);
 }
 
 TEST(SolidSyslogMbedTlsStream, SendForwardsBufferToSslWrite)
