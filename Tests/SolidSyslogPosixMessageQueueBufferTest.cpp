@@ -157,6 +157,15 @@ TEST(SolidSyslogPosixMessageQueueBuffer, ReadFromEmptyQueueDoesNotEmitError)
     CALLED_FAKE(ErrorHandlerFake_Handle, NEVER);
 }
 
+/* A NULL bytesRead* would crash on `*bytesRead = 0`. Guard at the
+ * Read entry — invalid caller usage, not a runtime failure, so no
+ * error code is emitted; just a defensive false return. */
+TEST(SolidSyslogPosixMessageQueueBuffer, ReadWithNullBytesReadDoesNotCrash)
+{
+    char data[16] = {};
+    CHECK_FALSE(SolidSyslogBuffer_Read(buffer, data, sizeof(data), nullptr));
+}
+
 TEST(SolidSyslogPosixMessageQueueBuffer, ServiceSendsMessageWrittenViaLog)
 {
     struct SolidSyslogSender* fakeSender = SenderFake_Create();

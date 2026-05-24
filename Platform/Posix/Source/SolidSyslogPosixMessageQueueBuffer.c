@@ -82,23 +82,26 @@ static inline const char* PosixMessageQueueBuffer_QueueName(struct SolidSyslogPo
 
 static bool PosixMessageQueueBuffer_Read(struct SolidSyslogBuffer* base, void* data, size_t maxSize, size_t* bytesRead)
 {
-    struct SolidSyslogPosixMessageQueueBuffer* self = PosixMessageQueueBuffer_SelfFromBase(base);
-    ssize_t received = mq_receive(self->Mq, data, maxSize, NULL);
-    bool success = received >= 0;
-
-    /* EAGAIN is the empty-queue poll signal — part of the happy path and must
-     * stay silent. Any other errno is a real failure worth surfacing. */
-    if (!success && (errno != EAGAIN))
+    bool success = false;
+    if (bytesRead != NULL)
     {
-        SolidSyslog_Error(
-            SOLIDSYSLOG_SEVERITY_ERROR,
-            &PosixMessageQueueBufferErrorSource,
-            (uint8_t) POSIXMESSAGEQUEUEBUFFER_ERROR_RECEIVE_FAILED
-        );
+        struct SolidSyslogPosixMessageQueueBuffer* self = PosixMessageQueueBuffer_SelfFromBase(base);
+        ssize_t received = mq_receive(self->Mq, data, maxSize, NULL);
+        success = received >= 0;
+
+        /* EAGAIN is the empty-queue poll signal — part of the happy path and must
+         * stay silent. Any other errno is a real failure worth surfacing. */
+        if (!success && (errno != EAGAIN))
+        {
+            SolidSyslog_Error(
+                SOLIDSYSLOG_SEVERITY_ERROR,
+                &PosixMessageQueueBufferErrorSource,
+                (uint8_t) POSIXMESSAGEQUEUEBUFFER_ERROR_RECEIVE_FAILED
+            );
+        }
+
+        *bytesRead = success ? (size_t) received : 0U;
     }
-
-    *bytesRead = success ? (size_t) received : 0U;
-
     return success;
 }
 
