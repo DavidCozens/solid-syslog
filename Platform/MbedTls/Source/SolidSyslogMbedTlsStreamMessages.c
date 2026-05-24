@@ -14,6 +14,8 @@ static const char* MbedTlsStreamError_AsString(uint8_t code)
             "TLS client could not be configured with its default protocol settings; connection not established",
         [MBEDTLSSTREAM_ERROR_SESSION_INIT_FAILED] =
             "TLS session could not be initialised against the configured context; connection not established",
+        [MBEDTLSSTREAM_ERROR_SERVER_NAME_NOT_SET] =
+            "TLS server name (SNI / cert match) could not be configured; connection not established",
     };
     const char* result = "unknown";
     if (code < (uint8_t) MBEDTLSSTREAM_ERROR_MAX)

@@ -160,6 +160,14 @@ static inline bool MbedTlsStream_ConfigureExpectedHostname(struct SolidSyslogMbe
     if (self->Config.ServerName != NULL)
     {
         ok = mbedtls_ssl_set_hostname(&self->SslContext, self->Config.ServerName) == 0;
+        if (!ok)
+        {
+            SolidSyslog_Error(
+                SOLIDSYSLOG_SEVERITY_ERROR,
+                &MbedTlsStreamErrorSource,
+                (uint8_t) MBEDTLSSTREAM_ERROR_SERVER_NAME_NOT_SET
+            );
+        }
     }
     return ok;
 }

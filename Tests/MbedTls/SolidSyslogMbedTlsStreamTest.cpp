@@ -72,10 +72,19 @@ TEST_GROUP(SolidSyslogMbedTlsStream)
     }
 
     /* Tests needing config tweaks (CaChain, Rng, ServerName, …) call this
-     * to release setup()'s pool slot, mutate `config`, then re-Create. */
+     * to release setup()'s pool slot, mutate `config`, then re-Create.
+     * Fully resets the fixture (transport, MbedTls fake counters, error
+     * handler) so the test body observes counts from this Open onwards
+     * only — matters for assertions like CHECK_OPEN_UNWOUND_WITH_ERROR
+     * that pin counts at == 1. */
     void ReCreateHandleWithUpdatedConfig()
     {
         SolidSyslogMbedTlsStream_Destroy(handle);
+        StreamFake_Destroy(transport);
+        MbedTlsFake_Reset();
+        ErrorHandlerFake_Install(nullptr);
+        transport = StreamFake_Create();
+        config.Transport = transport;
         handle = SolidSyslogMbedTlsStream_Create(&config);
     }
 
@@ -255,6 +264,18 @@ TEST(SolidSyslogMbedTlsStream, OpenClosesTransportAndFreesSslStateWhenSslSetupFa
 
     CHECK_FALSE(SolidSyslogStream_Open(handle, addr));
     CHECK_OPEN_UNWOUND_WITH_ERROR(transport, MBEDTLSSTREAM_ERROR_SESSION_INIT_FAILED);
+}
+
+TEST(SolidSyslogMbedTlsStream, OpenClosesTransportAndFreesSslStateWhenSetHostnameFails)
+{
+    /* ServerName must be set for ConfigureExpectedHostname to invoke
+     * mbedtls_ssl_set_hostname — otherwise the helper short-circuits to true. */
+    config.ServerName = "syslog.example.com";
+    ReCreateHandleWithUpdatedConfig();
+    MbedTlsFake_SetSslSetHostnameReturn(-1);
+
+    CHECK_FALSE(SolidSyslogStream_Open(handle, addr));
+    CHECK_OPEN_UNWOUND_WITH_ERROR(transport, MBEDTLSSTREAM_ERROR_SERVER_NAME_NOT_SET);
 }
 
 TEST(SolidSyslogMbedTlsStream, SendForwardsBufferToSslWrite)
