@@ -1079,6 +1079,24 @@ TEST(SolidSyslogTlsStream, OpenFailsImmediatelyOnHardSslError)
     CHECK_OPEN_UNWOUND_WITH_ERROR(transport, TLSSTREAM_ERROR_HANDSHAKE_REJECTED);
 }
 
+TEST(SolidSyslogTlsStream, SecondOpenAfterFailedFirstOpenSucceeds)
+{
+    /* The recovery contract that the per-failure-point unwinds enable: once
+     * Open's failure tail Closes the transport and releases the SSL state, the
+     * next Open is a clean Open-Close-Open cycle on the transport. Without the
+     * unwind, the inner transport would stay open and PosixTcpStream_Open would
+     * clobber its fd on the next StreamSender reconnect tick. */
+    int handshakeSequence[] = {-1, 1};
+    OpenSslFake_SetConnectReturnSequence(handshakeSequence, 2);
+    OpenSslFake_SetGetErrorReturn(SSL_ERROR_SSL); /* first call: hard error, fail-fast */
+
+    CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+    OpenSslFake_SetGetErrorReturn(0); /* second call: handshake succeeds, no error lookup */
+    CHECK_TRUE(SolidSyslogStream_Open(stream, addr));
+    LONGS_EQUAL(2, StreamFake_OpenCallCount(transport));
+    LONGS_EQUAL(1, StreamFake_CloseCallCount(transport));
+}
+
 /* -------------------------------------------------------------------------
  * Send fail-fast: any non-success closes the SSL session and the underlying
  * transport so the StreamSender's reconnect path runs on the next tick.
