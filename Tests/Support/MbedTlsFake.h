@@ -38,6 +38,7 @@ EXTERN_C_BEGIN
     int MbedTlsFake_SslSetupCallCount(void);
     struct mbedtls_ssl_context* MbedTlsFake_LastSslSetupContextArg(void);
     const struct mbedtls_ssl_config* MbedTlsFake_LastSslSetupConfigArg(void);
+    void MbedTlsFake_SetSslSetupReturn(int value);
 
     /* mbedtls_ssl_set_bio */
     int MbedTlsFake_SslSetBioCallCount(void);
