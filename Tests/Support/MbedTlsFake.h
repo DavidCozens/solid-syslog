@@ -28,6 +28,7 @@ EXTERN_C_BEGIN
     int MbedTlsFake_LastSslConfigDefaultsEndpoint(void);
     int MbedTlsFake_LastSslConfigDefaultsTransport(void);
     int MbedTlsFake_LastSslConfigDefaultsPreset(void);
+    void MbedTlsFake_SetSslConfigDefaultsReturn(int value);
 
     /* mbedtls_ssl_init */
     int MbedTlsFake_SslInitCallCount(void);
@@ -37,6 +38,7 @@ EXTERN_C_BEGIN
     int MbedTlsFake_SslSetupCallCount(void);
     struct mbedtls_ssl_context* MbedTlsFake_LastSslSetupContextArg(void);
     const struct mbedtls_ssl_config* MbedTlsFake_LastSslSetupConfigArg(void);
+    void MbedTlsFake_SetSslSetupReturn(int value);
 
     /* mbedtls_ssl_set_bio */
     int MbedTlsFake_SslSetBioCallCount(void);
@@ -103,6 +105,7 @@ EXTERN_C_BEGIN
     int MbedTlsFake_SslSetHostnameCallCount(void);
     struct mbedtls_ssl_context* MbedTlsFake_LastSslSetHostnameContextArg(void);
     const char* MbedTlsFake_LastSslSetHostnameNameArg(void);
+    void MbedTlsFake_SetSslSetHostnameReturn(int value);
 
     /* mbedtls_ssl_conf_own_cert (mTLS client identity wiring) */
     int MbedTlsFake_SslConfOwnCertCallCount(void);

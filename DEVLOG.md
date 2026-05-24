@@ -11743,3 +11743,71 @@ MISRA rule — different category, doesn't set precedent.
 ### Open questions
 
 - None.
+
+## 2026-05-24 — S26.02 MbedTlsStream Open unwinds + per-failure-point error reporting
+
+### Decisions
+
+- **Single-line tail unwind, not per-helper unwind.** Open's failure
+  tail is `if (!ok) MbedTlsStream_Close(base);` — one statement, one
+  exit point. `Close` is already idempotent (eager `mbedtls_ssl_init`
+  / `_config_init` in `Initialise` means the `*_free` calls are safe
+  whether or not Open reached its allocating step) so it does the
+  right thing regardless of which step tripped. Considered extracting
+  a `MbedTlsStream_UnwindOnFailure` helper; rejected — one statement
+  is one statement.
+- **Five protocol-level error codes, not five C-call codes.** New
+  `MbedTlsStreamErrors.h` entries (`DEFAULTS_NOT_APPLIED`,
+  `SESSION_INIT_FAILED`, `SERVER_NAME_NOT_SET`, `HANDSHAKE_REJECTED`,
+  `HANDSHAKE_TIMEOUT`) describe what the negotiation failed to
+  achieve, not which mbedTLS function returned non-zero. David's
+  guidance: the integrator should see "TLS handshake rejected by
+  peer or local verification" — not "mbedtls_ssl_handshake returned
+  MBEDTLS_ERR_SSL_BAD_INPUT_DATA". Sets the pattern for S26.03
+  (OpenSSL parity).
+- **PerformHandshake `||` split into two `else if` branches.** Was
+  one combined exit condition for both hard-error and budget-
+  exhausted exits; now two branches so each can emit its own typed
+  code. clang-tidy's `bugprone-branch-clone` does not fire — the
+  two emissions take different enum constants.
+- **Inner-transport Open failure is not our error to report.**
+  When `SolidSyslogStream_Open(transport, addr)` returns false (the
+  first `&&` short-circuit in MbedTlsStream_Open), MbedTlsStream
+  emits nothing and just returns false. The transport owns its own
+  diagnostics; the unwind tail still runs and closes the not-quite-
+  opened transport (idempotent on `INVALID_FD`).
+- **`ReCreateHandleWithUpdatedConfig` extended to fully reset the
+  fixture.** Was destroy-handle-only; now also destroys+recreates
+  the transport, resets MbedTlsFake counters, and re-installs the
+  ErrorHandlerFake. Required so the new
+  `CHECK_OPEN_UNWOUND_WITH_ERROR(transport, code)` macro's `== 1`
+  count assertions see counts from the post-ReCreate Open only. The
+  existing five callers (CaChain / Rng / hostname / OwnCert tests)
+  were unaffected — they only ever asserted counts produced by the
+  one Open they invoke.
+- **No defensive close-before-open in PosixTcpStream.** Considered
+  hardening `PosixTcpStream_Open` to close any pre-existing fd
+  before allocating a new one (would mask the bug class entirely).
+  Rejected per David: the contract today is "every `Stream_Open` is
+  preceded by `Stream_Close`", StreamSender honours it, and the
+  unwind added by this story restores the contract for the mbedTLS
+  failure path. Defensive close at the transport would paper over
+  future contract violations rather than surface them.
+
+### Deferred
+
+- **OpenSSL parity (S26.03).** Same shape: `TlsStream_Open` has the
+  same chained-`&&` failure paths, the same SSL state to free, the
+  same socket fd to close. Story to be filed after this one merges,
+  using the test pattern (`CHECK_OPEN_UNWOUND_WITH_ERROR` macro,
+  protocol-level error codes, recovery test) proven here.
+- **`mbedtls_ssl_close_notify` on a never-handshaked context.**
+  Today's `Close` calls close_notify unconditionally; on a context
+  where `ssl_setup` was never reached, close_notify returns
+  `MBEDTLS_ERR_SSL_BAD_INPUT_DATA` which we silently swallow.
+  Harmless but noisy in mbedTLS debug builds. Could add a "session
+  ever live?" guard; out of scope for S26.02.
+
+### Open questions
+
+- None.

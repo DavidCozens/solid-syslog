@@ -4,9 +4,13 @@
 #include <mbedtls/ssl.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
+#include "SolidSyslogError.h"
+#include "SolidSyslogMbedTlsStreamErrors.h"
 #include "SolidSyslogMbedTlsStreamPrivate.h"
 #include "SolidSyslogNullStream.h"
+#include "SolidSyslogPrival.h"
 #include "SolidSyslogStream.h"
 #include "SolidSyslogStreamDefinition.h"
 
@@ -97,17 +101,30 @@ static inline bool MbedTlsStream_Open(struct SolidSyslogStream* base, const stru
         MbedTlsStream_InstallTransportCallbacks(self);
         ok = MbedTlsStream_PerformHandshake(self);
     }
+    if (!ok)
+    {
+        MbedTlsStream_Close(base);
+    }
     return ok;
 }
 
 static inline bool MbedTlsStream_ApplySslConfigDefaults(struct SolidSyslogMbedTlsStream* self)
 {
-    return mbedtls_ssl_config_defaults(
-               &self->SslConfig,
-               MBEDTLS_SSL_IS_CLIENT,
-               MBEDTLS_SSL_TRANSPORT_STREAM,
-               MBEDTLS_SSL_PRESET_DEFAULT
-           ) == 0;
+    bool ok = mbedtls_ssl_config_defaults(
+                  &self->SslConfig,
+                  MBEDTLS_SSL_IS_CLIENT,
+                  MBEDTLS_SSL_TRANSPORT_STREAM,
+                  MBEDTLS_SSL_PRESET_DEFAULT
+              ) == 0;
+    if (!ok)
+    {
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &MbedTlsStreamErrorSource,
+            (uint8_t) MBEDTLSSTREAM_ERROR_DEFAULTS_NOT_APPLIED
+        );
+    }
+    return ok;
 }
 
 /* TLS policy owned by the library — set per-ssl_config so it cannot leak
@@ -125,7 +142,16 @@ static inline void MbedTlsStream_ApplyTlsPolicy(struct SolidSyslogMbedTlsStream*
 
 static inline bool MbedTlsStream_BindContextToConfig(struct SolidSyslogMbedTlsStream* self)
 {
-    return mbedtls_ssl_setup(&self->SslContext, &self->SslConfig) == 0;
+    bool ok = mbedtls_ssl_setup(&self->SslContext, &self->SslConfig) == 0;
+    if (!ok)
+    {
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &MbedTlsStreamErrorSource,
+            (uint8_t) MBEDTLSSTREAM_ERROR_SESSION_INIT_FAILED
+        );
+    }
+    return ok;
 }
 
 static inline bool MbedTlsStream_ConfigureExpectedHostname(struct SolidSyslogMbedTlsStream* self)
@@ -134,6 +160,14 @@ static inline bool MbedTlsStream_ConfigureExpectedHostname(struct SolidSyslogMbe
     if (self->Config.ServerName != NULL)
     {
         ok = mbedtls_ssl_set_hostname(&self->SslContext, self->Config.ServerName) == 0;
+        if (!ok)
+        {
+            SolidSyslog_Error(
+                SOLIDSYSLOG_SEVERITY_ERROR,
+                &MbedTlsStreamErrorSource,
+                (uint8_t) MBEDTLSSTREAM_ERROR_SERVER_NAME_NOT_SET
+            );
+        }
     }
     return ok;
 }
@@ -147,7 +181,9 @@ static inline void MbedTlsStream_InstallTransportCallbacks(struct SolidSyslogMbe
  * Each call may return WANT_READ/WANT_WRITE while waiting for the multi-RTT
  * handshake to progress; we sleep briefly between attempts (avoiding a busy
  * spin) until either the handshake completes, hits a hard error, or the
- * bounded budget expires. Same shape as OpenSSL's TlsStream_PerformHandshake. */
+ * bounded budget expires. Each non-success exit emits a distinct
+ * protocol-level error code so the integrator can tell rejection from
+ * timeout. Same shape as OpenSSL's TlsStream_PerformHandshake. */
 static inline bool MbedTlsStream_PerformHandshake(struct SolidSyslogMbedTlsStream* self)
 {
     int totalSleptMs = 0;
@@ -162,8 +198,22 @@ static inline bool MbedTlsStream_PerformHandshake(struct SolidSyslogMbedTlsStrea
             result = true;
             done = true;
         }
-        else if (!MbedTlsStream_IsRetryableHandshakeRc(rc) || MbedTlsStream_IsHandshakeBudgetExhausted(totalSleptMs))
+        else if (!MbedTlsStream_IsRetryableHandshakeRc(rc))
         {
+            SolidSyslog_Error(
+                SOLIDSYSLOG_SEVERITY_ERROR,
+                &MbedTlsStreamErrorSource,
+                (uint8_t) MBEDTLSSTREAM_ERROR_HANDSHAKE_REJECTED
+            );
+            done = true;
+        }
+        else if (MbedTlsStream_IsHandshakeBudgetExhausted(totalSleptMs))
+        {
+            SolidSyslog_Error(
+                SOLIDSYSLOG_SEVERITY_ERROR,
+                &MbedTlsStreamErrorSource,
+                (uint8_t) MBEDTLSSTREAM_ERROR_HANDSHAKE_TIMEOUT
+            );
             done = true;
         }
         else

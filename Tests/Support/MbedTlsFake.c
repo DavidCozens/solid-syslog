@@ -20,6 +20,7 @@ static mbedtls_ssl_config* lastSslConfigDefaultsConfigArg;
 static int lastSslConfigDefaultsEndpoint;
 static int lastSslConfigDefaultsTransport;
 static int lastSslConfigDefaultsPreset;
+static int sslConfigDefaultsReturn;
 
 /* mbedtls_ssl_init */
 static int sslInitCallCount;
@@ -29,6 +30,7 @@ static mbedtls_ssl_context* lastSslInitArg;
 static int sslSetupCallCount;
 static mbedtls_ssl_context* lastSslSetupContextArg;
 static const mbedtls_ssl_config* lastSslSetupConfigArg;
+static int sslSetupReturn;
 
 /* mbedtls_ssl_set_bio */
 static int sslSetBioCallCount;
@@ -98,6 +100,7 @@ static void* lastSslConfRngContextArg;
 static int sslSetHostnameCallCount;
 static mbedtls_ssl_context* lastSslSetHostnameContextArg;
 static const char* lastSslSetHostnameNameArg;
+static int sslSetHostnameReturn;
 
 /* mbedtls_ssl_conf_own_cert */
 static int sslConfOwnCertCallCount;
@@ -118,11 +121,13 @@ void MbedTlsFake_Reset(void)
     lastSslConfigDefaultsEndpoint = 0;
     lastSslConfigDefaultsTransport = 0;
     lastSslConfigDefaultsPreset = 0;
+    sslConfigDefaultsReturn = 0;
     sslInitCallCount = 0;
     lastSslInitArg = NULL;
     sslSetupCallCount = 0;
     lastSslSetupContextArg = NULL;
     lastSslSetupConfigArg = NULL;
+    sslSetupReturn = 0;
     sslSetBioCallCount = 0;
     lastSslSetBioContextArg = NULL;
     lastSslSetBioPBioArg = NULL;
@@ -164,6 +169,7 @@ void MbedTlsFake_Reset(void)
     sslSetHostnameCallCount = 0;
     lastSslSetHostnameContextArg = NULL;
     lastSslSetHostnameNameArg = NULL;
+    sslSetHostnameReturn = 0;
     sslConfOwnCertCallCount = 0;
     lastSslConfOwnCertConfigArg = NULL;
     lastSslConfOwnCertCertArg = NULL;
@@ -205,6 +211,11 @@ int MbedTlsFake_LastSslConfigDefaultsPreset(void)
     return lastSslConfigDefaultsPreset;
 }
 
+void MbedTlsFake_SetSslConfigDefaultsReturn(int value)
+{
+    sslConfigDefaultsReturn = value;
+}
+
 int MbedTlsFake_SslInitCallCount(void)
 {
     return sslInitCallCount;
@@ -228,6 +239,11 @@ mbedtls_ssl_context* MbedTlsFake_LastSslSetupContextArg(void)
 const mbedtls_ssl_config* MbedTlsFake_LastSslSetupConfigArg(void)
 {
     return lastSslSetupConfigArg;
+}
+
+void MbedTlsFake_SetSslSetupReturn(int value)
+{
+    sslSetupReturn = value;
 }
 
 int MbedTlsFake_SslSetBioCallCount(void)
@@ -436,6 +452,11 @@ const char* MbedTlsFake_LastSslSetHostnameNameArg(void)
     return lastSslSetHostnameNameArg;
 }
 
+void MbedTlsFake_SetSslSetHostnameReturn(int value)
+{
+    sslSetHostnameReturn = value;
+}
+
 int MbedTlsFake_SslConfOwnCertCallCount(void)
 {
     return sslConfOwnCertCallCount;
@@ -475,7 +496,7 @@ int mbedtls_ssl_config_defaults(mbedtls_ssl_config* conf, int endpoint, int tran
     lastSslConfigDefaultsEndpoint = endpoint;
     lastSslConfigDefaultsTransport = transport;
     lastSslConfigDefaultsPreset = preset;
-    return 0;
+    return sslConfigDefaultsReturn;
 }
 
 void mbedtls_ssl_init(mbedtls_ssl_context* ssl)
@@ -489,7 +510,7 @@ int mbedtls_ssl_setup(mbedtls_ssl_context* ssl, const mbedtls_ssl_config* conf)
     sslSetupCallCount++;
     lastSslSetupContextArg = ssl;
     lastSslSetupConfigArg = conf;
-    return 0;
+    return sslSetupReturn;
 }
 
 void mbedtls_ssl_set_bio(
@@ -610,5 +631,5 @@ int mbedtls_ssl_set_hostname(mbedtls_ssl_context* ssl, const char* hostname)
     sslSetHostnameCallCount++;
     lastSslSetHostnameContextArg = ssl;
     lastSslSetHostnameNameArg = hostname;
-    return 0;
+    return sslSetHostnameReturn;
 }

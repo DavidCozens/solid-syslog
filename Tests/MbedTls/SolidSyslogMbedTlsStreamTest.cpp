@@ -5,8 +5,11 @@ extern "C"
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/ssl.h>
 
+#include "ErrorHandlerFake.h"
 #include "MbedTlsFake.h"
 #include "SolidSyslogMbedTlsStream.h"
+#include "SolidSyslogMbedTlsStreamErrors.h"
+#include "SolidSyslogPrival.h"
 #include "AddressFake.h"
 #include "SolidSyslogStream.h"
 #include "SolidSyslogStreamDefinition.h"
@@ -16,6 +19,20 @@ extern "C"
 #include "TestUtils.h"
 
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings ONCE/NEVER/TWICE into scope for CALLED_FUNCTION / CALLED_FAKE
+
+// NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while) -- macro preserves __FILE__/__LINE__ in failure output; do-while wraps the multi-statement body for safe single-statement use
+#define CHECK_OPEN_UNWOUND_WITH_ERROR(transport, expectedCode)                    \
+    do                                                                            \
+    {                                                                             \
+        LONGS_EQUAL(1, StreamFake_CloseCallCount(transport));                     \
+        LONGS_EQUAL(1, MbedTlsFake_SslFreeCallCount());                           \
+        LONGS_EQUAL(1, MbedTlsFake_SslConfigFreeCallCount());                     \
+        CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);                               \
+        POINTERS_EQUAL(&MbedTlsStreamErrorSource, ErrorHandlerFake_LastSource()); \
+        UNSIGNED_LONGS_EQUAL((expectedCode), ErrorHandlerFake_LastCode());        \
+        LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity()); \
+    } while (0)
+// NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 
 static int NoOpSleepCallCount;
 static int g_lastSleepMs;
@@ -37,6 +54,7 @@ TEST_GROUP(SolidSyslogMbedTlsStream)
     void setup() override
     {
         MbedTlsFake_Reset();
+        ErrorHandlerFake_Install(nullptr);
         NoOpSleepCallCount = 0;
         g_lastSleepMs = 0;
         transport = StreamFake_Create();
@@ -54,10 +72,19 @@ TEST_GROUP(SolidSyslogMbedTlsStream)
     }
 
     /* Tests needing config tweaks (CaChain, Rng, ServerName, …) call this
-     * to release setup()'s pool slot, mutate `config`, then re-Create. */
+     * to release setup()'s pool slot, mutate `config`, then re-Create.
+     * Fully resets the fixture (transport, MbedTls fake counters, error
+     * handler) so the test body observes counts from this Open onwards
+     * only — matters for assertions like CHECK_OPEN_UNWOUND_WITH_ERROR
+     * that pin counts at == 1. */
     void ReCreateHandleWithUpdatedConfig()
     {
         SolidSyslogMbedTlsStream_Destroy(handle);
+        StreamFake_Destroy(transport);
+        MbedTlsFake_Reset();
+        ErrorHandlerFake_Install(nullptr);
+        transport = StreamFake_Create();
+        config.Transport = transport;
         handle = SolidSyslogMbedTlsStream_Create(&config);
     }
 
@@ -196,16 +223,34 @@ TEST(SolidSyslogMbedTlsStream, OpenRetriesHandshakeOnWantWrite)
     CALLED_FAKE(MbedTlsFake_SslHandshake, TWICE);
 }
 
-TEST(SolidSyslogMbedTlsStream, OpenFailsWhenHandshakeNeverCompletes)
+TEST(SolidSyslogMbedTlsStream, OpenClosesTransportAndFreesSslStateWhenHandshakeBudgetExhausts)
 {
     /* mbedtls_ssl_handshake always returns WANT_READ — handshake never makes
      * progress, so the bounded budget should expire and Open returns false. */
     ArrangePersistentHandshakeError(MBEDTLS_ERR_SSL_WANT_READ);
 
     CHECK_FALSE(SolidSyslogStream_Open(handle, addr));
+    CHECK_OPEN_UNWOUND_WITH_ERROR(transport, MBEDTLSSTREAM_ERROR_HANDSHAKE_TIMEOUT);
 }
 
-TEST(SolidSyslogMbedTlsStream, OpenFailsImmediatelyOnHardSslError)
+TEST(SolidSyslogMbedTlsStream, SecondOpenAfterFailedFirstOpenSucceeds)
+{
+    /* The recovery contract that the per-failure-point unwinds enable: once
+     * Open's failure tail Closes the transport and frees the SSL state, the
+     * next Open is a clean Open-Close-Open cycle on the transport — Connected
+     * goes false, StreamSender's next reconnect tick re-enters, and the
+     * second handshake completes. Without the unwind, the inner transport
+     * would stay open and PosixTcpStream_Open would clobber its fd. */
+    int handshakeSequence[] = {MBEDTLS_ERR_SSL_BAD_INPUT_DATA, 0};
+    MbedTlsFake_SetSslHandshakeReturnSequence(handshakeSequence, 2);
+
+    CHECK_FALSE(SolidSyslogStream_Open(handle, addr));
+    CHECK_TRUE(SolidSyslogStream_Open(handle, addr));
+    LONGS_EQUAL(2, StreamFake_OpenCallCount(transport));
+    LONGS_EQUAL(1, StreamFake_CloseCallCount(transport));
+}
+
+TEST(SolidSyslogMbedTlsStream, OpenClosesTransportAndFreesSslStateWhenHandshakeFailsHard)
 {
     /* Non-WANT error (e.g. a verify/connection failure) is fail-fast — no
      * retry budget burn, no Sleep. */
@@ -214,6 +259,42 @@ TEST(SolidSyslogMbedTlsStream, OpenFailsImmediatelyOnHardSslError)
     CHECK_FALSE(SolidSyslogStream_Open(handle, addr));
     CALLED_FAKE(MbedTlsFake_SslHandshake, ONCE);
     CALLED_FUNCTION(NoOpSleep, NEVER);
+    CHECK_OPEN_UNWOUND_WITH_ERROR(transport, MBEDTLSSTREAM_ERROR_HANDSHAKE_REJECTED);
+}
+
+/* -------------------------------------------------------------------------
+ * Open failure unwind + error reporting (S26.02). Every failure path after
+ * the first allocating operation must close the inner transport, free both
+ * mbedTLS structs, and emit the matching typed error code so the integrator
+ * sees a protocol-level diagnostic.
+ * ------------------------------------------------------------------------- */
+
+TEST(SolidSyslogMbedTlsStream, OpenClosesTransportAndFreesSslStateWhenSslConfigDefaultsFails)
+{
+    MbedTlsFake_SetSslConfigDefaultsReturn(-1);
+
+    CHECK_FALSE(SolidSyslogStream_Open(handle, addr));
+    CHECK_OPEN_UNWOUND_WITH_ERROR(transport, MBEDTLSSTREAM_ERROR_DEFAULTS_NOT_APPLIED);
+}
+
+TEST(SolidSyslogMbedTlsStream, OpenClosesTransportAndFreesSslStateWhenSslSetupFails)
+{
+    MbedTlsFake_SetSslSetupReturn(-1);
+
+    CHECK_FALSE(SolidSyslogStream_Open(handle, addr));
+    CHECK_OPEN_UNWOUND_WITH_ERROR(transport, MBEDTLSSTREAM_ERROR_SESSION_INIT_FAILED);
+}
+
+TEST(SolidSyslogMbedTlsStream, OpenClosesTransportAndFreesSslStateWhenSetHostnameFails)
+{
+    /* ServerName must be set for ConfigureExpectedHostname to invoke
+     * mbedtls_ssl_set_hostname — otherwise the helper short-circuits to true. */
+    config.ServerName = "syslog.example.com";
+    ReCreateHandleWithUpdatedConfig();
+    MbedTlsFake_SetSslSetHostnameReturn(-1);
+
+    CHECK_FALSE(SolidSyslogStream_Open(handle, addr));
+    CHECK_OPEN_UNWOUND_WITH_ERROR(transport, MBEDTLSSTREAM_ERROR_SERVER_NAME_NOT_SET);
 }
 
 TEST(SolidSyslogMbedTlsStream, SendForwardsBufferToSslWrite)
