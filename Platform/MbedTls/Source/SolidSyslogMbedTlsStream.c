@@ -181,7 +181,9 @@ static inline void MbedTlsStream_InstallTransportCallbacks(struct SolidSyslogMbe
  * Each call may return WANT_READ/WANT_WRITE while waiting for the multi-RTT
  * handshake to progress; we sleep briefly between attempts (avoiding a busy
  * spin) until either the handshake completes, hits a hard error, or the
- * bounded budget expires. Same shape as OpenSSL's TlsStream_PerformHandshake. */
+ * bounded budget expires. Each non-success exit emits a distinct
+ * protocol-level error code so the integrator can tell rejection from
+ * timeout. Same shape as OpenSSL's TlsStream_PerformHandshake. */
 static inline bool MbedTlsStream_PerformHandshake(struct SolidSyslogMbedTlsStream* self)
 {
     int totalSleptMs = 0;
@@ -196,7 +198,16 @@ static inline bool MbedTlsStream_PerformHandshake(struct SolidSyslogMbedTlsStrea
             result = true;
             done = true;
         }
-        else if (!MbedTlsStream_IsRetryableHandshakeRc(rc) || MbedTlsStream_IsHandshakeBudgetExhausted(totalSleptMs))
+        else if (!MbedTlsStream_IsRetryableHandshakeRc(rc))
+        {
+            SolidSyslog_Error(
+                SOLIDSYSLOG_SEVERITY_ERROR,
+                &MbedTlsStreamErrorSource,
+                (uint8_t) MBEDTLSSTREAM_ERROR_HANDSHAKE_REJECTED
+            );
+            done = true;
+        }
+        else if (MbedTlsStream_IsHandshakeBudgetExhausted(totalSleptMs))
         {
             done = true;
         }

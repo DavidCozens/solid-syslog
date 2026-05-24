@@ -232,7 +232,7 @@ TEST(SolidSyslogMbedTlsStream, OpenFailsWhenHandshakeNeverCompletes)
     CHECK_FALSE(SolidSyslogStream_Open(handle, addr));
 }
 
-TEST(SolidSyslogMbedTlsStream, OpenFailsImmediatelyOnHardSslError)
+TEST(SolidSyslogMbedTlsStream, OpenClosesTransportAndFreesSslStateWhenHandshakeFailsHard)
 {
     /* Non-WANT error (e.g. a verify/connection failure) is fail-fast — no
      * retry budget burn, no Sleep. */
@@ -241,6 +241,7 @@ TEST(SolidSyslogMbedTlsStream, OpenFailsImmediatelyOnHardSslError)
     CHECK_FALSE(SolidSyslogStream_Open(handle, addr));
     CALLED_FAKE(MbedTlsFake_SslHandshake, ONCE);
     CALLED_FUNCTION(NoOpSleep, NEVER);
+    CHECK_OPEN_UNWOUND_WITH_ERROR(transport, MBEDTLSSTREAM_ERROR_HANDSHAKE_REJECTED);
 }
 
 /* -------------------------------------------------------------------------
