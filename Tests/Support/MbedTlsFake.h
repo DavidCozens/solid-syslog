@@ -105,6 +105,7 @@ EXTERN_C_BEGIN
     int MbedTlsFake_SslSetHostnameCallCount(void);
     struct mbedtls_ssl_context* MbedTlsFake_LastSslSetHostnameContextArg(void);
     const char* MbedTlsFake_LastSslSetHostnameNameArg(void);
+    void MbedTlsFake_SetSslSetHostnameReturn(int value);
 
     /* mbedtls_ssl_conf_own_cert (mTLS client identity wiring) */
     int MbedTlsFake_SslConfOwnCertCallCount(void);
