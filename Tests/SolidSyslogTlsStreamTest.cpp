@@ -73,6 +73,22 @@ TEST_GROUP(SolidSyslogTlsStream)
         StreamFake_Destroy(transport);
     }
 
+    /* Tests needing config tweaks (CipherList, ClientCertChainPath, ServerName, …)
+     * call this to release setup()'s pool slot, mutate `config`, then re-Create.
+     * Fully resets the fixture (transport, OpenSslFake counters, error handler)
+     * so the test body observes counts from this Open onwards only — matters
+     * for assertions like CHECK_OPEN_UNWOUND_WITH_ERROR that pin counts at == 1. */
+    void ReCreateStreamWithUpdatedConfig()
+    {
+        SolidSyslogTlsStream_Destroy(stream);
+        StreamFake_Destroy(transport);
+        OpenSslFake_Reset();
+        ErrorHandlerFake_Install(nullptr);
+        transport        = StreamFake_Create();
+        config.Transport = transport;
+        stream           = SolidSyslogTlsStream_Create(&config);
+    }
+
     /* Drive the registered BIO read callback with the given transport return —
        collapses the open + set-return + grab-callback + invoke boilerplate. */
     [[nodiscard]] int InvokeBioReadWithTransportReturn(SolidSyslogSsize transportReturn) const
@@ -234,11 +250,11 @@ TEST(SolidSyslogTlsStream, OpenSkipsCipherListSetupWhenNotConfigured)
 
 TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenCipherListRejected)
 {
-    SolidSyslogTlsStream_Destroy(stream);
     config.CipherList = "not-a-real-cipher";
-    stream = SolidSyslogTlsStream_Create(&config);
+    ReCreateStreamWithUpdatedConfig();
     OpenSslFake_SetCipherListFails(true);
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+    CHECK_OPEN_UNWOUND_WITH_ERROR(transport, TLSSTREAM_ERROR_CONTEXT_INIT_FAILED);
 }
 
 TEST(SolidSyslogTlsStream, CipherListFailureFreesCtx)
@@ -662,6 +678,7 @@ TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenLoadVerifyLocationsFails)
 {
     OpenSslFake_SetLoadVerifyLocationsFails(true);
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+    CHECK_OPEN_UNWOUND_WITH_ERROR(transport, TLSSTREAM_ERROR_CONTEXT_INIT_FAILED);
 }
 
 TEST(SolidSyslogTlsStream, LoadVerifyLocationsFailureFreesCtx)
@@ -675,6 +692,7 @@ TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenMinProtoVersionFails)
 {
     OpenSslFake_SetMinProtoVersionFails(true);
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+    CHECK_OPEN_UNWOUND_WITH_ERROR(transport, TLSSTREAM_ERROR_CONTEXT_INIT_FAILED);
 }
 
 TEST(SolidSyslogTlsStream, MinProtoVersionFailureFreesCtx)
@@ -822,11 +840,11 @@ TEST(SolidSyslogTlsStream, OpenChecksClientKeyMatchesCert)
 
 TEST(SolidSyslogTlsStream, OpenFailsWhenOnlyClientCertIsSet)
 {
-    SolidSyslogTlsStream_Destroy(stream);
     config.ClientCertChainPath = "/some/path/client.pem";
     config.ClientKeyPath = nullptr;
-    stream = SolidSyslogTlsStream_Create(&config);
+    ReCreateStreamWithUpdatedConfig();
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+    CHECK_OPEN_UNWOUND_WITH_ERROR(transport, TLSSTREAM_ERROR_CONTEXT_INIT_FAILED);
 }
 
 TEST(SolidSyslogTlsStream, OpenMakesNoClientIdentityCallsWhenOnlyClientCertIsSet)
@@ -843,11 +861,11 @@ TEST(SolidSyslogTlsStream, OpenMakesNoClientIdentityCallsWhenOnlyClientCertIsSet
 
 TEST(SolidSyslogTlsStream, OpenFailsWhenOnlyClientKeyIsSet)
 {
-    SolidSyslogTlsStream_Destroy(stream);
     config.ClientCertChainPath = nullptr;
     config.ClientKeyPath = "/some/path/client.key";
-    stream = SolidSyslogTlsStream_Create(&config);
+    ReCreateStreamWithUpdatedConfig();
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+    CHECK_OPEN_UNWOUND_WITH_ERROR(transport, TLSSTREAM_ERROR_CONTEXT_INIT_FAILED);
 }
 
 TEST(SolidSyslogTlsStream, OpenMakesNoClientIdentityCallsWhenOnlyClientKeyIsSet)
@@ -874,12 +892,12 @@ TEST(SolidSyslogTlsStream, PartialClientIdentityConfigFreesCtx)
 
 TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenUseCertChainFileFails)
 {
-    SolidSyslogTlsStream_Destroy(stream);
     config.ClientCertChainPath = "/some/path/client.pem";
     config.ClientKeyPath = "/some/path/client.key";
-    stream = SolidSyslogTlsStream_Create(&config);
+    ReCreateStreamWithUpdatedConfig();
     OpenSslFake_SetUseCertChainFileFails(true);
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+    CHECK_OPEN_UNWOUND_WITH_ERROR(transport, TLSSTREAM_ERROR_CONTEXT_INIT_FAILED);
 }
 
 TEST(SolidSyslogTlsStream, UseCertChainFileFailureFreesCtx)
@@ -895,12 +913,12 @@ TEST(SolidSyslogTlsStream, UseCertChainFileFailureFreesCtx)
 
 TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenUsePrivateKeyFileFails)
 {
-    SolidSyslogTlsStream_Destroy(stream);
     config.ClientCertChainPath = "/some/path/client.pem";
     config.ClientKeyPath = "/some/path/client.key";
-    stream = SolidSyslogTlsStream_Create(&config);
+    ReCreateStreamWithUpdatedConfig();
     OpenSslFake_SetUsePrivateKeyFileFails(true);
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+    CHECK_OPEN_UNWOUND_WITH_ERROR(transport, TLSSTREAM_ERROR_CONTEXT_INIT_FAILED);
 }
 
 TEST(SolidSyslogTlsStream, UsePrivateKeyFileFailureFreesCtx)
@@ -916,12 +934,12 @@ TEST(SolidSyslogTlsStream, UsePrivateKeyFileFailureFreesCtx)
 
 TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenCheckPrivateKeyFails)
 {
-    SolidSyslogTlsStream_Destroy(stream);
     config.ClientCertChainPath = "/some/path/client.pem";
     config.ClientKeyPath = "/some/path/client.key";
-    stream = SolidSyslogTlsStream_Create(&config);
+    ReCreateStreamWithUpdatedConfig();
     OpenSslFake_SetCheckPrivateKeyFails(true);
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+    CHECK_OPEN_UNWOUND_WITH_ERROR(transport, TLSSTREAM_ERROR_CONTEXT_INIT_FAILED);
 }
 
 TEST(SolidSyslogTlsStream, CheckPrivateKeyFailureFreesCtx)
