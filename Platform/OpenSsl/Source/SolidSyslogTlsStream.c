@@ -6,10 +6,14 @@
 #include <openssl/types.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
+#include "SolidSyslogError.h"
 #include "SolidSyslogNullStream.h"
+#include "SolidSyslogPrival.h"
 #include "SolidSyslogStream.h"
 #include "SolidSyslogStreamDefinition.h"
+#include "SolidSyslogTlsStreamErrors.h"
 #include "SolidSyslogTlsStreamPrivate.h"
 
 enum
@@ -135,15 +139,30 @@ static inline void TlsStream_ReleaseSslContext(struct SolidSyslogTlsStream* self
 static inline bool TlsStream_Open(struct SolidSyslogStream* base, const struct SolidSyslogAddress* addr)
 {
     struct SolidSyslogTlsStream* self = TlsStream_SelfFromBase(base);
-    return SolidSyslogStream_Open(self->Config.Transport, addr) && TlsStream_InitSslContext(self) &&
-           TlsStream_InitSslSession(self) && TlsStream_AttachTransportBio(self) &&
-           TlsStream_ConfigureExpectedHostname(self) && TlsStream_PerformHandshake(self);
+    bool ok = SolidSyslogStream_Open(self->Config.Transport, addr) && TlsStream_InitSslContext(self) &&
+              TlsStream_InitSslSession(self) && TlsStream_AttachTransportBio(self) &&
+              TlsStream_ConfigureExpectedHostname(self) && TlsStream_PerformHandshake(self);
+    if (!ok)
+    {
+        TlsStream_Close(base);
+        TlsStream_ReleaseSslContext(self);
+    }
+    return ok;
 }
 
 static inline bool TlsStream_InitSslContext(struct SolidSyslogTlsStream* self)
 {
     self->Ctx = TlsStream_CreateSslContext(&self->Config);
-    return self->Ctx != NULL;
+    bool ok = self->Ctx != NULL;
+    if (!ok)
+    {
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &TlsStreamErrorSource,
+            (uint8_t) TLSSTREAM_ERROR_CONTEXT_INIT_FAILED
+        );
+    }
+    return ok;
 }
 
 static inline SSL_CTX* TlsStream_CreateSslContext(const struct SolidSyslogTlsStreamConfig* config)

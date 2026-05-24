@@ -4,10 +4,13 @@
 #include <openssl/types.h>
 #include <stddef.h>
 
+#include "ErrorHandlerFake.h"
 #include "OpenSslFake.h"
 #include "AddressFake.h"
+#include "SolidSyslogPrival.h"
 #include "SolidSyslogStream.h"
 #include "SolidSyslogTlsStream.h"
+#include "SolidSyslogTlsStreamErrors.h"
 #include "SolidSyslogTransport.h"
 #include "StreamFake.h"
 #include "TestUtils.h"
@@ -15,6 +18,18 @@
 
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
     // macros
+
+// NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while) -- macro preserves __FILE__/__LINE__ in failure output; do-while wraps the multi-statement body for safe single-statement use
+#define CHECK_OPEN_UNWOUND_WITH_ERROR(transport, expectedCode)                    \
+    do                                                                            \
+    {                                                                             \
+        LONGS_EQUAL(1, StreamFake_CloseCallCount(transport));                     \
+        CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);                               \
+        POINTERS_EQUAL(&TlsStreamErrorSource, ErrorHandlerFake_LastSource());     \
+        UNSIGNED_LONGS_EQUAL((expectedCode), ErrorHandlerFake_LastCode());        \
+        LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity()); \
+    } while (0)
+// NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 
 class TEST_SolidSyslogTlsStream_ReadReturnsNegativeOneOnHardErrorAndClosesSsl_Test;
 class TEST_SolidSyslogTlsStream_ReadReturnsNegativeOneOnZeroReturnAndClosesSsl_Test;
@@ -40,6 +55,7 @@ TEST_GROUP(SolidSyslogTlsStream)
     void setup() override
     {
         OpenSslFake_Reset();
+        ErrorHandlerFake_Install(nullptr);
         NoOpSleepCallCount = 0;
         g_lastSleepMs    = 0;
         transport        = StreamFake_Create();
@@ -633,6 +649,7 @@ TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenCtxNewFails)
 {
     OpenSslFake_SetCtxNewFails(true);
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
+    CHECK_OPEN_UNWOUND_WITH_ERROR(transport, TLSSTREAM_ERROR_CONTEXT_INIT_FAILED);
 }
 
 TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenSslNewFails)
