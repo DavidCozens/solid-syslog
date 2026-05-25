@@ -7,6 +7,9 @@ static const char* StreamSenderError_AsString(uint8_t code)
 {
     static const char* const messages[STREAMSENDER_ERROR_MAX] = {
         [STREAMSENDER_ERROR_NULL_CONFIG] = "SolidSyslogStreamSender_Create called with NULL config",
+        [STREAMSENDER_ERROR_NULL_RESOLVER] = "SolidSyslogStreamSender_Create config.Resolver is NULL",
+        [STREAMSENDER_ERROR_NULL_STREAM] = "SolidSyslogStreamSender_Create config.Stream is NULL",
+        [STREAMSENDER_ERROR_NULL_ADDRESS] = "SolidSyslogStreamSender_Create config.Address is NULL",
         [STREAMSENDER_ERROR_POOL_EXHAUSTED] =
             "SolidSyslogStreamSender_Create pool exhausted; returning fallback sender",
         [STREAMSENDER_ERROR_UNKNOWN_DESTROY] =

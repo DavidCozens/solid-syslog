@@ -776,3 +776,33 @@ TEST(SolidSyslogStreamSenderBadSetup, CreateWithNullConfigReportsError)
     POINTERS_EQUAL(&StreamSenderErrorSource, ErrorHandlerFake_LastSource());
     UNSIGNED_LONGS_EQUAL(STREAMSENDER_ERROR_NULL_CONFIG, ErrorHandlerFake_LastCode());
 }
+
+TEST(SolidSyslogStreamSenderBadSetup, CreateWithNullResolverReportsError)
+{
+    config.Resolver = nullptr;
+    SolidSyslogStreamSender_Create(&config);
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&StreamSenderErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(STREAMSENDER_ERROR_NULL_RESOLVER, ErrorHandlerFake_LastCode());
+}
+
+TEST(SolidSyslogStreamSenderBadSetup, CreateWithNullStreamReportsError)
+{
+    config.Stream = nullptr;
+    SolidSyslogStreamSender_Create(&config);
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&StreamSenderErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(STREAMSENDER_ERROR_NULL_STREAM, ErrorHandlerFake_LastCode());
+}
+
+TEST(SolidSyslogStreamSenderBadSetup, CreateWithNullAddressReportsError)
+{
+    config.Address = nullptr;
+    SolidSyslogStreamSender_Create(&config);
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&StreamSenderErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(STREAMSENDER_ERROR_NULL_ADDRESS, ErrorHandlerFake_LastCode());
+}

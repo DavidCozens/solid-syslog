@@ -59,6 +59,30 @@ static bool StreamSender_IsValidConfig(const struct SolidSyslogStreamSenderConfi
             (uint8_t) STREAMSENDER_ERROR_NULL_CONFIG
         );
     }
+    else if (config->Resolver == NULL)
+    {
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &StreamSenderErrorSource,
+            (uint8_t) STREAMSENDER_ERROR_NULL_RESOLVER
+        );
+    }
+    else if (config->Stream == NULL)
+    {
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &StreamSenderErrorSource,
+            (uint8_t) STREAMSENDER_ERROR_NULL_STREAM
+        );
+    }
+    else if (config->Address == NULL)
+    {
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &StreamSenderErrorSource,
+            (uint8_t) STREAMSENDER_ERROR_NULL_ADDRESS
+        );
+    }
     else
     {
         valid = true;
