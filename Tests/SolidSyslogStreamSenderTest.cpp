@@ -4,13 +4,17 @@
 #include <stdint.h>
 #include <sys/socket.h>
 
+#include "ErrorHandlerFake.h"
 #include "SolidSyslogEndpoint.h"
+#include "SolidSyslogError.h"
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogGetAddrInfoResolver.h"
 #include "SolidSyslogPosixAddress.h"
 #include "SolidSyslogPosixTcpStream.h"
+#include "SolidSyslogPrival.h"
 #include "SolidSyslogSender.h"
 #include "SolidSyslogStreamSender.h"
+#include "SolidSyslogStreamSenderErrors.h"
 #include "SolidSyslogTunables.h"
 #include "SocketFake.h"
 #include "TestUtils.h"
@@ -722,4 +726,53 @@ TEST(SolidSyslogStreamSenderPool, FillingPoolThenOverflowReturnsDistinctFallback
         CHECK_TEXT(slot != nullptr, "pool slot was nullptr (FillPool failed?)");
         CHECK_TEXT(overflow != slot, "Fallback handle collided with a pool slot");
     }
+}
+
+// Bad-setup tests — _Create rejects NULL config / Resolver / Stream / Address
+// by emitting SolidSyslog_Error(SEVERITY_ERROR, ...) and returning the shared
+// SolidSyslogNullSender without consuming a pool slot. Matches the
+// SolidSyslogUdpSenderBadSetup contract from S12.06.
+
+// clang-format off
+TEST_GROUP(SolidSyslogStreamSenderBadSetup)
+{
+    struct SolidSyslogResolver*          resolver = nullptr;
+    struct SolidSyslogStream*            stream   = nullptr;
+    struct SolidSyslogAddress*           address  = nullptr;
+    struct SolidSyslogStreamSenderConfig config{};
+    // cppcheck-suppress unreadVariable -- assigned in tests; cppcheck does not model CppUTest macros
+    struct SolidSyslogSender*            sender   = nullptr;
+    int                                  sentinel = 0;
+
+    void setup() override
+    {
+        SocketFake_Reset();
+        endpointGetHost = GetHost;
+        endpointVersion = 0;
+        endpointGetPort = GetPort;
+        resolver = SolidSyslogGetAddrInfoResolver_Create();
+        stream   = SolidSyslogPosixTcpStream_Create(nullptr);
+        address  = SolidSyslogPosixAddress_Create();
+        config   = {resolver, stream, address, TestEndpoint, TestEndpointVersion};
+        ErrorHandlerFake_Install(&sentinel);
+    }
+
+    void teardown() override
+    {
+        SolidSyslogStreamSender_Destroy(sender);
+        SolidSyslogPosixAddress_Destroy(address);
+        SolidSyslogPosixTcpStream_Destroy(stream);
+        SolidSyslogGetAddrInfoResolver_Destroy(resolver);
+    }
+};
+
+// clang-format on
+
+TEST(SolidSyslogStreamSenderBadSetup, CreateWithNullConfigReportsError)
+{
+    SolidSyslogStreamSender_Create(nullptr);
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&StreamSenderErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(STREAMSENDER_ERROR_NULL_CONFIG, ErrorHandlerFake_LastCode());
 }
