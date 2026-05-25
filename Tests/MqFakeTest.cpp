@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <mqueue.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 
 #include "MqFake.h"
 #include "TestUtils.h"
