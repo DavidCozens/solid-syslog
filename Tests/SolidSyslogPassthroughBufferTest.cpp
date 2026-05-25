@@ -5,8 +5,11 @@
 
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
     // macros
+#include "ErrorHandlerFake.h"
 #include "SolidSyslogBuffer.h"
 #include "SolidSyslogPassthroughBuffer.h"
+#include "SolidSyslogPassthroughBufferErrors.h"
+#include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
 #include "SenderFake.h"
 
@@ -82,6 +85,18 @@ TEST(SolidSyslogPassthroughBuffer, ReadReturnsNothingToSend)
     CHECK_FALSE(sent);
 }
 
+TEST(SolidSyslogPassthroughBuffer, DestroyWithNullHandleEmitsUnknownDestroyWarning)
+{
+    ErrorHandlerFake_Install(nullptr);
+
+    SolidSyslogPassthroughBuffer_Destroy(nullptr);
+
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&PassthroughBufferErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(PASSTHROUGHBUFFER_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
+}
+
 TEST(SolidSyslogPassthroughBuffer, UseAfterDestroyIsCrashSafeViaNullBufferVtable)
 {
     /* After Destroy the slot's abstract-base vtable is the shared NullBuffer's, so
@@ -97,15 +112,6 @@ TEST(SolidSyslogPassthroughBuffer, UseAfterDestroyIsCrashSafeViaNullBufferVtable
     CALLED_FAKE_ON(SenderFake_Send, fakeSender, NEVER);
 
     buffer = SolidSyslogPassthroughBuffer_Create(fakeSender); // for teardown
-}
-
-IGNORE_TEST(SolidSyslogPassthroughBuffer, HappyPathOnly)
-
-{
-    // Error handling not yet implemented — see Epic #31
-    //   Create with NULL sender returns NULL
-    //   Write with NULL buffer does not crash
-    //   Destroy with NULL buffer does not crash
 }
 
 // Pool tests — prove SOLIDSYSLOG_PASSTHROUGH_BUFFER_POOL_SIZE caps live
@@ -184,4 +190,43 @@ TEST(SolidSyslogPassthroughBufferPool, FallbackWriteAndReadAreNoOps)
     CHECK_FALSE(SolidSyslogBuffer_Read(overflow, readBuffer, sizeof(readBuffer), &bytesRead));
     LONGS_EQUAL(0, bytesRead);
     CALLED_FAKE_ON(SenderFake_Send, fakeSender, NEVER);
+}
+
+TEST(SolidSyslogPassthroughBufferPool, CreateWithNullSenderReportsError)
+{
+    ErrorHandlerFake_Install(nullptr);
+
+    overflow = SolidSyslogPassthroughBuffer_Create(nullptr);
+
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&PassthroughBufferErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(PASSTHROUGHBUFFER_ERROR_NULL_SENDER, ErrorHandlerFake_LastCode());
+}
+
+TEST(SolidSyslogPassthroughBufferPool, CreateWithNullSenderReturnsFallbackDistinctFromAnyPoolSlot)
+{
+    FillPool();
+
+    overflow = SolidSyslogPassthroughBuffer_Create(nullptr);
+
+    CHECK_TEXT(overflow != nullptr, "Fallback handle was nullptr");
+    for (auto* slot : pooled)
+    {
+        CHECK_TEXT(overflow != slot, "Fallback handle collided with a pool slot");
+    }
+}
+
+TEST(SolidSyslogPassthroughBufferPool, CreateWithNullSenderDoesNotConsumeAPoolSlot)
+{
+    // If the failed Create had leaked its acquired slot, FillPool would overflow
+    // into the fallback one slot sooner and one pool slot would collide with
+    // `overflow` (both pointing at the NullBuffer singleton).
+    overflow = SolidSyslogPassthroughBuffer_Create(nullptr);
+
+    FillPool();
+    for (auto* slot : pooled)
+    {
+        CHECK_TEXT(slot != overflow, "Pool slot collided with the NULL-sender fallback handle");
+    }
 }
