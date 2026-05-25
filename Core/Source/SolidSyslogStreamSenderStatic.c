@@ -14,6 +14,7 @@
 
 struct SolidSyslogSender;
 
+static bool StreamSender_IsValidConfig(const struct SolidSyslogStreamSenderConfig* config);
 static inline size_t StreamSender_IndexFromHandle(const struct SolidSyslogSender* base);
 static inline void StreamSender_CleanupAtIndex(size_t index, void* context);
 
@@ -27,21 +28,66 @@ static struct SolidSyslogPoolAllocator StreamSender_Allocator = {
 struct SolidSyslogSender* SolidSyslogStreamSender_Create(const struct SolidSyslogStreamSenderConfig* config)
 {
     struct SolidSyslogSender* result = SolidSyslogNullSender_Get();
-    size_t index = SolidSyslogPoolAllocator_AcquireFirstFree(&StreamSender_Allocator);
-    if (SolidSyslogPoolAllocator_IndexIsValid(&StreamSender_Allocator, index))
+    if (StreamSender_IsValidConfig(config))
     {
-        StreamSender_Initialise(&StreamSender_Pool[index].Base, config);
-        result = &StreamSender_Pool[index].Base;
+        size_t index = SolidSyslogPoolAllocator_AcquireFirstFree(&StreamSender_Allocator);
+        if (SolidSyslogPoolAllocator_IndexIsValid(&StreamSender_Allocator, index))
+        {
+            StreamSender_Initialise(&StreamSender_Pool[index].Base, config);
+            result = &StreamSender_Pool[index].Base;
+        }
+        else
+        {
+            SolidSyslog_Error(
+                SOLIDSYSLOG_SEVERITY_ERROR,
+                &StreamSenderErrorSource,
+                (uint8_t) STREAMSENDER_ERROR_POOL_EXHAUSTED
+            );
+        }
     }
-    else
+    return result;
+}
+
+static bool StreamSender_IsValidConfig(const struct SolidSyslogStreamSenderConfig* config)
+{
+    bool valid = false;
+    if (config == NULL)
     {
         SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &StreamSenderErrorSource,
-            (uint8_t) STREAMSENDER_ERROR_POOL_EXHAUSTED
+            (uint8_t) STREAMSENDER_ERROR_NULL_CONFIG
         );
     }
-    return result;
+    else if (config->Resolver == NULL)
+    {
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &StreamSenderErrorSource,
+            (uint8_t) STREAMSENDER_ERROR_NULL_RESOLVER
+        );
+    }
+    else if (config->Stream == NULL)
+    {
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &StreamSenderErrorSource,
+            (uint8_t) STREAMSENDER_ERROR_NULL_STREAM
+        );
+    }
+    else if (config->Address == NULL)
+    {
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &StreamSenderErrorSource,
+            (uint8_t) STREAMSENDER_ERROR_NULL_ADDRESS
+        );
+    }
+    else
+    {
+        valid = true;
+    }
+    return valid;
 }
 
 void SolidSyslogStreamSender_Destroy(struct SolidSyslogSender* base)
