@@ -523,6 +523,7 @@ jobs:
           -IPlatform/OpenSsl/Interface
           -IPlatform/MbedTls/Interface
           -IPlatform/FreeRtos/Interface
+          -IPlatform/PlusTcp/Interface
           -IPlatform/FatFs/Interface
           --xml --xml-version=2
           Core/Source/
@@ -532,6 +533,7 @@ jobs:
           Platform/OpenSsl/Source/
           Platform/MbedTls/Source/
           Platform/FreeRtos/Source/
+          Platform/PlusTcp/Source/
           Platform/FatFs/Source/
           2> build/cppcheck/cppcheck-report.xml
 
@@ -566,6 +568,7 @@ jobs:
           -IPlatform/OpenSsl/Interface
           -IPlatform/MbedTls/Interface
           -IPlatform/FreeRtos/Interface
+          -IPlatform/PlusTcp/Interface
           -IPlatform/FatFs/Interface
           Core/Source/
           Platform/Atomics/Source/
@@ -574,6 +577,7 @@ jobs:
           Platform/OpenSsl/Source/
           Platform/MbedTls/Source/
           Platform/FreeRtos/Source/
+          Platform/PlusTcp/Source/
           Platform/FatFs/Source/
 
       - name: Generate cppcheck-misra XML report
@@ -593,6 +597,7 @@ jobs:
             -IPlatform/OpenSsl/Interface \
             -IPlatform/MbedTls/Interface \
             -IPlatform/FreeRtos/Interface \
+            -IPlatform/PlusTcp/Interface \
             -IPlatform/FatFs/Interface \
             --xml --xml-version=2 \
             Core/Source/ \
@@ -602,6 +607,7 @@ jobs:
             Platform/OpenSsl/Source/ \
             Platform/MbedTls/Source/ \
             Platform/FreeRtos/Source/ \
+            Platform/PlusTcp/Source/ \
             Platform/FatFs/Source/ \
             2> build/cppcheck-misra/cppcheck-misra-report.xml
 
