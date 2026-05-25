@@ -5,8 +5,11 @@
 
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
     // macros
+#include "ErrorHandlerFake.h"
 #include "SolidSyslogBuffer.h"
 #include "SolidSyslogPassthroughBuffer.h"
+#include "SolidSyslogPassthroughBufferErrors.h"
+#include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
 #include "SenderFake.h"
 
@@ -184,4 +187,43 @@ TEST(SolidSyslogPassthroughBufferPool, FallbackWriteAndReadAreNoOps)
     CHECK_FALSE(SolidSyslogBuffer_Read(overflow, readBuffer, sizeof(readBuffer), &bytesRead));
     LONGS_EQUAL(0, bytesRead);
     CALLED_FAKE_ON(SenderFake_Send, fakeSender, NEVER);
+}
+
+TEST(SolidSyslogPassthroughBufferPool, CreateWithNullSenderReportsError)
+{
+    ErrorHandlerFake_Install(nullptr);
+
+    overflow = SolidSyslogPassthroughBuffer_Create(nullptr);
+
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&PassthroughBufferErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(PASSTHROUGHBUFFER_ERROR_NULL_SENDER, ErrorHandlerFake_LastCode());
+}
+
+TEST(SolidSyslogPassthroughBufferPool, CreateWithNullSenderReturnsFallbackDistinctFromAnyPoolSlot)
+{
+    FillPool();
+
+    overflow = SolidSyslogPassthroughBuffer_Create(nullptr);
+
+    CHECK_TEXT(overflow != nullptr, "Fallback handle was nullptr");
+    for (auto* slot : pooled)
+    {
+        CHECK_TEXT(overflow != slot, "Fallback handle collided with a pool slot");
+    }
+}
+
+TEST(SolidSyslogPassthroughBufferPool, CreateWithNullSenderDoesNotConsumeAPoolSlot)
+{
+    // If the failed Create had leaked its acquired slot, FillPool would overflow
+    // into the fallback one slot sooner and one pool slot would collide with
+    // `overflow` (both pointing at the NullBuffer singleton).
+    overflow = SolidSyslogPassthroughBuffer_Create(nullptr);
+
+    FillPool();
+    for (auto* slot : pooled)
+    {
+        CHECK_TEXT(slot != overflow, "Pool slot collided with the NULL-sender fallback handle");
+    }
 }

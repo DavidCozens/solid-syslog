@@ -27,20 +27,31 @@ static struct SolidSyslogPoolAllocator PassthroughBuffer_Allocator = {
 
 struct SolidSyslogBuffer* SolidSyslogPassthroughBuffer_Create(struct SolidSyslogSender* sender)
 {
-    size_t index = SolidSyslogPoolAllocator_AcquireFirstFree(&PassthroughBuffer_Allocator);
     struct SolidSyslogBuffer* handle = SolidSyslogNullBuffer_Get();
-    if (SolidSyslogPoolAllocator_IndexIsValid(&PassthroughBuffer_Allocator, index))
-    {
-        PassthroughBuffer_Initialise(&PassthroughBuffer_Pool[index].Base, sender);
-        handle = &PassthroughBuffer_Pool[index].Base;
-    }
-    else
+    if (sender == NULL)
     {
         SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &PassthroughBufferErrorSource,
-            (uint8_t) PASSTHROUGHBUFFER_ERROR_POOL_EXHAUSTED
+            (uint8_t) PASSTHROUGHBUFFER_ERROR_NULL_SENDER
         );
+    }
+    else
+    {
+        size_t index = SolidSyslogPoolAllocator_AcquireFirstFree(&PassthroughBuffer_Allocator);
+        if (SolidSyslogPoolAllocator_IndexIsValid(&PassthroughBuffer_Allocator, index))
+        {
+            PassthroughBuffer_Initialise(&PassthroughBuffer_Pool[index].Base, sender);
+            handle = &PassthroughBuffer_Pool[index].Base;
+        }
+        else
+        {
+            SolidSyslog_Error(
+                SOLIDSYSLOG_SEVERITY_ERROR,
+                &PassthroughBufferErrorSource,
+                (uint8_t) PASSTHROUGHBUFFER_ERROR_POOL_EXHAUSTED
+            );
+        }
     }
     return handle;
 }
