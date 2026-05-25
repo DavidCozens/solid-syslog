@@ -198,24 +198,6 @@ TEST(SolidSyslogPosixMessageQueueBuffer, ServiceSendsMessageWrittenViaLog)
     SenderFake_Destroy(fakeSender);
 }
 
-IGNORE_TEST(SolidSyslogPosixMessageQueueBuffer, HappyPathOnly)
-
-{
-    // Error handling not yet implemented — see Epic #31
-    //   Create with zero maxMessageSize or maxMessages
-    //   Create when mq_open fails returns NULL
-    //   Write with NULL buffer does not crash
-    //   Write with NULL data does not crash
-    //   Read with NULL buffer does not crash
-    //   Read with NULL data does not crash
-    //   Read with NULL bytesRead does not crash
-    //   Destroy with NULL buffer does not crash
-    //   Write when queue is full (back-pressure / overflow)
-    //
-    // Blocking mode not yet implemented — see S4.5 or later
-    //   Read blocks waiting for a message (O_NONBLOCK removed)
-}
-
 // NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 #define CHECK_IS_FALLBACK(handle, pool)                                                \
     do                                                                                 \
