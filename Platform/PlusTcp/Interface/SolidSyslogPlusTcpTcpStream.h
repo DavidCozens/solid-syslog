@@ -1,5 +1,5 @@
-#ifndef SOLIDSYSLOGFREERTOSTCPSTREAM_H
-#define SOLIDSYSLOGFREERTOSTCPSTREAM_H
+#ifndef SOLIDSYSLOGPLUSTCPTCPSTREAM_H
+#define SOLIDSYSLOGPLUSTCPTCPSTREAM_H
 
 #include "ExternC.h"
 #include "SolidSyslogTcpConnectTimeoutFunction.h"
@@ -8,18 +8,17 @@ EXTERN_C_BEGIN
 
     struct SolidSyslogStream;
 
-    struct SolidSyslogFreeRtosTcpStreamConfig
+    struct SolidSyslogPlusTcpTcpStreamConfig
     {
         SolidSyslogTcpConnectTimeoutFunction
             GetConnectTimeoutMs; /* NULL → use SOLIDSYSLOG_TCP_CONNECT_TIMEOUT_MS tunable */
         void* ConnectTimeoutContext; /* passed through to GetConnectTimeoutMs; NULL is fine */
     };
 
-    struct SolidSyslogStream* SolidSyslogFreeRtosTcpStream_Create(
-        const struct SolidSyslogFreeRtosTcpStreamConfig* config
+    struct SolidSyslogStream* SolidSyslogPlusTcpTcpStream_Create(const struct SolidSyslogPlusTcpTcpStreamConfig* config
     );
-    void SolidSyslogFreeRtosTcpStream_Destroy(struct SolidSyslogStream * base);
+    void SolidSyslogPlusTcpTcpStream_Destroy(struct SolidSyslogStream * base);
 
 EXTERN_C_END
 
-#endif /* SOLIDSYSLOGFREERTOSTCPSTREAM_H */
+#endif /* SOLIDSYSLOGPLUSTCPTCPSTREAM_H */

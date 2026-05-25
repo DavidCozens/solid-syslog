@@ -18,7 +18,7 @@
  * runs over qemu -serial stdio (CmsdkUart RX wired into newlib's _read
  * in Bdd/Targets/FreeRtos/Common/Syscalls.c). On link-up the IP-task event
  * hook spawns the interactive task and the service task once; UdpSender
- * drives the SolidSyslogFreeRtosDatagram via the static resolver, so
+ * drives the SolidSyslogPlusTcpDatagram via the static resolver, so
  * each `send N` line over the UART emits N RFC 5424 datagrams to
  * {10.0.2.2, port=port}. */
 
@@ -44,12 +44,12 @@
 #include "SolidSyslogFatFsFile.h"
 #include "SolidSyslogFileBlockDevice.h"
 #include "SolidSyslogFormatter.h"
-#include "SolidSyslogFreeRtosAddress.h"
-#include "SolidSyslogFreeRtosDatagram.h"
+#include "SolidSyslogPlusTcpAddress.h"
+#include "SolidSyslogPlusTcpDatagram.h"
 #include "SolidSyslogFreeRtosMutex.h"
-#include "SolidSyslogFreeRtosResolver.h"
+#include "SolidSyslogPlusTcpResolver.h"
 #include "SolidSyslogFreeRtosSysUpTime.h"
-#include "SolidSyslogFreeRtosTcpStream.h"
+#include "SolidSyslogPlusTcpTcpStream.h"
 #include "SolidSyslogMetaSd.h"
 #include "SolidSyslogMutex.h"
 #include "SolidSyslogNullStore.h"
@@ -130,7 +130,7 @@
  * standard slirp DHCP-allocated guest address; we hardcode it here so no
  * DHCP server is required. 10.0.2.2 is the slirp gateway routed to the
  * QEMU host; 10.0.2.3 is slirp's built-in DNS forwarder, used by
- * SolidSyslogFreeRtosResolver when ipconfigUSE_DNS is enabled. */
+ * SolidSyslogPlusTcpResolver when ipconfigUSE_DNS is enabled. */
 static const uint8_t TEST_IP_ADDRESS[ipIP_ADDRESS_LENGTH_BYTES] = {10U, 0U, 2U, 15U};
 static const uint8_t TEST_NETMASK[ipIP_ADDRESS_LENGTH_BYTES] = {255U, 255U, 255U, 0U};
 static const uint8_t TEST_GATEWAY[ipIP_ADDRESS_LENGTH_BYTES] = {10U, 0U, 2U, 2U};
@@ -897,7 +897,7 @@ static void TeardownAll(void)
     SolidSyslogFreeRtosMutex_Destroy(lifecycleMutex);
     lifecycleMutex = NULL;
     SolidSyslogSwitchingSender_Destroy(switchingSender);
-    /* BddTargetTlsSender owns the inner MbedTlsStream + FreeRtosTcpStream pool
+    /* BddTargetTlsSender owns the inner MbedTlsStream + PlusTcpTcpStream pool
      * slots and the StreamSender slot, so it must be destroyed before tcpSender
      * / tcpStream below — releasing slots in roughly reverse order of Create
      * keeps the dependency graph clean even though the pool allocator itself
@@ -905,12 +905,12 @@ static void TeardownAll(void)
     BddTargetTlsSender_Destroy();
     tlsSender = NULL;
     SolidSyslogStreamSender_Destroy(tcpSender);
-    SolidSyslogFreeRtosAddress_Destroy(tcpAddress);
-    SolidSyslogFreeRtosTcpStream_Destroy(tcpStream);
+    SolidSyslogPlusTcpAddress_Destroy(tcpAddress);
+    SolidSyslogPlusTcpTcpStream_Destroy(tcpStream);
     SolidSyslogUdpSender_Destroy(udpSender);
-    SolidSyslogFreeRtosAddress_Destroy(udpAddress);
-    SolidSyslogFreeRtosDatagram_Destroy(datagram);
-    SolidSyslogFreeRtosResolver_Destroy(resolver);
+    SolidSyslogPlusTcpAddress_Destroy(udpAddress);
+    SolidSyslogPlusTcpDatagram_Destroy(datagram);
+    SolidSyslogPlusTcpResolver_Destroy(resolver);
 }
 
 static void SemihostingExit(int status)
@@ -953,9 +953,9 @@ static void InteractiveTask(void* argument)
     BddTargetMtlsConfig_SetHost("10.0.2.2");
     BddTargetMtlsConfig_SetServerName("syslog-ng");
 
-    resolver = SolidSyslogFreeRtosResolver_Create();
-    datagram = SolidSyslogFreeRtosDatagram_Create();
-    udpAddress = SolidSyslogFreeRtosAddress_Create();
+    resolver = SolidSyslogPlusTcpResolver_Create();
+    datagram = SolidSyslogPlusTcpDatagram_Create();
+    udpAddress = SolidSyslogPlusTcpAddress_Create();
 
     struct SolidSyslogUdpSenderConfig udpConfig = {
         .Resolver = resolver,
@@ -970,8 +970,8 @@ static void InteractiveTask(void* argument)
      * UDP endpoint callbacks because the BDD oracle (syslog-ng) listens on the
      * same host:port for both transports — the syslog-ng config in
      * Bdd/syslog-ng/syslog-ng.conf has a TCP listener on 5514 alongside UDP. */
-    tcpStream = SolidSyslogFreeRtosTcpStream_Create(NULL);
-    tcpAddress = SolidSyslogFreeRtosAddress_Create();
+    tcpStream = SolidSyslogPlusTcpTcpStream_Create(NULL);
+    tcpAddress = SolidSyslogPlusTcpAddress_Create();
     struct SolidSyslogStreamSenderConfig tcpConfig = {
         .Resolver = resolver,
         .Stream = tcpStream,
@@ -981,7 +981,7 @@ static void InteractiveTask(void* argument)
     };
     tcpSender = SolidSyslogStreamSender_Create(&tcpConfig);
 
-    /* TLS slot: SolidSyslogMbedTlsStream over SolidSyslogFreeRtosTcpStream,
+    /* TLS slot: SolidSyslogMbedTlsStream over SolidSyslogPlusTcpTcpStream,
      * with the demo CA / client cert / client key baked into the ELF. The
      * same slot serves both @tls (port 6514) and @mtls (port 6515)
      * scenarios — the wrapper wires the client cert unconditionally and

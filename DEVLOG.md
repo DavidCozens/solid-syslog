@@ -1,6 +1,120 @@
 # Dev Log
 
-## 2026-05-25 — S28.01 lwIP container pin + SOLIDSYSLOG_FREERTOS_NET option
+## 2026-05-25 — S28.02 rename FreeRtos networking classes to PlusTcp + move to Platform/PlusTcp/
+
+Second story in E28 (#454, parent #439). Pure cosmetic rename — no
+production behaviour change. Sets up the prefix split that S28.03–S28.05
+need so the lwIP Raw backend can sit beside the existing
+FreeRTOS-Plus-TCP backend without name collisions.
+
+### What landed
+
+1. **Four networking classes renamed and moved** from
+   `Platform/FreeRtos/` to a new `Platform/PlusTcp/` tree:
+   - `SolidSyslogFreeRtosAddress` → `SolidSyslogPlusTcpAddress`
+   - `SolidSyslogFreeRtosDatagram` → `SolidSyslogPlusTcpDatagram`
+   - `SolidSyslogFreeRtosResolver` → `SolidSyslogPlusTcpResolver`
+   - `SolidSyslogFreeRtosTcpStream` → `SolidSyslogPlusTcpTcpStream`
+
+   All public types, functions, error enums + sources, error code
+   macros, header guards, and TU-local statics renamed in lock-step.
+   `SolidSyslogFreeRtosMutex` and `SolidSyslogFreeRtosSysUpTime` stay
+   under `Platform/FreeRtos/` — they are RTOS primitives, not
+   networking, and are reused across both PlusTcp and (forthcoming)
+   lwIP Raw backends.
+
+2. **Pool-size tunables renamed**:
+   - `SOLIDSYSLOG_FREE_RTOS_DATAGRAM_POOL_SIZE` → `SOLIDSYSLOG_PLUS_TCP_DATAGRAM_POOL_SIZE`
+   - `SOLIDSYSLOG_FREE_RTOS_RESOLVER_POOL_SIZE` → `SOLIDSYSLOG_PLUS_TCP_RESOLVER_POOL_SIZE`
+   - `SOLIDSYSLOG_FREE_RTOS_TCP_STREAM_POOL_SIZE` → `SOLIDSYSLOG_PLUS_TCP_TCP_STREAM_POOL_SIZE`
+
+   `SOLIDSYSLOG_FREE_RTOS_MUTEX_POOL_SIZE` stays — Mutex isn't moving.
+
+3. **Top-level CMake wiring**. `Platform/PlusTcp/` adds an INTERFACE
+   library `SolidSyslogPlusTcp` mirroring `Platform/FreeRtos/`. The
+   `SOLIDSYSLOG_FREERTOS_NET` option's `BOTH` path stops `FATAL_ERROR`-ing
+   and emits a `STATUS` message instead (compiles `PLUSTCP` only until
+   the lwIP backend lands in S28.06). `LWIP` still fails fast.
+
+4. **CI jobs gain `-plustcp` suffix** so the future lwIP siblings
+   (S28.06) can sit beside them:
+   - `build-freertos-host-tdd-plustcp`
+   - `build-freertos-target-plustcp`
+   - `bdd-freertos-qemu-plustcp`
+
+   Updated the `needs:` lists, JUnit artifact names, JUnit-pattern
+   strings in the summary tool block, and the branch-protection list
+   in `CLAUDE.md`. Live GitHub branch-protection settings need a manual
+   update once this PR merges.
+
+5. **BDD common file renamed**:
+   `Bdd/Targets/Common/BddTargetTlsSender_MbedTls_FreeRtosTcp.c`
+   → `BddTargetTlsSender_MbedTls_PlusTcpTcp.c` — the file name
+   describes the inner stream backend.
+
+6. **Docs aligned**: README, CLAUDE.md public-headers table,
+   docs/NAMING.md, docs/integrating-mbedtls.md, docs/misra-deviations.md,
+   docs/iec62443.md, docs/rfc-compliance.md,
+   Bdd/Targets/FreeRtos/README.md, and a new
+   `docs/containers.md` section documenting the `BOTH = PLUSTCP-only`
+   gap.
+
+### Process
+
+Worked in 13 branch commits — for each networking class, a pure
+move-only commit (`git mv` + CMake re-pathing, file contents and
+identifiers unchanged) followed by an identifier-rename commit. Move
+commits preserve 100% git rename detection; rename commits drop below
+the 50% default threshold for the smaller files (15–94 lines, most
+lines touched by sed), so `git log --follow` on the final
+`SolidSyslogPlusTcp*` names tracks back through the move but stops
+at the rename commit unless the user passes `--find-renames=10%`. Then
+the CI rename and the doc-alignment sweep.
+
+Each move-commit verified compile-clean against
+`cmake --build --preset debug --target junit` in the
+`cpputest-freertos` container and `cmake --build --preset freertos-cross
+--target SolidSyslogBddTarget` in `cpputest-freertos-cross`. Each
+rename-commit verified the same plus the renamed test
+(`SolidSyslogPlusTcp*Test`) runs green. Full host-TDD junit suite green
+at the end of slice 4b.
+
+### Decisions
+
+- **`TcpStream` suffix preserved** even though it doubles the "Tcp" in
+  the new identifier (`SolidSyslogPlusTcpTcpStream`). Mirrors the
+  sibling pattern `SolidSyslogPosixTcpStream` / `SolidSyslogWinsockTcpStream`
+  / the forthcoming `SolidSyslogLwipRawTcpStream`. Awkward to read but
+  unambiguous.
+- **`BOTH = PLUSTCP synonym` during the gap.** Dev-container users
+  who set `BOTH` get a working build with a STATUS message rather than
+  a `FATAL_ERROR`, so the value doesn't have to flip during the E28
+  arc. CI runs `PLUSTCP` (today) and will add `LWIP` in S28.06; CI never
+  exercises `BOTH`.
+- **CI container images unchanged.** `cpputest-freertos` and
+  `cpputest-freertos-cross` host both backends side-by-side (S28.01);
+  the `-plustcp` suffix is on the CI job names only.
+- **Address has no per-class pool tunable** to rename (shares
+  `SOLIDSYSLOG_ADDRESS_POOL_SIZE` with the Posix/Winsock siblings).
+
+### Deferred
+
+- **SolidSyslogPlusTcpAddressTest not in junit target.** The
+  `Tests/CMakeLists.txt` junit-test list never included
+  `SolidSyslogFreeRtosAddressTest` (predates this story; missed when
+  S08.03 added the test). Renamed to `SolidSyslogPlusTcpAddressTest`
+  for consistency but still not wired into `junit`. The test passes
+  on its own (11/11); fix belongs in a follow-up story rather than
+  this rename sweep.
+- **Live GitHub branch-protection settings.** The PR's CLAUDE.md
+  change updates the documented list; the live GitHub settings need
+  a separate manual update by the maintainer (called out in the PR
+  description).
+
+### Open questions
+
+- None.
+
 
 Foundation story for E28 (#439 — lwIP Raw API support). No production-code
 changes; this is image plumbing plus a CMake option that gates the future

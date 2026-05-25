@@ -463,7 +463,7 @@
  * Number of SolidSyslogWinsockResolver instances the library's internal
  * static pool can simultaneously hold. The resolver is stateless (its
  * slot just holds the vtable); the pool exists for lifecycle symmetry
- * with the stateful FreeRtosResolver / GetAddrInfoResolver siblings.
+ * with the stateful PlusTcpResolver / GetAddrInfoResolver siblings.
  *
  * Default 1.
  *
@@ -539,7 +539,7 @@
 #endif
 
 /*
- * Number of SolidSyslogFreeRtosDatagram instances the library's
+ * Number of SolidSyslogPlusTcpDatagram instances the library's
  * internal static pool can simultaneously hold. Each instance carries
  * a FreeRTOS-Plus-TCP Socket_t.
  *
@@ -549,17 +549,17 @@
  *
  * Floor: 1. Sub-floor values rejected at compile time.
  */
-#ifndef SOLIDSYSLOG_FREE_RTOS_DATAGRAM_POOL_SIZE
+#ifndef SOLIDSYSLOG_PLUS_TCP_DATAGRAM_POOL_SIZE
 /* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- macro form required for preprocessor visibility (floor #if) and C array-size const-expr. */
-#define SOLIDSYSLOG_FREE_RTOS_DATAGRAM_POOL_SIZE 1U
+#define SOLIDSYSLOG_PLUS_TCP_DATAGRAM_POOL_SIZE 1U
 #endif
 
-#if SOLIDSYSLOG_FREE_RTOS_DATAGRAM_POOL_SIZE < 1
-#error "SOLIDSYSLOG_FREE_RTOS_DATAGRAM_POOL_SIZE must be >= 1"
+#if SOLIDSYSLOG_PLUS_TCP_DATAGRAM_POOL_SIZE < 1
+#error "SOLIDSYSLOG_PLUS_TCP_DATAGRAM_POOL_SIZE must be >= 1"
 #endif
 
 /*
- * Number of SolidSyslogFreeRtosResolver instances the library's
+ * Number of SolidSyslogPlusTcpResolver instances the library's
  * internal static pool can simultaneously hold. Each instance carries
  * the 4-byte IPv4 octets the integrator pins it to.
  *
@@ -569,36 +569,36 @@
  *
  * Floor: 1. Sub-floor values rejected at compile time.
  */
-#ifndef SOLIDSYSLOG_FREE_RTOS_RESOLVER_POOL_SIZE
+#ifndef SOLIDSYSLOG_PLUS_TCP_RESOLVER_POOL_SIZE
 /* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- macro form required for preprocessor visibility (floor #if) and C array-size const-expr. */
-#define SOLIDSYSLOG_FREE_RTOS_RESOLVER_POOL_SIZE 1U
+#define SOLIDSYSLOG_PLUS_TCP_RESOLVER_POOL_SIZE 1U
 #endif
 
-#if SOLIDSYSLOG_FREE_RTOS_RESOLVER_POOL_SIZE < 1
-#error "SOLIDSYSLOG_FREE_RTOS_RESOLVER_POOL_SIZE must be >= 1"
+#if SOLIDSYSLOG_PLUS_TCP_RESOLVER_POOL_SIZE < 1
+#error "SOLIDSYSLOG_PLUS_TCP_RESOLVER_POOL_SIZE must be >= 1"
 #endif
 
 /*
- * Number of SolidSyslogFreeRtosTcpStream instances the library's
+ * Number of SolidSyslogPlusTcpTcpStream instances the library's
  * internal static pool can simultaneously hold. Each instance carries
  * a FreeRTOS-Plus-TCP Socket_t for the bounded-blocking-connect
  * non-blocking TCP transport.
  *
  * Default 2 — matches the POSIX and Windows TCP stream pool defaults
  * so a future TLS-via-mbedTLS path (S08.07) wrapping an underlying
- * FreeRtosTcpStream does not silently fall back to NullStream on the
+ * PlusTcpTcpStream does not silently fall back to NullStream on the
  * second Create. Plain-TCP-only integrators pay 8 bytes of extra
  * static state; mbedTLS integrators are spared an override.
  *
  * Floor: 1. Sub-floor values rejected at compile time.
  */
-#ifndef SOLIDSYSLOG_FREE_RTOS_TCP_STREAM_POOL_SIZE
+#ifndef SOLIDSYSLOG_PLUS_TCP_TCP_STREAM_POOL_SIZE
 /* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- macro form required for preprocessor visibility (floor #if) and C array-size const-expr. */
-#define SOLIDSYSLOG_FREE_RTOS_TCP_STREAM_POOL_SIZE 2U
+#define SOLIDSYSLOG_PLUS_TCP_TCP_STREAM_POOL_SIZE 2U
 #endif
 
-#if SOLIDSYSLOG_FREE_RTOS_TCP_STREAM_POOL_SIZE < 1
-#error "SOLIDSYSLOG_FREE_RTOS_TCP_STREAM_POOL_SIZE must be >= 1"
+#if SOLIDSYSLOG_PLUS_TCP_TCP_STREAM_POOL_SIZE < 1
+#error "SOLIDSYSLOG_PLUS_TCP_TCP_STREAM_POOL_SIZE must be >= 1"
 #endif
 
 /*

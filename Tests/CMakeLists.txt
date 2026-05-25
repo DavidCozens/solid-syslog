@@ -235,9 +235,10 @@ foreach(freertos_test_target IN ITEMS
     SolidSyslogFreeRtosMutexTest
     SolidSyslogFreeRtosSysUpTimeTest
     CmsdkUartTest
-    SolidSyslogFreeRtosDatagramTest
-    SolidSyslogFreeRtosTcpStreamTest
-    SolidSyslogFreeRtosResolverTest
+    SolidSyslogPlusTcpAddressTest
+    SolidSyslogPlusTcpDatagramTest
+    SolidSyslogPlusTcpTcpStreamTest
+    SolidSyslogPlusTcpResolverTest
 )
     if(TARGET ${freertos_test_target})
         register_junit_test(${freertos_test_target})

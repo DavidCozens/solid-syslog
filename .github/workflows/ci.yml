@@ -523,6 +523,7 @@ jobs:
           -IPlatform/OpenSsl/Interface
           -IPlatform/MbedTls/Interface
           -IPlatform/FreeRtos/Interface
+          -IPlatform/PlusTcp/Interface
           -IPlatform/FatFs/Interface
           --xml --xml-version=2
           Core/Source/
@@ -532,6 +533,7 @@ jobs:
           Platform/OpenSsl/Source/
           Platform/MbedTls/Source/
           Platform/FreeRtos/Source/
+          Platform/PlusTcp/Source/
           Platform/FatFs/Source/
           2> build/cppcheck/cppcheck-report.xml
 
@@ -566,6 +568,7 @@ jobs:
           -IPlatform/OpenSsl/Interface
           -IPlatform/MbedTls/Interface
           -IPlatform/FreeRtos/Interface
+          -IPlatform/PlusTcp/Interface
           -IPlatform/FatFs/Interface
           Core/Source/
           Platform/Atomics/Source/
@@ -574,6 +577,7 @@ jobs:
           Platform/OpenSsl/Source/
           Platform/MbedTls/Source/
           Platform/FreeRtos/Source/
+          Platform/PlusTcp/Source/
           Platform/FatFs/Source/
 
       - name: Generate cppcheck-misra XML report
@@ -593,6 +597,7 @@ jobs:
             -IPlatform/OpenSsl/Interface \
             -IPlatform/MbedTls/Interface \
             -IPlatform/FreeRtos/Interface \
+            -IPlatform/PlusTcp/Interface \
             -IPlatform/FatFs/Interface \
             --xml --xml-version=2 \
             Core/Source/ \
@@ -602,6 +607,7 @@ jobs:
             Platform/OpenSsl/Source/ \
             Platform/MbedTls/Source/ \
             Platform/FreeRtos/Source/ \
+            Platform/PlusTcp/Source/ \
             Platform/FatFs/Source/ \
             2> build/cppcheck-misra/cppcheck-misra-report.xml
 
@@ -845,7 +851,7 @@ jobs:
         if: failure()
         run: docker compose -f ci/docker-compose.bdd.yml logs --no-color
 
-  build-freertos-host-tdd:
+  build-freertos-host-tdd-plustcp:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -886,11 +892,11 @@ jobs:
         if: success() || failure()
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
-          name: junit-build-freertos-host-tdd
+          name: junit-build-freertos-host-tdd-plustcp
           path: build/debug/cpputest_*.xml
           retention-days: 1
 
-  build-freertos-target:
+  build-freertos-target-plustcp:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -926,8 +932,8 @@ jobs:
           path: Bdd/features/steps/solidsyslog_tunables.py
           retention-days: 1
 
-  bdd-freertos-qemu:
-    needs: build-freertos-target
+  bdd-freertos-qemu-plustcp:
+    needs: build-freertos-target-plustcp
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -970,7 +976,7 @@ jobs:
         if: success() || failure()
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
-          name: junit-bdd-freertos-qemu
+          name: junit-bdd-freertos-qemu-plustcp
           path: Bdd/junit/TESTS-*.xml
           retention-days: 1
 
@@ -980,7 +986,7 @@ jobs:
 
   summary:
     if: always() && github.event_name == 'pull_request'
-    needs: [build-linux-gcc, build-linux-tunable-override, build-linux-clang, sanitize-linux-gcc, coverage-linux-gcc, analyze-tidy, analyze-cppcheck, analyze-format, analyze-iwyu, bdd-linux-syslog-ng, build-windows-msvc, bdd-windows-otel, integration-linux-openssl, integration-linux-mbedtls, integration-windows-openssl, build-freertos-host-tdd, build-freertos-target, bdd-freertos-qemu]
+    needs: [build-linux-gcc, build-linux-tunable-override, build-linux-clang, sanitize-linux-gcc, coverage-linux-gcc, analyze-tidy, analyze-cppcheck, analyze-format, analyze-iwyu, bdd-linux-syslog-ng, build-windows-msvc, bdd-windows-otel, integration-linux-openssl, integration-linux-mbedtls, integration-windows-openssl, build-freertos-host-tdd-plustcp, build-freertos-target-plustcp, bdd-freertos-qemu-plustcp]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -1035,8 +1041,8 @@ jobs:
                   },
                   {
                     "id": "junit",
-                    "name": "build-freertos-host-tdd",
-                    "pattern": "**/junit-build-freertos-host-tdd/cpputest_*.xml"
+                    "name": "build-freertos-host-tdd-plustcp",
+                    "pattern": "**/junit-build-freertos-host-tdd-plustcp/cpputest_*.xml"
                   },
                   {
                     "id": "junit",
@@ -1075,8 +1081,8 @@ jobs:
                   },
                   {
                     "id": "junit",
-                    "name": "bdd-freertos-qemu",
-                    "pattern": "**/junit-bdd-freertos-qemu/TESTS-*.xml"
+                    "name": "bdd-freertos-qemu-plustcp",
+                    "pattern": "**/junit-bdd-freertos-qemu-plustcp/TESTS-*.xml"
                   },
                   {
                     "id": "junit",
