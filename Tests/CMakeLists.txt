@@ -235,7 +235,7 @@ foreach(freertos_test_target IN ITEMS
     SolidSyslogFreeRtosMutexTest
     SolidSyslogFreeRtosSysUpTimeTest
     CmsdkUartTest
-    SolidSyslogFreeRtosDatagramTest
+    SolidSyslogPlusTcpDatagramTest
     SolidSyslogFreeRtosTcpStreamTest
     SolidSyslogFreeRtosResolverTest
 )

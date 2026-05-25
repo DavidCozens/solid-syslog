@@ -18,7 +18,7 @@
  * runs over qemu -serial stdio (CmsdkUart RX wired into newlib's _read
  * in Bdd/Targets/FreeRtos/Common/Syscalls.c). On link-up the IP-task event
  * hook spawns the interactive task and the service task once; UdpSender
- * drives the SolidSyslogFreeRtosDatagram via the static resolver, so
+ * drives the SolidSyslogPlusTcpDatagram via the static resolver, so
  * each `send N` line over the UART emits N RFC 5424 datagrams to
  * {10.0.2.2, port=port}. */
 
@@ -45,7 +45,7 @@
 #include "SolidSyslogFileBlockDevice.h"
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogPlusTcpAddress.h"
-#include "SolidSyslogFreeRtosDatagram.h"
+#include "SolidSyslogPlusTcpDatagram.h"
 #include "SolidSyslogFreeRtosMutex.h"
 #include "SolidSyslogFreeRtosResolver.h"
 #include "SolidSyslogFreeRtosSysUpTime.h"
@@ -909,7 +909,7 @@ static void TeardownAll(void)
     SolidSyslogFreeRtosTcpStream_Destroy(tcpStream);
     SolidSyslogUdpSender_Destroy(udpSender);
     SolidSyslogPlusTcpAddress_Destroy(udpAddress);
-    SolidSyslogFreeRtosDatagram_Destroy(datagram);
+    SolidSyslogPlusTcpDatagram_Destroy(datagram);
     SolidSyslogFreeRtosResolver_Destroy(resolver);
 }
 
@@ -954,7 +954,7 @@ static void InteractiveTask(void* argument)
     BddTargetMtlsConfig_SetServerName("syslog-ng");
 
     resolver = SolidSyslogFreeRtosResolver_Create();
-    datagram = SolidSyslogFreeRtosDatagram_Create();
+    datagram = SolidSyslogPlusTcpDatagram_Create();
     udpAddress = SolidSyslogPlusTcpAddress_Create();
 
     struct SolidSyslogUdpSenderConfig udpConfig = {

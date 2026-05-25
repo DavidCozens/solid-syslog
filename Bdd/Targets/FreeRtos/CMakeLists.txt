@@ -3,7 +3,7 @@
 # Compiled cross-only — gated by the top-level CMakeLists.txt on
 # CMAKE_CROSSCOMPILING + CMAKE_SYSTEM_PROCESSOR == "arm".
 #
-# Wires SolidSyslogUdpSender behind the SolidSyslogFreeRtosDatagram adapter
+# Wires SolidSyslogUdpSender behind the SolidSyslogPlusTcpDatagram adapter
 # and the static resolver, with Bdd/Targets/Common/BddTargetInteractive
 # driving `send N` / `quit` over the QEMU -serial stdio UART (CmsdkUart RX
 # path).
@@ -265,9 +265,9 @@ add_executable(SolidSyslogBddTarget
     ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogPlusTcpAddress.c
     ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogPlusTcpAddressMessages.c
     ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogPlusTcpAddressStatic.c
-    ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogFreeRtosDatagram.c
-    ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogFreeRtosDatagramMessages.c
-    ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogFreeRtosDatagramStatic.c
+    ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogPlusTcpDatagram.c
+    ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogPlusTcpDatagramMessages.c
+    ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogPlusTcpDatagramStatic.c
     ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosMutex.c
     ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosMutexMessages.c
     ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosMutexStatic.c

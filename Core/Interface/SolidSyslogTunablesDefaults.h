@@ -539,7 +539,7 @@
 #endif
 
 /*
- * Number of SolidSyslogFreeRtosDatagram instances the library's
+ * Number of SolidSyslogPlusTcpDatagram instances the library's
  * internal static pool can simultaneously hold. Each instance carries
  * a FreeRTOS-Plus-TCP Socket_t.
  *
@@ -549,13 +549,13 @@
  *
  * Floor: 1. Sub-floor values rejected at compile time.
  */
-#ifndef SOLIDSYSLOG_FREE_RTOS_DATAGRAM_POOL_SIZE
+#ifndef SOLIDSYSLOG_PLUS_TCP_DATAGRAM_POOL_SIZE
 /* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- macro form required for preprocessor visibility (floor #if) and C array-size const-expr. */
-#define SOLIDSYSLOG_FREE_RTOS_DATAGRAM_POOL_SIZE 1U
+#define SOLIDSYSLOG_PLUS_TCP_DATAGRAM_POOL_SIZE 1U
 #endif
 
-#if SOLIDSYSLOG_FREE_RTOS_DATAGRAM_POOL_SIZE < 1
-#error "SOLIDSYSLOG_FREE_RTOS_DATAGRAM_POOL_SIZE must be >= 1"
+#if SOLIDSYSLOG_PLUS_TCP_DATAGRAM_POOL_SIZE < 1
+#error "SOLIDSYSLOG_PLUS_TCP_DATAGRAM_POOL_SIZE must be >= 1"
 #endif
 
 /*
