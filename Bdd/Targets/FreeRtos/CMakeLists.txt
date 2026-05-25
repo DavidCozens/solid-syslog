@@ -262,9 +262,9 @@ add_executable(SolidSyslogBddTarget
     ${CMAKE_SOURCE_DIR}/Platform/FatFs/Source/SolidSyslogFatFsFile.c
     ${CMAKE_SOURCE_DIR}/Platform/FatFs/Source/SolidSyslogFatFsFileMessages.c
     ${CMAKE_SOURCE_DIR}/Platform/FatFs/Source/SolidSyslogFatFsFileStatic.c
-    ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogFreeRtosAddress.c
-    ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogFreeRtosAddressMessages.c
-    ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogFreeRtosAddressStatic.c
+    ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogPlusTcpAddress.c
+    ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogPlusTcpAddressMessages.c
+    ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogPlusTcpAddressStatic.c
     ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosDatagram.c
     ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosDatagramMessages.c
     ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosDatagramStatic.c
@@ -311,7 +311,7 @@ target_include_directories(SolidSyslogBddTarget PRIVATE
     ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Interface   # SolidSyslogFreeRtos{Mutex,SysUpTime}.h
     ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source      # SolidSyslogFreeRtosMutexPrivate.h
     ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Interface    # SolidSyslogFreeRtos{Address,Datagram,Resolver,TcpStream}.h
-    ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source       # SolidSyslogFreeRtosAddressPrivate.h
+    ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source       # SolidSyslogPlusTcpAddressPrivate.h
     ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Interface    # SolidSyslogMbedTlsStream.h
     ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source       # SolidSyslogMbedTlsStreamPrivate.h
     ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common            # BddTargetInteractive.h

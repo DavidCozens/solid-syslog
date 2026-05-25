@@ -44,7 +44,7 @@
 #include "SolidSyslogFatFsFile.h"
 #include "SolidSyslogFileBlockDevice.h"
 #include "SolidSyslogFormatter.h"
-#include "SolidSyslogFreeRtosAddress.h"
+#include "SolidSyslogPlusTcpAddress.h"
 #include "SolidSyslogFreeRtosDatagram.h"
 #include "SolidSyslogFreeRtosMutex.h"
 #include "SolidSyslogFreeRtosResolver.h"
@@ -905,10 +905,10 @@ static void TeardownAll(void)
     BddTargetTlsSender_Destroy();
     tlsSender = NULL;
     SolidSyslogStreamSender_Destroy(tcpSender);
-    SolidSyslogFreeRtosAddress_Destroy(tcpAddress);
+    SolidSyslogPlusTcpAddress_Destroy(tcpAddress);
     SolidSyslogFreeRtosTcpStream_Destroy(tcpStream);
     SolidSyslogUdpSender_Destroy(udpSender);
-    SolidSyslogFreeRtosAddress_Destroy(udpAddress);
+    SolidSyslogPlusTcpAddress_Destroy(udpAddress);
     SolidSyslogFreeRtosDatagram_Destroy(datagram);
     SolidSyslogFreeRtosResolver_Destroy(resolver);
 }
@@ -955,7 +955,7 @@ static void InteractiveTask(void* argument)
 
     resolver = SolidSyslogFreeRtosResolver_Create();
     datagram = SolidSyslogFreeRtosDatagram_Create();
-    udpAddress = SolidSyslogFreeRtosAddress_Create();
+    udpAddress = SolidSyslogPlusTcpAddress_Create();
 
     struct SolidSyslogUdpSenderConfig udpConfig = {
         .Resolver = resolver,
@@ -971,7 +971,7 @@ static void InteractiveTask(void* argument)
      * same host:port for both transports — the syslog-ng config in
      * Bdd/syslog-ng/syslog-ng.conf has a TCP listener on 5514 alongside UDP. */
     tcpStream = SolidSyslogFreeRtosTcpStream_Create(NULL);
-    tcpAddress = SolidSyslogFreeRtosAddress_Create();
+    tcpAddress = SolidSyslogPlusTcpAddress_Create();
     struct SolidSyslogStreamSenderConfig tcpConfig = {
         .Resolver = resolver,
         .Stream = tcpStream,

@@ -13,7 +13,7 @@
 #include "task.h"
 
 #include "SolidSyslogDatagramDefinition.h"
-#include "SolidSyslogFreeRtosAddressPrivate.h"
+#include "SolidSyslogPlusTcpAddressPrivate.h"
 #include "SolidSyslogFreeRtosDatagramPrivate.h"
 #include "SolidSyslogNullDatagram.h"
 #include "SolidSyslogUdpPayload.h"
@@ -91,7 +91,7 @@ static enum SolidSyslogDatagramSendResult FreeRtosDatagram_SendTo(
     enum SolidSyslogDatagramSendResult result = SOLIDSYSLOG_DATAGRAM_SEND_RESULT_FAILED;
     if (FreeRtosDatagram_IsOpen(self))
     {
-        const struct freertos_sockaddr* dest = SolidSyslogFreeRtosAddress_AsConstFreertosSockaddr(addr);
+        const struct freertos_sockaddr* dest = SolidSyslogPlusTcpAddress_AsConstFreertosSockaddr(addr);
         FreeRtosDatagram_PrimeArpIfMissing(dest->sin_address.ulIP_IPv4);
         int32_t sent = FreeRTOS_sendto(self->Socket, buffer, size, 0, dest, sizeof(*dest));
         if (sent > 0)

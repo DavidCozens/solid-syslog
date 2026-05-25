@@ -13,7 +13,7 @@
 #include "FreeRTOS_Sockets.h"
 #include "task.h"
 
-#include "SolidSyslogFreeRtosAddressPrivate.h"
+#include "SolidSyslogPlusTcpAddressPrivate.h"
 #include "SolidSyslogFreeRtosTcpStreamPrivate.h"
 #include "SolidSyslogNullStream.h"
 #include "SolidSyslogStream.h"
@@ -194,7 +194,7 @@ static bool FreeRtosTcpStream_TryConnect(
      * enough for a healthy peer to ACK over slirp/LAN. */
     const TickType_t connectTimeoutTicks = pdMS_TO_TICKS(FreeRtosTcpStream_ResolveConnectTimeoutMs(self));
 
-    const struct freertos_sockaddr* dest = SolidSyslogFreeRtosAddress_AsConstFreertosSockaddr(addr);
+    const struct freertos_sockaddr* dest = SolidSyslogPlusTcpAddress_AsConstFreertosSockaddr(addr);
     FreeRtosTcpStream_PrimeArpIfMissing(dest->sin_address.ulIP_IPv4);
     FreeRtosTcpStream_SetSendTimeout(self->Socket, connectTimeoutTicks);
     FreeRtosTcpStream_SetRecvTimeout(self->Socket, connectTimeoutTicks);

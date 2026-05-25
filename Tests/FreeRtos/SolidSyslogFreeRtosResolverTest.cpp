@@ -9,8 +9,8 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
 #include "FreeRtosDnsFake.h"
-#include "SolidSyslogFreeRtosAddress.h"
-#include "SolidSyslogFreeRtosAddressPrivate.h"
+#include "SolidSyslogPlusTcpAddress.h"
+#include "SolidSyslogPlusTcpAddressPrivate.h"
 #include "SolidSyslogFreeRtosResolver.h"
 #include "SolidSyslogFreeRtosResolverErrors.h"
 #include "SolidSyslogPrival.h"
@@ -54,12 +54,12 @@ TEST_GROUP(SolidSyslogFreeRtosResolverTest)
     {
         FreeRtosDnsFake_Reset();
         resolver = SolidSyslogFreeRtosResolver_Create();
-        addr     = SolidSyslogFreeRtosAddress_Create();
+        addr     = SolidSyslogPlusTcpAddress_Create();
     }
 
     void teardown() override
     {
-        SolidSyslogFreeRtosAddress_Destroy(addr);
+        SolidSyslogPlusTcpAddress_Destroy(addr);
         SolidSyslogFreeRtosResolver_Destroy(resolver);
     }
 
@@ -71,7 +71,7 @@ TEST_GROUP(SolidSyslogFreeRtosResolverTest)
     // NOLINTNEXTLINE(modernize-use-nodiscard) -- used through accessor syntax in tests
     const struct freertos_sockaddr* Result() const
     {
-        return SolidSyslogFreeRtosAddress_AsConstFreertosSockaddr(addr);
+        return SolidSyslogPlusTcpAddress_AsConstFreertosSockaddr(addr);
     }
 };
 
@@ -204,11 +204,11 @@ TEST(SolidSyslogFreeRtosResolverPoolTest, FallbackResolveReturnsFalse)
 {
     FillPool();
     overflow = SolidSyslogFreeRtosResolver_Create();
-    struct SolidSyslogAddress* fallbackResult = SolidSyslogFreeRtosAddress_Create();
+    struct SolidSyslogAddress* fallbackResult = SolidSyslogPlusTcpAddress_Create();
 
     CHECK_FALSE(SolidSyslogResolver_Resolve(overflow, SOLIDSYSLOG_TRANSPORT_UDP, TEST_HOST, TEST_PORT, fallbackResult));
 
-    SolidSyslogFreeRtosAddress_Destroy(fallbackResult);
+    SolidSyslogPlusTcpAddress_Destroy(fallbackResult);
 }
 
 TEST(SolidSyslogFreeRtosResolverPoolTest, CreateAcquiresAndReleasesConfigLockOnFirstFreeSlot)

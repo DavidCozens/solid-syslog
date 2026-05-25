@@ -25,7 +25,7 @@
 #include "BddTargetMtlsConfig.h"
 #include "BddTargetSwitchConfig.h"
 #include "BddTargetTlsConfig.h"
-#include "SolidSyslogFreeRtosAddress.h"
+#include "SolidSyslogPlusTcpAddress.h"
 #include "SolidSyslogFreeRtosTcpStream.h"
 #include "SolidSyslogMbedTlsStream.h"
 #include "SolidSyslogNullSender.h"
@@ -378,7 +378,7 @@ struct SolidSyslogSender* BddTargetTlsSender_Create(struct SolidSyslogResolver* 
     tlsStreamConfig.ClientKey = &clientKey;
     tlsStream = SolidSyslogMbedTlsStream_Create(&tlsStreamConfig);
 
-    address = SolidSyslogFreeRtosAddress_Create();
+    address = SolidSyslogPlusTcpAddress_Create();
 
     static struct SolidSyslogStreamSenderConfig senderConfig;
     senderConfig = (struct SolidSyslogStreamSenderConfig) {0};
@@ -403,7 +403,7 @@ void BddTargetTlsSender_Destroy(void)
         return;
     }
     SolidSyslogStreamSender_Destroy(sender);
-    SolidSyslogFreeRtosAddress_Destroy(address);
+    SolidSyslogPlusTcpAddress_Destroy(address);
     SolidSyslogMbedTlsStream_Destroy(tlsStream);
     SolidSyslogFreeRtosTcpStream_Destroy(underlyingStream);
 

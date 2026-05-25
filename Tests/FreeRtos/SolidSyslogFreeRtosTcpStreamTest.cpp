@@ -6,8 +6,8 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
-#include "SolidSyslogFreeRtosAddress.h"
-#include "SolidSyslogFreeRtosAddressPrivate.h"
+#include "SolidSyslogPlusTcpAddress.h"
+#include "SolidSyslogPlusTcpAddressPrivate.h"
 #include "SolidSyslogFreeRtosTcpStream.h"
 #include "SolidSyslogFreeRtosTcpStreamErrors.h"
 #include "SolidSyslogPrival.h"
@@ -81,8 +81,8 @@ TEST_GROUP(SolidSyslogFreeRtosTcpStream)
         FreeRtosTaskFake_Reset();
         FakeGetConnectTimeoutMs_Reset();
         stream                        = SolidSyslogFreeRtosTcpStream_Create(nullptr);
-        addr                          = SolidSyslogFreeRtosAddress_Create();
-        struct freertos_sockaddr* sin = SolidSyslogFreeRtosAddress_AsFreertosSockaddr(addr);
+        addr                          = SolidSyslogPlusTcpAddress_Create();
+        struct freertos_sockaddr* sin = SolidSyslogPlusTcpAddress_AsFreertosSockaddr(addr);
         sin->sin_family               = FREERTOS_AF_INET;
         sin->sin_port                 = FreeRTOS_htons(TEST_PORT);
         sin->sin_address.ulIP_IPv4    = FreeRTOS_inet_addr_quick(10, 0, 2, 2);
@@ -90,7 +90,7 @@ TEST_GROUP(SolidSyslogFreeRtosTcpStream)
 
     void teardown() override
     {
-        SolidSyslogFreeRtosAddress_Destroy(addr);
+        SolidSyslogPlusTcpAddress_Destroy(addr);
         if (stream != nullptr)
         {
             SolidSyslogFreeRtosTcpStream_Destroy(stream);
@@ -226,7 +226,7 @@ TEST(SolidSyslogFreeRtosTcpStream, OpenCallsConnectWithSocketAndAddress)
     openStream();
     CALLED_FAKE(FreeRtosSocketsFake_Connect, ONCE);
     POINTERS_EQUAL(FreeRtosSocketsFake_LastSocketReturned(), FreeRtosSocketsFake_LastConnectSocket());
-    POINTERS_EQUAL(SolidSyslogFreeRtosAddress_AsConstFreertosSockaddr(addr), FreeRtosSocketsFake_LastConnectAddress());
+    POINTERS_EQUAL(SolidSyslogPlusTcpAddress_AsConstFreertosSockaddr(addr), FreeRtosSocketsFake_LastConnectAddress());
     LONGS_EQUAL(sizeof(struct freertos_sockaddr), FreeRtosSocketsFake_LastConnectAddressLength());
 }
 
@@ -489,7 +489,7 @@ TEST(SolidSyslogFreeRtosTcpStreamPool, FallbackVtableMethodsAreNoOps)
 {
     FillPool();
     overflow = SolidSyslogFreeRtosTcpStream_Create(nullptr);
-    struct SolidSyslogAddress* localAddr = SolidSyslogFreeRtosAddress_Create();
+    struct SolidSyslogAddress* localAddr = SolidSyslogPlusTcpAddress_Create();
     char buf[8] = {0};
     FreeRtosSocketsFake_Reset();
 
@@ -499,7 +499,7 @@ TEST(SolidSyslogFreeRtosTcpStreamPool, FallbackVtableMethodsAreNoOps)
     CHECK_TRUE(SolidSyslogStream_Send(overflow, buf, sizeof(buf)));
     LONGS_EQUAL(0, SolidSyslogStream_Read(overflow, buf, sizeof(buf)));
     SolidSyslogStream_Close(overflow);
-    SolidSyslogFreeRtosAddress_Destroy(localAddr);
+    SolidSyslogPlusTcpAddress_Destroy(localAddr);
 
     CALLED_FAKE(FreeRtosSocketsFake_Socket, NEVER);
     CALLED_FAKE(FreeRtosSocketsFake_Connect, NEVER);

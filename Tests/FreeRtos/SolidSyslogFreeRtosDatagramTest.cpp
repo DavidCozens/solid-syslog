@@ -8,8 +8,8 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 #include "ErrorHandlerFake.h"
 #include "SolidSyslogDatagram.h"
 #include "SolidSyslogDatagramDefinition.h"
-#include "SolidSyslogFreeRtosAddress.h"
-#include "SolidSyslogFreeRtosAddressPrivate.h"
+#include "SolidSyslogPlusTcpAddress.h"
+#include "SolidSyslogPlusTcpAddressPrivate.h"
 #include "SolidSyslogFreeRtosDatagram.h"
 #include "SolidSyslogFreeRtosDatagramErrors.h"
 #include "SolidSyslogPrival.h"
@@ -53,8 +53,8 @@ TEST_GROUP(SolidSyslogFreeRtosDatagram)
         FreeRtosArpFake_Reset();
         FreeRtosTaskFake_Reset();
         datagram = SolidSyslogFreeRtosDatagram_Create();
-        addr = SolidSyslogFreeRtosAddress_Create();
-        struct freertos_sockaddr* sin = SolidSyslogFreeRtosAddress_AsFreertosSockaddr(addr);
+        addr = SolidSyslogPlusTcpAddress_Create();
+        struct freertos_sockaddr* sin = SolidSyslogPlusTcpAddress_AsFreertosSockaddr(addr);
         sin->sin_family = FREERTOS_AF_INET;
         sin->sin_port = FreeRTOS_htons(TEST_PORT);
         sin->sin_address.ulIP_IPv4 = FreeRTOS_inet_addr_quick(127, 0, 0, 1);
@@ -62,7 +62,7 @@ TEST_GROUP(SolidSyslogFreeRtosDatagram)
 
     void teardown() override
     {
-        SolidSyslogFreeRtosAddress_Destroy(addr);
+        SolidSyslogPlusTcpAddress_Destroy(addr);
         SolidSyslogFreeRtosDatagram_Destroy(datagram);
     }
 
@@ -188,7 +188,7 @@ TEST(SolidSyslogFreeRtosDatagram, SendToSendsBufferToDestinationAfterOpen)
     LONGS_EQUAL(TEST_MESSAGE_LEN, FreeRtosSocketsFake_LastSendtoLength());
     LONGS_EQUAL(0, FreeRtosSocketsFake_LastSendtoFlags());
     POINTERS_EQUAL(
-        SolidSyslogFreeRtosAddress_AsConstFreertosSockaddr(addr),
+        SolidSyslogPlusTcpAddress_AsConstFreertosSockaddr(addr),
         FreeRtosSocketsFake_LastSendtoDestination()
     );
     LONGS_EQUAL(sizeof(struct freertos_sockaddr), FreeRtosSocketsFake_LastSendtoDestinationLength());
@@ -324,7 +324,7 @@ TEST(SolidSyslogFreeRtosDatagramPool, FallbackVtableMethodsAreNoOps)
 {
     FillPool();
     overflow = SolidSyslogFreeRtosDatagram_Create();
-    struct SolidSyslogAddress* localAddr = SolidSyslogFreeRtosAddress_Create();
+    struct SolidSyslogAddress* localAddr = SolidSyslogPlusTcpAddress_Create();
     FreeRtosSocketsFake_Reset();
 
     /* NullDatagram's Open returns true so caller success paths are not
@@ -333,7 +333,7 @@ TEST(SolidSyslogFreeRtosDatagramPool, FallbackVtableMethodsAreNoOps)
     SolidSyslogDatagram_SendTo(overflow, "x", 1, localAddr);
     SolidSyslogDatagram_Close(overflow);
 
-    SolidSyslogFreeRtosAddress_Destroy(localAddr);
+    SolidSyslogPlusTcpAddress_Destroy(localAddr);
 
     CALLED_FAKE(FreeRtosSocketsFake_Socket, NEVER);
     CALLED_FAKE(FreeRtosSocketsFake_Sendto, NEVER);
