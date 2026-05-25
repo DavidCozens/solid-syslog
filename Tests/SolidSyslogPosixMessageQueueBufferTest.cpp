@@ -1,3 +1,4 @@
+#include <cerrno>
 #include <cstdlib>
 
 #include "TestUtils.h"
@@ -7,6 +8,7 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
     // macros
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
+#include "MqFake.h"
 #include "SolidSyslogBuffer.h"
 #include "SolidSyslogBufferDefinition.h"
 #include "SolidSyslogPosixMessageQueueBuffer.h"
@@ -33,6 +35,7 @@ TEST_GROUP(SolidSyslogPosixMessageQueueBuffer)
 
     void setup() override
     {
+        MqFake_Reset();
         // cppcheck-suppress unreadVariable -- used across TEST_GROUP methods; cppcheck does not model CppUTest macros
         buffer = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10);
         readSize = 0;
@@ -102,6 +105,83 @@ TEST(SolidSyslogPosixMessageQueueBuffer, SecondReadAfterSingleWriteReturnsFalse)
     CHECK_FALSE(Read());
 }
 
+TEST(SolidSyslogPosixMessageQueueBuffer, WriteWhenMqSendFailsReportsError)
+{
+    ErrorHandlerFake_Install(nullptr);
+    MqFake_FailNextSend(EAGAIN);
+
+    Write();
+
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&PosixMessageQueueBufferErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(POSIXMESSAGEQUEUEBUFFER_ERROR_SEND_FAILED, ErrorHandlerFake_LastCode());
+}
+
+/* Regression guard: the production check is errno-agnostic
+ * (`if (mq_send(...) != 0)`), so EAGAIN and EMSGSIZE flow through
+ * the same branch today. A future contributor who adds errno-specific
+ * handling has to deliberately drop one of these cases. */
+TEST(SolidSyslogPosixMessageQueueBuffer, WriteWithOversizedMessageReportsError)
+{
+    ErrorHandlerFake_Install(nullptr);
+    MqFake_FailNextSend(EMSGSIZE);
+
+    Write();
+
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    UNSIGNED_LONGS_EQUAL(POSIXMESSAGEQUEUEBUFFER_ERROR_SEND_FAILED, ErrorHandlerFake_LastCode());
+}
+
+TEST(SolidSyslogPosixMessageQueueBuffer, ReadWhenMqReceiveFailsReportsError)
+{
+    ErrorHandlerFake_Install(nullptr);
+    MqFake_FailNextReceive(EMSGSIZE);
+
+    Read();
+
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&PosixMessageQueueBufferErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(POSIXMESSAGEQUEUEBUFFER_ERROR_RECEIVE_FAILED, ErrorHandlerFake_LastCode());
+}
+
+/* Regression guard: empty queue (EAGAIN) is part of the happy poll loop
+ * and must NOT emit. The error handler must remain untouched. */
+TEST(SolidSyslogPosixMessageQueueBuffer, ReadFromEmptyQueueDoesNotEmitError)
+{
+    ErrorHandlerFake_Install(nullptr);
+
+    CHECK_FALSE(Read());
+
+    CALLED_FAKE(ErrorHandlerFake_Handle, NEVER);
+}
+
+/* A NULL bytesRead* would crash on `*bytesRead = 0`. Guard at the
+ * Read entry — invalid caller usage, not a runtime failure, so no
+ * error code is emitted; just a defensive false return. */
+TEST(SolidSyslogPosixMessageQueueBuffer, ReadWithNullBytesReadDoesNotCrash)
+{
+    char data[16] = {};
+    CHECK_FALSE(SolidSyslogBuffer_Read(buffer, data, sizeof(data), nullptr));
+}
+
+/* After Destroy the slot's abstract-base vtable is the shared NullBuffer's, so
+ * Write/Read through the stale handle is a safe no-op rather than a NULL-fn-pointer
+ * crash. NullBuffer.Write swallows; NullBuffer.Read returns false with bytesRead=0. */
+TEST(SolidSyslogPosixMessageQueueBuffer, UseAfterDestroyIsCrashSafeViaNullBufferVtable)
+{
+    SolidSyslogPosixMessageQueueBuffer_Destroy(buffer);
+
+    SolidSyslogBuffer_Write(buffer, "x", 1);
+    char data[16] = {};
+    size_t bytesRead = 99;
+    CHECK_FALSE(SolidSyslogBuffer_Read(buffer, data, sizeof(data), &bytesRead));
+    LONGS_EQUAL(0, bytesRead);
+
+    buffer = SolidSyslogPosixMessageQueueBuffer_Create(SOLIDSYSLOG_MAX_MESSAGE_SIZE, 10); // for teardown
+}
+
 TEST(SolidSyslogPosixMessageQueueBuffer, ServiceSendsMessageWrittenViaLog)
 {
     struct SolidSyslogSender* fakeSender = SenderFake_Create();
@@ -116,24 +196,6 @@ TEST(SolidSyslogPosixMessageQueueBuffer, ServiceSendsMessageWrittenViaLog)
 
     SolidSyslog_Destroy(solidSyslog);
     SenderFake_Destroy(fakeSender);
-}
-
-IGNORE_TEST(SolidSyslogPosixMessageQueueBuffer, HappyPathOnly)
-
-{
-    // Error handling not yet implemented — see Epic #31
-    //   Create with zero maxMessageSize or maxMessages
-    //   Create when mq_open fails returns NULL
-    //   Write with NULL buffer does not crash
-    //   Write with NULL data does not crash
-    //   Read with NULL buffer does not crash
-    //   Read with NULL data does not crash
-    //   Read with NULL bytesRead does not crash
-    //   Destroy with NULL buffer does not crash
-    //   Write when queue is full (back-pressure / overflow)
-    //
-    // Blocking mode not yet implemented — see S4.5 or later
-    //   Read blocks waiting for a message (O_NONBLOCK removed)
 }
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
@@ -156,6 +218,11 @@ TEST_GROUP(SolidSyslogPosixMessageQueueBufferPool)
     // cppcheck-suppress constVariable -- assigned in test bodies; cppcheck does not model CppUTest lifecycle
     struct SolidSyslogBuffer* pooled[SOLIDSYSLOG_POSIX_MESSAGE_QUEUE_BUFFER_POOL_SIZE] = {};
     struct SolidSyslogBuffer* overflow                                                 = nullptr;
+
+    void setup() override
+    {
+        MqFake_Reset();
+    }
 
     void teardown() override
     {
@@ -210,6 +277,36 @@ TEST(SolidSyslogPosixMessageQueueBufferPool, ExhaustedCreateReportsError)
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
     POINTERS_EQUAL(&PosixMessageQueueBufferErrorSource, ErrorHandlerFake_LastSource());
     UNSIGNED_LONGS_EQUAL(POSIXMESSAGEQUEUEBUFFER_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastCode());
+}
+
+TEST(SolidSyslogPosixMessageQueueBufferPool, CreateOnMqOpenFailureReportsError)
+{
+    ErrorHandlerFake_Install(nullptr);
+    MqFake_FailNextOpen(EINVAL);
+
+    overflow = MakeBuffer();
+
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&PosixMessageQueueBufferErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(POSIXMESSAGEQUEUEBUFFER_ERROR_MQ_OPEN_FAILED, ErrorHandlerFake_LastCode());
+}
+
+TEST(SolidSyslogPosixMessageQueueBufferPool, CreateOnMqOpenFailureReleasesSlot)
+{
+    MqFake_FailNextOpen(EINVAL);
+
+    overflow = MakeBuffer();
+
+    // Fill the pool *after* the failed Create; if the failed Create had leaked
+    // its acquired slot, the pool would overflow into the fallback one slot
+    // sooner — and FillPool's last MakeBuffer would return the same NullBuffer
+    // singleton as `overflow`, since both Creates would have run out of slots.
+    FillPool();
+    for (auto* slot : pooled)
+    {
+        CHECK_TEXT(slot != overflow, "Pool slot collided with the failed-Create fallback handle");
+    }
 }
 
 TEST(SolidSyslogPosixMessageQueueBufferPool, FallbackReadAndWriteAreNoOps)
@@ -275,6 +372,22 @@ TEST(SolidSyslogPosixMessageQueueBufferPool, DestroyOfUnknownHandleReportsWarnin
     struct SolidSyslogBuffer stranger = {};
 
     SolidSyslogPosixMessageQueueBuffer_Destroy(&stranger);
+
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&PosixMessageQueueBufferErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(POSIXMESSAGEQUEUEBUFFER_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
+}
+
+/* Destroy(NULL) is reachable from any integrator who keeps a NullBuffer-fallback
+ * handle and later releases it. The IndexFromHandle search returns POOL_SIZE
+ * (no slot matches NULL), IndexIsValid returns false, so the FreeIfInUse branch
+ * is skipped — caller sees an UNKNOWN_DESTROY warning, no crash. */
+TEST(SolidSyslogPosixMessageQueueBufferPool, DestroyOfNullHandleReportsWarningWithoutCrashing)
+{
+    ErrorHandlerFake_Install(nullptr);
+
+    SolidSyslogPosixMessageQueueBuffer_Destroy(nullptr);
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
     LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());

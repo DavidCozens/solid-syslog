@@ -1,5 +1,6 @@
 #include "SolidSyslogPosixMessageQueueBuffer.h"
 
+#include <errno.h>
 #include <fcntl.h>
 #include <mqueue.h>
 #include <stdbool.h>
@@ -8,10 +9,13 @@
 #include <sys/types.h>
 
 #include "SolidSyslogBufferDefinition.h"
+#include "SolidSyslogError.h"
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogNullBuffer.h"
+#include "SolidSyslogPosixMessageQueueBufferErrors.h"
 #include "SolidSyslogPosixMessageQueueBufferPrivate.h"
 #include "SolidSyslogPosixProcessId.h"
+#include "SolidSyslogPrival.h"
 
 enum
 {
@@ -28,7 +32,7 @@ static inline struct SolidSyslogPosixMessageQueueBuffer* PosixMessageQueueBuffer
 static inline const char* PosixMessageQueueBuffer_QueueName(struct SolidSyslogPosixMessageQueueBuffer* self);
 
 // NOLINTBEGIN(bugprone-easily-swappable-parameters) -- distinct semantic meaning; mirrors the public _Create signature plus a per-slot discriminator
-void PosixMessageQueueBuffer_Initialise(
+bool PosixMessageQueueBuffer_Initialise(
     struct SolidSyslogBuffer* base,
     size_t maxMessageSize,
     long maxMessages,
@@ -58,6 +62,7 @@ void PosixMessageQueueBuffer_Initialise(
     self->MaxMessageSize = maxMessageSize;
     self->Base.Write = PosixMessageQueueBuffer_Write;
     self->Base.Read = PosixMessageQueueBuffer_Read;
+    return self->Mq != (mqd_t) -1;
 }
 
 void PosixMessageQueueBuffer_Cleanup(struct SolidSyslogBuffer* base)
@@ -77,19 +82,44 @@ static inline const char* PosixMessageQueueBuffer_QueueName(struct SolidSyslogPo
 
 static bool PosixMessageQueueBuffer_Read(struct SolidSyslogBuffer* base, void* data, size_t maxSize, size_t* bytesRead)
 {
-    struct SolidSyslogPosixMessageQueueBuffer* self = PosixMessageQueueBuffer_SelfFromBase(base);
-    ssize_t received = mq_receive(self->Mq, data, maxSize, NULL);
-    bool success = received >= 0;
+    bool success = false;
+    if (bytesRead != NULL)
+    {
+        struct SolidSyslogPosixMessageQueueBuffer* self = PosixMessageQueueBuffer_SelfFromBase(base);
+        ssize_t received = mq_receive(self->Mq, data, maxSize, NULL);
+        success = received >= 0;
 
-    *bytesRead = success ? (size_t) received : 0U;
+        /* Capture errno immediately after mq_receive so the EAGAIN test below
+         * stays a pure predicate and is decoupled from errno's lifetime
+         * between the errno-setting call and the read (MISRA C:2012 Rule 22.10).
+         * EAGAIN is the empty-queue poll signal — part of the happy path and
+         * must stay silent. Any other errno is a real failure worth surfacing. */
+        int receiveErrno = success ? 0 : errno;
+        if (!success && (receiveErrno != EAGAIN))
+        {
+            SolidSyslog_Error(
+                SOLIDSYSLOG_SEVERITY_ERROR,
+                &PosixMessageQueueBufferErrorSource,
+                (uint8_t) POSIXMESSAGEQUEUEBUFFER_ERROR_RECEIVE_FAILED
+            );
+        }
 
+        *bytesRead = success ? (size_t) received : 0U;
+    }
     return success;
 }
 
 static void PosixMessageQueueBuffer_Write(struct SolidSyslogBuffer* base, const void* data, size_t size)
 {
     struct SolidSyslogPosixMessageQueueBuffer* self = PosixMessageQueueBuffer_SelfFromBase(base);
-    mq_send(self->Mq, data, size, 0);
+    if (mq_send(self->Mq, data, size, 0) != 0)
+    {
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            &PosixMessageQueueBufferErrorSource,
+            (uint8_t) POSIXMESSAGEQUEUEBUFFER_ERROR_SEND_FAILED
+        );
+    }
 }
 
 static inline struct SolidSyslogPosixMessageQueueBuffer* PosixMessageQueueBuffer_SelfFromBase(
