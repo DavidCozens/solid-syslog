@@ -33,7 +33,7 @@
 #undef MBEDTLS_FS_IO
 
 /* No BSD sockets — the transport is injected as a SolidSyslogStream
- * (FreeRtosTcpStream) and bridged into mbedTLS via mbedtls_ssl_set_bio
+ * (PlusTcpTcpStream) and bridged into mbedTLS via mbedtls_ssl_set_bio
  * callbacks. MBEDTLS_NET_C would otherwise pull in <sys/socket.h>. */
 #undef MBEDTLS_NET_C
 

@@ -49,7 +49,7 @@
 #include "SolidSyslogFreeRtosMutex.h"
 #include "SolidSyslogPlusTcpResolver.h"
 #include "SolidSyslogFreeRtosSysUpTime.h"
-#include "SolidSyslogFreeRtosTcpStream.h"
+#include "SolidSyslogPlusTcpTcpStream.h"
 #include "SolidSyslogMetaSd.h"
 #include "SolidSyslogMutex.h"
 #include "SolidSyslogNullStore.h"
@@ -897,7 +897,7 @@ static void TeardownAll(void)
     SolidSyslogFreeRtosMutex_Destroy(lifecycleMutex);
     lifecycleMutex = NULL;
     SolidSyslogSwitchingSender_Destroy(switchingSender);
-    /* BddTargetTlsSender owns the inner MbedTlsStream + FreeRtosTcpStream pool
+    /* BddTargetTlsSender owns the inner MbedTlsStream + PlusTcpTcpStream pool
      * slots and the StreamSender slot, so it must be destroyed before tcpSender
      * / tcpStream below — releasing slots in roughly reverse order of Create
      * keeps the dependency graph clean even though the pool allocator itself
@@ -906,7 +906,7 @@ static void TeardownAll(void)
     tlsSender = NULL;
     SolidSyslogStreamSender_Destroy(tcpSender);
     SolidSyslogPlusTcpAddress_Destroy(tcpAddress);
-    SolidSyslogFreeRtosTcpStream_Destroy(tcpStream);
+    SolidSyslogPlusTcpTcpStream_Destroy(tcpStream);
     SolidSyslogUdpSender_Destroy(udpSender);
     SolidSyslogPlusTcpAddress_Destroy(udpAddress);
     SolidSyslogPlusTcpDatagram_Destroy(datagram);
@@ -970,7 +970,7 @@ static void InteractiveTask(void* argument)
      * UDP endpoint callbacks because the BDD oracle (syslog-ng) listens on the
      * same host:port for both transports — the syslog-ng config in
      * Bdd/syslog-ng/syslog-ng.conf has a TCP listener on 5514 alongside UDP. */
-    tcpStream = SolidSyslogFreeRtosTcpStream_Create(NULL);
+    tcpStream = SolidSyslogPlusTcpTcpStream_Create(NULL);
     tcpAddress = SolidSyslogPlusTcpAddress_Create();
     struct SolidSyslogStreamSenderConfig tcpConfig = {
         .Resolver = resolver,
@@ -981,7 +981,7 @@ static void InteractiveTask(void* argument)
     };
     tcpSender = SolidSyslogStreamSender_Create(&tcpConfig);
 
-    /* TLS slot: SolidSyslogMbedTlsStream over SolidSyslogFreeRtosTcpStream,
+    /* TLS slot: SolidSyslogMbedTlsStream over SolidSyslogPlusTcpTcpStream,
      * with the demo CA / client cert / client key baked into the ELF. The
      * same slot serves both @tls (port 6514) and @mtls (port 6515)
      * scenarios — the wrapper wires the client cert unconditionally and

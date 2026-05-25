@@ -236,7 +236,7 @@ foreach(freertos_test_target IN ITEMS
     SolidSyslogFreeRtosSysUpTimeTest
     CmsdkUartTest
     SolidSyslogPlusTcpDatagramTest
-    SolidSyslogFreeRtosTcpStreamTest
+    SolidSyslogPlusTcpTcpStreamTest
     SolidSyslogPlusTcpResolverTest
 )
     if(TARGET ${freertos_test_target})

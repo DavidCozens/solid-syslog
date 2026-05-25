@@ -1,7 +1,7 @@
-/* MbedTLS-over-FreeRtosTcpStream BDD TLS sender (slice 6b).
+/* MbedTLS-over-PlusTcpTcpStream BDD TLS sender (slice 6b).
  *
  * Composes:
- *   - SolidSyslogFreeRtosTcpStream  inner TCP transport
+ *   - SolidSyslogPlusTcpTcpStream  inner TCP transport
  *   - SolidSyslogMbedTlsStream      TLS over the injected Stream
  *   - SolidSyslogStreamSender       RFC 6587 octet-counting framing
  *
@@ -26,7 +26,7 @@
 #include "BddTargetSwitchConfig.h"
 #include "BddTargetTlsConfig.h"
 #include "SolidSyslogPlusTcpAddress.h"
-#include "SolidSyslogFreeRtosTcpStream.h"
+#include "SolidSyslogPlusTcpTcpStream.h"
 #include "SolidSyslogMbedTlsStream.h"
 #include "SolidSyslogNullSender.h"
 #include "SolidSyslogStream.h"
@@ -362,7 +362,7 @@ struct SolidSyslogSender* BddTargetTlsSender_Create(struct SolidSyslogResolver* 
         return SolidSyslogNullSender_Get();
     }
 
-    underlyingStream = SolidSyslogFreeRtosTcpStream_Create(NULL);
+    underlyingStream = SolidSyslogPlusTcpTcpStream_Create(NULL);
 
     static struct SolidSyslogMbedTlsStreamConfig tlsStreamConfig;
     tlsStreamConfig = (struct SolidSyslogMbedTlsStreamConfig) {0};
@@ -405,7 +405,7 @@ void BddTargetTlsSender_Destroy(void)
     SolidSyslogStreamSender_Destroy(sender);
     SolidSyslogPlusTcpAddress_Destroy(address);
     SolidSyslogMbedTlsStream_Destroy(tlsStream);
-    SolidSyslogFreeRtosTcpStream_Destroy(underlyingStream);
+    SolidSyslogPlusTcpTcpStream_Destroy(underlyingStream);
 
     /* Entropy / DRBG / parsed certs survive across Destroy → Create cycles to
      * avoid re-seeding on every reconnect. Real teardown only happens at

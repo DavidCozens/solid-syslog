@@ -48,21 +48,21 @@ else()
 
     add_test(NAME SolidSyslogPlusTcpDatagramTest COMMAND SolidSyslogPlusTcpDatagramTest)
 
-    add_executable(SolidSyslogFreeRtosTcpStreamTest
-        SolidSyslogFreeRtosTcpStreamTest.cpp
+    add_executable(SolidSyslogPlusTcpTcpStreamTest
+        SolidSyslogPlusTcpTcpStreamTest.cpp
         main.cpp
         ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogPlusTcpAddress.c
         ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogPlusTcpAddressMessages.c
         ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogPlusTcpAddressStatic.c
-        ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogFreeRtosTcpStream.c
-        ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogFreeRtosTcpStreamMessages.c
-        ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogFreeRtosTcpStreamStatic.c
+        ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogPlusTcpTcpStream.c
+        ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogPlusTcpTcpStreamMessages.c
+        ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogPlusTcpTcpStreamStatic.c
         ${CMAKE_SOURCE_DIR}/Tests/Support/FreeRtosFakes/Source/FreeRtosSocketsFake.c
         ${CMAKE_SOURCE_DIR}/Tests/Support/FreeRtosFakes/Source/FreeRtosArpFake.c
         ${CMAKE_SOURCE_DIR}/Tests/Support/FreeRtosFakes/Source/FreeRtosTaskFake.c
     )
 
-    target_link_libraries(SolidSyslogFreeRtosTcpStreamTest PRIVATE
+    target_link_libraries(SolidSyslogPlusTcpTcpStreamTest PRIVATE
         ${PROJECT_NAME}
         ConfigLockFake
         ErrorHandlerFake
@@ -70,7 +70,7 @@ else()
         CppUTestExt
     )
 
-    target_include_directories(SolidSyslogFreeRtosTcpStreamTest PRIVATE
+    target_include_directories(SolidSyslogPlusTcpTcpStreamTest PRIVATE
         ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Interface
         ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source
         ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Interface
@@ -83,7 +83,7 @@ else()
         $ENV{FREERTOS_PLUS_TCP_PATH}/source/include
     )
 
-    add_test(NAME SolidSyslogFreeRtosTcpStreamTest COMMAND SolidSyslogFreeRtosTcpStreamTest)
+    add_test(NAME SolidSyslogPlusTcpTcpStreamTest COMMAND SolidSyslogPlusTcpTcpStreamTest)
 
     add_executable(SolidSyslogPlusTcpResolverTest
         SolidSyslogPlusTcpResolverTest.cpp
