@@ -6,7 +6,6 @@
 
 #include "ErrorHandlerFake.h"
 #include "SolidSyslogEndpoint.h"
-#include "SolidSyslogError.h"
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogGetAddrInfoResolver.h"
 #include "SolidSyslogPosixAddress.h"
@@ -753,6 +752,7 @@ TEST_GROUP(SolidSyslogStreamSenderBadSetup)
         resolver = SolidSyslogGetAddrInfoResolver_Create();
         stream   = SolidSyslogPosixTcpStream_Create(nullptr);
         address  = SolidSyslogPosixAddress_Create();
+        // cppcheck-suppress unreadVariable -- used in test bodies; cppcheck does not model CppUTest macros
         config   = {resolver, stream, address, TestEndpoint, TestEndpointVersion};
         ErrorHandlerFake_Install(&sentinel);
     }
