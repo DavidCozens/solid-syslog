@@ -2,7 +2,6 @@
 #define SOLIDSYSLOGSECURITYPOLICYDEFINITION_H
 
 #include "ExternC.h"
-#include "SolidSyslogTunables.h"
 
 #include <stdbool.h>
 #include <stdint.h>
