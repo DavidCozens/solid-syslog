@@ -806,3 +806,15 @@ TEST(SolidSyslogStreamSenderBadSetup, CreateWithNullAddressReportsError)
     POINTERS_EQUAL(&StreamSenderErrorSource, ErrorHandlerFake_LastSource());
     UNSIGNED_LONGS_EQUAL(STREAMSENDER_ERROR_NULL_ADDRESS, ErrorHandlerFake_LastCode());
 }
+
+TEST(SolidSyslogStreamSenderBadSetup, SendOnBadSetupSenderReturnsTrue)
+{
+    sender = SolidSyslogStreamSender_Create(nullptr);
+    CHECK_TRUE(SolidSyslogSender_Send(sender, TEST_MESSAGE, TEST_MESSAGE_LEN));
+}
+
+TEST(SolidSyslogStreamSenderBadSetup, DisconnectOnBadSetupSenderDoesNotCrash)
+{
+    sender = SolidSyslogStreamSender_Create(nullptr);
+    SolidSyslogSender_Disconnect(sender);
+}
