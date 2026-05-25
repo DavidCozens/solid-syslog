@@ -20,3 +20,8 @@ TEST(SolidSyslogTunables, MaxMessageSizeIsReachableViaTunablesHeader)
 {
     CHECK(SOLIDSYSLOG_MAX_MESSAGE_SIZE > 0);
 }
+
+TEST(SolidSyslogTunables, MaxPathSizeIsReachableViaTunablesHeader)
+{
+    CHECK(SOLIDSYSLOG_MAX_PATH_SIZE > 0);
+}

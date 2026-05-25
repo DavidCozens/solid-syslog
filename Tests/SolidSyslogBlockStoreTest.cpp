@@ -544,7 +544,7 @@ TEST(SolidSyslogBlockStoreConfig, MaxBlockSizeOneClampedToMinimum)
 
 TEST(SolidSyslogBlockStoreConfig, FilenameExactlyAtMaxPath)
 {
-    /* MAX_PATH_SIZE=128, suffix "00.log"=6, null=1, so max prefix=121 chars */
+    /* SOLIDSYSLOG_MAX_PATH_SIZE=128, suffix "00.log"=6, null=1, so max prefix=121 chars */
     char prefix[122];
     memset(prefix, 'A', 121);
     prefix[121] = '\0';
@@ -560,7 +560,7 @@ TEST(SolidSyslogBlockStoreConfig, FilenameExactlyAtMaxPath)
 
 TEST(SolidSyslogBlockStoreConfig, FilenameTruncatedWhenPrefixTooLong)
 {
-    /* MAX_PATH_SIZE=128. A 127-char prefix leaves 1 byte for digits and
+    /* SOLIDSYSLOG_MAX_PATH_SIZE=128. A 127-char prefix leaves 1 byte for digits and
        suffix. FormatFilename must not write past the buffer — prior to
        the fix, SolidSyslogFormat_Character wrote 2 bytes unconditionally
        (char + null), overflowing filename[128]. ASan detects this. */
