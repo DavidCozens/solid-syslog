@@ -1,5 +1,55 @@
 # Dev Log
 
+## 2026-05-25 — S21.03 lift MAX_PATH_SIZE and MAX_INTEGRITY_SIZE to build-time tunables
+
+Implements S21.03 (#446) under E21 (#217). Two small wins moving the
+last hardcoded `Core/` constants into the
+`SOLIDSYSLOG_USER_TUNABLES_FILE` umbrella that S21.01 (#347) set up.
+
+### What landed
+
+1. **`SOLIDSYSLOG_MAX_PATH_SIZE`** — was a TU-local
+   `enum { MAX_PATH_SIZE = 128U }` at the top of
+   `Core/Source/SolidSyslogFileBlockDevice.c`. Now a `#define` in
+   `Core/Interface/SolidSyslogTunablesDefaults.h` following the existing
+   `SOLIDSYSLOG_MAX_MESSAGE_SIZE` pattern (override → default → floor
+   `#if`). Default unchanged at 128; floor 32 (24-char prefix headroom
+   after subtracting the `NN.log` + null suffix). Five call sites in
+   `SolidSyslogFileBlockDevice.c` updated; `Core/Source/` picks up the
+   tunable via a new `#include "SolidSyslogTunables.h"`. Two
+   comment-only references in `Tests/SolidSyslogBlockStoreTest.cpp`
+   updated for consistency.
+2. **`SOLIDSYSLOG_MAX_INTEGRITY_SIZE`** — was an `enum` inside
+   `Core/Interface/SolidSyslogSecurityPolicyDefinition.h`. Now a
+   `#define` in `SolidSyslogTunablesDefaults.h`. Default unchanged at
+   32 (HMAC-SHA256); floor 4 (CRC-32 / truncated MAC). The enum
+   already had the `SOLIDSYSLOG_` prefix so no call-site renames were
+   needed — `RecordStorePrivate.h`, `SolidSyslogBlockStoreStatic.c`,
+   and the BlockStore test all kept working. `SecurityPolicyDefinition.h`
+   itself now `#include "SolidSyslogTunables.h"` so existing transitive
+   consumers stay IWYU-clean.
+3. **Two new sentinels** in `Tests/SolidSyslogTunablesTest.cpp`:
+   `MaxPathSizeIsReachableViaTunablesHeader` and
+   `MaxIntegritySizeIsReachableViaTunablesHeader`. Same shape as the
+   existing `MaxMessageSize…` test — confirms the symbol resolves
+   through the umbrella header.
+
+### Branch + commits
+
+`feat/s21-03-tunables-path-and-integrity`, two commits, not pushed:
+- `6123e18 feat: S21.03 lift MAX_PATH_SIZE to a build-time tunable`
+- `40fbece feat: S21.03 lift SOLIDSYSLOG_MAX_INTEGRITY_SIZE to a build-time tunable`
+
+No PR raised — David reviews the diff first.
+
+### Local validation
+
+`cmake --preset debug && cmake --build --preset debug` clean.
+`SolidSyslogTests`: 1326 ran, 0 failures (was 1325; +1 per new
+sentinel — second test ran on the rebuild that included the
+`MAX_INTEGRITY_SIZE` move). Full preset suite, sanitize, coverage,
+tidy, cppcheck, IWYU left to CI per the local validation gate.
+
 ## 2026-05-23 — S10.20 close-out: flip MISRA + naming gates to error mode
 
 Closes S10.20 (#437) and E10 (#12). Bundle of CI gate flips and audit-

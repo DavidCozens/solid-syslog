@@ -29,6 +29,46 @@
 #endif
 
 /*
+ * Maximum bytes the library will format for a single on-disk path
+ * produced by SolidSyslogFileBlockDevice (path prefix + two-digit
+ * sequence number + ".log" + null terminator). Caps both the per-call
+ * Formatter storage and the bounded prefix copy.
+ *
+ * Floor: smallest size that still leaves room for a meaningful prefix
+ * after subtracting the 6-byte filename suffix and null terminator.
+ * 32 leaves 24 characters for the prefix — enough for any sane
+ * filesystem location. Sub-floor values rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_MAX_PATH_SIZE
+/* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- macro form required for preprocessor visibility (floor #if) and C array-size const-expr. */
+#define SOLIDSYSLOG_MAX_PATH_SIZE 128U
+#endif
+
+#if SOLIDSYSLOG_MAX_PATH_SIZE < 32
+#error "SOLIDSYSLOG_MAX_PATH_SIZE must be >= 32"
+#endif
+
+/*
+ * Maximum bytes of integrity-tag the library will reserve per record.
+ * Drives the RecordStore per-record buffer width — every record carries
+ * a tag this wide regardless of the active SolidSyslogSecurityPolicy.
+ * Default 32 is large enough for HMAC-SHA256; CRC-16 uses 2 of those
+ * bytes; the rest is unused slack the integrator can recover by
+ * dropping this in their tunables override.
+ *
+ * Floor: 4. Enough for CRC-32 or a truncated MAC. Sub-floor values
+ * rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_MAX_INTEGRITY_SIZE
+/* NOLINTNEXTLINE(cppcoreguidelines-macro-usage) -- macro form required for preprocessor visibility (floor #if) and C array-size const-expr. */
+#define SOLIDSYSLOG_MAX_INTEGRITY_SIZE 32U
+#endif
+
+#if SOLIDSYSLOG_MAX_INTEGRITY_SIZE < 4
+#error "SOLIDSYSLOG_MAX_INTEGRITY_SIZE must be >= 4"
+#endif
+
+/*
  * Number of SolidSyslog instances the library's internal static pool
  * can simultaneously hold. Each instance is a small bookkeeping struct
  * (collaborator pointers + SD array pointer + count).

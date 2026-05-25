@@ -9,13 +9,9 @@
 #include "SolidSyslogFileBlockDevicePrivate.h"
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogNullBlockDevice.h"
+#include "SolidSyslogTunables.h"
 
 struct SolidSyslogFile;
-
-enum
-{
-    MAX_PATH_SIZE = 128U
-};
 
 static const char FILE_EXTENSION[] = ".log";
 
@@ -23,7 +19,7 @@ enum
 {
     SEQUENCE_DIGITS = 2U,
     FILENAME_SUFFIX = SEQUENCE_DIGITS + sizeof(FILE_EXTENSION) - 1U,
-    MAX_PREFIX_LENGTH = (size_t) MAX_PATH_SIZE - (size_t) FILENAME_SUFFIX - 1U,
+    MAX_PREFIX_LENGTH = (size_t) SOLIDSYSLOG_MAX_PATH_SIZE - (size_t) FILENAME_SUFFIX - 1U,
     /* Two-digit on-disk sequence — indices > 99 cannot be represented
      * uniquely. Without this guard, a wide blockIndex would be narrowed
      * to uint8_t and alias an existing block (256 -> 00). */
@@ -187,7 +183,7 @@ static bool FileBlockDevice_OpenHandleOnBlock(
     }
     handle->IsOpen = false;
 
-    SolidSyslogFormatterStorage nameStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(MAX_PATH_SIZE)];
+    SolidSyslogFormatterStorage nameStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(SOLIDSYSLOG_MAX_PATH_SIZE)];
     const char* name = FileBlockDevice_FormatBlockFilename(self, nameStorage, blockIndex);
 
     bool opened = SolidSyslogFile_Open(handle->File, name);
@@ -207,7 +203,7 @@ static inline const char* FileBlockDevice_FormatBlockFilename(
     size_t blockIndex
 )
 {
-    struct SolidSyslogFormatter* formatter = SolidSyslogFormatter_Create(storage, MAX_PATH_SIZE);
+    struct SolidSyslogFormatter* formatter = SolidSyslogFormatter_Create(storage, SOLIDSYSLOG_MAX_PATH_SIZE);
 
     SolidSyslogFormatter_BoundedString(formatter, self->PathPrefix, MAX_PREFIX_LENGTH);
     SolidSyslogFormatter_TwoDigit(formatter, (uint8_t) blockIndex);
@@ -232,7 +228,7 @@ static bool FileBlockDevice_Dispose(struct SolidSyslogBlockDevice* base, size_t 
 
         FileBlockDevice_CloseIfHoldingBlock(&self->Handle, blockIndex);
 
-        SolidSyslogFormatterStorage nameStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(MAX_PATH_SIZE)];
+        SolidSyslogFormatterStorage nameStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(SOLIDSYSLOG_MAX_PATH_SIZE)];
         const char* name = FileBlockDevice_FormatBlockFilename(self, nameStorage, blockIndex);
         disposed = SolidSyslogFile_Delete(self->Handle.File, name);
     }
@@ -260,7 +256,7 @@ static bool FileBlockDevice_Exists(struct SolidSyslogBlockDevice* base, size_t b
     if (FileBlockDevice_IsValidBlockIndex(blockIndex))
     {
         struct SolidSyslogFileBlockDevice* self = FileBlockDevice_SelfFromBase(base);
-        SolidSyslogFormatterStorage nameStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(MAX_PATH_SIZE)];
+        SolidSyslogFormatterStorage nameStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(SOLIDSYSLOG_MAX_PATH_SIZE)];
         const char* name = FileBlockDevice_FormatBlockFilename(self, nameStorage, blockIndex);
         exists = SolidSyslogFile_Exists(self->Handle.File, name);
     }
