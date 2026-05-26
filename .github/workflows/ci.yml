@@ -471,6 +471,73 @@ jobs:
           path: build/iwyu/iwyu-output.txt
           retention-days: 1
 
+  # Mirrors analyze-tidy but runs on cpputest-freertos so the Platform/{FreeRtos,
+  # PlusTcp,LwipRaw,MbedTls,FatFs} trees and their Tests/* siblings enter the
+  # CMake configure (gated by FREERTOS_KERNEL_PATH / MBEDTLS_DIR / LWIP_PATH /
+  # FATFS_PATH, all set in the freertos image). The base lane on cpputest skips
+  # those trees because the env vars are absent.
+  analyze-tidy-freertos-plustcp:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/davidcozens/cpputest-freertos:sha-a0c1c0a
+      options: --user root
+    env:
+      GIT_CONFIG_COUNT: 1
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: '*'
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Configure
+        run: cmake --preset tidy
+
+      - name: Build with clang-tidy
+        shell: bash
+        run: set -o pipefail && cmake --build --preset tidy 2>&1 | tee build/tidy/clang-tidy-output.txt
+
+      - name: Upload clang-tidy output
+        if: success() || failure()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: clang-tidy-report-freertos-plustcp
+          path: build/tidy/clang-tidy-output.txt
+          retention-days: 1
+
+  # Same freertos coverage rationale as analyze-tidy-freertos-plustcp. Overrides
+  # CMAKE_C_COMPILER explicitly to clang-19 because the cpputest-freertos image
+  # (chained from the cpputest gcc base) ships clang-19/clang++-19 but no
+  # `clang`/`clang++` alternative — only the cpputest-clang image creates that
+  # alias. A future image bump could add the alternative to the gcc base and
+  # drop these overrides.
+  analyze-iwyu-freertos-plustcp:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/davidcozens/cpputest-freertos:sha-a0c1c0a
+      options: --user root
+    env:
+      GIT_CONFIG_COUNT: 1
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: '*'
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Configure
+        run: cmake --preset iwyu -DCMAKE_C_COMPILER=clang-19 -DCMAKE_CXX_COMPILER=clang++-19
+
+      - name: Run include-what-you-use
+        shell: bash
+        run: set -o pipefail && cmake --build --preset iwyu --target iwyu 2>&1 | tee build/iwyu/iwyu-output.txt
+
+      - name: Upload iwyu output
+        if: success() || failure()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: iwyu-report-freertos-plustcp
+          path: build/iwyu/iwyu-output.txt
+          retention-days: 1
+
   analyze-format:
     runs-on: ubuntu-latest
     container:
@@ -986,7 +1053,7 @@ jobs:
 
   summary:
     if: always() && github.event_name == 'pull_request'
-    needs: [build-linux-gcc, build-linux-tunable-override, build-linux-clang, sanitize-linux-gcc, coverage-linux-gcc, analyze-tidy, analyze-cppcheck, analyze-format, analyze-iwyu, bdd-linux-syslog-ng, build-windows-msvc, bdd-windows-otel, integration-linux-openssl, integration-linux-mbedtls, integration-windows-openssl, build-freertos-host-tdd-plustcp, build-freertos-target-plustcp, bdd-freertos-qemu-plustcp]
+    needs: [build-linux-gcc, build-linux-tunable-override, build-linux-clang, sanitize-linux-gcc, coverage-linux-gcc, analyze-tidy, analyze-tidy-freertos-plustcp, analyze-cppcheck, analyze-format, analyze-iwyu, analyze-iwyu-freertos-plustcp, bdd-linux-syslog-ng, build-windows-msvc, bdd-windows-otel, integration-linux-openssl, integration-linux-mbedtls, integration-windows-openssl, build-freertos-host-tdd-plustcp, build-freertos-target-plustcp, bdd-freertos-qemu-plustcp]
     runs-on: ubuntu-latest
     permissions:
       contents: read
