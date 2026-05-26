@@ -138,7 +138,6 @@ TEST(SolidSyslogGetAddrInfoResolver, FreesAddrInfoOnSuccess)
         }                                                                              \
     } while (0)
 
-
 // clang-format off
 TEST_GROUP(SolidSyslogGetAddrInfoResolverPool)
 {

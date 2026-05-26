@@ -22,7 +22,6 @@ using namespace CososoTesting;
 #include "FreeRTOS_IP.h"
 #include "FreeRTOS_Sockets.h"
 
-
 // Asserts handle is non-null and not one of the slots in pool.
 #define CHECK_IS_FALLBACK(handle, pool)                                                \
     do                                                                                 \
@@ -34,7 +33,6 @@ using namespace CososoTesting;
             CHECK_TEXT((handle) != slot, "Fallback handle collided with a pool slot"); \
         }                                                                              \
     } while (0)
-
 
 static const char* const TEST_HOST = "10.0.2.2";
 static const char* const TEST_ALTERNATE_HOST = "192.168.1.1";

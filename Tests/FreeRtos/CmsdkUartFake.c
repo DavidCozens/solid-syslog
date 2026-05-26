@@ -47,7 +47,7 @@ static uint32_t Fake_Read32(uintptr_t address)
         }
         if (fake.readsRemainingBeforeTxReady == 0)
         {
-            fake.state &= ~TX_FULL_BIT;
+            fake.state &= ~(uint32_t) TX_FULL_BIT;
         }
         if (fake.readsRemainingBeforeRxReady > 0)
         {
@@ -64,7 +64,7 @@ static uint32_t Fake_Read32(uintptr_t address)
         if ((fake.state & RX_FULL_BIT) != 0U)
         {
             result = fake.receivedByte;
-            fake.state &= ~RX_FULL_BIT;
+            fake.state &= ~(uint32_t) RX_FULL_BIT;
         }
     }
     else if (offset == CTRL_OFFSET)
@@ -181,7 +181,7 @@ void CmsdkUartFake_SetReceivedByte(char byte)
     /* Clear leftover RX-ready state from a prior arm so back-to-back calls
      * don't carry RX_FULL_BIT or a stale countdown into the new mode. */
     fake.receivedByte = (uint32_t) (unsigned char) byte;
-    fake.state &= ~RX_FULL_BIT;
+    fake.state &= ~(uint32_t) RX_FULL_BIT;
     fake.readsRemainingBeforeRxReady = 0;
     if (fake.readsBeforeRxReadyDefault == 0)
     {

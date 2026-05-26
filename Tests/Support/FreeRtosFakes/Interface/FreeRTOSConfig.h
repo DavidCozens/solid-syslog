@@ -1,7 +1,6 @@
 #ifndef SOLIDSYSLOG_TESTS_FREERTOSFAKES_FREERTOSCONFIG_H
 #define SOLIDSYSLOG_TESTS_FREERTOSFAKES_FREERTOSCONFIG_H
 
-
 /* FreeRTOS-Plus-TCP's IPConfig defaults header checks this guard to confirm
  * FreeRTOSConfig.h was included before any IP header. */
 #define FREERTOS_CONFIG_H
@@ -68,6 +67,5 @@
             }           \
         }               \
     } while (0)
-
 
 #endif /* SOLIDSYSLOG_TESTS_FREERTOSFAKES_FREERTOSCONFIG_H */

@@ -206,7 +206,6 @@ TEST(SolidSyslogPosixMessageQueueBuffer, ServiceSendsMessageWrittenViaLog)
         }                                                                              \
     } while (0)
 
-
 // clang-format off
 TEST_GROUP(SolidSyslogPosixMessageQueueBufferPool)
 {

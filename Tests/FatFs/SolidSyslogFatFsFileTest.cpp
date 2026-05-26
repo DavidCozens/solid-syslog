@@ -23,7 +23,6 @@ static const char* const TEST_PATH = "test.log";
 #define CHECK_STAT_PATH(path) STRCMP_EQUAL((path), FatFsFake_LastStatPath())
 #define CHECK_UNLINK_PATH(path) STRCMP_EQUAL((path), FatFsFake_LastUnlinkPath())
 
-
 // clang-format off
 TEST_GROUP(SolidSyslogFatFsFile)
 {

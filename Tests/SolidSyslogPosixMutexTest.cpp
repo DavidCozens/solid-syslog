@@ -12,7 +12,6 @@
 
 using namespace CososoTesting;
 
-
 // Asserts handle is non-null and not one of the slots in pool.
 #define CHECK_IS_FALLBACK(handle, pool)                                                \
     do                                                                                 \
@@ -24,7 +23,6 @@ using namespace CososoTesting;
             CHECK_TEXT((handle) != slot, "Fallback handle collided with a pool slot"); \
         }                                                                              \
     } while (0)
-
 
 // clang-format off
 TEST_GROUP(SolidSyslogPosixMutex)

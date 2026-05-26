@@ -728,7 +728,6 @@ TEST(SolidSyslogStreamSenderPool, FillingPoolThenOverflowReturnsDistinctFallback
         UNSIGNED_LONGS_EQUAL((expectedCode), ErrorHandlerFake_LastCode());        \
     } while (0)
 
-
 // clang-format off
 TEST_GROUP(SolidSyslogStreamSenderBadSetup)
 {

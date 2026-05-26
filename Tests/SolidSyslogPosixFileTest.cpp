@@ -27,7 +27,6 @@ static const char* const TEST_PATH = "/tmp/test_posix_file.dat";
         }                                                                              \
     } while (0)
 
-
 // clang-format off
 TEST_GROUP(SolidSyslogPosixFile)
 {

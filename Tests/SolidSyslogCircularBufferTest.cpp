@@ -43,7 +43,6 @@ using namespace CososoTesting;
         }                                                                            \
     } while (0)
 
-
 enum
 {
     TEST_MAX_MESSAGES = 1,

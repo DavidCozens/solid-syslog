@@ -18,7 +18,6 @@ using namespace CososoTesting;
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
-
 // Asserts handle is non-null and not one of the slots in pool.
 #define CHECK_IS_FALLBACK(handle, pool)                                                \
     do                                                                                 \
@@ -30,7 +29,6 @@ using namespace CososoTesting;
             CHECK_TEXT((handle) != slot, "Fallback handle collided with a pool slot"); \
         }                                                                              \
     } while (0)
-
 
 // clang-format off
 static const char* const TEST_HOST           = "127.0.0.1";

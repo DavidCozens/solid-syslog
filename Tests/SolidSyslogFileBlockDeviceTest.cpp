@@ -27,7 +27,6 @@ static const char* const TEST_PATH_PREFIX = "/tmp/blockdev_";
         MEMCMP_EQUAL((expected), checkBuf, (length));                                                \
     } while (0)
 
-
 // clang-format off
 TEST_GROUP(SolidSyslogFileBlockDevice)
 {

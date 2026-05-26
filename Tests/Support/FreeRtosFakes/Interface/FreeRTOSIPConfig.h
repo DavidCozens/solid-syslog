@@ -21,5 +21,4 @@
 #define ipconfigZERO_COPY_RX_DRIVER 0
 #define ipconfigZERO_COPY_TX_DRIVER 0
 
-
 #endif /* FREERTOS_IP_CONFIG_H */

@@ -13,7 +13,6 @@ using namespace CososoTesting;
 #include "SolidSyslogTunables.h"
 #include "lwip/ip_addr.h"
 
-
 // Asserts handle is non-null and not one of the slots in pool.
 #define CHECK_IS_FALLBACK(handle, pool)                                                \
     do                                                                                 \
@@ -36,7 +35,6 @@ using namespace CososoTesting;
         POINTERS_EQUAL(&(source), ErrorHandlerFake_LastSource());  \
         UNSIGNED_LONGS_EQUAL((code), ErrorHandlerFake_LastCode()); \
     } while (0)
-
 
 // clang-format off
 TEST_GROUP(SolidSyslogLwipRawAddress)

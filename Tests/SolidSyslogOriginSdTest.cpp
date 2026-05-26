@@ -51,7 +51,6 @@ static void FakeIpAt(struct SolidSyslogFormatter* f, size_t index)
         SolidSyslogFormatter_AsFormattedBuffer(formatter)                             \
     )
 
-
 namespace
 {
 std::string repeated(char c, size_t n)

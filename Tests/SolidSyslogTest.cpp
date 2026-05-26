@@ -217,7 +217,6 @@ static const int TIMESTAMP_OFFSET_OFFSET       = 26;
 
 #define CHECK_MSGID(expected) STRCMP_EQUAL(expected, SyslogField(lastMessage(), SYSLOG_FIELD_MSGID).c_str())
 
-
 static const char SD_SPY_TEXT[] = "[spy]";
 static const char SD_SPY2_TEXT[] = "[spy2]";
 

@@ -104,7 +104,6 @@ TEST_GROUP(SolidSyslogPosixTcpStream)
         LONGS_EQUAL(SocketFake_SocketFd(), SocketFake_LastClosedFd()); \
     } while (0)
 
-
 TEST(SolidSyslogPosixTcpStream, CreateDestroyWorksWithoutCrashing)
 {
 }
@@ -574,7 +573,6 @@ TEST(SolidSyslogPosixTcpStream, ReadReturnsNegativeOneOnErrorAndClosesSocket)
             CHECK_TEXT((handle) != slot, "Fallback handle collided with a pool slot"); \
         }                                                                              \
     } while (0)
-
 
 // clang-format off
 TEST_GROUP(SolidSyslogPosixTcpStreamPool)

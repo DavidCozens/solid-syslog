@@ -23,7 +23,6 @@ using namespace CososoTesting;
 #include "FreeRTOS_IP.h"
 #include "FreeRTOS_Sockets.h"
 
-
 // Asserts handle is non-null and not one of the slots in pool.
 #define CHECK_IS_FALLBACK(handle, pool)                                                \
     do                                                                                 \
@@ -35,7 +34,6 @@ using namespace CososoTesting;
             CHECK_TEXT((handle) != slot, "Fallback handle collided with a pool slot"); \
         }                                                                              \
     } while (0)
-
 
 static const uint16_t TEST_PORT = 514;
 static const char TEST_MESSAGE[] = "hello";
@@ -126,7 +124,6 @@ TEST_GROUP(SolidSyslogPlusTcpTcpStream)
         CALLED_FAKE(FreeRtosSocketsFake_Closesocket, ONCE);                                                    \
         POINTERS_EQUAL(FreeRtosSocketsFake_LastSocketReturned(), FreeRtosSocketsFake_LastClosesocketSocket()); \
     } while (0)
-
 
 TEST(SolidSyslogPlusTcpTcpStream, CreateReturnsNonNullStream)
 

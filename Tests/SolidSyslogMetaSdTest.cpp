@@ -60,7 +60,6 @@ static void FakeLanguage_Get(struct SolidSyslogFormatter* formatter)
 #define CHECK_LANGUAGE(expected) \
     STRCMP_EQUAL("[meta sequenceId=\"1\" language=\"" expected "\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter))
 
-
 // clang-format off
 TEST_GROUP(SolidSyslogMetaSd)
 {

@@ -105,7 +105,6 @@ class TEST_SolidSyslogFormatter_ZeroSizeBoundedStringIsNoOp_Test;
 class TEST_SolidSyslogFormatter_ZeroSizeUint32IsNoOp_Test;
 struct TEST_GROUP_CppUTestGroupSolidSyslogFormatter;
 
-
 #define CREATE_FORMATTER(bufferSize) formatter = SolidSyslogFormatter_Create(storage, bufferSize)
 
 #define CHECK_FORMATTED(expected)                                              \
@@ -113,7 +112,6 @@ struct TEST_GROUP_CppUTestGroupSolidSyslogFormatter;
     LONGS_EQUAL(strlen(expected), SolidSyslogFormatter_Length(formatter))
 
 #define CHECK_LENGTH(expected) LONGS_EQUAL(expected, SolidSyslogFormatter_Length(formatter))
-
 
 enum
 {

@@ -19,7 +19,6 @@ using namespace CososoTesting;
 #include "SolidSyslogTunables.h"
 #include "lwip/ip_addr.h"
 
-
 // Asserts handle is non-null and not one of the slots in pool.
 #define CHECK_IS_FALLBACK(handle, pool)                                                \
     do                                                                                 \
@@ -42,7 +41,6 @@ using namespace CososoTesting;
         POINTERS_EQUAL(&(source), ErrorHandlerFake_LastSource());  \
         UNSIGNED_LONGS_EQUAL((code), ErrorHandlerFake_LastCode()); \
     } while (0)
-
 
 static const char* const TEST_HOST = "127.0.0.1";
 static const uint16_t TEST_PORT = 514;

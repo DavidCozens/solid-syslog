@@ -216,7 +216,6 @@ TEST_GROUP(SolidSyslogTlsStream)
         CALLED_FAKE_ON(StreamFake_Close, transport, ONCE); \
     } while (0)
 
-
 TEST(SolidSyslogTlsStream, CreateSucceeds)
 {
     CHECK_TRUE(stream != nullptr);
