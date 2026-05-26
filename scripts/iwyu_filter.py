@@ -35,6 +35,14 @@ ADDITIONS that IWYU asks for but we never write by hand:
    so it asks for forward declarations no test file ever writes. Same
    shape of false positive as (3) — IWYU not modelling CppUTest macros.
 
+WHOLE-FILE blocks we drop because the file is third-party:
+
+5. Anything under /opt/... — upstream sources mounted into the container
+   image (mbedTLS, lwIP, FreeRTOS-Kernel / Plus-TCP, FatFs). These appear
+   in compile_commands.json because the freertos-aware analyze-iwyu lane
+   compiles INTERFACE-library TUs from those trees. We don't own the
+   includes there; suggestions on those files are noise.
+
 Reads IWYU output (typically the stdout of iwyu_tool.py) on stdin, emits
 filtered output on stdout. File blocks whose only findings are filtered
 findings are suppressed entirely, so the report shows only actionable
@@ -57,6 +65,21 @@ FILTERED_REMOVALS = (
 FILTERED_ADDITIONS = (
     re.compile(r"^class TEST_\w+_Test;\s*$"),
 )
+
+# Whole file paths to drop entirely — third-party trees mounted into the
+# container image and not part of this project. See module docstring (5).
+EXTERNAL_PATH_PREFIXES = (
+    "/opt/",
+)
+
+_FILE_HEADER = re.compile(r"^(\S+) should add these lines:")
+
+
+def _is_external_path(header_line):
+    match = _FILE_HEADER.match(header_line)
+    if not match:
+        return False
+    return match.group(1).startswith(EXTERNAL_PATH_PREFIXES)
 
 
 def _is_filtered_removal(line):
@@ -87,7 +110,10 @@ def filter_iwyu(stream_in, stream_out):
                 block_end += 1
 
             block = lines[i:block_end]
-            kept_block, has_finding = _filter_block(block)
+            if _is_external_path(block[0]):
+                kept_block, has_finding = [], False
+            else:
+                kept_block, has_finding = _filter_block(block)
             if has_finding:
                 files_with_findings += 1
                 stream_out.writelines(kept_block)
