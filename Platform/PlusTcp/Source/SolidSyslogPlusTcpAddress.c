@@ -1,6 +1,7 @@
-#include "SolidSyslogPlusTcpAddressPrivate.h"
-
 #include <string.h>
+
+#include "SolidSyslogPlusTcpAddressPrivate.h"
+#include "FreeRTOS_Sockets.h"
 
 struct SolidSyslogAddress;
 

@@ -1,8 +1,8 @@
-#include "CppUTest/TestHarness.h"
+#include <stdint.h>
 
+#include "CppUTest/TestHarness.h"
 #include "FreeRtosTaskFake.h"
 #include "SolidSyslogFreeRtosSysUpTime.h"
-
 #include "FreeRTOS.h"
 
 // clang-format off
@@ -17,6 +17,7 @@ TEST_GROUP(SolidSyslogFreeRtosSysUpTime)
 // clang-format on
 
 TEST(SolidSyslogFreeRtosSysUpTime, ReturnsZeroWhenTicksAreZero)
+
 {
     FreeRtosTaskFake_SetTickCount(0);
 
@@ -24,6 +25,7 @@ TEST(SolidSyslogFreeRtosSysUpTime, ReturnsZeroWhenTicksAreZero)
 }
 
 TEST(SolidSyslogFreeRtosSysUpTime, ReturnsOneWhenTicksAreOne)
+
 {
     FreeRtosTaskFake_SetTickCount(1);
 
@@ -31,6 +33,7 @@ TEST(SolidSyslogFreeRtosSysUpTime, ReturnsOneWhenTicksAreOne)
 }
 
 TEST(SolidSyslogFreeRtosSysUpTime, ReturnsTickCountAtMidRange)
+
 {
     FreeRtosTaskFake_SetTickCount(12345U);
 
@@ -38,6 +41,7 @@ TEST(SolidSyslogFreeRtosSysUpTime, ReturnsTickCountAtMidRange)
 }
 
 TEST(SolidSyslogFreeRtosSysUpTime, ReturnsUint32MaxWhenTicksAreUint32Max)
+
 {
     FreeRtosTaskFake_SetTickCount(UINT32_MAX);
 

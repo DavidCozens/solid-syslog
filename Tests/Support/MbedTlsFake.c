@@ -4,6 +4,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "mbedtls/pk.h"
+#include "mbedtls/x509_crl.h"
+#include "mbedtls/x509_crt.h"
+
 /* -------------------------------------------------------------------------
  * Captured state — one section per mbedTLS API call. Tests read these via
  * accessors below; production reaches libmbedtls through the link-interposed

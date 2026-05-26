@@ -1,6 +1,7 @@
 #ifndef FREERTOS_IP_CONFIG_H
 #define FREERTOS_IP_CONFIG_H
 
+#include "FreeRTOS.h"
 // NOLINTBEGIN(cppcoreguidelines-macro-usage) -- FreeRTOS-Plus-TCP API requires these to be #defines
 
 /* Host-suitable FreeRTOS-Plus-TCP config for unit-test fakes. The IP stack

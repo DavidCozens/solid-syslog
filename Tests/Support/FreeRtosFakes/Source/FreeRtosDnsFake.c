@@ -7,8 +7,10 @@
 
 #include "FreeRTOS_DNS.h"
 #include "FreeRTOS_IP.h"
-
 #include "SafeString.h"
+#include "FreeRTOS.h"
+#include "FreeRTOS_IPv4.h"
+#include "FreeRTOS_Sockets.h"
 
 static unsigned getAddrInfoCallCount = 0;
 static unsigned freeAddrInfoCallCount = 0;

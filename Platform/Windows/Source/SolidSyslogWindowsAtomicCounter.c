@@ -46,11 +46,10 @@ static uint32_t WindowsAtomicCounter_Increment(struct SolidSyslogAtomicCounter* 
     struct SolidSyslogWindowsAtomicCounter* self = WindowsAtomicCounter_SelfFromBase(base);
     LONG current = InterlockedCompareExchange(&self->Value, 0, 0);
     LONG next = 0;
-    LONG previous = 0;
     do
     {
         next = ((uint32_t) current >= SOLIDSYSLOG_SEQUENCE_ID_MAX) ? 1 : (current + 1);
-        previous = InterlockedCompareExchange(&self->Value, next, current);
+        LONG previous = InterlockedCompareExchange(&self->Value, next, current);
         if (previous == current)
         {
             break;

@@ -2,9 +2,7 @@
 #define FREERTOSSEMAPHOREFAKE_H
 
 #include "ExternC.h"
-
 #include "FreeRTOS.h"
-#include "semphr.h"
 
 EXTERN_C_BEGIN
 

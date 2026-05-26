@@ -12323,3 +12323,101 @@ MISRA rule — different category, doesn't set precedent.
   clang container) but needs re-applying via the IDE before the next
   Rebuild Container. Format pipeline going forward: filter
   `git diff --name-only` for `.c|.cpp|.h|.hpp$` extensions.
+
+## 2026-05-26 — S24.11: freertos-aware analyze-tidy + analyze-iwyu, misra_renumber tool, tiered pre-PR doc
+
+### Decisions
+
+- **Extend analyzer CI rather than add new gates.** S24.11's scope was
+  narrowed to "wire the existing `tidy` / `iwyu` presets through the
+  freertos image" — single `analyze-tidy-freertos-plustcp` +
+  `analyze-iwyu-freertos-plustcp` pair. Avoids per-backend duplication
+  (LWIP deferred to S28.06).
+
+- **Single image bump cascades through the chain.** Built IWYU 0.23 from
+  the `clang_19` upstream branch into `cpputest` (gcc base) so it
+  matches the version in `cpputest-clang`. `cpputest-freertos` chains
+  `FROM cpputest`, so the rebase inherits IWYU automatically. New SHAs:
+  `cpputest:sha-2c7b76b`, `cpputest-freertos:sha-a0c1c0a`,
+  `cpputest-freertos-cross:sha-a0c1c0a`.
+
+- **FreeRTOS umbrella-header convention codified in `scripts/iwyu_filter.py`.**
+  IWYU sees specific types in `task.h` / `portmacro.h` /
+  `FreeRTOS_DNS_Globals.h` and suggests including them directly,
+  removing `FreeRTOS.h` / `FreeRTOS_IP.h`. Both umbrellas must stay first
+  to set up the build environment from `FreeRTOSConfig.h`. Filter now
+  drops removals of those umbrellas and adds of the private sub-headers.
+
+- **Tidy treatment: A2 (per-file NOLINTBEGIN/END) over A1 (tier-wide).**
+  David's preference shifted mid-session — first picked A2 for
+  `Tests/FreeRtos/CmsdkUartFake.c` register macros, then flagged
+  dislike of inline suppression generally. We kept the A2 form for
+  consistency with the BDD-side `Bdd/Targets/FreeRtos/Common/CmsdkUart.c`
+  (mirrors the test fake) and queued S24.12 (#461) as the tier-wide
+  audit follow-up.
+
+- **`bugprone-easily-swappable-parameters` disabled tier-wide in
+  `Tests/.clang-tidy`.** The rule fires too often for legitimate
+  MMIO-helper / equality-assertion patterns; real arg-swap bugs in tests
+  get caught by the test itself.
+
+- **MbedTls struct names exempted at `Platform/MbedTls/.clang-tidy`.**
+  Forward declarations of `mbedtls_ctr_drbg_context`, `mbedtls_x509_crt`,
+  `mbedtls_pk_context` violate `StructCase` + `StructPrefix` rules but
+  renaming is impossible. New per-platform-component `.clang-tidy` with
+  a `StructIgnoredRegexp` override (re-stating the root whitelist plus
+  `mbedtls_[a-z0-9_]+`). clang-tidy CheckOption values don't merge
+  across the hierarchy — the override file restates the root pattern
+  verbatim.
+
+- **`scripts/misra_renumber.py` shipped early.** Originally planned as the
+  S24.11 closing commit; brought forward when the IWYU apply shifted
+  line numbers in `Platform/PlusTcp/Source/SolidSyslogPlusTcpAddress.c`
+  and `SolidSyslogPlusTcpDatagram.c`, breaking
+  `misra_suppressions.txt`. Two-pass design: pass 1 audits against
+  unsuppressed findings; pass 2 catches per-location dedup
+  shadowing (cppcheck only reports the first rule fired at a line, so
+  a 11.3 hiding behind a 11.2 surfaces only when run with the existing
+  suppressions list).
+
+- **Tiered pre-PR check budget written to `docs/local-checks.md`.**
+  Replaces the old "run 8 presets locally" guidance (30+ min) with:
+  per-commit `debug` build + tests (~30–60s); pre-push IWYU + format
+  + `misra_renumber.py` only when production source changed (~3–5 min);
+  CI owns everything else.
+
+### Deferred
+
+- **S24.12 (#461) — inline-suppression audit.** Promote tests-only
+  rules to tier-level, fix where possible, move MISRA cases to
+  `misra_suppressions.txt`, keep inline only as last resort. David's
+  open question: how many non-MISRA cppcheck inline suppressions
+  remain after that cleanup?
+
+- **LWIP analyzer lane.** S28.06 (when the lwIP backend is feature-
+  complete) is where adding an `analyze-tidy-freertos-lwip` /
+  `analyze-iwyu-freertos-lwip` lane belongs naturally. Today the
+  freertos image carries both backends, but only PLUSTCP is wired into
+  the new lanes.
+
+- **Removing the `-DCMAKE_C_COMPILER=clang-19` override.** The
+  `cpputest` gcc base image carries `clang-19` with no `clang`
+  alternative, so the freertos-aware IWYU lane spells the version
+  explicitly. Adding `update-alternatives --install /usr/bin/clang
+  clang /usr/bin/clang-19 100` to the gcc Dockerfile in a future image
+  bump would let the override drop.
+
+### Open questions
+
+- The dead `cppcheck-suppress` entries that `misra_renumber.py`'s pass-1
+  flagged (`new=[]`) — are they stale (rule no longer fires at all) or
+  shadowed by inline suppressions? S24.12 should resolve case by case.
+
+- `Platform/Windows/Source/SolidSyslogWindowsAtomicCounter.c`'s
+  `unreadVariable` finding had been sitting silently in
+  `cppcheck-report.xml` for many CI runs (the XML-report step doesn't
+  carry `--error-exitcode=1`). Should we tighten that step to
+  `--error-exitcode=1` so quiet style findings can't accumulate? Risk:
+  every untriaged style finding becomes a hard gate. Worth E24
+  discussion.
+

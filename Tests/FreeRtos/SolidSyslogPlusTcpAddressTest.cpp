@@ -4,8 +4,6 @@
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
     // macros
 
-#include <cstring>
-
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
 #include "SolidSyslogPlusTcpAddress.h"
@@ -13,7 +11,6 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 #include "SolidSyslogPlusTcpAddressPrivate.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
-
 #include "FreeRTOS.h"
 #include "FreeRTOS_IP.h"
 #include "FreeRTOS_Sockets.h"
@@ -53,11 +50,13 @@ TEST_GROUP(SolidSyslogPlusTcpAddress)
 // clang-format on
 
 TEST(SolidSyslogPlusTcpAddress, CreateReturnsNonNull)
+
 {
     CHECK(address != nullptr);
 }
 
 TEST(SolidSyslogPlusTcpAddress, AsFreertosSockaddrRoundTripsBytes)
+
 {
     struct freertos_sockaddr expected = {};
     expected.sin_family = FREERTOS_AF_INET;
@@ -71,6 +70,7 @@ TEST(SolidSyslogPlusTcpAddress, AsFreertosSockaddrRoundTripsBytes)
 }
 
 TEST(SolidSyslogPlusTcpAddress, CreateZeroesTheSockaddrFromAnyPriorSlotContents)
+
 {
     struct freertos_sockaddr dirty = {};
     dirty.sin_family = FREERTOS_AF_INET;
@@ -121,6 +121,7 @@ TEST_GROUP(SolidSyslogPlusTcpAddressPool)
 // clang-format on
 
 TEST(SolidSyslogPlusTcpAddressPool, FillingPoolThenOverflowReturnsDistinctFallback)
+
 {
     FillPool();
 
@@ -130,6 +131,7 @@ TEST(SolidSyslogPlusTcpAddressPool, FillingPoolThenOverflowReturnsDistinctFallba
 }
 
 TEST(SolidSyslogPlusTcpAddressPool, ExhaustedCreateReportsError)
+
 {
     ErrorHandlerFake_Install(nullptr);
     FillPool();
@@ -143,6 +145,7 @@ TEST(SolidSyslogPlusTcpAddressPool, ExhaustedCreateReportsError)
 }
 
 TEST(SolidSyslogPlusTcpAddressPool, CreateAcquiresAndReleasesConfigLockOnFirstFreeSlot)
+
 {
     ConfigLockFake_Install();
 
@@ -153,6 +156,7 @@ TEST(SolidSyslogPlusTcpAddressPool, CreateAcquiresAndReleasesConfigLockOnFirstFr
 }
 
 TEST(SolidSyslogPlusTcpAddressPool, CreateLocksOncePerSlotProbedWhenPoolIsFull)
+
 {
     FillPool();
     ConfigLockFake_Install();
@@ -164,6 +168,7 @@ TEST(SolidSyslogPlusTcpAddressPool, CreateLocksOncePerSlotProbedWhenPoolIsFull)
 }
 
 TEST(SolidSyslogPlusTcpAddressPool, DestroyOfPooledHandleLocksOnce)
+
 {
     pooled[0] = SolidSyslogPlusTcpAddress_Create();
     ConfigLockFake_Install();
@@ -176,6 +181,7 @@ TEST(SolidSyslogPlusTcpAddressPool, DestroyOfPooledHandleLocksOnce)
 }
 
 TEST(SolidSyslogPlusTcpAddressPool, DestroyOfUnknownHandleDoesNotLock)
+
 {
     ConfigLockFake_Install();
     char stranger = 0;
@@ -187,6 +193,7 @@ TEST(SolidSyslogPlusTcpAddressPool, DestroyOfUnknownHandleDoesNotLock)
 }
 
 TEST(SolidSyslogPlusTcpAddressPool, DestroyOfUnknownHandleReportsWarning)
+
 {
     ErrorHandlerFake_Install(nullptr);
     char stranger = 0;
@@ -200,6 +207,7 @@ TEST(SolidSyslogPlusTcpAddressPool, DestroyOfUnknownHandleReportsWarning)
 }
 
 TEST(SolidSyslogPlusTcpAddressPool, DestroyOfStaleHandleReportsWarning)
+
 {
     pooled[0] = SolidSyslogPlusTcpAddress_Create();
     SolidSyslogPlusTcpAddress_Destroy(pooled[0]);

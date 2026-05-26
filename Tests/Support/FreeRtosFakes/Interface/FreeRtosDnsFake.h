@@ -1,12 +1,10 @@
 #ifndef FREERTOSDNSFAKE_H
 #define FREERTOSDNSFAKE_H
 
-#include "ExternC.h"
-
 #include <stdbool.h>
 
+#include "ExternC.h"
 #include "FreeRTOS.h"
-#include "FreeRTOS_Sockets.h"
 
 EXTERN_C_BEGIN
 

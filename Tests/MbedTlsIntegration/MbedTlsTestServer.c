@@ -9,8 +9,10 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <sys/types.h>
 
 #include "MbedTlsTestCert.h"
+#include "mbedtls/pk.h"
 
 struct MbedTlsTestServer
 {

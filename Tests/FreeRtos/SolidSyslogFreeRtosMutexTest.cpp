@@ -13,9 +13,7 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 #include "SolidSyslogMutexDefinition.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
-
 #include "FreeRTOS.h"
-#include "semphr.h"
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while) -- macros preserve __FILE__/__LINE__ at the call site
 
@@ -54,11 +52,13 @@ TEST_GROUP(SolidSyslogFreeRtosMutex)
 // clang-format on
 
 TEST(SolidSyslogFreeRtosMutex, CreateCallsCreateMutexStaticOnce)
+
 {
     CALLED_FAKE(FreeRtosSemaphoreFake_CreateMutexStatic, ONCE);
 }
 
 TEST(SolidSyslogFreeRtosMutex, LockCallsSemaphoreTakeOnce)
+
 {
     SolidSyslogMutex_Lock(mutex);
 
@@ -66,6 +66,7 @@ TEST(SolidSyslogFreeRtosMutex, LockCallsSemaphoreTakeOnce)
 }
 
 TEST(SolidSyslogFreeRtosMutex, UnlockCallsSemaphoreGiveOnce)
+
 {
     SolidSyslogMutex_Unlock(mutex);
 
@@ -73,6 +74,7 @@ TEST(SolidSyslogFreeRtosMutex, UnlockCallsSemaphoreGiveOnce)
 }
 
 TEST(SolidSyslogFreeRtosMutex, DestroyCallsSemaphoreDeleteOnce)
+
 {
     SolidSyslogFreeRtosMutex_Destroy(mutex);
     mutex = nullptr;
@@ -121,6 +123,7 @@ TEST_GROUP(SolidSyslogFreeRtosMutexPool)
 // clang-format on
 
 TEST(SolidSyslogFreeRtosMutexPool, FillingPoolThenOverflowReturnsDistinctFallback)
+
 {
     FillPool();
 
@@ -130,6 +133,7 @@ TEST(SolidSyslogFreeRtosMutexPool, FillingPoolThenOverflowReturnsDistinctFallbac
 }
 
 TEST(SolidSyslogFreeRtosMutexPool, ExhaustedCreateReportsError)
+
 {
     ErrorHandlerFake_Install(nullptr);
     FillPool();
@@ -143,6 +147,7 @@ TEST(SolidSyslogFreeRtosMutexPool, ExhaustedCreateReportsError)
 }
 
 TEST(SolidSyslogFreeRtosMutexPool, FallbackLockUnlockAreNoOps)
+
 {
     FillPool();
     FreeRtosSemaphoreFake_Reset();
@@ -156,6 +161,7 @@ TEST(SolidSyslogFreeRtosMutexPool, FallbackLockUnlockAreNoOps)
 }
 
 TEST(SolidSyslogFreeRtosMutexPool, CreateAcquiresAndReleasesConfigLockOnFirstFreeSlot)
+
 {
     ConfigLockFake_Install();
 
@@ -166,6 +172,7 @@ TEST(SolidSyslogFreeRtosMutexPool, CreateAcquiresAndReleasesConfigLockOnFirstFre
 }
 
 TEST(SolidSyslogFreeRtosMutexPool, CreateLocksOncePerSlotProbedWhenPoolIsFull)
+
 {
     FillPool();
     ConfigLockFake_Install();
@@ -177,6 +184,7 @@ TEST(SolidSyslogFreeRtosMutexPool, CreateLocksOncePerSlotProbedWhenPoolIsFull)
 }
 
 TEST(SolidSyslogFreeRtosMutexPool, DestroyOfPooledHandleLocksOnce)
+
 {
     pooled[0] = SolidSyslogFreeRtosMutex_Create();
     ConfigLockFake_Install();
@@ -189,6 +197,7 @@ TEST(SolidSyslogFreeRtosMutexPool, DestroyOfPooledHandleLocksOnce)
 }
 
 TEST(SolidSyslogFreeRtosMutexPool, DestroyOfUnknownHandleDoesNotLock)
+
 {
     ConfigLockFake_Install();
     struct SolidSyslogMutex stranger = {};
@@ -200,6 +209,7 @@ TEST(SolidSyslogFreeRtosMutexPool, DestroyOfUnknownHandleDoesNotLock)
 }
 
 TEST(SolidSyslogFreeRtosMutexPool, DestroyOfUnknownHandleReportsWarning)
+
 {
     ErrorHandlerFake_Install(nullptr);
     struct SolidSyslogMutex stranger = {};
@@ -213,6 +223,7 @@ TEST(SolidSyslogFreeRtosMutexPool, DestroyOfUnknownHandleReportsWarning)
 }
 
 TEST(SolidSyslogFreeRtosMutexPool, DestroyOfStaleHandleReportsWarning)
+
 {
     pooled[0] = SolidSyslogFreeRtosMutex_Create();
     SolidSyslogFreeRtosMutex_Destroy(pooled[0]);

@@ -1,11 +1,12 @@
 #ifndef FREERTOSSOCKETSFAKE_H
 #define FREERTOSSOCKETSFAKE_H
 
-#include "ExternC.h"
-
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
+#include <sys/socket.h>
 
+#include "ExternC.h"
 #include "FreeRTOS.h"
 #include "FreeRTOS_Sockets.h"
 

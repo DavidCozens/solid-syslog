@@ -1,5 +1,6 @@
 #include "TestUtils.h"
 #include "CppUTest/TestHarness.h"
+#include "lwip/ip4_addr.h"
 
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
     // macros
@@ -11,7 +12,6 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 #include "SolidSyslogLwipRawAddressPrivate.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
-
 #include "lwip/ip_addr.h"
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while) -- macros preserve __FILE__/__LINE__ at the call site
@@ -60,11 +60,13 @@ TEST_GROUP(SolidSyslogLwipRawAddress)
 // clang-format on
 
 TEST(SolidSyslogLwipRawAddress, CreateReturnsNonNull)
+
 {
     CHECK(address != nullptr);
 }
 
 TEST(SolidSyslogLwipRawAddress, IpFieldRoundTripsBytes)
+
 {
     struct SolidSyslogLwipRawAddress* self = SolidSyslogLwipRawAddress_As(address);
     IP4_ADDR(&self->Ip, 127, 0, 0, 1);
@@ -78,6 +80,7 @@ TEST(SolidSyslogLwipRawAddress, IpFieldRoundTripsBytes)
 }
 
 TEST(SolidSyslogLwipRawAddress, PortFieldRoundTripsValue)
+
 {
     SolidSyslogLwipRawAddress_As(address)->Port = 514;
 
@@ -85,6 +88,7 @@ TEST(SolidSyslogLwipRawAddress, PortFieldRoundTripsValue)
 }
 
 TEST(SolidSyslogLwipRawAddress, CreateZeroesIpAndPortFromAnyPriorSlotContents)
+
 {
     struct SolidSyslogLwipRawAddress* self = SolidSyslogLwipRawAddress_As(address);
     IP4_ADDR(&self->Ip, 1, 2, 3, 4);
@@ -134,6 +138,7 @@ TEST_GROUP(SolidSyslogLwipRawAddressPool)
 // clang-format on
 
 TEST(SolidSyslogLwipRawAddressPool, FillingPoolThenOverflowReturnsDistinctFallback)
+
 {
     FillPool();
 
@@ -143,6 +148,7 @@ TEST(SolidSyslogLwipRawAddressPool, FillingPoolThenOverflowReturnsDistinctFallba
 }
 
 TEST(SolidSyslogLwipRawAddressPool, ExhaustedCreateReportsError)
+
 {
     ErrorHandlerFake_Install(nullptr);
     FillPool();
@@ -153,6 +159,7 @@ TEST(SolidSyslogLwipRawAddressPool, ExhaustedCreateReportsError)
 }
 
 TEST(SolidSyslogLwipRawAddressPool, CreateAcquiresAndReleasesConfigLockOnFirstFreeSlot)
+
 {
     ConfigLockFake_Install();
 
@@ -163,6 +170,7 @@ TEST(SolidSyslogLwipRawAddressPool, CreateAcquiresAndReleasesConfigLockOnFirstFr
 }
 
 TEST(SolidSyslogLwipRawAddressPool, CreateLocksOncePerSlotProbedWhenPoolIsFull)
+
 {
     FillPool();
     ConfigLockFake_Install();
@@ -174,6 +182,7 @@ TEST(SolidSyslogLwipRawAddressPool, CreateLocksOncePerSlotProbedWhenPoolIsFull)
 }
 
 TEST(SolidSyslogLwipRawAddressPool, DestroyOfPooledHandleLocksOnce)
+
 {
     pooled[0] = SolidSyslogLwipRawAddress_Create();
     ConfigLockFake_Install();
@@ -186,6 +195,7 @@ TEST(SolidSyslogLwipRawAddressPool, DestroyOfPooledHandleLocksOnce)
 }
 
 TEST(SolidSyslogLwipRawAddressPool, DestroyOfUnknownHandleDoesNotLock)
+
 {
     ConfigLockFake_Install();
     char stranger = 0;
@@ -197,6 +207,7 @@ TEST(SolidSyslogLwipRawAddressPool, DestroyOfUnknownHandleDoesNotLock)
 }
 
 TEST(SolidSyslogLwipRawAddressPool, DestroyOfUnknownHandleReportsWarning)
+
 {
     ErrorHandlerFake_Install(nullptr);
     char stranger = 0;
@@ -207,6 +218,7 @@ TEST(SolidSyslogLwipRawAddressPool, DestroyOfUnknownHandleReportsWarning)
 }
 
 TEST(SolidSyslogLwipRawAddressPool, DestroyOfStaleHandleReportsWarning)
+
 {
     pooled[0] = SolidSyslogLwipRawAddress_Create();
     SolidSyslogLwipRawAddress_Destroy(pooled[0]);

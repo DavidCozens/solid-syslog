@@ -19,7 +19,6 @@
  */
 
 #include <stdint.h>
-#include <limits.h>
 
 /* Kernel scalar types. BaseType_t / UBaseType_t are typedef'd to long /
  * unsigned long so they match the host compiler's long width (64-bit on x86_64

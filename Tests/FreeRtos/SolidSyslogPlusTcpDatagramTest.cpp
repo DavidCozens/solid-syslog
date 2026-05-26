@@ -1,3 +1,6 @@
+#include <stddef.h>
+#include <stdint.h>
+
 #include "TestUtils.h"
 #include "CppUTest/TestHarness.h"
 
@@ -15,11 +18,9 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
 #include "SolidSyslogUdpPayload.h"
-
 #include "FreeRtosArpFake.h"
 #include "FreeRtosSocketsFake.h"
 #include "FreeRtosTaskFake.h"
-
 #include "FreeRTOS.h"
 #include "FreeRTOS_IP.h"
 #include "FreeRTOS_Sockets.h"
@@ -74,11 +75,13 @@ TEST_GROUP(SolidSyslogPlusTcpDatagram)
 };
 
 TEST(SolidSyslogPlusTcpDatagram, CreateReturnsNonNullDatagram)
+
 {
     CHECK(datagram != nullptr);
 }
 
 TEST(SolidSyslogPlusTcpDatagram, OpenCreatesUdpSocket)
+
 {
     SolidSyslogDatagram_Open(datagram);
     CALLED_FAKE(FreeRtosSocketsFake_Socket, ONCE);
@@ -88,17 +91,20 @@ TEST(SolidSyslogPlusTcpDatagram, OpenCreatesUdpSocket)
 }
 
 TEST(SolidSyslogPlusTcpDatagram, OpenReturnsTrueOnSuccess)
+
 {
     CHECK_TRUE(SolidSyslogDatagram_Open(datagram));
 }
 
 TEST(SolidSyslogPlusTcpDatagram, OpenReturnsFalseWhenSocketFails)
+
 {
     FreeRtosSocketsFake_SetSocketFails(true);
     CHECK_FALSE(SolidSyslogDatagram_Open(datagram));
 }
 
 TEST(SolidSyslogPlusTcpDatagram, OpenIsIdempotent)
+
 {
     SolidSyslogDatagram_Open(datagram);
     CHECK_TRUE(SolidSyslogDatagram_Open(datagram));
@@ -106,11 +112,13 @@ TEST(SolidSyslogPlusTcpDatagram, OpenIsIdempotent)
 }
 
 TEST(SolidSyslogPlusTcpDatagram, MaxPayloadReturnsIpv6SafeDefault)
+
 {
     LONGS_EQUAL(SOLIDSYSLOG_UDP_IPV6_SAFE_PAYLOAD, SolidSyslogDatagram_MaxPayload(datagram));
 }
 
 TEST(SolidSyslogPlusTcpDatagram, SendToFailsBeforeOpen)
+
 {
     enum SolidSyslogDatagramSendResult result = SolidSyslogDatagram_SendTo(datagram, "x", 1, addr);
     LONGS_EQUAL(SOLIDSYSLOG_DATAGRAM_SEND_RESULT_FAILED, result);
@@ -118,6 +126,7 @@ TEST(SolidSyslogPlusTcpDatagram, SendToFailsBeforeOpen)
 }
 
 TEST(SolidSyslogPlusTcpDatagram, SendToFailsWhenSendtoErrors)
+
 {
     SolidSyslogDatagram_Open(datagram);
     FreeRtosSocketsFake_SetSendtoFails(true);
@@ -125,6 +134,7 @@ TEST(SolidSyslogPlusTcpDatagram, SendToFailsWhenSendtoErrors)
 }
 
 TEST(SolidSyslogPlusTcpDatagram, CloseClosesSocket)
+
 {
     SolidSyslogDatagram_Open(datagram);
     SolidSyslogDatagram_Close(datagram);
@@ -133,6 +143,7 @@ TEST(SolidSyslogPlusTcpDatagram, CloseClosesSocket)
 }
 
 TEST(SolidSyslogPlusTcpDatagram, SendToFailsAfterClose)
+
 {
     SolidSyslogDatagram_Open(datagram);
     SolidSyslogDatagram_Close(datagram);
@@ -142,6 +153,7 @@ TEST(SolidSyslogPlusTcpDatagram, SendToFailsAfterClose)
 }
 
 TEST(SolidSyslogPlusTcpDatagram, DestroyClosesOpenSocket)
+
 {
     SolidSyslogDatagram_Open(datagram);
     SolidSyslogPlusTcpDatagram_Destroy(datagram);
@@ -150,6 +162,7 @@ TEST(SolidSyslogPlusTcpDatagram, DestroyClosesOpenSocket)
 }
 
 TEST(SolidSyslogPlusTcpDatagram, CloseIsIdempotent)
+
 {
     SolidSyslogDatagram_Open(datagram);
     SolidSyslogDatagram_Close(datagram);
@@ -158,12 +171,14 @@ TEST(SolidSyslogPlusTcpDatagram, CloseIsIdempotent)
 }
 
 TEST(SolidSyslogPlusTcpDatagram, CloseWithoutOpenIsNoOp)
+
 {
     SolidSyslogDatagram_Close(datagram);
     CALLED_FAKE(FreeRtosSocketsFake_Closesocket, NEVER);
 }
 
 TEST(SolidSyslogPlusTcpDatagram, DestroyAfterCloseDoesNotCloseAgain)
+
 {
     SolidSyslogDatagram_Open(datagram);
     SolidSyslogDatagram_Close(datagram);
@@ -173,6 +188,7 @@ TEST(SolidSyslogPlusTcpDatagram, DestroyAfterCloseDoesNotCloseAgain)
 }
 
 TEST(SolidSyslogPlusTcpDatagram, SendToSendsBufferToDestinationAfterOpen)
+
 {
     static const char TEST_MESSAGE[] = "hello";
     static const size_t TEST_MESSAGE_LEN = sizeof(TEST_MESSAGE) - 1;
@@ -195,6 +211,7 @@ TEST(SolidSyslogPlusTcpDatagram, SendToSendsBufferToDestinationAfterOpen)
 }
 
 TEST(SolidSyslogPlusTcpDatagram, SendToChecksIfIpIsInArpCache)
+
 {
     openAndSendOnce();
 
@@ -203,6 +220,7 @@ TEST(SolidSyslogPlusTcpDatagram, SendToChecksIfIpIsInArpCache)
 }
 
 TEST(SolidSyslogPlusTcpDatagram, SendToFiresArpProbeOnCacheMiss)
+
 {
     openAndSendOnce();
 
@@ -211,6 +229,7 @@ TEST(SolidSyslogPlusTcpDatagram, SendToFiresArpProbeOnCacheMiss)
 }
 
 TEST(SolidSyslogPlusTcpDatagram, SendToYieldsAfterArpProbeOnCacheMiss)
+
 {
     openAndSendOnce();
 
@@ -218,6 +237,7 @@ TEST(SolidSyslogPlusTcpDatagram, SendToYieldsAfterArpProbeOnCacheMiss)
 }
 
 TEST(SolidSyslogPlusTcpDatagram, SendToSkipsArpProbeAndYieldOnCacheHit)
+
 {
     SolidSyslogDatagram_Open(datagram);
     FreeRtosArpFake_SetCacheHit(true);
@@ -230,6 +250,7 @@ TEST(SolidSyslogPlusTcpDatagram, SendToSkipsArpProbeAndYieldOnCacheHit)
 }
 
 TEST(SolidSyslogPlusTcpDatagram, SendToReChecksArpCacheOnEachCall)
+
 {
     SolidSyslogDatagram_Open(datagram);
 
@@ -247,6 +268,7 @@ TEST(SolidSyslogPlusTcpDatagram, SendToReChecksArpCacheOnEachCall)
 }
 
 TEST(SolidSyslogPlusTcpDatagram, SendToForwardsLengthVerbatim)
+
 {
     static const char TEST_BUFFER[1024] = {};
     SolidSyslogDatagram_Open(datagram);
@@ -299,6 +321,7 @@ TEST_GROUP(SolidSyslogPlusTcpDatagramPool)
 // clang-format on
 
 TEST(SolidSyslogPlusTcpDatagramPool, FillingPoolThenOverflowReturnsDistinctFallback)
+
 {
     FillPool();
 
@@ -308,6 +331,7 @@ TEST(SolidSyslogPlusTcpDatagramPool, FillingPoolThenOverflowReturnsDistinctFallb
 }
 
 TEST(SolidSyslogPlusTcpDatagramPool, ExhaustedCreateReportsError)
+
 {
     ErrorHandlerFake_Install(nullptr);
     FillPool();
@@ -321,6 +345,7 @@ TEST(SolidSyslogPlusTcpDatagramPool, ExhaustedCreateReportsError)
 }
 
 TEST(SolidSyslogPlusTcpDatagramPool, FallbackVtableMethodsAreNoOps)
+
 {
     FillPool();
     overflow = SolidSyslogPlusTcpDatagram_Create();
@@ -341,6 +366,7 @@ TEST(SolidSyslogPlusTcpDatagramPool, FallbackVtableMethodsAreNoOps)
 }
 
 TEST(SolidSyslogPlusTcpDatagramPool, CreateAcquiresAndReleasesConfigLockOnFirstFreeSlot)
+
 {
     ConfigLockFake_Install();
 
@@ -351,6 +377,7 @@ TEST(SolidSyslogPlusTcpDatagramPool, CreateAcquiresAndReleasesConfigLockOnFirstF
 }
 
 TEST(SolidSyslogPlusTcpDatagramPool, CreateLocksOncePerSlotProbedWhenPoolIsFull)
+
 {
     FillPool();
     ConfigLockFake_Install();
@@ -362,6 +389,7 @@ TEST(SolidSyslogPlusTcpDatagramPool, CreateLocksOncePerSlotProbedWhenPoolIsFull)
 }
 
 TEST(SolidSyslogPlusTcpDatagramPool, DestroyOfPooledHandleLocksOnce)
+
 {
     pooled[0] = SolidSyslogPlusTcpDatagram_Create();
     ConfigLockFake_Install();
@@ -374,6 +402,7 @@ TEST(SolidSyslogPlusTcpDatagramPool, DestroyOfPooledHandleLocksOnce)
 }
 
 TEST(SolidSyslogPlusTcpDatagramPool, DestroyOfUnknownHandleDoesNotLock)
+
 {
     ConfigLockFake_Install();
     struct SolidSyslogDatagram stranger = {};
@@ -385,6 +414,7 @@ TEST(SolidSyslogPlusTcpDatagramPool, DestroyOfUnknownHandleDoesNotLock)
 }
 
 TEST(SolidSyslogPlusTcpDatagramPool, DestroyOfUnknownHandleReportsWarning)
+
 {
     ErrorHandlerFake_Install(nullptr);
     struct SolidSyslogDatagram stranger = {};
@@ -398,6 +428,7 @@ TEST(SolidSyslogPlusTcpDatagramPool, DestroyOfUnknownHandleReportsWarning)
 }
 
 TEST(SolidSyslogPlusTcpDatagramPool, DestroyOfStaleHandleReportsWarning)
+
 {
     pooled[0] = SolidSyslogPlusTcpDatagram_Create();
     SolidSyslogPlusTcpDatagram_Destroy(pooled[0]);

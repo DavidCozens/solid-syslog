@@ -6,9 +6,6 @@
 #ifndef LWIP_ARCH_CC_H
 #define LWIP_ARCH_CC_H
 
-#include <stdio.h>
-#include <stdlib.h>
-
 // NOLINTBEGIN(cppcoreguidelines-macro-usage,bugprone-macro-parentheses) -- lwIP API requires these to be #defines
 #define LWIP_PLATFORM_DIAG(x) \
     do                        \
