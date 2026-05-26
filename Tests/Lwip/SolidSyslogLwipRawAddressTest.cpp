@@ -28,6 +28,17 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
         }                                                                              \
     } while (0)
 
+// Asserts the most recent ErrorHandlerFake call matched (severity, source, code).
+// Use after the act-phase of a test that expects exactly one SolidSyslog_Error call.
+#define CHECK_REPORTED(severity, source, code)                     \
+    do                                                             \
+    {                                                              \
+        CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);                \
+        LONGS_EQUAL((severity), ErrorHandlerFake_LastSeverity());  \
+        POINTERS_EQUAL(&(source), ErrorHandlerFake_LastSource());  \
+        UNSIGNED_LONGS_EQUAL((code), ErrorHandlerFake_LastCode()); \
+    } while (0)
+
 // NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 
 // clang-format off
@@ -138,10 +149,7 @@ TEST(SolidSyslogLwipRawAddressPool, ExhaustedCreateReportsError)
 
     overflow = SolidSyslogLwipRawAddress_Create();
 
-    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
-    POINTERS_EQUAL(&LwipRawAddressErrorSource, ErrorHandlerFake_LastSource());
-    UNSIGNED_LONGS_EQUAL(LWIPRAWADDRESS_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastCode());
+    CHECK_REPORTED(SOLIDSYSLOG_SEVERITY_ERROR, LwipRawAddressErrorSource, LWIPRAWADDRESS_ERROR_POOL_EXHAUSTED);
 }
 
 TEST(SolidSyslogLwipRawAddressPool, CreateAcquiresAndReleasesConfigLockOnFirstFreeSlot)
@@ -195,10 +203,7 @@ TEST(SolidSyslogLwipRawAddressPool, DestroyOfUnknownHandleReportsWarning)
 
     SolidSyslogLwipRawAddress_Destroy((struct SolidSyslogAddress*) &stranger);
 
-    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    POINTERS_EQUAL(&LwipRawAddressErrorSource, ErrorHandlerFake_LastSource());
-    UNSIGNED_LONGS_EQUAL(LWIPRAWADDRESS_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
+    CHECK_REPORTED(SOLIDSYSLOG_SEVERITY_WARNING, LwipRawAddressErrorSource, LWIPRAWADDRESS_ERROR_UNKNOWN_DESTROY);
 }
 
 TEST(SolidSyslogLwipRawAddressPool, DestroyOfStaleHandleReportsWarning)
@@ -210,8 +215,5 @@ TEST(SolidSyslogLwipRawAddressPool, DestroyOfStaleHandleReportsWarning)
     SolidSyslogLwipRawAddress_Destroy(pooled[0]);
     pooled[0] = nullptr;
 
-    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    POINTERS_EQUAL(&LwipRawAddressErrorSource, ErrorHandlerFake_LastSource());
-    UNSIGNED_LONGS_EQUAL(LWIPRAWADDRESS_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
+    CHECK_REPORTED(SOLIDSYSLOG_SEVERITY_WARNING, LwipRawAddressErrorSource, LWIPRAWADDRESS_ERROR_UNKNOWN_DESTROY);
 }

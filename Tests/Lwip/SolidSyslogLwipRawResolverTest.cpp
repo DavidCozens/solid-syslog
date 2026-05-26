@@ -34,6 +34,17 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
         }                                                                              \
     } while (0)
 
+// Asserts the most recent ErrorHandlerFake call matched (severity, source, code).
+// Use after the act-phase of a test that expects exactly one SolidSyslog_Error call.
+#define CHECK_REPORTED(severity, source, code)                     \
+    do                                                             \
+    {                                                              \
+        CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);                \
+        LONGS_EQUAL((severity), ErrorHandlerFake_LastSeverity());  \
+        POINTERS_EQUAL(&(source), ErrorHandlerFake_LastSource());  \
+        UNSIGNED_LONGS_EQUAL((code), ErrorHandlerFake_LastCode()); \
+    } while (0)
+
 // NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 
 static const char* const TEST_HOST = "127.0.0.1";
@@ -104,9 +115,11 @@ TEST(SolidSyslogLwipRawResolver, ResolveReturnsFalseOnNonLiteralHost)
 
 TEST(SolidSyslogLwipRawResolver, ResolveReturnsFalseWhenIpaddrAtonRejectsHost)
 {
-    // We defer to lwIP's ipaddr_aton — anything it accepts as numeric IPv4
-    // (including Berkeley-style "10.0.2") is fine; anything it rejects (DNS
-    // names, alphabetic input, empty string) we reject.
+    // We defer to lwIP's ipaddr_aton — whatever the parser accepts, we accept;
+    // whatever it rejects, we reject. We do not enforce any specific shape on
+    // top of the parser (no dotted-quad-only check) so the tests assert only
+    // the rejection contract for clearly non-numeric inputs (DNS names,
+    // alphabetic, empty), not a specific accept-list.
     CHECK_FALSE(Resolve("a.b.c.d"));
     CHECK_FALSE(Resolve(""));
 }
@@ -162,10 +175,7 @@ TEST(SolidSyslogLwipRawResolverPool, ExhaustedCreateReportsError)
 
     overflow = SolidSyslogLwipRawResolver_Create();
 
-    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
-    POINTERS_EQUAL(&LwipRawResolverErrorSource, ErrorHandlerFake_LastSource());
-    UNSIGNED_LONGS_EQUAL(LWIPRAWRESOLVER_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastCode());
+    CHECK_REPORTED(SOLIDSYSLOG_SEVERITY_ERROR, LwipRawResolverErrorSource, LWIPRAWRESOLVER_ERROR_POOL_EXHAUSTED);
 }
 
 TEST(SolidSyslogLwipRawResolverPool, FallbackResolveReturnsFalse)
@@ -230,10 +240,7 @@ TEST(SolidSyslogLwipRawResolverPool, DestroyOfUnknownHandleReportsWarning)
 
     SolidSyslogLwipRawResolver_Destroy(&stranger);
 
-    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    POINTERS_EQUAL(&LwipRawResolverErrorSource, ErrorHandlerFake_LastSource());
-    UNSIGNED_LONGS_EQUAL(LWIPRAWRESOLVER_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
+    CHECK_REPORTED(SOLIDSYSLOG_SEVERITY_WARNING, LwipRawResolverErrorSource, LWIPRAWRESOLVER_ERROR_UNKNOWN_DESTROY);
 }
 
 TEST(SolidSyslogLwipRawResolverPool, DestroyOfStaleHandleReportsWarning)
@@ -245,10 +252,7 @@ TEST(SolidSyslogLwipRawResolverPool, DestroyOfStaleHandleReportsWarning)
     SolidSyslogLwipRawResolver_Destroy(pooled[0]);
     pooled[0] = nullptr;
 
-    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    POINTERS_EQUAL(&LwipRawResolverErrorSource, ErrorHandlerFake_LastSource());
-    UNSIGNED_LONGS_EQUAL(LWIPRAWRESOLVER_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
+    CHECK_REPORTED(SOLIDSYSLOG_SEVERITY_WARNING, LwipRawResolverErrorSource, LWIPRAWRESOLVER_ERROR_UNKNOWN_DESTROY);
 }
 
 TEST(SolidSyslogLwipRawResolver, UdpTransportResolvesIdenticallyToTcp)
