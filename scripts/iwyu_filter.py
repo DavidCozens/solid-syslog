@@ -35,9 +35,39 @@ ADDITIONS that IWYU asks for but we never write by hand:
    so it asks for forward declarations no test file ever writes. Same
    shape of false positive as (3) — IWYU not modelling CppUTest macros.
 
+REMOVALS that we keep as-is (FreeRTOS umbrella convention):
+
+5. '- #include "FreeRTOS.h"' and '- #include "FreeRTOS_IP.h"'.
+   The FreeRTOS-Kernel and FreeRTOS-Plus-TCP APIs both follow an
+   umbrella-header convention: FreeRTOS.h must be included first because
+   it sets up the build environment from FreeRTOSConfig.h before any
+   other FreeRTOS header is parsed. IWYU sees specific types in
+   task.h / portmacro.h / FreeRTOS_DNS_Globals.h and decides the
+   umbrella isn't directly used, but removing it breaks the upstream
+   convention. The same applies to FreeRTOS_IP.h for the Plus-TCP stack.
+
+ADDITIONS that IWYU asks for but we never write by hand (cont.):
+
+6. '#include "FreeRTOSConfig.h"' — direct config include.
+   Platform/FreeRtos/ source files must not include FreeRTOSConfig.h
+   directly — that's a LayerGuard violation (Platform reaching into a
+   consumer-supplied / Tests-tier file). The config is reached
+   transitively through FreeRTOS.h, which is the contract.
+
+7. '#include "portmacro.h"' — private FreeRTOS header.
+   portmacro.h is a port-specific internal header that must come in via
+   the FreeRTOS.h umbrella, not be included directly. Same as (6) on
+   layering grounds.
+
+7a. '#include "FreeRTOS_DNS_Globals.h"' — internal FreeRTOS-Plus-TCP header.
+   The `_Globals` suffix marks this as the implementation's internal
+   shared declarations; consumers reach `freertos_addrinfo` via
+   FreeRTOS_DNS.h, which the FreeRTOS-Plus-TCP API documents as the
+   entry point. IWYU doesn't model that public/private split.
+
 WHOLE-FILE blocks we drop because the file is third-party:
 
-5. Anything under /opt/... — upstream sources mounted into the container
+8. Anything under /opt/... — upstream sources mounted into the container
    image (mbedTLS, lwIP, FreeRTOS-Kernel / Plus-TCP, FatFs). These appear
    in compile_commands.json because the freertos-aware analyze-iwyu lane
    compiles INTERFACE-library TUs from those trees. We don't own the
@@ -60,10 +90,15 @@ FILTERED_REMOVALS = (
     re.compile(r"^- struct \w+;\s*//"),
     re.compile(r"^- #include <stdbool\.h>\s*//"),
     re.compile(r"^- #include \"CppUTest/TestHarness\.h\"\s*//"),
+    re.compile(r"^- #include \"FreeRTOS\.h\"\s*//"),
+    re.compile(r"^- #include \"FreeRTOS_IP\.h\"\s*//"),
 )
 
 FILTERED_ADDITIONS = (
     re.compile(r"^class TEST_\w+_Test;\s*$"),
+    re.compile(r"^#include \"FreeRTOSConfig\.h\"\s*//"),
+    re.compile(r"^#include \"portmacro\.h\"\s*//"),
+    re.compile(r"^#include \"FreeRTOS_DNS_Globals\.h\"\s*//"),
 )
 
 # Whole file paths to drop entirely — third-party trees mounted into the
