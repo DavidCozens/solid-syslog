@@ -19,7 +19,6 @@ using namespace CososoTesting;
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while) -- macros preserve __FILE__/__LINE__ at the call site
 
 // Asserts handle is non-null and not one of the slots in pool.
 #define CHECK_IS_FALLBACK(handle, pool)                                                \
@@ -33,7 +32,6 @@ using namespace CososoTesting;
         }                                                                              \
     } while (0)
 
-// NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 
 namespace
 {
@@ -44,7 +42,6 @@ uint32_t FakeGetConnectTimeoutMs_ReturnValue = 200U;
 void FakeGetConnectTimeoutMs_Reset()
 {
     FakeGetConnectTimeoutMs_CallCount = 0;
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) -- sentinel pointer; we never deref, only compare to nullptr after Open
     FakeGetConnectTimeoutMs_LastContext = reinterpret_cast<void*>(0x1U); /* sentinel — overwritten on first call */
     FakeGetConnectTimeoutMs_ReturnValue = 200U;
 }
@@ -120,7 +117,6 @@ TEST_GROUP(SolidSyslogWinsockTcpStream)
 
 // clang-format on
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 #define CHECK_SOCKET_CLOSED_ONCE()                                   \
     do                                                               \
     {                                                                \
@@ -128,7 +124,6 @@ TEST_GROUP(SolidSyslogWinsockTcpStream)
         CHECK(WinsockFake_SocketFd() == WinsockFake_LastClosedFd()); \
     } while (0)
 
-// NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 
 TEST(SolidSyslogWinsockTcpStream, CreateDestroyWorksWithoutCrashing)
 {

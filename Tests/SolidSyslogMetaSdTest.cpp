@@ -50,7 +50,6 @@ static void FakeLanguage_Get(struct SolidSyslogFormatter* formatter)
     SolidSyslogFormatter_EscapedString(formatter, fakeLanguageContent, fakeLanguageMaxLength);
 }
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage) -- macros preserve __FILE__/__LINE__ in test failure output
 #define CHECK_SEQUENCEID(expected) \
     STRCMP_EQUAL("[meta sequenceId=\"" expected "\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter))
 #define CHECK_SYSUPTIME(expected)                             \
@@ -61,7 +60,6 @@ static void FakeLanguage_Get(struct SolidSyslogFormatter* formatter)
 #define CHECK_LANGUAGE(expected) \
     STRCMP_EQUAL("[meta sequenceId=\"1\" language=\"" expected "\"]", SolidSyslogFormatter_AsFormattedBuffer(formatter))
 
-// NOLINTEND(cppcoreguidelines-macro-usage)
 
 // clang-format off
 TEST_GROUP(SolidSyslogMetaSd)

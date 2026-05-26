@@ -39,7 +39,6 @@ struct ScanFake
 
 inline ScanFake& ToFake(struct SolidSyslogBlockDevice* self)
 {
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) -- vtable downcast: base is the first member of ScanFake
     return *reinterpret_cast<ScanFake*>(self);
 }
 

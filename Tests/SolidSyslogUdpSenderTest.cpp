@@ -573,10 +573,8 @@ TEST(SolidSyslogUdpSenderFailure, SendRecoversAfterTransientResolveFailure)
     CHECK_TRUE(Send());
 }
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage) -- macros preserve __FILE__/__LINE__ in test failure output
 #define CALLED_DATAGRAM_SEND(times) CALLED_FAKE_ON(DatagramFake_Send, datagram, times)
 #define CALLED_DATAGRAM_MAX_PAYLOAD(times) CALLED_FAKE_ON(DatagramFake_MaxPayload, datagram, times)
-// NOLINTEND(cppcoreguidelines-macro-usage)
 
 // clang-format off
 TEST_GROUP_BASE(SolidSyslogUdpSenderRetry, UdpSenderTestBase)

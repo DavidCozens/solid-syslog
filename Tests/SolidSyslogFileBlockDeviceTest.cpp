@@ -19,7 +19,6 @@ static const char* const TEST_PATH_PREFIX = "/tmp/blockdev_";
  * Mirrors the CHECK_PRIVAL family in SolidSyslogTest.cpp — names the intent so
  * tests read as "block N at offset O contains 'foo'" rather than buf+memcmp boilerplate.
  * Macro (not function) so test failures report the caller's __FILE__/__LINE__. */
-// NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while) -- macro preserves caller location in test failure output
 #define CHECK_BLOCK_CONTAINS(blockIndex, offset, expected, length)                                   \
     do                                                                                               \
     {                                                                                                \
@@ -28,7 +27,6 @@ static const char* const TEST_PATH_PREFIX = "/tmp/blockdev_";
         MEMCMP_EQUAL((expected), checkBuf, (length));                                                \
     } while (0)
 
-// NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 
 // clang-format off
 TEST_GROUP(SolidSyslogFileBlockDevice)

@@ -16,7 +16,6 @@ using namespace CososoTesting;
 
 static const char* const TEST_PATH = "/tmp/test_posix_file.dat";
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while) -- macros preserve __FILE__/__LINE__ at the call site
 #define CHECK_IS_FALLBACK(handle, pool)                                                \
     do                                                                                 \
     {                                                                                  \
@@ -28,7 +27,6 @@ static const char* const TEST_PATH = "/tmp/test_posix_file.dat";
         }                                                                              \
     } while (0)
 
-// NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 
 // clang-format off
 TEST_GROUP(SolidSyslogPosixFile)

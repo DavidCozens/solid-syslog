@@ -19,7 +19,6 @@ using namespace CososoTesting;
 
 // Assertion macros at file scope so failures report the test's own
 // __FILE__/__LINE__ rather than the helper's.
-// NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while) -- macros preserve __FILE__/__LINE__ at the call site
 
 // Asserts the last record read equals `expected` bytes of length `size`.
 // Depends on `readData` and `readSize` from CircularBufferFixture being in scope.
@@ -44,7 +43,6 @@ using namespace CososoTesting;
         }                                                                            \
     } while (0)
 
-// NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 
 enum
 {

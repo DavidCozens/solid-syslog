@@ -1,7 +1,6 @@
 #ifndef SOLIDSYSLOG_TESTS_FREERTOSFAKES_FREERTOSCONFIG_H
 #define SOLIDSYSLOG_TESTS_FREERTOSFAKES_FREERTOSCONFIG_H
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage) -- FreeRTOS API requires these to be #defines
 
 /* FreeRTOS-Plus-TCP's IPConfig defaults header checks this guard to confirm
  * FreeRTOSConfig.h was included before any IP header. */
@@ -70,6 +69,5 @@
         }               \
     } while (0)
 
-// NOLINTEND(cppcoreguidelines-macro-usage)
 
 #endif /* SOLIDSYSLOG_TESTS_FREERTOSFAKES_FREERTOSCONFIG_H */

@@ -40,7 +40,6 @@ static void FakeIpAt(struct SolidSyslogFormatter* f, size_t index)
     SolidSyslogFormatter_EscapedString(f, fakeIps.at(index), 64); // ORIGIN_IP_MAX
 }
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage) -- macros preserve __FILE__/__LINE__ in test failure output
 #define CHECK_ENTERPRISE_ID(expected)                                                           \
     STRCMP_EQUAL(                                                                               \
         "[origin software=\"TestSoftware\" swVersion=\"9.8.7\" enterpriseId=\"" expected "\"]", \
@@ -52,7 +51,6 @@ static void FakeIpAt(struct SolidSyslogFormatter* f, size_t index)
         SolidSyslogFormatter_AsFormattedBuffer(formatter)                             \
     )
 
-// NOLINTEND(cppcoreguidelines-macro-usage)
 
 namespace
 {

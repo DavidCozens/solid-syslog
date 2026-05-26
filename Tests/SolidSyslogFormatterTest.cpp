@@ -105,7 +105,6 @@ class TEST_SolidSyslogFormatter_ZeroSizeBoundedStringIsNoOp_Test;
 class TEST_SolidSyslogFormatter_ZeroSizeUint32IsNoOp_Test;
 struct TEST_GROUP_CppUTestGroupSolidSyslogFormatter;
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage) -- test helper macros for readability; CppUTest requires macros for correct failure location
 
 #define CREATE_FORMATTER(bufferSize) formatter = SolidSyslogFormatter_Create(storage, bufferSize)
 
@@ -115,7 +114,6 @@ struct TEST_GROUP_CppUTestGroupSolidSyslogFormatter;
 
 #define CHECK_LENGTH(expected) LONGS_EQUAL(expected, SolidSyslogFormatter_Length(formatter))
 
-// NOLINTEND(cppcoreguidelines-macro-usage)
 
 enum
 {

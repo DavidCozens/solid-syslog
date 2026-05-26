@@ -719,7 +719,6 @@ TEST(SolidSyslogStreamSenderPool, FillingPoolThenOverflowReturnsDistinctFallback
 // SolidSyslogUdpSenderBadSetup contract from S12.06.
 
 /* Macro (not function) so test failures report the caller's __FILE__/__LINE__. */
-// NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while) -- macro preserves caller location in test failure output
 #define CHECK_STREAMSENDER_BAD_SETUP_ERROR(expectedCode)                          \
     do                                                                            \
     {                                                                             \
@@ -729,7 +728,6 @@ TEST(SolidSyslogStreamSenderPool, FillingPoolThenOverflowReturnsDistinctFallback
         UNSIGNED_LONGS_EQUAL((expectedCode), ErrorHandlerFake_LastCode());        \
     } while (0)
 
-// NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 
 // clang-format off
 TEST_GROUP(SolidSyslogStreamSenderBadSetup)

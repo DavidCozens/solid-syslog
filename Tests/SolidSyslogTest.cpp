@@ -150,7 +150,6 @@ static const int TIMESTAMP_MICROSECOND_LENGTH  = 7;
 static const int TIMESTAMP_OFFSET_OFFSET       = 26;
 // clang-format on
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage) -- macros preserve __FILE__/__LINE__ in test failure output
 #define CHECK_PRIVAL(expected) \
     STRNCMP_EQUAL(expected, SyslogField(lastMessage(), SYSLOG_FIELD_HEADER).c_str(), strlen(expected))
 
@@ -218,7 +217,6 @@ static const int TIMESTAMP_OFFSET_OFFSET       = 26;
 
 #define CHECK_MSGID(expected) STRCMP_EQUAL(expected, SyslogField(lastMessage(), SYSLOG_FIELD_MSGID).c_str())
 
-// NOLINTEND(cppcoreguidelines-macro-usage)
 
 static const char SD_SPY_TEXT[] = "[spy]";
 static const char SD_SPY2_TEXT[] = "[spy2]";
@@ -1776,7 +1774,6 @@ TEST(SolidSyslogLifecycle, DestroyWithUnknownHandleReportsWarning)
     /* Any non-pool address is "unknown" to IndexFromHandle. Cast a stack
        byte's address — its value never gets dereferenced, only compared. */
     char stackByte = 0;
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) -- forging an "unknown" handle to drive the bad-setup path
     auto* notAHandle = reinterpret_cast<struct SolidSyslog*>(&stackByte);
     ErrorHandlerFake_Install(nullptr);
 

@@ -14,7 +14,6 @@
 
 using namespace CososoTesting;
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while) -- macros preserve __FILE__/__LINE__ at the call site
 
 // Asserts handle is non-null and not one of the slots in pool.
 #define CHECK_IS_FALLBACK(handle, pool)                                                \
@@ -28,7 +27,6 @@ using namespace CososoTesting;
         }                                                                              \
     } while (0)
 
-// NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 
 // clang-format off
 TEST_GROUP(SolidSyslogPool)
@@ -148,7 +146,6 @@ TEST(SolidSyslogPool, DestroyOfUnknownHandleDoesNotLock)
     ConfigLockFake_Install();
     /* Any non-pool address — cast a stack byte, value never dereferenced. */
     char stackByte = 0;
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) -- forging an "unknown" handle to drive the bad-setup path
     auto* stranger = reinterpret_cast<struct SolidSyslog*>(&stackByte);
 
     SolidSyslog_Destroy(stranger);
@@ -161,7 +158,6 @@ TEST(SolidSyslogPool, DestroyOfUnknownHandleReportsWarning)
 {
     ErrorHandlerFake_Install(nullptr);
     char stackByte = 0;
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) -- forging an "unknown" handle to drive the bad-setup path
     auto* stranger = reinterpret_cast<struct SolidSyslog*>(&stackByte);
 
     SolidSyslog_Destroy(stranger);

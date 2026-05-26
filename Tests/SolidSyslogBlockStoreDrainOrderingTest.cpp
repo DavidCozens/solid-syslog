@@ -54,7 +54,6 @@ struct SenderSpy
 
 static bool SenderSpy_Send(struct SolidSyslogSender* self, const void* buffer, size_t size)
 {
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) -- vtable downcast; SenderSpy embeds SolidSyslogSender as its first field
     auto* spy = reinterpret_cast<SenderSpy*>(self);
     if (spy->outage)
     {

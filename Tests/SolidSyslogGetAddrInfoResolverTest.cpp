@@ -127,7 +127,6 @@ TEST(SolidSyslogGetAddrInfoResolver, FreesAddrInfoOnSuccess)
     CALLED_FAKE(SocketFake_FreeAddrInfo, ONCE);
 }
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while) -- macros preserve __FILE__/__LINE__ at the call site
 #define CHECK_IS_FALLBACK(handle, pool)                                                \
     do                                                                                 \
     {                                                                                  \
@@ -139,7 +138,6 @@ TEST(SolidSyslogGetAddrInfoResolver, FreesAddrInfoOnSuccess)
         }                                                                              \
     } while (0)
 
-// NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 
 // clang-format off
 TEST_GROUP(SolidSyslogGetAddrInfoResolverPool)
