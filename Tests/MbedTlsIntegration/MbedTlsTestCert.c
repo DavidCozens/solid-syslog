@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <mbedtls/asn1.h>
 #include <mbedtls/ctr_drbg.h>
-#include <mbedtls/oid.h>
 #include <mbedtls/pk.h>
 #include <mbedtls/rsa.h>
 #include <mbedtls/x509.h>
@@ -12,6 +11,7 @@
 #include <string.h>
 
 #include "SafeString.h"
+#include "mbedtls/md.h"
 
 enum
 {

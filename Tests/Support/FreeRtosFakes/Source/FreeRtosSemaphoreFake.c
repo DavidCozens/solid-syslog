@@ -1,5 +1,11 @@
 #include "FreeRtosSemaphoreFake.h"
 
+#include <stdint.h>
+
+#include "FreeRTOS.h"
+#include "queue.h"
+#include "semphr.h"
+
 static unsigned createMutexStaticCallCount = 0;
 static unsigned semaphoreTakeCallCount = 0;
 static unsigned semaphoreGiveCallCount = 0;

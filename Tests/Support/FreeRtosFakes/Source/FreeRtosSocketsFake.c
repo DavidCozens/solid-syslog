@@ -2,6 +2,8 @@
 
 #include "FreeRtosSocketsFake.h"
 
+#include "FreeRTOS.h"
+
 static unsigned socketCallCount = 0;
 static BaseType_t lastSocketDomain = 0;
 static BaseType_t lastSocketType = 0;

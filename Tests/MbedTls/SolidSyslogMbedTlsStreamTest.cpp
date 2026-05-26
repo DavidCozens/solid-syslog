@@ -1,9 +1,12 @@
 #include "CppUTest/TestHarness.h"
+#include "mbedtls/pk.h"
+#include "mbedtls/x509_crt.h"
 
 extern "C"
 {
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/ssl.h>
+#include <stdint.h>
 
 #include "ErrorHandlerFake.h"
 #include "MbedTlsFake.h"
@@ -12,7 +15,6 @@ extern "C"
 #include "SolidSyslogPrival.h"
 #include "AddressFake.h"
 #include "SolidSyslogStream.h"
-#include "SolidSyslogStreamDefinition.h"
 #include "SolidSyslogTunables.h"
 #include "StreamFake.h"
 }
@@ -144,6 +146,7 @@ TEST_GROUP(SolidSyslogMbedTlsStream)
 // clang-format on
 
 TEST(SolidSyslogMbedTlsStream, OpenDelegatesToInjectedTransport)
+
 {
     SolidSyslogStream_Open(handle, addr);
 
@@ -152,6 +155,7 @@ TEST(SolidSyslogMbedTlsStream, OpenDelegatesToInjectedTransport)
 }
 
 TEST(SolidSyslogMbedTlsStream, CreateInitialisesSslConfigForSafeFree)
+
 {
     /* Init happens eagerly in Create (via MbedTlsStream_Initialise) so the
      * symmetric *_free in Close is always safe — whether Open was reached,
@@ -160,6 +164,7 @@ TEST(SolidSyslogMbedTlsStream, CreateInitialisesSslConfigForSafeFree)
 }
 
 TEST(SolidSyslogMbedTlsStream, OpenAppliesClientStreamDefaultsToSslConfig)
+
 {
     SolidSyslogStream_Open(handle, addr);
 
@@ -171,12 +176,14 @@ TEST(SolidSyslogMbedTlsStream, OpenAppliesClientStreamDefaultsToSslConfig)
 }
 
 TEST(SolidSyslogMbedTlsStream, CreateInitialisesSslContextForSafeFree)
+
 {
     /* Same eager-init invariant as the SslConfig case above. */
     LONGS_EQUAL(1, MbedTlsFake_SslInitCallCount());
 }
 
 TEST(SolidSyslogMbedTlsStream, OpenBindsContextToConfig)
+
 {
     SolidSyslogStream_Open(handle, addr);
 
@@ -186,6 +193,7 @@ TEST(SolidSyslogMbedTlsStream, OpenBindsContextToConfig)
 }
 
 TEST(SolidSyslogMbedTlsStream, OpenWiresBioWithNonNullSendRecvAndNullRecvTimeout)
+
 {
     /* mbedTLS's set_bio takes both a recv and a recv_timeout callback;
      * we install the former (non-blocking would-block via WANT_READ) and
@@ -202,6 +210,7 @@ TEST(SolidSyslogMbedTlsStream, OpenWiresBioWithNonNullSendRecvAndNullRecvTimeout
 }
 
 TEST(SolidSyslogMbedTlsStream, OpenDrivesHandshakeOnTheSslContext)
+
 {
     SolidSyslogStream_Open(handle, addr);
 
@@ -210,6 +219,7 @@ TEST(SolidSyslogMbedTlsStream, OpenDrivesHandshakeOnTheSslContext)
 }
 
 TEST(SolidSyslogMbedTlsStream, OpenReturnsTrueWhenHandshakeSucceeds)
+
 {
     MbedTlsFake_SetSslHandshakeReturn(0);
 
@@ -217,6 +227,7 @@ TEST(SolidSyslogMbedTlsStream, OpenReturnsTrueWhenHandshakeSucceeds)
 }
 
 TEST(SolidSyslogMbedTlsStream, OpenReturnsFalseWhenHandshakeFails)
+
 {
     MbedTlsFake_SetSslHandshakeReturn(-1);
 
@@ -232,6 +243,7 @@ TEST(SolidSyslogMbedTlsStream, OpenReturnsFalseWhenHandshakeFails)
  * ------------------------------------------------------------------------- */
 
 TEST(SolidSyslogMbedTlsStream, OpenRetriesHandshakeOnWantRead)
+
 {
     ArrangeHandshakeRetryThenSucceed(MBEDTLS_ERR_SSL_WANT_READ);
 
@@ -240,6 +252,7 @@ TEST(SolidSyslogMbedTlsStream, OpenRetriesHandshakeOnWantRead)
 }
 
 TEST(SolidSyslogMbedTlsStream, OpenSleepsBetweenHandshakeRetries)
+
 {
     ArrangeHandshakeRetryThenSucceed(MBEDTLS_ERR_SSL_WANT_READ);
 
@@ -248,6 +261,7 @@ TEST(SolidSyslogMbedTlsStream, OpenSleepsBetweenHandshakeRetries)
 }
 
 TEST(SolidSyslogMbedTlsStream, OpenRetriesHandshakeOnWantWrite)
+
 {
     /* WANT_WRITE arises when mbedTLS needs to send (e.g. ClientFinished
      * under non-blocking transport with a temporarily-full send buffer).
@@ -259,6 +273,7 @@ TEST(SolidSyslogMbedTlsStream, OpenRetriesHandshakeOnWantWrite)
 }
 
 TEST(SolidSyslogMbedTlsStream, OpenClosesTransportAndFreesSslStateWhenHandshakeBudgetExhausts)
+
 {
     /* mbedtls_ssl_handshake always returns WANT_READ — handshake never makes
      * progress, so the bounded budget should expire and Open returns false. */
@@ -269,6 +284,7 @@ TEST(SolidSyslogMbedTlsStream, OpenClosesTransportAndFreesSslStateWhenHandshakeB
 }
 
 TEST(SolidSyslogMbedTlsStream, OpenInvokesConfiguredHandshakeTimeoutGetter)
+
 {
     RecreateHandleWithFakeHandshakeGetter();
     SolidSyslogStream_Open(handle, addr);
@@ -277,6 +293,7 @@ TEST(SolidSyslogMbedTlsStream, OpenInvokesConfiguredHandshakeTimeoutGetter)
 }
 
 TEST(SolidSyslogMbedTlsStream, OpenUsesGetterReturnValueAsHandshakeBudget)
+
 {
     /* 5 ms budget against the 1 ms poll interval → loop should sleep 5 times
        before declaring HANDSHAKE_TIMEOUT and unwinding. */
@@ -290,6 +307,7 @@ TEST(SolidSyslogMbedTlsStream, OpenUsesGetterReturnValueAsHandshakeBudget)
 }
 
 TEST(SolidSyslogMbedTlsStream, GetterReceivesNullContextWhenContextNotConfigured)
+
 {
     RecreateHandleWithFakeHandshakeGetter();
     SolidSyslogStream_Open(handle, addr);
@@ -298,6 +316,7 @@ TEST(SolidSyslogMbedTlsStream, GetterReceivesNullContextWhenContextNotConfigured
 }
 
 TEST(SolidSyslogMbedTlsStream, SecondOpenAfterFailedFirstOpenSucceeds)
+
 {
     /* The recovery contract that the per-failure-point unwinds enable: once
      * Open's failure tail Closes the transport and frees the SSL state, the
@@ -315,6 +334,7 @@ TEST(SolidSyslogMbedTlsStream, SecondOpenAfterFailedFirstOpenSucceeds)
 }
 
 TEST(SolidSyslogMbedTlsStream, OpenClosesTransportAndFreesSslStateWhenHandshakeFailsHard)
+
 {
     /* Non-WANT error (e.g. a verify/connection failure) is fail-fast — no
      * retry budget burn, no Sleep. */
@@ -334,6 +354,7 @@ TEST(SolidSyslogMbedTlsStream, OpenClosesTransportAndFreesSslStateWhenHandshakeF
  * ------------------------------------------------------------------------- */
 
 TEST(SolidSyslogMbedTlsStream, OpenClosesTransportAndFreesSslStateWhenSslConfigDefaultsFails)
+
 {
     MbedTlsFake_SetSslConfigDefaultsReturn(-1);
 
@@ -342,6 +363,7 @@ TEST(SolidSyslogMbedTlsStream, OpenClosesTransportAndFreesSslStateWhenSslConfigD
 }
 
 TEST(SolidSyslogMbedTlsStream, OpenClosesTransportAndFreesSslStateWhenSslSetupFails)
+
 {
     MbedTlsFake_SetSslSetupReturn(-1);
 
@@ -350,6 +372,7 @@ TEST(SolidSyslogMbedTlsStream, OpenClosesTransportAndFreesSslStateWhenSslSetupFa
 }
 
 TEST(SolidSyslogMbedTlsStream, OpenClosesTransportAndFreesSslStateWhenSetHostnameFails)
+
 {
     /* ServerName must be set for ConfigureExpectedHostname to invoke
      * mbedtls_ssl_set_hostname — otherwise the helper short-circuits to true. */
@@ -362,6 +385,7 @@ TEST(SolidSyslogMbedTlsStream, OpenClosesTransportAndFreesSslStateWhenSetHostnam
 }
 
 TEST(SolidSyslogMbedTlsStream, SendForwardsBufferToSslWrite)
+
 {
     const unsigned char payload[] = {0x10, 0x20, 0x30};
 
@@ -373,6 +397,7 @@ TEST(SolidSyslogMbedTlsStream, SendForwardsBufferToSslWrite)
 }
 
 TEST(SolidSyslogMbedTlsStream, SendReturnsTrueWhenSslWriteWritesAllBytes)
+
 {
     const unsigned char payload[] = {0x10, 0x20, 0x30};
     MbedTlsFake_SetSslWriteReturn((int) sizeof(payload));
@@ -381,6 +406,7 @@ TEST(SolidSyslogMbedTlsStream, SendReturnsTrueWhenSslWriteWritesAllBytes)
 }
 
 TEST(SolidSyslogMbedTlsStream, SendReturnsFalseWhenSslWriteWritesPartial)
+
 {
     const unsigned char payload[] = {0x10, 0x20, 0x30};
     MbedTlsFake_SetSslWriteReturn(1);
@@ -389,6 +415,7 @@ TEST(SolidSyslogMbedTlsStream, SendReturnsFalseWhenSslWriteWritesPartial)
 }
 
 TEST(SolidSyslogMbedTlsStream, SendReturnsFalseWhenSslWriteFails)
+
 {
     const unsigned char payload[] = {0x10, 0x20, 0x30};
     MbedTlsFake_SetSslWriteReturn(-1);
@@ -397,6 +424,7 @@ TEST(SolidSyslogMbedTlsStream, SendReturnsFalseWhenSslWriteFails)
 }
 
 TEST(SolidSyslogMbedTlsStream, SendClosesSslAndTransportOnWriteFailure)
+
 {
     /* Fail-fast: a TLS-level write failure means the session state is
      * unrecoverable. Mirror the OpenSSL TlsStream contract — close internally
@@ -411,6 +439,7 @@ TEST(SolidSyslogMbedTlsStream, SendClosesSslAndTransportOnWriteFailure)
 }
 
 TEST(SolidSyslogMbedTlsStream, SendClosesSslAndTransportOnShortWrite)
+
 {
     /* mbedtls_ssl_write returning fewer bytes than requested is treated the
      * same as outright failure — the application boundary requires
@@ -425,6 +454,7 @@ TEST(SolidSyslogMbedTlsStream, SendClosesSslAndTransportOnShortWrite)
 }
 
 TEST(SolidSyslogMbedTlsStream, ReadForwardsBufferToSslRead)
+
 {
     unsigned char buffer[8];
     MbedTlsFake_SetSslReadReturn(3);
@@ -437,6 +467,7 @@ TEST(SolidSyslogMbedTlsStream, ReadForwardsBufferToSslRead)
 }
 
 TEST(SolidSyslogMbedTlsStream, ReadReturnsByteCountWhenSslReadReturnsPositive)
+
 {
     unsigned char buffer[8];
     MbedTlsFake_SetSslReadReturn(5);
@@ -445,6 +476,7 @@ TEST(SolidSyslogMbedTlsStream, ReadReturnsByteCountWhenSslReadReturnsPositive)
 }
 
 TEST(SolidSyslogMbedTlsStream, ReadReturnsZeroOnWantRead)
+
 {
     unsigned char buffer[8];
     MbedTlsFake_SetSslReadReturn(MBEDTLS_ERR_SSL_WANT_READ);
@@ -453,6 +485,7 @@ TEST(SolidSyslogMbedTlsStream, ReadReturnsZeroOnWantRead)
 }
 
 TEST(SolidSyslogMbedTlsStream, ReadReturnsNegativeOnSslReadError)
+
 {
     unsigned char buffer[8];
     MbedTlsFake_SetSslReadReturn(-1);
@@ -461,6 +494,7 @@ TEST(SolidSyslogMbedTlsStream, ReadReturnsNegativeOnSslReadError)
 }
 
 TEST(SolidSyslogMbedTlsStream, ReadClosesSslAndTransportOnHardError)
+
 {
     /* Same fail-fast contract as Send: any read result other than positive
      * bytes or WANT_READ (e.g. peer close_notify, fatal alert, transport
@@ -475,6 +509,7 @@ TEST(SolidSyslogMbedTlsStream, ReadClosesSslAndTransportOnHardError)
 }
 
 TEST(SolidSyslogMbedTlsStream, ReadDoesNotCloseOnWantRead)
+
 {
     /* WANT_READ is steady-state would-block, not a connection failure —
      * leave the session intact so the caller can retry. */
@@ -488,6 +523,7 @@ TEST(SolidSyslogMbedTlsStream, ReadDoesNotCloseOnWantRead)
 }
 
 TEST(SolidSyslogMbedTlsStream, CloseAfterInternalCloseFromSendFailureDoesNotDoubleFree)
+
 {
     /* Send and Read may close internally on failure; the subsequent Close
      * from the StreamSender reconnect path or Destroy must not crash or
@@ -506,6 +542,7 @@ TEST(SolidSyslogMbedTlsStream, CloseAfterInternalCloseFromSendFailureDoesNotDoub
 }
 
 TEST(SolidSyslogMbedTlsStream, CloseSendsSslCloseNotifyOnTheSslContextFromOpen)
+
 {
     SolidSyslogStream_Open(handle, addr);
 
@@ -516,6 +553,7 @@ TEST(SolidSyslogMbedTlsStream, CloseSendsSslCloseNotifyOnTheSslContextFromOpen)
 }
 
 TEST(SolidSyslogMbedTlsStream, CloseFreesSslContextAndSslConfigFromOpen)
+
 {
     SolidSyslogStream_Open(handle, addr);
 
@@ -528,6 +566,7 @@ TEST(SolidSyslogMbedTlsStream, CloseFreesSslContextAndSslConfigFromOpen)
 }
 
 TEST(SolidSyslogMbedTlsStream, CloseDelegatesToInjectedTransport)
+
 {
     SolidSyslogStream_Close(handle);
 
@@ -535,6 +574,7 @@ TEST(SolidSyslogMbedTlsStream, CloseDelegatesToInjectedTransport)
 }
 
 TEST(SolidSyslogMbedTlsStream, BioSendCallbackForwardsBufferToTransport)
+
 {
     SolidSyslogStream_Open(handle, addr);
     auto* bioSend = MbedTlsFake_LastSslSetBioSendCallback();
@@ -550,6 +590,7 @@ TEST(SolidSyslogMbedTlsStream, BioSendCallbackForwardsBufferToTransport)
 }
 
 TEST(SolidSyslogMbedTlsStream, BioRecvCallbackForwardsBufferToTransport)
+
 {
     SolidSyslogStream_Open(handle, addr);
     auto* bioRecv = MbedTlsFake_LastSslSetBioRecvCallback();
@@ -566,6 +607,7 @@ TEST(SolidSyslogMbedTlsStream, BioRecvCallbackForwardsBufferToTransport)
 }
 
 TEST(SolidSyslogMbedTlsStream, BioRecvReturnsWantReadWhenTransportWouldBlock)
+
 {
     /* Stream contract: transport Read returns 0 to signal would-block. mbedTLS
      * needs MBEDTLS_ERR_SSL_WANT_READ to drive its retry loop; any other
@@ -583,6 +625,7 @@ TEST(SolidSyslogMbedTlsStream, BioRecvReturnsWantReadWhenTransportWouldBlock)
 }
 
 TEST(SolidSyslogMbedTlsStream, BioRecvReturnsFatalWhenTransportFails)
+
 {
     /* Stream contract: negative is fatal. mbedTLS treats any negative other
      * than its own WANT_* sentinels as a transport error and aborts. */
@@ -599,6 +642,7 @@ TEST(SolidSyslogMbedTlsStream, BioRecvReturnsFatalWhenTransportFails)
 }
 
 TEST(SolidSyslogMbedTlsStream, OpenSetsAuthmodeRequired)
+
 {
     SolidSyslogStream_Open(handle, addr);
 
@@ -608,6 +652,7 @@ TEST(SolidSyslogMbedTlsStream, OpenSetsAuthmodeRequired)
 }
 
 TEST(SolidSyslogMbedTlsStream, OpenWiresCaChainFromConfigAndNullCrl)
+
 {
     /* Use a non-null marker pointer; the fake captures it without dereferencing. */
     static mbedtls_x509_crt caChainMarker;
@@ -622,6 +667,7 @@ TEST(SolidSyslogMbedTlsStream, OpenWiresCaChainFromConfigAndNullCrl)
 }
 
 TEST(SolidSyslogMbedTlsStream, OpenWiresRngFromConfigUsingCtrDrbgRandom)
+
 {
     static mbedtls_ctr_drbg_context rngMarker;
     config.Rng = &rngMarker;
@@ -635,6 +681,7 @@ TEST(SolidSyslogMbedTlsStream, OpenWiresRngFromConfigUsingCtrDrbgRandom)
 }
 
 TEST(SolidSyslogMbedTlsStream, OpenSetsHostnameWhenServerNameProvided)
+
 {
     config.ServerName = "syslog.example.com";
     ReCreateHandleWithUpdatedConfig();
@@ -646,6 +693,7 @@ TEST(SolidSyslogMbedTlsStream, OpenSetsHostnameWhenServerNameProvided)
 }
 
 TEST(SolidSyslogMbedTlsStream, OpenSkipsHostnameWhenServerNameIsNull)
+
 {
     /* setup() left config.ServerName at NULL. */
     SolidSyslogStream_Open(handle, addr);
@@ -661,6 +709,7 @@ TEST(SolidSyslogMbedTlsStream, OpenSkipsHostnameWhenServerNameIsNull)
  * ------------------------------------------------------------------------- */
 
 TEST(SolidSyslogMbedTlsStream, OpenWiresOwnCertWhenClientCertAndKeyProvided)
+
 {
     static mbedtls_x509_crt clientCertMarker;
     static mbedtls_pk_context clientKeyMarker;
@@ -676,6 +725,7 @@ TEST(SolidSyslogMbedTlsStream, OpenWiresOwnCertWhenClientCertAndKeyProvided)
 }
 
 TEST(SolidSyslogMbedTlsStream, OpenSkipsOwnCertWhenClientCertChainIsNull)
+
 {
     /* Key provided, cert NULL — caller hasn't fully opted in to mTLS, so
      * the adapter must not tell mbedTLS anything. setup() leaves
@@ -689,6 +739,7 @@ TEST(SolidSyslogMbedTlsStream, OpenSkipsOwnCertWhenClientCertChainIsNull)
 }
 
 TEST(SolidSyslogMbedTlsStream, OpenSkipsOwnCertWhenClientKeyIsNull)
+
 {
     /* Cert provided, key NULL — still incomplete; same skip. */
     static mbedtls_x509_crt clientCertMarker;

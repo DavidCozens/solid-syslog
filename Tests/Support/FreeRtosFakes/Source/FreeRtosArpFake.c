@@ -1,6 +1,7 @@
 #include "FreeRtosArpFake.h"
 
 #include "FreeRTOS_ARP.h"
+#include "FreeRTOS.h"
 
 static unsigned isIpInArpCacheCallCount = 0;
 static uint32_t lastIsIpInArpCacheArg = 0;

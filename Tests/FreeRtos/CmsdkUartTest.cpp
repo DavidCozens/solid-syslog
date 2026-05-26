@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 #include "TestUtils.h"
 #include "CppUTest/TestHarness.h"
 
@@ -21,33 +23,39 @@ TEST_GROUP(CmsdkUart)
 // clang-format on
 
 TEST(CmsdkUart, InitWritesBaudDivisor)
+
 {
     LONGS_EQUAL(16, CmsdkUartFake_GetBaudDiv());
 }
 
 TEST(CmsdkUart, InitEnablesTransmitter)
+
 {
     LONGS_EQUAL(0x01, CmsdkUartFake_GetCtrl() & 0x01);
 }
 
 TEST(CmsdkUart, InitEnablesReceiver)
+
 {
     LONGS_EQUAL(0x02, CmsdkUartFake_GetCtrl() & 0x02);
 }
 
 TEST(CmsdkUart, PutCharWritesByteToDataRegister)
+
 {
     CmsdkUart_PutChar('A');
     LONGS_EQUAL('A', CmsdkUartFake_GetData());
 }
 
 TEST(CmsdkUart, PutCharWritesTheGivenByte)
+
 {
     CmsdkUart_PutChar('B');
     LONGS_EQUAL('B', CmsdkUartFake_GetData());
 }
 
 TEST(CmsdkUart, PutCharSpinsForTxFullToClearBeforeWritingNextByte)
+
 {
     CmsdkUart_PutChar('A');
     CmsdkUart_PutChar('B');
@@ -56,6 +64,7 @@ TEST(CmsdkUart, PutCharSpinsForTxFullToClearBeforeWritingNextByte)
 }
 
 TEST(CmsdkUart, PutCharCallsSleepWhileSpinningForTxFull)
+
 {
     CmsdkUart_PutChar('A');
     CmsdkUart_PutChar('B');
@@ -63,6 +72,7 @@ TEST(CmsdkUart, PutCharCallsSleepWhileSpinningForTxFull)
 }
 
 TEST(CmsdkUart, PutCharWritesImmediatelyWhenTransmitterIsAlwaysReady)
+
 {
     CmsdkUartFake_SetReadsBeforeTxReady(0);
     CmsdkUart_PutChar('X');
@@ -72,12 +82,14 @@ TEST(CmsdkUart, PutCharWritesImmediatelyWhenTransmitterIsAlwaysReady)
 }
 
 TEST(CmsdkUart, WriteOfSingleByteEmitsThatByte)
+
 {
     CmsdkUart_Write("X", 1);
     LONGS_EQUAL('X', CmsdkUartFake_GetData());
 }
 
 TEST(CmsdkUart, WriteOfMultipleBytesEmitsAllByteWithoutOverrun)
+
 {
     CmsdkUart_Write("AB", 2);
     LONGS_EQUAL('B', CmsdkUartFake_GetData());
@@ -85,12 +97,14 @@ TEST(CmsdkUart, WriteOfMultipleBytesEmitsAllByteWithoutOverrun)
 }
 
 TEST(CmsdkUart, GetCharReturnsByteFromDataRegister)
+
 {
     CmsdkUartFake_SetReceivedByte('Q');
     LONGS_EQUAL('Q', CmsdkUart_GetChar());
 }
 
 TEST(CmsdkUart, GetCharSpinsForRxFullToBecomeSetBeforeReadingDataRegister)
+
 {
     CmsdkUartFake_SetReadsBeforeRxReady(2);
     CmsdkUartFake_SetReceivedByte('Z');
@@ -98,6 +112,7 @@ TEST(CmsdkUart, GetCharSpinsForRxFullToBecomeSetBeforeReadingDataRegister)
 }
 
 TEST(CmsdkUart, GetCharCallsSleepWhileSpinningForRxFull)
+
 {
     CmsdkUartFake_SetReadsBeforeRxReady(2);
     CmsdkUartFake_SetReceivedByte('Z');
@@ -106,6 +121,7 @@ TEST(CmsdkUart, GetCharCallsSleepWhileSpinningForRxFull)
 }
 
 TEST(CmsdkUart, GetCharReturnsImmediatelyWhenReceiverHasByte)
+
 {
     CmsdkUartFake_SetReadsBeforeRxReady(0);
     CmsdkUartFake_SetReceivedByte('X');
@@ -114,6 +130,7 @@ TEST(CmsdkUart, GetCharReturnsImmediatelyWhenReceiverHasByte)
 }
 
 TEST(CmsdkUart, GetCharSpinsAfterReArmFromImmediateReadyToDelayedReady)
+
 {
     CmsdkUartFake_SetReadsBeforeRxReady(0);
     CmsdkUartFake_SetReceivedByte('A');

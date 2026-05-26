@@ -11,12 +11,14 @@
 #include "FreeRTOS_ARP.h"
 #include "FreeRTOS_Sockets.h"
 #include "task.h"
-
 #include "SolidSyslogDatagramDefinition.h"
 #include "SolidSyslogPlusTcpAddressPrivate.h"
 #include "SolidSyslogPlusTcpDatagramPrivate.h"
 #include "SolidSyslogNullDatagram.h"
 #include "SolidSyslogUdpPayload.h"
+#include "SolidSyslogDatagram.h"
+
+struct SolidSyslogAddress;
 
 static bool PlusTcpDatagram_Open(struct SolidSyslogDatagram* base);
 static enum SolidSyslogDatagramSendResult PlusTcpDatagram_SendTo(

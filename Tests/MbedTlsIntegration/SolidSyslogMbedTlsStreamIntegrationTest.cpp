@@ -4,11 +4,9 @@ extern "C"
 {
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/entropy.h>
-#include <mbedtls/ssl.h>
 #include <mbedtls/version.h>
 #include <sys/socket.h>
 #include <sys/time.h>
-#include <unistd.h>
 
 #include "MbedTlsTestCert.h"
 #include "MbedTlsTestServer.h"
@@ -154,6 +152,7 @@ TEST_GROUP(SolidSyslogMbedTlsStreamIntegration)
 // clang-format on
 
 TEST(SolidSyslogMbedTlsStreamIntegration, HandshakeSucceedsWhenServerCertSignedByTrustedCaAndHostnameMatches)
+
 {
     struct SolidSyslogStream* transport = StartServerWithCert(&serverCert);
     struct SolidSyslogMbedTlsStreamConfig config = BuildBaseConfig(transport);
@@ -169,6 +168,7 @@ TEST(SolidSyslogMbedTlsStreamIntegration, HandshakeSucceedsWhenServerCertSignedB
 }
 
 TEST(SolidSyslogMbedTlsStreamIntegration, HandshakeFailsWhenServerCertSignedByUntrustedCa)
+
 {
     /* Trust an unrelated CA: we hand the *client* a different CA chain than
      * the one that signed the server's cert, so the chain validation fails. */
@@ -191,6 +191,7 @@ TEST(SolidSyslogMbedTlsStreamIntegration, HandshakeFailsWhenServerCertSignedByUn
 }
 
 TEST(SolidSyslogMbedTlsStreamIntegration, HandshakeFailsWhenServerNameDoesNotMatchCert)
+
 {
     struct SolidSyslogStream* transport = StartServerWithCert(&serverCert);
     struct SolidSyslogMbedTlsStreamConfig config = BuildBaseConfig(transport);
@@ -203,6 +204,7 @@ TEST(SolidSyslogMbedTlsStreamIntegration, HandshakeFailsWhenServerNameDoesNotMat
 }
 
 TEST(SolidSyslogMbedTlsStreamIntegration, MutualTlsHandshakeSucceedsWithClientCertSignedByTrustedCa)
+
 {
     /* Build per-test mTLS material: a client CA + a leaf cert signed by it.
      * Server is told to require + verify client certs against this CA. */
@@ -233,6 +235,7 @@ TEST(SolidSyslogMbedTlsStreamIntegration, MutualTlsHandshakeSucceedsWithClientCe
 }
 
 TEST(SolidSyslogMbedTlsStreamIntegration, MutualTlsHandshakeRejectedWhenClientSendsNoCert)
+
 {
     /* Server requires a client cert but the integrator hasn't opted in to
      * mTLS — ClientCertChain / ClientKey are NULL. Server-side verify must
@@ -255,6 +258,7 @@ TEST(SolidSyslogMbedTlsStreamIntegration, MutualTlsHandshakeRejectedWhenClientSe
 }
 
 TEST(SolidSyslogMbedTlsStreamIntegration, MutualTlsHandshakeRejectedWhenClientCertSignedByUntrustedCa)
+
 {
     /* Client cert is signed by a CA the server doesn't trust. Server-side
      * chain validation fails and Open returns false on the client. */
@@ -291,6 +295,7 @@ TEST(SolidSyslogMbedTlsStreamIntegration, MutualTlsHandshakeRejectedWhenClientCe
 }
 
 TEST(SolidSyslogMbedTlsStreamIntegration, BinaryLinksAgainstRealLibMbedTls)
+
 {
     /* mbedtls_version_get_number() is a constant, side-effect-free symbol
      * present in every mbedTLS build — a successful link plus a return

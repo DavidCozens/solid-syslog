@@ -2,9 +2,7 @@
 #define FREERTOSTASKFAKE_H
 
 #include "ExternC.h"
-
 #include "FreeRTOS.h"
-#include "task.h"
 
 EXTERN_C_BEGIN
 

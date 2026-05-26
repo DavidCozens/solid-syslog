@@ -1,5 +1,6 @@
 #include "TestUtils.h"
 #include "CppUTest/TestHarness.h"
+#include "lwip/ip4_addr.h"
 
 using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
     // macros
@@ -17,7 +18,6 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 #include "SolidSyslogResolverDefinition.h"
 #include "SolidSyslogTransport.h"
 #include "SolidSyslogTunables.h"
-
 #include "lwip/ip_addr.h"
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while) -- macros preserve __FILE__/__LINE__ at the call site
@@ -77,16 +77,19 @@ TEST_GROUP(SolidSyslogLwipRawResolver)
 // clang-format on
 
 TEST(SolidSyslogLwipRawResolver, CreateSucceeds)
+
 {
     CHECK(resolver != nullptr);
 }
 
 TEST(SolidSyslogLwipRawResolver, ResolveReturnsTrueOnLiteralIpv4)
+
 {
     CHECK_TRUE(Resolve());
 }
 
 TEST(SolidSyslogLwipRawResolver, ResolvePopulatesIpFromLiteralIpv4)
+
 {
     Resolve("127.0.0.1");
 
@@ -99,6 +102,7 @@ TEST(SolidSyslogLwipRawResolver, ResolvePopulatesIpFromLiteralIpv4)
 }
 
 TEST(SolidSyslogLwipRawResolver, ResolvePopulatesPortFromArg)
+
 {
     Resolve(TEST_HOST, 9999);
 
@@ -106,6 +110,7 @@ TEST(SolidSyslogLwipRawResolver, ResolvePopulatesPortFromArg)
 }
 
 TEST(SolidSyslogLwipRawResolver, ResolveReturnsFalseOnNonLiteralHost)
+
 {
     // Locks in the no-DNS contract: a hostname that isn't a literal dotted-quad
     // is rejected. Real DNS would land as the future SolidSyslogLwipRawDnsResolver
@@ -114,6 +119,7 @@ TEST(SolidSyslogLwipRawResolver, ResolveReturnsFalseOnNonLiteralHost)
 }
 
 TEST(SolidSyslogLwipRawResolver, ResolveReturnsFalseWhenIpaddrAtonRejectsHost)
+
 {
     // We defer to lwIP's ipaddr_aton — whatever the parser accepts, we accept;
     // whatever it rejects, we reject. We do not enforce any specific shape on
@@ -160,6 +166,7 @@ TEST_GROUP(SolidSyslogLwipRawResolverPool)
 // clang-format on
 
 TEST(SolidSyslogLwipRawResolverPool, FillingPoolThenOverflowReturnsDistinctFallback)
+
 {
     FillPool();
 
@@ -169,6 +176,7 @@ TEST(SolidSyslogLwipRawResolverPool, FillingPoolThenOverflowReturnsDistinctFallb
 }
 
 TEST(SolidSyslogLwipRawResolverPool, ExhaustedCreateReportsError)
+
 {
     ErrorHandlerFake_Install(nullptr);
     FillPool();
@@ -179,6 +187,7 @@ TEST(SolidSyslogLwipRawResolverPool, ExhaustedCreateReportsError)
 }
 
 TEST(SolidSyslogLwipRawResolverPool, FallbackResolveReturnsFalse)
+
 {
     FillPool();
     overflow = SolidSyslogLwipRawResolver_Create();
@@ -190,6 +199,7 @@ TEST(SolidSyslogLwipRawResolverPool, FallbackResolveReturnsFalse)
 }
 
 TEST(SolidSyslogLwipRawResolverPool, CreateAcquiresAndReleasesConfigLockOnFirstFreeSlot)
+
 {
     ConfigLockFake_Install();
 
@@ -200,6 +210,7 @@ TEST(SolidSyslogLwipRawResolverPool, CreateAcquiresAndReleasesConfigLockOnFirstF
 }
 
 TEST(SolidSyslogLwipRawResolverPool, CreateLocksOncePerSlotProbedWhenPoolIsFull)
+
 {
     FillPool();
     ConfigLockFake_Install();
@@ -211,6 +222,7 @@ TEST(SolidSyslogLwipRawResolverPool, CreateLocksOncePerSlotProbedWhenPoolIsFull)
 }
 
 TEST(SolidSyslogLwipRawResolverPool, DestroyOfPooledHandleLocksOnce)
+
 {
     pooled[0] = SolidSyslogLwipRawResolver_Create();
     ConfigLockFake_Install();
@@ -223,6 +235,7 @@ TEST(SolidSyslogLwipRawResolverPool, DestroyOfPooledHandleLocksOnce)
 }
 
 TEST(SolidSyslogLwipRawResolverPool, DestroyOfUnknownHandleDoesNotLock)
+
 {
     ConfigLockFake_Install();
     struct SolidSyslogResolver stranger = {};
@@ -234,6 +247,7 @@ TEST(SolidSyslogLwipRawResolverPool, DestroyOfUnknownHandleDoesNotLock)
 }
 
 TEST(SolidSyslogLwipRawResolverPool, DestroyOfUnknownHandleReportsWarning)
+
 {
     ErrorHandlerFake_Install(nullptr);
     struct SolidSyslogResolver stranger = {};
@@ -244,6 +258,7 @@ TEST(SolidSyslogLwipRawResolverPool, DestroyOfUnknownHandleReportsWarning)
 }
 
 TEST(SolidSyslogLwipRawResolverPool, DestroyOfStaleHandleReportsWarning)
+
 {
     pooled[0] = SolidSyslogLwipRawResolver_Create();
     SolidSyslogLwipRawResolver_Destroy(pooled[0]);
@@ -256,6 +271,7 @@ TEST(SolidSyslogLwipRawResolverPool, DestroyOfStaleHandleReportsWarning)
 }
 
 TEST(SolidSyslogLwipRawResolver, UdpTransportResolvesIdenticallyToTcp)
+
 {
     // Locks in that the literal-IPv4 resolver does not dispatch on transport —
     // a future reader must not add transport-typed pcb selection here.

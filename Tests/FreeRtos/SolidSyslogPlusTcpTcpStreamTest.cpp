@@ -1,3 +1,6 @@
+#include <stddef.h>
+#include <stdint.h>
+
 #include "TestUtils.h"
 #include "CppUTest/TestHarness.h"
 
@@ -14,11 +17,9 @@ using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-f
 #include "SolidSyslogStream.h"
 #include "SolidSyslogStreamDefinition.h"
 #include "SolidSyslogTunables.h"
-
 #include "FreeRtosArpFake.h"
 #include "FreeRtosSocketsFake.h"
 #include "FreeRtosTaskFake.h"
-
 #include "FreeRTOS.h"
 #include "FreeRTOS_IP.h"
 #include "FreeRTOS_Sockets.h"
@@ -134,11 +135,13 @@ TEST_GROUP(SolidSyslogPlusTcpTcpStream)
 // NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 
 TEST(SolidSyslogPlusTcpTcpStream, CreateReturnsNonNullStream)
+
 {
     CHECK(stream != nullptr);
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, OpenCreatesTcpSocket)
+
 {
     openStream();
     CALLED_FAKE(FreeRtosSocketsFake_Socket, ONCE);
@@ -148,17 +151,20 @@ TEST(SolidSyslogPlusTcpTcpStream, OpenCreatesTcpSocket)
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, OpenReturnsTrueOnSuccess)
+
 {
     CHECK_TRUE(SolidSyslogStream_Open(stream, addr));
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, OpenReturnsFalseWhenSocketFails)
+
 {
     FreeRtosSocketsFake_SetSocketFails(true);
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, OpenChecksIfDestinationIsInArpCache)
+
 {
     openStream();
     CALLED_FAKE(FreeRtosArpFake_IsIpInArpCache, ONCE);
@@ -166,6 +172,7 @@ TEST(SolidSyslogPlusTcpTcpStream, OpenChecksIfDestinationIsInArpCache)
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, OpenFiresArpProbeOnCacheMiss)
+
 {
     openStream();
     CALLED_FAKE(FreeRtosArpFake_OutputArpRequest, ONCE);
@@ -173,12 +180,14 @@ TEST(SolidSyslogPlusTcpTcpStream, OpenFiresArpProbeOnCacheMiss)
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, OpenYieldsAfterArpProbeOnCacheMiss)
+
 {
     openStream();
     CALLED_FAKE(FreeRtosTaskFake_VTaskDelay, ONCE);
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, OpenSkipsArpProbeAndYieldOnCacheHit)
+
 {
     FreeRtosArpFake_SetCacheHit(true);
     openStream();
@@ -187,18 +196,21 @@ TEST(SolidSyslogPlusTcpTcpStream, OpenSkipsArpProbeAndYieldOnCacheHit)
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, OpenSetsConnectTimeoutBeforeConnect)
+
 {
     openStream();
     LONGS_EQUAL(pdMS_TO_TICKS(SOLIDSYSLOG_TCP_CONNECT_TIMEOUT_MS), FreeRtosSocketsFake_SndTimeoAtConnect());
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, OpenSetsRecvTimeoutBeforeConnect)
+
 {
     openStream();
     LONGS_EQUAL(pdMS_TO_TICKS(SOLIDSYSLOG_TCP_CONNECT_TIMEOUT_MS), FreeRtosSocketsFake_RcvTimeoAtConnect());
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, OpenInvokesConfiguredConnectTimeoutGetter)
+
 {
     openStreamWithFakeGetter();
 
@@ -206,6 +218,7 @@ TEST(SolidSyslogPlusTcpTcpStream, OpenInvokesConfiguredConnectTimeoutGetter)
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, OpenUsesGetterReturnValueAsConnectTimeout)
+
 {
     FakeGetConnectTimeoutMs_ReturnValue = 1234U;
 
@@ -215,6 +228,7 @@ TEST(SolidSyslogPlusTcpTcpStream, OpenUsesGetterReturnValueAsConnectTimeout)
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, GetterReceivesNullContextWhenContextNotConfigured)
+
 {
     openStreamWithFakeGetter();
 
@@ -222,6 +236,7 @@ TEST(SolidSyslogPlusTcpTcpStream, GetterReceivesNullContextWhenContextNotConfigu
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, OpenCallsConnectWithSocketAndAddress)
+
 {
     openStream();
     CALLED_FAKE(FreeRtosSocketsFake_Connect, ONCE);
@@ -231,12 +246,14 @@ TEST(SolidSyslogPlusTcpTcpStream, OpenCallsConnectWithSocketAndAddress)
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, OpenClearsSendTimeoutAfterConnect)
+
 {
     openStream();
     LONGS_EQUAL(0, FreeRtosSocketsFake_LastSndTimeoSet());
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, OpenClearsRecvTimeoutAfterConnect)
+
 {
     openStream();
     LONGS_EQUAL(0, FreeRtosSocketsFake_LastRcvTimeoSet());
@@ -244,6 +261,7 @@ TEST(SolidSyslogPlusTcpTcpStream, OpenClearsRecvTimeoutAfterConnect)
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, OpenCallsSetsockoptWithReturnedSocketAndLevelZero)
+
 {
     openStream();
     POINTERS_EQUAL(FreeRtosSocketsFake_LastSocketReturned(), FreeRtosSocketsFake_LastSetsockoptSocket());
@@ -251,18 +269,21 @@ TEST(SolidSyslogPlusTcpTcpStream, OpenCallsSetsockoptWithReturnedSocketAndLevelZ
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, OpenPassesTickTypeSizedOptionLengthToSetsockopt)
+
 {
     openStream();
     LONGS_EQUAL(sizeof(TickType_t), FreeRtosSocketsFake_LastSetsockoptOptionLength());
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, OpenReturnsFalseOnConnectFailure)
+
 {
     FreeRtosSocketsFake_SetConnectFails(true);
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, OpenClosesSocketOnConnectFailure)
+
 {
     FreeRtosSocketsFake_SetConnectFails(true);
     openStream();
@@ -270,6 +291,7 @@ TEST(SolidSyslogPlusTcpTcpStream, OpenClosesSocketOnConnectFailure)
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, OpenIsIdempotent)
+
 {
     openStream();
     CHECK_TRUE(SolidSyslogStream_Open(stream, addr));
@@ -278,12 +300,14 @@ TEST(SolidSyslogPlusTcpTcpStream, OpenIsIdempotent)
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, SendFailsBeforeOpen)
+
 {
     CHECK_FALSE(SolidSyslogStream_Send(stream, "x", 1));
     CALLED_FAKE(FreeRtosSocketsFake_Send, NEVER);
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, SendCallsFreeRtosSendWithSocketBufferAndLength)
+
 {
     openStream();
     SolidSyslogStream_Send(stream, TEST_MESSAGE, TEST_MESSAGE_LEN);
@@ -295,12 +319,14 @@ TEST(SolidSyslogPlusTcpTcpStream, SendCallsFreeRtosSendWithSocketBufferAndLength
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, SendReturnsTrueOnFullWrite)
+
 {
     openStream();
     CHECK_TRUE(SolidSyslogStream_Send(stream, TEST_MESSAGE, TEST_MESSAGE_LEN));
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, SendReturnsFalseOnShortWrite)
+
 {
     openStream();
     FreeRtosSocketsFake_SetSendReturn(TEST_SHORT_WRITE_BYTES);
@@ -308,6 +334,7 @@ TEST(SolidSyslogPlusTcpTcpStream, SendReturnsFalseOnShortWrite)
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, SendDoesNotRetryAfterShortWrite)
+
 {
     openStream();
     FreeRtosSocketsFake_SetSendReturn(TEST_SHORT_WRITE_BYTES);
@@ -316,6 +343,7 @@ TEST(SolidSyslogPlusTcpTcpStream, SendDoesNotRetryAfterShortWrite)
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, SendClosesSocketOnShortWrite)
+
 {
     openStream();
     FreeRtosSocketsFake_SetSendReturn(TEST_SHORT_WRITE_BYTES);
@@ -324,6 +352,7 @@ TEST(SolidSyslogPlusTcpTcpStream, SendClosesSocketOnShortWrite)
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, SendReturnsFalseOnError)
+
 {
     openStream();
     FreeRtosSocketsFake_SetSendFails(true);
@@ -331,6 +360,7 @@ TEST(SolidSyslogPlusTcpTcpStream, SendReturnsFalseOnError)
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, SendClosesSocketOnError)
+
 {
     openStream();
     FreeRtosSocketsFake_SetSendFails(true);
@@ -339,12 +369,14 @@ TEST(SolidSyslogPlusTcpTcpStream, SendClosesSocketOnError)
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, ReadReturnsNegativeOneBeforeOpen)
+
 {
     LONGS_EQUAL(-1, readIntoBuffer());
     CALLED_FAKE(FreeRtosSocketsFake_Recv, NEVER);
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, ReadCallsFreeRtosRecvWithSocketBufferAndLength)
+
 {
     openStream();
     readIntoBuffer();
@@ -356,6 +388,7 @@ TEST(SolidSyslogPlusTcpTcpStream, ReadCallsFreeRtosRecvWithSocketBufferAndLength
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, ReadReturnsBytesOnSuccess)
+
 {
     openStream();
     FreeRtosSocketsFake_SetRecvReturn(TEST_READ_BYTES);
@@ -363,6 +396,7 @@ TEST(SolidSyslogPlusTcpTcpStream, ReadReturnsBytesOnSuccess)
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, ReadReturnsZeroWhenWouldBlock)
+
 {
     openStream();
     FreeRtosSocketsFake_SetRecvReturn(0);
@@ -370,6 +404,7 @@ TEST(SolidSyslogPlusTcpTcpStream, ReadReturnsZeroWhenWouldBlock)
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, ReadLeavesSocketOpenWhenWouldBlock)
+
 {
     openStream();
     FreeRtosSocketsFake_SetRecvReturn(0);
@@ -378,6 +413,7 @@ TEST(SolidSyslogPlusTcpTcpStream, ReadLeavesSocketOpenWhenWouldBlock)
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, ReadReturnsNegativeOneOnErrorAndClosesSocket)
+
 {
     openStream();
     FreeRtosSocketsFake_SetRecvFails(true);
@@ -386,12 +422,14 @@ TEST(SolidSyslogPlusTcpTcpStream, ReadReturnsNegativeOneOnErrorAndClosesSocket)
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, CloseWithoutOpenIsNoOp)
+
 {
     SolidSyslogStream_Close(stream);
     CALLED_FAKE(FreeRtosSocketsFake_Closesocket, NEVER);
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, CloseClosesOpenSocket)
+
 {
     openStream();
     SolidSyslogStream_Close(stream);
@@ -399,6 +437,7 @@ TEST(SolidSyslogPlusTcpTcpStream, CloseClosesOpenSocket)
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, CloseIsIdempotent)
+
 {
     openStream();
     SolidSyslogStream_Close(stream);
@@ -407,6 +446,7 @@ TEST(SolidSyslogPlusTcpTcpStream, CloseIsIdempotent)
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, DestroyClosesOpenSocket)
+
 {
     openStream();
     SolidSyslogPlusTcpTcpStream_Destroy(stream);
@@ -415,6 +455,7 @@ TEST(SolidSyslogPlusTcpTcpStream, DestroyClosesOpenSocket)
 }
 
 TEST(SolidSyslogPlusTcpTcpStream, DestroyAfterCloseDoesNotCloseAgain)
+
 {
     openStream();
     SolidSyslogStream_Close(stream);
@@ -464,6 +505,7 @@ TEST_GROUP(SolidSyslogPlusTcpTcpStreamPool)
 // clang-format on
 
 TEST(SolidSyslogPlusTcpTcpStreamPool, FillingPoolThenOverflowReturnsDistinctFallback)
+
 {
     FillPool();
 
@@ -473,6 +515,7 @@ TEST(SolidSyslogPlusTcpTcpStreamPool, FillingPoolThenOverflowReturnsDistinctFall
 }
 
 TEST(SolidSyslogPlusTcpTcpStreamPool, ExhaustedCreateReportsError)
+
 {
     ErrorHandlerFake_Install(nullptr);
     FillPool();
@@ -486,6 +529,7 @@ TEST(SolidSyslogPlusTcpTcpStreamPool, ExhaustedCreateReportsError)
 }
 
 TEST(SolidSyslogPlusTcpTcpStreamPool, FallbackVtableMethodsAreNoOps)
+
 {
     FillPool();
     overflow = SolidSyslogPlusTcpTcpStream_Create(nullptr);
@@ -509,6 +553,7 @@ TEST(SolidSyslogPlusTcpTcpStreamPool, FallbackVtableMethodsAreNoOps)
 }
 
 TEST(SolidSyslogPlusTcpTcpStreamPool, CreateAcquiresAndReleasesConfigLockOnFirstFreeSlot)
+
 {
     ConfigLockFake_Install();
 
@@ -519,6 +564,7 @@ TEST(SolidSyslogPlusTcpTcpStreamPool, CreateAcquiresAndReleasesConfigLockOnFirst
 }
 
 TEST(SolidSyslogPlusTcpTcpStreamPool, CreateLocksOncePerSlotProbedWhenPoolIsFull)
+
 {
     FillPool();
     ConfigLockFake_Install();
@@ -530,6 +576,7 @@ TEST(SolidSyslogPlusTcpTcpStreamPool, CreateLocksOncePerSlotProbedWhenPoolIsFull
 }
 
 TEST(SolidSyslogPlusTcpTcpStreamPool, DestroyOfPooledHandleLocksOnce)
+
 {
     pooled[0] = SolidSyslogPlusTcpTcpStream_Create(nullptr);
     ConfigLockFake_Install();
@@ -542,6 +589,7 @@ TEST(SolidSyslogPlusTcpTcpStreamPool, DestroyOfPooledHandleLocksOnce)
 }
 
 TEST(SolidSyslogPlusTcpTcpStreamPool, DestroyOfUnknownHandleDoesNotLock)
+
 {
     ConfigLockFake_Install();
     struct SolidSyslogStream stranger = {};
@@ -553,6 +601,7 @@ TEST(SolidSyslogPlusTcpTcpStreamPool, DestroyOfUnknownHandleDoesNotLock)
 }
 
 TEST(SolidSyslogPlusTcpTcpStreamPool, DestroyOfUnknownHandleReportsWarning)
+
 {
     ErrorHandlerFake_Install(nullptr);
     struct SolidSyslogStream stranger = {};
@@ -566,6 +615,7 @@ TEST(SolidSyslogPlusTcpTcpStreamPool, DestroyOfUnknownHandleReportsWarning)
 }
 
 TEST(SolidSyslogPlusTcpTcpStreamPool, DestroyOfStaleHandleReportsWarning)
+
 {
     pooled[0] = SolidSyslogPlusTcpTcpStream_Create(nullptr);
     SolidSyslogPlusTcpTcpStream_Destroy(pooled[0]);

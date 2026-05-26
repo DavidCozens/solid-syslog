@@ -1,7 +1,5 @@
 #include "CmsdkUartFake.h"
 
-#include <stddef.h>
-
 // The CMSDK UART register-offset and status-bit macros below mirror the
 // ARM CMSDK UART hardware datasheet exactly. The macro form is intentional —
 // a future reader can grep for `DATA_OFFSET` against vendor docs and land on

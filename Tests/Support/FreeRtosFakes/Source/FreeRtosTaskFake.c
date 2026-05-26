@@ -1,5 +1,7 @@
 #include "FreeRtosTaskFake.h"
 
+#include "task.h"
+
 static unsigned vTaskDelayCallCount = 0;
 static TickType_t lastVTaskDelayTicks = 0;
 static TickType_t tickCount = 0;

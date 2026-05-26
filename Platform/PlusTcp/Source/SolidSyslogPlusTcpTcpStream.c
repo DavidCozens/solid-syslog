@@ -12,13 +12,13 @@
 #include "FreeRTOS_IP.h"
 #include "FreeRTOS_Sockets.h"
 #include "task.h"
-
 #include "SolidSyslogPlusTcpAddressPrivate.h"
 #include "SolidSyslogPlusTcpTcpStreamPrivate.h"
 #include "SolidSyslogNullStream.h"
 #include "SolidSyslogStream.h"
-#include "SolidSyslogStreamDefinition.h"
 #include "SolidSyslogTunables.h"
+
+struct SolidSyslogAddress;
 
 /* SolidSyslogStream_Read returns < 0 to signal EOF/error (socket closed
  * internally); -1 is the in-tree convention shared with Posix/Winsock. */
