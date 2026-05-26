@@ -12,7 +12,7 @@
 #include "TestUtils.h"
 #include "CppUTest/TestHarness.h"
 
-using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings ONCE/NEVER into scope for the CALLED_FAKE macro
+using namespace CososoTesting;
 
 class TEST_SolidSyslogMetaSd_FirstFormatProducesSequenceId1_Test;
 class TEST_SolidSyslogMetaSd_FormatEscapesBackslashInLanguage_Test;

@@ -15,7 +15,7 @@
 #include "SolidSyslogTunables.h"
 #include "TestUtils.h"
 
-using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings ONCE/NEVER into scope for CALLED_FAKE
+using namespace CososoTesting;
 
 // Assertion macros at file scope so failures report the test's own
 // __FILE__/__LINE__ rather than the helper's.

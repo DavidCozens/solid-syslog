@@ -19,8 +19,7 @@
 #include "TestUtils.h"
 #include "CppUTest/TestHarness.h"
 
-using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
-    // macros
+using namespace CososoTesting;
 
 // clang-format off
 static const char* const TEST_HOST           = "127.0.0.1";
@@ -342,9 +341,9 @@ TEST(SolidSyslogStreamSender, EndpointVersionChangeUsesNewPortOnReconnect)
 TEST_GROUP(SolidSyslogStreamSenderConfig)
 {
     // cppcheck-suppress unreadVariable -- assigned in CreateSender; cppcheck does not model CppUTest macros
-    const char* (*getHostFn)(void) = GetHost; // NOLINT(modernize-redundant-void-arg) -- C idiom
+    const char* (*getHostFn)(void) = GetHost;
     // cppcheck-suppress unreadVariable -- assigned in CreateSender; cppcheck does not model CppUTest macros
-    int (*getPortFn)(void) = GetPort; // NOLINT(modernize-redundant-void-arg) -- C idiom
+    int (*getPortFn)(void) = GetPort;
     struct SolidSyslogStream*        stream   = nullptr;
     struct SolidSyslogResolver*      resolver = nullptr;
     struct SolidSyslogAddress*       address  = nullptr;

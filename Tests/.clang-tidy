@@ -20,7 +20,15 @@
 #   the types carry semantic distinction the rule can't see. Disabled tier-
 #   wide because the rule fires too often for legitimate patterns; real
 #   argument-order bugs in tests get caught by the tests themselves.
+#
+# -google-build-using-namespace
+#   Test files use `using namespace CososoTesting;` at file scope to bring
+#   the CALLED_FAKE multiplicity tokens (NEVER, ONCE, TWICE, THRICE) into
+#   scope at the call site. The scope is one .cpp file and the symbols are
+#   intentional sugar; the rule's "don't pollute global scope" concern does
+#   not apply to test-only translation units.
 InheritParentConfig: true
 Checks: >
   -readability-identifier-naming,
-  -bugprone-easily-swappable-parameters
+  -bugprone-easily-swappable-parameters,
+  -google-build-using-namespace

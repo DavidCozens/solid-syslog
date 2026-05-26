@@ -5,8 +5,7 @@
 #include "SolidSyslogPrival.h"
 #include "TestUtils.h"
 
-using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
-    // macros
+using namespace CososoTesting;
 
 // clang-format off
 TEST_GROUP(SolidSyslogErrorEx)

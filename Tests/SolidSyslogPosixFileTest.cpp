@@ -12,8 +12,7 @@
 
 #include <cstdio>
 
-using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings NEVER/ONCE/TWICE/THRICE into scope for the CALLED_*
-    // macros
+using namespace CososoTesting;
 
 static const char* const TEST_PATH = "/tmp/test_posix_file.dat";
 

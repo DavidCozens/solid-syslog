@@ -1,22 +1,22 @@
 #include "CmsdkUartFake.h"
 
-// The CMSDK UART register-offset and status-bit macros below mirror the
-// ARM CMSDK UART hardware datasheet exactly. The macro form is intentional —
-// a future reader can grep for `DATA_OFFSET` against vendor docs and land on
-// these definitions verbatim. Converting them to enums would obscure that
-// mapping, so we keep them as #defines.
-// NOLINTBEGIN(cppcoreguidelines-macro-to-enum,modernize-macro-to-enum)
-#define DATA_OFFSET 0x000U
-#define STATE_OFFSET 0x004U
-#define CTRL_OFFSET 0x008U
-#define INTSTAT_OFFSET 0x00CU
-#define BAUDDIV_OFFSET 0x010U
+// The CMSDK UART register-offset and status-bit values below mirror the
+// ARM CMSDK UART hardware datasheet exactly. Grouped into an anonymous enum
+// so a future reader can grep for `DATA_OFFSET` against vendor docs and land
+// on these definitions verbatim, while gaining a typed identifier over the
+// historical #define form.
+enum
+{
+    DATA_OFFSET = 0x000,
+    STATE_OFFSET = 0x004,
+    CTRL_OFFSET = 0x008,
+    INTSTAT_OFFSET = 0x00C,
+    BAUDDIV_OFFSET = 0x010,
 
-#define TX_FULL_BIT 0x01U
-#define RX_FULL_BIT 0x02U
-#define TX_OVRE_BIT 0x04U
-
-// NOLINTEND(cppcoreguidelines-macro-to-enum,modernize-macro-to-enum)
+    TX_FULL_BIT = 0x01,
+    RX_FULL_BIT = 0x02,
+    TX_OVRE_BIT = 0x04,
+};
 
 static struct
 {

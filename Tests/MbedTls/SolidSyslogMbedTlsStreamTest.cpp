@@ -21,7 +21,7 @@ extern "C"
 
 #include "TestUtils.h"
 
-using namespace CososoTesting; // NOLINT(google-build-using-namespace) -- test-file scope only; brings ONCE/NEVER/TWICE into scope for CALLED_FUNCTION / CALLED_FAKE
+using namespace CososoTesting;
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while) -- macro preserves __FILE__/__LINE__ in failure output; do-while wraps the multi-statement body for safe single-statement use
 #define CHECK_OPEN_UNWOUND_WITH_ERROR(transport, expectedCode)                    \
