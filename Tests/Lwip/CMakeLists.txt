@@ -32,6 +32,7 @@ set(LWIP_TEST_INCLUDE_DIRS
 # pulled inline rather than wrapped as a static lib).
 set(LWIP_FAKE_SOURCES
     ${CMAKE_SOURCE_DIR}/Tests/Support/LwipFakes/Source/LwipPbufFake.c
+    ${CMAKE_SOURCE_DIR}/Tests/Support/LwipFakes/Source/LwipTcpFake.c
     ${CMAKE_SOURCE_DIR}/Tests/Support/LwipFakes/Source/LwipUdpFake.c
 )
 
@@ -144,6 +145,10 @@ add_test(NAME SolidSyslogLwipRawDatagramTest COMMAND SolidSyslogLwipRawDatagramT
 add_executable(SolidSyslogLwipRawTcpStreamTest
     SolidSyslogLwipRawTcpStreamTest.cpp
     main.cpp
+    ${CMAKE_SOURCE_DIR}/Tests/Support/LwipFakes/Source/LwipTcpFake.c
+    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawAddress.c
+    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawAddressMessages.c
+    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawAddressStatic.c
     ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawTcpStream.c
     ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawTcpStreamMessages.c
     ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawTcpStreamStatic.c

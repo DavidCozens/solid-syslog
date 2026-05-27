@@ -8,6 +8,9 @@ using namespace CososoTesting;
 
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
+#include "LwipTcpFake.h"
+#include "SolidSyslogLwipRawAddress.h"
+#include "SolidSyslogLwipRawAddressPrivate.h"
 #include "SolidSyslogLwipRawTcpStream.h"
 #include "SolidSyslogLwipRawTcpStreamErrors.h"
 #include "SolidSyslogNullStream.h"
@@ -15,6 +18,12 @@ using namespace CososoTesting;
 #include "SolidSyslogStream.h"
 #include "SolidSyslogStreamDefinition.h"
 #include "SolidSyslogTunables.h"
+#include "lwip/err.h"
+#include "lwip/ip4_addr.h"
+#include "lwip/ip_addr.h"
+#include "lwip/tcp.h"
+
+static const uint16_t TEST_PORT = 514;
 
 // Asserts handle is non-null and not one of the slots in pool.
 #define CHECK_IS_FALLBACK(handle, pool)                                                \
@@ -40,7 +49,7 @@ using namespace CososoTesting;
 
 namespace
 {
-int FakeSleep_CallCount = 0;
+unsigned FakeSleep_CallCount = 0;
 int FakeSleep_LastMs = 0;
 
 void FakeSleep_Reset()
@@ -54,31 +63,90 @@ extern "C" void FakeSleep(int milliseconds)
     FakeSleep_CallCount++;
     FakeSleep_LastMs = milliseconds;
 }
+
+unsigned FakeGetConnectTimeoutMs_CallCount = 0;
+void* FakeGetConnectTimeoutMs_LastContext = nullptr;
+uint32_t FakeGetConnectTimeoutMs_ReturnValue = SOLIDSYSLOG_TCP_CONNECT_TIMEOUT_MS;
+
+void FakeGetConnectTimeoutMs_Reset()
+{
+    FakeGetConnectTimeoutMs_CallCount = 0;
+    FakeGetConnectTimeoutMs_LastContext = reinterpret_cast<void*>(0x1U);
+    FakeGetConnectTimeoutMs_ReturnValue = SOLIDSYSLOG_TCP_CONNECT_TIMEOUT_MS;
+}
+
+extern "C" uint32_t FakeGetConnectTimeoutMs(void* context)
+{
+    FakeGetConnectTimeoutMs_CallCount++;
+    FakeGetConnectTimeoutMs_LastContext = context;
+    return FakeGetConnectTimeoutMs_ReturnValue;
+}
 } // namespace
 
+/* Shared fixture: every TcpStream lifecycle test needs the fakes reset, a
+ * fresh stream + address handle pair, teardown of both, and the leak
+ * invariant — every tcp_pcb handed out by tcp_new must come back via
+ * tcp_close / tcp_abort / null-via-tcp_err by the end of the test. */
 // clang-format off
-TEST_GROUP(SolidSyslogLwipRawTcpStream)
+TEST_BASE(LwipRawTcpStreamTestBase)
 {
-    struct SolidSyslogLwipRawTcpStreamConfig validConfig{};
+    struct SolidSyslogLwipRawTcpStreamConfig config{};
     struct SolidSyslogStream* stream = nullptr;
+    struct SolidSyslogAddress* address = nullptr;
 
+    void createFakesAndHandles()
+    {
+        LwipTcpFake_Reset();
+        FakeSleep_Reset();
+        FakeGetConnectTimeoutMs_Reset();
+        config = {};
+        config.Sleep = FakeSleep;
+        stream = SolidSyslogLwipRawTcpStream_Create(&config);
+        address = SolidSyslogLwipRawAddress_Create();
+        struct SolidSyslogLwipRawAddress* lwipAddress = SolidSyslogLwipRawAddress_As(address);
+        IP4_ADDR(&lwipAddress->Ip, 127, 0, 0, 1);
+        lwipAddress->Port = TEST_PORT;
+    }
+
+    void destroyHandlesAndCheckNoLeak() const
+    {
+        SolidSyslogLwipRawAddress_Destroy(address);
+        SolidSyslogLwipRawTcpStream_Destroy(stream);
+        LONGS_EQUAL_TEXT(0, LwipTcpFake_OutstandingPcbCount(), "leaked tcp_pcb past teardown");
+    }
+};
+
+TEST_GROUP_BASE(SolidSyslogLwipRawTcpStream, LwipRawTcpStreamTestBase)
+{
     void setup() override
     {
-        FakeSleep_Reset();
-        validConfig = {};
-        validConfig.Sleep = FakeSleep;
-        stream = SolidSyslogLwipRawTcpStream_Create(&validConfig);
+        createFakesAndHandles();
     }
 
     void teardown() override
     {
-        if (stream != nullptr)
-        {
-            SolidSyslogLwipRawTcpStream_Destroy(stream);
-        }
+        destroyHandlesAndCheckNoLeak();
+    }
+};
+
+TEST_GROUP_BASE(SolidSyslogLwipRawTcpStreamConnected, LwipRawTcpStreamTestBase)
+{
+    void setup() override
+    {
+        createFakesAndHandles();
+        SolidSyslogStream_Open(stream, address);
+    }
+
+    void teardown() override
+    {
+        destroyHandlesAndCheckNoLeak();
     }
 };
 // clang-format on
+
+/* ------------------------------------------------------------------
+ * Created-but-not-opened tests
+ * ----------------------------------------------------------------*/
 
 TEST(SolidSyslogLwipRawTcpStream, CreateReturnsNonNullStream)
 {
@@ -94,7 +162,7 @@ TEST(SolidSyslogLwipRawTcpStream, DestroyReleasesSlotToPool)
 {
     SolidSyslogLwipRawTcpStream_Destroy(stream);
 
-    stream = SolidSyslogLwipRawTcpStream_Create(&validConfig);
+    stream = SolidSyslogLwipRawTcpStream_Create(&config);
 
     CHECK(stream != SolidSyslogNullStream_Get());
 }
@@ -116,6 +184,241 @@ TEST(SolidSyslogLwipRawTcpStream, CreateWithNullSleepReturnsFallback)
     POINTERS_EQUAL(SolidSyslogNullStream_Get(), fallback);
 }
 
+TEST(SolidSyslogLwipRawTcpStream, CloseBeforeOpenIsNoOp)
+{
+    SolidSyslogStream_Close(stream);
+
+    CALLED_FAKE(LwipTcpFake_TcpClose, NEVER);
+    CALLED_FAKE(LwipTcpFake_TcpAbort, NEVER);
+}
+
+TEST(SolidSyslogLwipRawTcpStream, OpenCallsTcpNew)
+{
+    SolidSyslogStream_Open(stream, address);
+
+    CALLED_FAKE(LwipTcpFake_TcpNew, ONCE);
+}
+
+TEST(SolidSyslogLwipRawTcpStream, OpenReturnsTrueOnSuccessfulConnect)
+{
+    CHECK_TRUE(SolidSyslogStream_Open(stream, address));
+}
+
+TEST(SolidSyslogLwipRawTcpStream, OpenReturnsFalseWhenTcpNewFails)
+{
+    LwipTcpFake_SetTcpNewFails(true);
+
+    CHECK_FALSE(SolidSyslogStream_Open(stream, address));
+    CALLED_FAKE(LwipTcpFake_TcpConnect, NEVER);
+}
+
+TEST(SolidSyslogLwipRawTcpStream, OpenSetsKeepaliveOnPcb)
+{
+    SolidSyslogStream_Open(stream, address);
+
+    CHECK((LwipTcpFake_LastTcpNewReturned()->so_options & SOF_KEEPALIVE) != 0);
+}
+
+TEST(SolidSyslogLwipRawTcpStream, OpenRegistersTcpArgRecvErrSentCallbacks)
+{
+    SolidSyslogStream_Open(stream, address);
+
+    CALLED_FAKE(LwipTcpFake_TcpArg, ONCE);
+    CALLED_FAKE(LwipTcpFake_TcpRecv, ONCE);
+    CALLED_FAKE(LwipTcpFake_TcpErr, ONCE);
+    CALLED_FAKE(LwipTcpFake_TcpSent, ONCE);
+    CHECK(LwipTcpFake_LastRecvFn() != nullptr);
+    CHECK(LwipTcpFake_LastErrFn() != nullptr);
+    CHECK(LwipTcpFake_LastSentFn() != nullptr);
+    CHECK(LwipTcpFake_LastCallbackArg() != nullptr);
+}
+
+TEST(SolidSyslogLwipRawTcpStream, OpenCallsTcpConnectWithAddressIpAndPort)
+{
+    SolidSyslogStream_Open(stream, address);
+
+    CALLED_FAKE(LwipTcpFake_TcpConnect, ONCE);
+    POINTERS_EQUAL(LwipTcpFake_LastTcpNewReturned(), LwipTcpFake_LastConnectPcb());
+    POINTERS_EQUAL(&SolidSyslogLwipRawAddress_AsConst(address)->Ip, LwipTcpFake_LastConnectIpaddr());
+    LONGS_EQUAL(TEST_PORT, LwipTcpFake_LastConnectPort());
+    CHECK(LwipTcpFake_LastConnectedFn() != nullptr);
+}
+
+TEST(SolidSyslogLwipRawTcpStream, OpenReturnsFalseAndAbortsWhenConnectedCallbackFiresErrored)
+{
+    LwipTcpFake_SetConnectCallbackResult(ERR_RST);
+
+    CHECK_FALSE(SolidSyslogStream_Open(stream, address));
+    CALLED_FAKE(LwipTcpFake_TcpAbort, ONCE);
+    CALLED_FAKE(LwipTcpFake_TcpClose, NEVER);
+}
+
+TEST(SolidSyslogLwipRawTcpStream, OpenReturnsFalseAndAbortsOnImmediateTcpConnectError)
+{
+    LwipTcpFake_SetTcpConnectError(ERR_VAL);
+
+    CHECK_FALSE(SolidSyslogStream_Open(stream, address));
+    CALLED_FAKE(LwipTcpFake_TcpAbort, ONCE);
+    CALLED_FAKE(LwipTcpFake_TcpClose, NEVER);
+}
+
+TEST(SolidSyslogLwipRawTcpStream, OpenReturnsFalseAndAbortsOnConnectTimeout)
+{
+    LwipTcpFake_SetConnectCallbackFires(false);
+
+    CHECK_FALSE(SolidSyslogStream_Open(stream, address));
+    CALLED_FAKE(LwipTcpFake_TcpAbort, ONCE);
+    CALLED_FAKE(LwipTcpFake_TcpClose, NEVER);
+}
+
+TEST(SolidSyslogLwipRawTcpStream, OpenSleepsBetweenPollsDuringTimeoutPath)
+{
+    LwipTcpFake_SetConnectCallbackFires(false);
+
+    SolidSyslogStream_Open(stream, address);
+
+    /* timeout / poll periods → exactly that many sleeps before giving up. */
+    LONGS_EQUAL(SOLIDSYSLOG_TCP_CONNECT_TIMEOUT_MS / SOLIDSYSLOG_LWIP_RAW_TCP_CONNECT_POLL_MS, FakeSleep_CallCount);
+    LONGS_EQUAL(SOLIDSYSLOG_LWIP_RAW_TCP_CONNECT_POLL_MS, FakeSleep_LastMs);
+}
+
+TEST(SolidSyslogLwipRawTcpStream, OpenHappyPathDoesNotSleep)
+{
+    SolidSyslogStream_Open(stream, address);
+
+    LONGS_EQUAL(0, FakeSleep_CallCount);
+}
+
+TEST(SolidSyslogLwipRawTcpStream, OpenRespectsRuntimeTunableConnectTimeout)
+{
+    LwipTcpFake_SetConnectCallbackFires(false);
+    /* Re-create the stream with a getter installed. The default fixture's
+     * stream uses NULL getter (falls back to the compile-time tunable);
+     * we want to verify the getter is honoured on the timeout deadline. */
+    SolidSyslogLwipRawTcpStream_Destroy(stream);
+    config.GetConnectTimeoutMs = FakeGetConnectTimeoutMs;
+    config.ConnectTimeoutContext = reinterpret_cast<void*>(0xABCDU);
+    FakeGetConnectTimeoutMs_ReturnValue = 20U;
+    stream = SolidSyslogLwipRawTcpStream_Create(&config);
+
+    SolidSyslogStream_Open(stream, address);
+
+    /* 20 ms / 10 ms poll = 2 polls. */
+    LONGS_EQUAL(2, FakeSleep_CallCount);
+    CHECK(FakeGetConnectTimeoutMs_CallCount >= 1U);
+    POINTERS_EQUAL(reinterpret_cast<void*>(0xABCDU), FakeGetConnectTimeoutMs_LastContext);
+}
+
+/* ------------------------------------------------------------------
+ * Open-already-called tests
+ * ----------------------------------------------------------------*/
+
+TEST(SolidSyslogLwipRawTcpStreamConnected, ReopenDoesNotAllocateNewPcb)
+{
+    CHECK_TRUE(SolidSyslogStream_Open(stream, address));
+
+    CALLED_FAKE(LwipTcpFake_TcpNew, ONCE);
+}
+
+TEST(SolidSyslogLwipRawTcpStreamConnected, CloseCallsTcpCloseOnOpenPcb)
+{
+    SolidSyslogStream_Close(stream);
+
+    CALLED_FAKE(LwipTcpFake_TcpClose, ONCE);
+    POINTERS_EQUAL(LwipTcpFake_LastTcpNewReturned(), LwipTcpFake_LastClosePcb());
+}
+
+TEST(SolidSyslogLwipRawTcpStreamConnected, SecondCloseDoesNotCloseAgain)
+{
+    SolidSyslogStream_Close(stream);
+
+    SolidSyslogStream_Close(stream);
+
+    CALLED_FAKE(LwipTcpFake_TcpClose, ONCE);
+}
+
+TEST(SolidSyslogLwipRawTcpStreamConnected, CloseThenOpenAllocatesFreshPcb)
+{
+    SolidSyslogStream_Close(stream);
+
+    SolidSyslogStream_Open(stream, address);
+
+    CALLED_FAKE(LwipTcpFake_TcpNew, TWICE);
+}
+
+TEST(SolidSyslogLwipRawTcpStreamConnected, DestroyClosesOpenPcb)
+{
+    SolidSyslogLwipRawTcpStream_Destroy(stream);
+    stream = nullptr;
+
+    CALLED_FAKE(LwipTcpFake_TcpClose, ONCE);
+}
+
+TEST(SolidSyslogLwipRawTcpStreamConnected, DestroyAfterCloseDoesNotCloseAgain)
+{
+    SolidSyslogStream_Close(stream);
+
+    SolidSyslogLwipRawTcpStream_Destroy(stream);
+    stream = nullptr;
+
+    CALLED_FAKE(LwipTcpFake_TcpClose, ONCE);
+}
+
+TEST(SolidSyslogLwipRawTcpStreamConnected, TcpErrCallbackReleasesPcbWithoutCallingTcpClose)
+{
+    /* Drive the err callback the wrapper registered. lwIP releases the
+     * pcb upstream before invoking err — the wrapper must null its Pcb
+     * field and NOT call tcp_close (use-after-free). */
+    tcp_err_fn errCb = LwipTcpFake_LastErrFn();
+    void* arg = LwipTcpFake_LastCallbackArg();
+    errCb(arg, ERR_RST);
+    LwipTcpFake_NotePcbReleasedByErr();
+
+    SolidSyslogStream_Close(stream);
+
+    CALLED_FAKE(LwipTcpFake_TcpClose, NEVER);
+}
+
+TEST(SolidSyslogLwipRawTcpStreamConnected, RecvCallbackReturnsErrOkAsNoOpStub)
+{
+    /* Real RX queue handling lands in the Send/Read slice — this slot's
+     * stub returns ERR_OK so lwIP sees the bytes as accepted. */
+    tcp_recv_fn recvCb = LwipTcpFake_LastRecvFn();
+
+    LONGS_EQUAL(
+        ERR_OK,
+        recvCb(LwipTcpFake_LastCallbackArg(), LwipTcpFake_LastTcpNewReturned(), nullptr, ERR_OK)
+    );
+}
+
+TEST(SolidSyslogLwipRawTcpStreamConnected, SentCallbackReturnsErrOkAsNoOpStub)
+{
+    /* TCP_WRITE_FLAG_COPY means caller buffers are released at Send return —
+     * no per-ACK accounting needed. The slot exists because lwIP wants the
+     * callback set when the pcb is wired. */
+    tcp_sent_fn sentCb = LwipTcpFake_LastSentFn();
+
+    LONGS_EQUAL(ERR_OK, sentCb(LwipTcpFake_LastCallbackArg(), LwipTcpFake_LastTcpNewReturned(), 0));
+}
+
+TEST(SolidSyslogLwipRawTcpStreamConnected, DestroyAfterTcpErrDoesNotCallTcpClose)
+{
+    tcp_err_fn errCb = LwipTcpFake_LastErrFn();
+    void* arg = LwipTcpFake_LastCallbackArg();
+    errCb(arg, ERR_RST);
+    LwipTcpFake_NotePcbReleasedByErr();
+
+    SolidSyslogLwipRawTcpStream_Destroy(stream);
+    stream = nullptr;
+
+    CALLED_FAKE(LwipTcpFake_TcpClose, NEVER);
+}
+
+/* ------------------------------------------------------------------
+ * Pool tests — handed-out handles never call lwIP, so they don't need
+ * the fake state. Same TEST_GROUP shape as Commit 1.
+ * ----------------------------------------------------------------*/
+
 // clang-format off
 TEST_GROUP(SolidSyslogLwipRawTcpStreamPool)
 {
@@ -125,6 +428,7 @@ TEST_GROUP(SolidSyslogLwipRawTcpStreamPool)
 
     void setup() override
     {
+        LwipTcpFake_Reset();
         FakeSleep_Reset();
         validConfig = {};
         validConfig.Sleep = FakeSleep;
@@ -181,9 +485,6 @@ TEST(SolidSyslogLwipRawTcpStreamPool, FallbackVtableMethodsAreNoOps)
     overflow = SolidSyslogLwipRawTcpStream_Create(&validConfig);
     char buffer[1] = {0};
 
-    /* NullStream's Open / Send return true so caller success paths are not
-     * tripped; Read returns 0 (would-block) so callers don't tear the
-     * connection down; Close is a no-op. */
     CHECK_TRUE(SolidSyslogStream_Open(overflow, nullptr));
     CHECK_TRUE(SolidSyslogStream_Send(overflow, "x", 1));
     LONGS_EQUAL(0, SolidSyslogStream_Read(overflow, buffer, sizeof(buffer)));
