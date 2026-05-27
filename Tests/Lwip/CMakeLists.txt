@@ -100,3 +100,32 @@ set_target_properties(SolidSyslogLwipRawResolverTest PROPERTIES
 )
 
 add_test(NAME SolidSyslogLwipRawResolverTest COMMAND SolidSyslogLwipRawResolverTest)
+
+# ---- SolidSyslogLwipRawDatagramTest ----
+
+add_executable(SolidSyslogLwipRawDatagramTest
+    SolidSyslogLwipRawDatagramTest.cpp
+    main.cpp
+    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawAddress.c
+    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawAddressMessages.c
+    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawAddressStatic.c
+    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawDatagram.c
+    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawDatagramMessages.c
+    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawDatagramStatic.c
+)
+
+target_link_libraries(SolidSyslogLwipRawDatagramTest PRIVATE
+    ${PROJECT_NAME}
+    ConfigLockFake
+    ErrorHandlerFake
+    CppUTest
+    CppUTestExt
+)
+
+target_include_directories(SolidSyslogLwipRawDatagramTest PRIVATE ${LWIP_TEST_INCLUDE_DIRS})
+
+set_target_properties(SolidSyslogLwipRawDatagramTest PROPERTIES
+    CXX_CPPCHECK ""
+)
+
+add_test(NAME SolidSyslogLwipRawDatagramTest COMMAND SolidSyslogLwipRawDatagramTest)
