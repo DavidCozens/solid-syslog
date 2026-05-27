@@ -31,6 +31,7 @@ set(LWIP_TEST_INCLUDE_DIRS
 # the FreeRtosFakes pattern (sources live under Tests/Support/LwipFakes/Source/,
 # pulled inline rather than wrapped as a static lib).
 set(LWIP_FAKE_SOURCES
+    ${CMAKE_SOURCE_DIR}/Tests/Support/LwipFakes/Source/LwipPbufFake.c
     ${CMAKE_SOURCE_DIR}/Tests/Support/LwipFakes/Source/LwipUdpFake.c
 )
 

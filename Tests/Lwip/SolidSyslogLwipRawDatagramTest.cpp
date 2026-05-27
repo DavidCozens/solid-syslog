@@ -5,15 +5,21 @@ using namespace CososoTesting;
 
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
+#include "LwipPbufFake.h"
 #include "LwipUdpFake.h"
 #include "SolidSyslogDatagram.h"
 #include "SolidSyslogDatagramDefinition.h"
 #include "SolidSyslogLwipRawAddress.h"
+#include "SolidSyslogLwipRawAddressPrivate.h"
 #include "SolidSyslogLwipRawDatagram.h"
 #include "SolidSyslogLwipRawDatagramErrors.h"
 #include "SolidSyslogNullDatagram.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogTunables.h"
+#include "SolidSyslogUdpPayload.h"
+#include "lwip/ip4_addr.h"
+
+static const uint16_t TEST_PORT = 514;
 
 // Asserts handle is non-null and not one of the slots in pool.
 #define CHECK_IS_FALLBACK(handle, pool)                                                \
@@ -52,8 +58,12 @@ TEST_BASE(LwipRawDatagramTestBase)
     void createFakesAndHandles()
     {
         LwipUdpFake_Reset();
+        LwipPbufFake_Reset();
         datagram = SolidSyslogLwipRawDatagram_Create();
         address = SolidSyslogLwipRawAddress_Create();
+        struct SolidSyslogLwipRawAddress* lwipAddress = SolidSyslogLwipRawAddress_As(address);
+        IP4_ADDR(&lwipAddress->Ip, 127, 0, 0, 1);
+        lwipAddress->Port = TEST_PORT;
     }
 
     void destroyHandlesAndCheckNoLeak() const
@@ -61,6 +71,7 @@ TEST_BASE(LwipRawDatagramTestBase)
         SolidSyslogLwipRawAddress_Destroy(address);
         SolidSyslogLwipRawDatagram_Destroy(datagram);
         LONGS_EQUAL_TEXT(0, LwipUdpFake_OutstandingPcbCount(), "leaked udp_pcb past teardown");
+        LONGS_EQUAL_TEXT(0, LwipPbufFake_OutstandingPbufCount(), "leaked pbuf past teardown");
     }
 };
 
@@ -141,6 +152,21 @@ TEST(SolidSyslogLwipRawDatagram, OpenReturnsFalseWhenUdpNewFails)
     CHECK_FALSE(SolidSyslogDatagram_Open(datagram));
 }
 
+TEST(SolidSyslogLwipRawDatagram, MaxPayloadReturnsIpv6SafeDefault)
+{
+    LONGS_EQUAL(SOLIDSYSLOG_UDP_IPV6_SAFE_PAYLOAD, SolidSyslogDatagram_MaxPayload(datagram));
+}
+
+TEST(SolidSyslogLwipRawDatagram, SendToFailsBeforeOpen)
+{
+    LONGS_EQUAL(
+        SOLIDSYSLOG_DATAGRAM_SEND_RESULT_FAILED,
+        SolidSyslogDatagram_SendTo(datagram, "x", 1, address)
+    );
+    CALLED_FAKE(LwipPbufFake_PbufAlloc, NEVER);
+    CALLED_FAKE(LwipUdpFake_UdpSendto, NEVER);
+}
+
 /* ------------------------------------------------------------------
  * Already-opened tests (Open lifted into the group's setup)
  * ----------------------------------------------------------------*/
@@ -194,6 +220,111 @@ TEST(SolidSyslogLwipRawDatagramOpen, DestroyAfterCloseDoesNotRemoveAgain)
     datagram = nullptr;
 
     CALLED_FAKE(LwipUdpFake_UdpRemove, ONCE);
+}
+
+TEST(SolidSyslogLwipRawDatagramOpen, SendToSucceeds)
+{
+    LONGS_EQUAL(
+        SOLIDSYSLOG_DATAGRAM_SEND_RESULT_SENT,
+        SolidSyslogDatagram_SendTo(datagram, "x", 1, address)
+    );
+}
+
+TEST(SolidSyslogLwipRawDatagramOpen, SendToCallsUdpSendto)
+{
+    SolidSyslogDatagram_SendTo(datagram, "x", 1, address);
+
+    CALLED_FAKE(LwipUdpFake_UdpSendto, ONCE);
+}
+
+TEST(SolidSyslogLwipRawDatagramOpen, SendToAllocatesPbuf)
+{
+    SolidSyslogDatagram_SendTo(datagram, "x", 1, address);
+
+    CALLED_FAKE(LwipPbufFake_PbufAlloc, ONCE);
+}
+
+TEST(SolidSyslogLwipRawDatagramOpen, SendToAllocatesTransportLayerPbufRef)
+{
+    SolidSyslogDatagram_SendTo(datagram, "x", 1, address);
+
+    LONGS_EQUAL(PBUF_TRANSPORT, LwipPbufFake_LastAllocLayer());
+    LONGS_EQUAL(PBUF_REF, LwipPbufFake_LastAllocType());
+}
+
+TEST(SolidSyslogLwipRawDatagramOpen, SendToPbufPayloadPointsAtCallerBuffer)
+{
+    static const char buf[] = "hello";
+
+    SolidSyslogDatagram_SendTo(datagram, buf, sizeof(buf) - 1U, address);
+
+    POINTERS_EQUAL(buf, LwipPbufFake_LastAllocReturned()->payload);
+}
+
+TEST(SolidSyslogLwipRawDatagramOpen, SendToForwardsAddressIpAndPort)
+{
+    SolidSyslogDatagram_SendTo(datagram, "x", 1, address);
+
+    POINTERS_EQUAL(&SolidSyslogLwipRawAddress_AsConst(address)->Ip, LwipUdpFake_LastSendtoIpaddr());
+    LONGS_EQUAL(TEST_PORT, LwipUdpFake_LastSendtoPort());
+}
+
+TEST(SolidSyslogLwipRawDatagramOpen, SendToForwardsLengthVerbatim)
+{
+    static const char buf[1232] = {};
+
+    SolidSyslogDatagram_SendTo(datagram, buf, 1, address);
+    LONGS_EQUAL(1, LwipPbufFake_LastAllocLength());
+
+    SolidSyslogDatagram_SendTo(datagram, buf, 1232, address);
+    LONGS_EQUAL(1232, LwipPbufFake_LastAllocLength());
+}
+
+TEST(SolidSyslogLwipRawDatagramOpen, SendToFreesPbufAfterSendto)
+{
+    SolidSyslogDatagram_SendTo(datagram, "x", 1, address);
+
+    CALLED_FAKE(LwipPbufFake_PbufFree, ONCE);
+}
+
+TEST(SolidSyslogLwipRawDatagramOpen, SendToFailsAfterClose)
+{
+    SolidSyslogDatagram_Close(datagram);
+
+    LONGS_EQUAL(
+        SOLIDSYSLOG_DATAGRAM_SEND_RESULT_FAILED,
+        SolidSyslogDatagram_SendTo(datagram, "x", 1, address)
+    );
+}
+
+TEST(SolidSyslogLwipRawDatagramOpen, SendToFailsWhenPbufAllocFails)
+{
+    LwipPbufFake_SetPbufAllocFails(true);
+
+    LONGS_EQUAL(
+        SOLIDSYSLOG_DATAGRAM_SEND_RESULT_FAILED,
+        SolidSyslogDatagram_SendTo(datagram, "x", 1, address)
+    );
+    CALLED_FAKE(LwipUdpFake_UdpSendto, NEVER);
+}
+
+TEST(SolidSyslogLwipRawDatagramOpen, SendToFailsWhenSendtoErrors)
+{
+    LwipUdpFake_SetUdpSendtoError(ERR_MEM);
+
+    LONGS_EQUAL(
+        SOLIDSYSLOG_DATAGRAM_SEND_RESULT_FAILED,
+        SolidSyslogDatagram_SendTo(datagram, "x", 1, address)
+    );
+}
+
+TEST(SolidSyslogLwipRawDatagramOpen, SendToFreesPbufEvenWhenSendtoErrors)
+{
+    LwipUdpFake_SetUdpSendtoError(ERR_MEM);
+
+    SolidSyslogDatagram_SendTo(datagram, "x", 1, address);
+
+    CALLED_FAKE(LwipPbufFake_PbufFree, ONCE);
 }
 
 // clang-format off

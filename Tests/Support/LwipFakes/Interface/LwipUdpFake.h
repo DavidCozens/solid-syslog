@@ -4,10 +4,14 @@
 #include "ExternC.h"
 
 #include <stdbool.h>
+#include <stdint.h>
+
+#include "lwip/ip_addr.h"
 
 EXTERN_C_BEGIN
 
     struct udp_pcb;
+    struct pbuf;
 
     void LwipUdpFake_Reset(void);
 
@@ -21,6 +25,16 @@ EXTERN_C_BEGIN
     /* udp_remove spy */
     unsigned LwipUdpFake_UdpRemoveCallCount(void);
     struct udp_pcb* LwipUdpFake_LastUdpRemovePcb(void);
+
+    /* udp_sendto configuration */
+    void LwipUdpFake_SetUdpSendtoError(int8_t err);
+
+    /* udp_sendto spy */
+    unsigned LwipUdpFake_UdpSendtoCallCount(void);
+    struct udp_pcb* LwipUdpFake_LastSendtoPcb(void);
+    struct pbuf* LwipUdpFake_LastSendtoPbuf(void);
+    const ip_addr_t* LwipUdpFake_LastSendtoIpaddr(void);
+    uint16_t LwipUdpFake_LastSendtoPort(void);
 
     /* Allocated-but-not-yet-freed PCB count. Successful udp_new bumps it;
      * udp_remove decrements. A test that ends with a non-zero value has
