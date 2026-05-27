@@ -5,6 +5,7 @@ using namespace CososoTesting;
 
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
+#include "LwipUdpFake.h"
 #include "SolidSyslogDatagram.h"
 #include "SolidSyslogDatagramDefinition.h"
 #include "SolidSyslogLwipRawAddress.h"
@@ -45,6 +46,7 @@ TEST_GROUP(SolidSyslogLwipRawDatagram)
 
     void setup() override
     {
+        LwipUdpFake_Reset();
         datagram = SolidSyslogLwipRawDatagram_Create();
         address = SolidSyslogLwipRawAddress_Create();
     }
@@ -69,6 +71,96 @@ TEST(SolidSyslogLwipRawDatagram, DestroyReleasesSlotToPool)
     datagram = SolidSyslogLwipRawDatagram_Create();
 
     CHECK(datagram != SolidSyslogNullDatagram_Get());
+}
+
+TEST(SolidSyslogLwipRawDatagram, OpenSucceeds)
+{
+    CHECK_TRUE(SolidSyslogDatagram_Open(datagram));
+}
+
+TEST(SolidSyslogLwipRawDatagram, CloseSucceeds)
+{
+    SolidSyslogDatagram_Close(datagram);
+}
+
+TEST(SolidSyslogLwipRawDatagram, OpenCallsUdpNew)
+{
+    SolidSyslogDatagram_Open(datagram);
+
+    CALLED_FAKE(LwipUdpFake_UdpNew, ONCE);
+}
+
+TEST(SolidSyslogLwipRawDatagram, CloseCallsUdpRemoveOnOpenPcb)
+{
+    SolidSyslogDatagram_Open(datagram);
+
+    SolidSyslogDatagram_Close(datagram);
+
+    CALLED_FAKE(LwipUdpFake_UdpRemove, ONCE);
+    POINTERS_EQUAL(LwipUdpFake_LastUdpRemovePcb(), LwipUdpFake_LastUdpNewReturned());
+}
+
+TEST(SolidSyslogLwipRawDatagram, OpenIsIdempotent)
+{
+    SolidSyslogDatagram_Open(datagram);
+
+    CHECK_TRUE(SolidSyslogDatagram_Open(datagram));
+    CALLED_FAKE(LwipUdpFake_UdpNew, ONCE);
+}
+
+TEST(SolidSyslogLwipRawDatagram, CloseIsIdempotent)
+{
+    SolidSyslogDatagram_Open(datagram);
+    SolidSyslogDatagram_Close(datagram);
+
+    SolidSyslogDatagram_Close(datagram);
+
+    CALLED_FAKE(LwipUdpFake_UdpRemove, ONCE);
+}
+
+TEST(SolidSyslogLwipRawDatagram, CloseWithoutOpenIsNoOp)
+{
+    SolidSyslogDatagram_Close(datagram);
+
+    CALLED_FAKE(LwipUdpFake_UdpRemove, NEVER);
+}
+
+TEST(SolidSyslogLwipRawDatagram, OpenReturnsFalseWhenUdpNewFails)
+{
+    LwipUdpFake_SetUdpNewFails(true);
+
+    CHECK_FALSE(SolidSyslogDatagram_Open(datagram));
+}
+
+TEST(SolidSyslogLwipRawDatagram, CloseAndReopenCreatesFreshPcb)
+{
+    SolidSyslogDatagram_Open(datagram);
+    SolidSyslogDatagram_Close(datagram);
+
+    SolidSyslogDatagram_Open(datagram);
+
+    CALLED_FAKE(LwipUdpFake_UdpNew, TWICE);
+}
+
+TEST(SolidSyslogLwipRawDatagram, DestroyClosesOpenPcb)
+{
+    SolidSyslogDatagram_Open(datagram);
+
+    SolidSyslogLwipRawDatagram_Destroy(datagram);
+    datagram = nullptr;
+
+    CALLED_FAKE(LwipUdpFake_UdpRemove, ONCE);
+}
+
+TEST(SolidSyslogLwipRawDatagram, DestroyAfterCloseDoesNotRemoveAgain)
+{
+    SolidSyslogDatagram_Open(datagram);
+    SolidSyslogDatagram_Close(datagram);
+
+    SolidSyslogLwipRawDatagram_Destroy(datagram);
+    datagram = nullptr;
+
+    CALLED_FAKE(LwipUdpFake_UdpRemove, ONCE);
 }
 
 // clang-format off

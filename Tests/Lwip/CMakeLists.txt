@@ -27,6 +27,13 @@ set(LWIP_TEST_INCLUDE_DIRS
     $ENV{LWIP_PATH}/src/include
 )
 
+# lwIP host-side fakes — recompiled into each test exe that needs them, mirroring
+# the FreeRtosFakes pattern (sources live under Tests/Support/LwipFakes/Source/,
+# pulled inline rather than wrapped as a static lib).
+set(LWIP_FAKE_SOURCES
+    ${CMAKE_SOURCE_DIR}/Tests/Support/LwipFakes/Source/LwipUdpFake.c
+)
+
 # lwIP upstream parser. Wrapped as a STATIC library with cppcheck disabled
 # so the `toomanyconfigs` warning from opt.h's #ifdef forest doesn't fail
 # our build. We don't audit upstream lwIP code — that is lwIP's concern.
@@ -106,6 +113,7 @@ add_test(NAME SolidSyslogLwipRawResolverTest COMMAND SolidSyslogLwipRawResolverT
 add_executable(SolidSyslogLwipRawDatagramTest
     SolidSyslogLwipRawDatagramTest.cpp
     main.cpp
+    ${LWIP_FAKE_SOURCES}
     ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawAddress.c
     ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawAddressMessages.c
     ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawAddressStatic.c
