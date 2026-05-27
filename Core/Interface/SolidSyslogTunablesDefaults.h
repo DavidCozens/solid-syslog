@@ -589,6 +589,69 @@
 #endif
 
 /*
+ * Number of SolidSyslogLwipRawTcpStream instances the library's internal
+ * static pool can simultaneously hold. Each instance carries a struct tcp_pcb
+ * pointer, the Connected / Errored flags, and a bounded RX pbuf ring sized
+ * by SOLIDSYSLOG_LWIP_RAW_TCP_RX_QUEUE_SIZE.
+ *
+ * Default 2 — matches SOLIDSYSLOG_POSIX_TCP_STREAM_POOL_SIZE and the other
+ * TCP-stream-backend defaults so the canonical TLS-over-plain-TCP pair does
+ * not silently fall back to NullStream on the second Create. Bump via
+ * SOLIDSYSLOG_USER_TUNABLES_FILE if more are needed.
+ *
+ * Floor: 1. Sub-floor values rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_LWIP_RAW_TCP_STREAM_POOL_SIZE
+#define SOLIDSYSLOG_LWIP_RAW_TCP_STREAM_POOL_SIZE 2U
+#endif
+
+#if SOLIDSYSLOG_LWIP_RAW_TCP_STREAM_POOL_SIZE < 1
+#error "SOLIDSYSLOG_LWIP_RAW_TCP_STREAM_POOL_SIZE must be >= 1"
+#endif
+
+/*
+ * Period (milliseconds) the SolidSyslogLwipRawTcpStream bounded-connect
+ * spin loop sleeps between polls of the lwIP-side connected_cb flag.
+ * Each iteration calls the integrator-injected SolidSyslogSleepFunction
+ * so the loop never busy-waits — under NO_SYS=1 the integrator's Sleep
+ * implementation ticks sys_check_timeouts and drives RX; under NO_SYS=0
+ * it yields to the tcpip thread (vTaskDelay or equivalent).
+ *
+ * Default 10 ms gives 20 polls inside the default 200 ms connect deadline.
+ *
+ * Floor: 1 ms. Sub-floor values rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_LWIP_RAW_TCP_CONNECT_POLL_MS
+#define SOLIDSYSLOG_LWIP_RAW_TCP_CONNECT_POLL_MS 10U
+#endif
+
+#if SOLIDSYSLOG_LWIP_RAW_TCP_CONNECT_POLL_MS < 1
+#error "SOLIDSYSLOG_LWIP_RAW_TCP_CONNECT_POLL_MS must be >= 1"
+#endif
+
+/*
+ * Maximum number of struct pbuf* the SolidSyslogLwipRawTcpStream RX queue
+ * holds before backpressuring lwIP. Bounds the *count* of queued pbufs,
+ * not their byte volume — lwIP's TCP_WND and MEMP_NUM_PBUF cap upstream
+ * receive bytes; this knob caps how many segment-sized pbufs can pile up
+ * behind a slow Stream_Read drain before the tcp_recv callback returns
+ * non-ERR_OK so lwIP retains the pbuf and replays the callback later.
+ *
+ * Default 8 — sized for the typical mTLS handshake flight (ServerHello +
+ * Certificate + ServerKeyExchange + ServerHelloDone is 2-4 segments; 8
+ * leaves margin for cert chains and renegotiation traffic).
+ *
+ * Floor: 1. Sub-floor values rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_LWIP_RAW_TCP_RX_QUEUE_SIZE
+#define SOLIDSYSLOG_LWIP_RAW_TCP_RX_QUEUE_SIZE 8U
+#endif
+
+#if SOLIDSYSLOG_LWIP_RAW_TCP_RX_QUEUE_SIZE < 1
+#error "SOLIDSYSLOG_LWIP_RAW_TCP_RX_QUEUE_SIZE must be >= 1"
+#endif
+
+/*
  * Number of SolidSyslogPlusTcpTcpStream instances the library's
  * internal static pool can simultaneously hold. Each instance carries
  * a FreeRTOS-Plus-TCP Socket_t for the bounded-blocking-connect
