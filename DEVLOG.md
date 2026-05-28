@@ -1,5 +1,71 @@
 # Dev Log
 
+## 2026-05-28 — S24.13 IWYU lanes switched to advisory
+
+Pivot story under E24. Started out scoped as "replace IWYU with
+clang-tidy's `misc-include-cleaner`, diff-scoped" — followed the
+proven `analyze-tidy*` lane pattern S24.11 established (clang-tidy in
+the cpputest-freertos image) so the swap would have been a
+configuration-only change with no separate lane. Halfway through the
+finding survey, misc-include-cleaner turned out to have substantial
+stdlib-mapping gaps on POSIX extensions: `CLOCK_REALTIME` not mapped
+to `<time.h>`, `SOL_SOCKET` / `SO_KEEPALIVE` not mapped to
+`<sys/socket.h>`, `timeval` not mapped to `<sys/time.h>`. About 75 %
+of the findings on `Platform/Posix/` were false positives the
+two-knob check (`IgnoreHeaders` + `DeduplicateFindings`) couldn't
+filter cleanly. Confirmed with a minimal repro: no combination of
+`<time.h>` + `<sys/time.h>` satisfies the check for `CLOCK_REALTIME`.
+
+The original motivation for the swap was IWYU's per-PR friction
+(two-pass output, container drift, line-shift cascades). The simpler
+move that actually buys us throughput is to keep IWYU and stop it
+blocking PRs. Two `continue-on-error: true` additions on the IWYU
+`Run` steps in `.github/workflows/ci.yml`. cppcheck stays required —
+S24.12 just audited its suppressions and the FP rate is low.
+
+`docs/local-checks.md` updated: Tier B drops the IWYU-pre-push
+requirement and `clang-format -i` over touched files is now Tier B's
+sole expensive step. Release prep picks up the IWYU artifact sweep.
+
+Reverted the partial misc-include-cleaner work I'd already started
+(eight Core/Source files with newly-added `<stdint.h>` and
+`SolidSyslogPrival.h` includes plus a `Tests/.clang-tidy`
+`IgnoreHeaders` entry for CppUTest) — those were legitimate
+improvements but stopped being in scope once the story shape changed.
+The misc-include-cleaner investigation, plus a note on the standalone
+`clang-include-cleaner` tool (which does support IWYU-style mapping
+files and may close the POSIX gap), goes back into E24's candidate
+ideas to revisit if we want to retry the swap later.
+
+### What stays
+
+- `analyze-iwyu` / `analyze-iwyu-freertos-plustcp` lanes still run on
+  every PR.
+- Both lanes still upload `iwyu-report` / `iwyu-report-freertos-plustcp`
+  artifacts.
+- The `iwyu` CMake preset and the `ENABLE_IWYU` plumbing stay — the
+  local-run recipe in `docs/local-checks.md` still works.
+- Branch protection list unchanged. Step-level `continue-on-error`
+  makes the job report success on findings, so the required-check
+  contract is still satisfied without a UI edit.
+
+### What changed
+
+- The IWYU step in both lanes is renamed `Run include-what-you-use (advisory)`
+  and gets `continue-on-error: true`.
+- `docs/local-checks.md` Tier B narrative drops IWYU as a required
+  step and gains an "(optional, advisory)" subsection.
+
+### Open follow-ups
+
+- Future story under E24 — investigate `clang-include-cleaner`
+  standalone (mapping-file support) as a replacement candidate. Land
+  it via a feature-branch experiment that runs side-by-side with
+  advisory IWYU for one PR cycle, only promote if FP rate clears
+  ~95 %.
+- Release-prep checklist gains "sweep the IWYU artifact" — will land
+  alongside whatever release-prep doc owns checklists.
+
 ## 2026-05-28 — S28.05 SolidSyslogLwipRawTcpStream
 
 Fifth story in E28 (#465, parent #439). TCP stream adapter for the
