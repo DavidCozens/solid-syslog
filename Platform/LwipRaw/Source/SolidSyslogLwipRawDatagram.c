@@ -19,8 +19,8 @@ struct SolidSyslogAddress;
 /* Per-operation parameters carried across one marshal hop. Only the fields
  * the in-flight op needs are set (Open/Close set just Self); SendTo fills the
  * rest. One struct per class so the void*-context recovery has a single cast
- * site (LwipRawDatagram_CallFromContext) — see D.002 in docs/misra-deviations.md. */
-struct LwipRawDatagram_Call
+ * site (LwipRawDatagramCallFromContext) — see D.002 in docs/misra-deviations.md. */
+struct LwipRawDatagramCall
 {
     struct SolidSyslogLwipRawDatagram* Self;
     const struct SolidSyslogLwipRawAddress* Dst;
@@ -40,7 +40,7 @@ static enum SolidSyslogDatagramSendResult LwipRawDatagram_SendTo(
 static size_t LwipRawDatagram_MaxPayload(struct SolidSyslogDatagram* base);
 
 static inline struct SolidSyslogLwipRawDatagram* LwipRawDatagram_SelfFromBase(struct SolidSyslogDatagram* base);
-static inline struct LwipRawDatagram_Call* LwipRawDatagram_CallFromContext(void* context);
+static inline struct LwipRawDatagramCall* LwipRawDatagramCallFromContext(void* context);
 static inline bool LwipRawDatagram_IsOpen(const struct SolidSyslogLwipRawDatagram* self);
 static void LwipRawDatagram_DoOpen(void* context);
 static void LwipRawDatagram_DoClose(void* context);
@@ -65,9 +65,9 @@ static inline struct SolidSyslogLwipRawDatagram* LwipRawDatagram_SelfFromBase(st
  * back into each Do* callback. Single named helper so the void→struct cast
  * lives in one place — one suppression site per class, not one per callback
  * (the marshal-seam analogue of LwipRawTcpStream_SelfFromArg; see D.002). */
-static inline struct LwipRawDatagram_Call* LwipRawDatagram_CallFromContext(void* context)
+static inline struct LwipRawDatagramCall* LwipRawDatagramCallFromContext(void* context)
 {
-    return (struct LwipRawDatagram_Call*) context;
+    return (struct LwipRawDatagramCall*) context;
 }
 
 void LwipRawDatagram_Cleanup(struct SolidSyslogDatagram* base)
@@ -83,14 +83,14 @@ static void LwipRawDatagram_Close(struct SolidSyslogDatagram* base)
     struct SolidSyslogLwipRawDatagram* self = LwipRawDatagram_SelfFromBase(base);
     if (LwipRawDatagram_IsOpen(self))
     {
-        struct LwipRawDatagram_Call call = {.Self = self};
+        struct LwipRawDatagramCall call = {.Self = self};
         SolidSyslogLwipRaw_Marshal(LwipRawDatagram_DoClose, &call);
     }
 }
 
 static void LwipRawDatagram_DoClose(void* context)
 {
-    struct SolidSyslogLwipRawDatagram* self = LwipRawDatagram_CallFromContext(context)->Self;
+    struct SolidSyslogLwipRawDatagram* self = LwipRawDatagramCallFromContext(context)->Self;
     udp_remove(self->Pcb);
     self->Pcb = NULL;
 }
@@ -100,7 +100,7 @@ static bool LwipRawDatagram_Open(struct SolidSyslogDatagram* base)
     struct SolidSyslogLwipRawDatagram* self = LwipRawDatagram_SelfFromBase(base);
     if (!LwipRawDatagram_IsOpen(self))
     {
-        struct LwipRawDatagram_Call call = {.Self = self};
+        struct LwipRawDatagramCall call = {.Self = self};
         SolidSyslogLwipRaw_Marshal(LwipRawDatagram_DoOpen, &call);
     }
     return LwipRawDatagram_IsOpen(self);
@@ -108,7 +108,7 @@ static bool LwipRawDatagram_Open(struct SolidSyslogDatagram* base)
 
 static void LwipRawDatagram_DoOpen(void* context)
 {
-    struct SolidSyslogLwipRawDatagram* self = LwipRawDatagram_CallFromContext(context)->Self;
+    struct SolidSyslogLwipRawDatagram* self = LwipRawDatagramCallFromContext(context)->Self;
     self->Pcb = udp_new();
 }
 
@@ -128,7 +128,7 @@ static enum SolidSyslogDatagramSendResult LwipRawDatagram_SendTo(
     enum SolidSyslogDatagramSendResult result = SOLIDSYSLOG_DATAGRAM_SEND_RESULT_FAILED;
     if (LwipRawDatagram_IsOpen(self))
     {
-        struct LwipRawDatagram_Call call = {
+        struct LwipRawDatagramCall call = {
             .Self = self,
             .Dst = SolidSyslogLwipRawAddress_AsConst(addr),
             .Buffer = buffer,
@@ -147,7 +147,7 @@ static enum SolidSyslogDatagramSendResult LwipRawDatagram_SendTo(
  * outlives the synchronous hop, so no copy is needed. */
 static void LwipRawDatagram_DoSendTo(void* context)
 {
-    struct LwipRawDatagram_Call* call = LwipRawDatagram_CallFromContext(context);
+    struct LwipRawDatagramCall* call = LwipRawDatagramCallFromContext(context);
     call->Result = SOLIDSYSLOG_DATAGRAM_SEND_RESULT_FAILED;
     struct pbuf* p = pbuf_alloc(PBUF_TRANSPORT, (u16_t) call->Size, PBUF_REF);
     if (p != NULL)
