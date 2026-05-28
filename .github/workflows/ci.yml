@@ -459,8 +459,14 @@ jobs:
       - name: Configure
         run: cmake --preset iwyu
 
-      - name: Run include-what-you-use
+      # IWYU is advisory: the two-pass "should add / should remove" output is
+      # hard to interpret correctly under time pressure, and the per-PR
+      # friction it causes outweighs the steady-state value (S24.13 / E24).
+      # Findings still surface via the uploaded artifact below; release prep
+      # is responsible for clearing them.
+      - name: Run include-what-you-use (advisory)
         shell: bash
+        continue-on-error: true
         run: set -o pipefail && cmake --build --preset iwyu --target iwyu 2>&1 | tee build/iwyu/iwyu-output.txt
 
       - name: Upload iwyu output
@@ -526,8 +532,10 @@ jobs:
       - name: Configure
         run: cmake --preset iwyu -DCMAKE_C_COMPILER=clang-19 -DCMAKE_CXX_COMPILER=clang++-19
 
-      - name: Run include-what-you-use
+      # Advisory per S24.13 — see analyze-iwyu above for rationale.
+      - name: Run include-what-you-use (advisory)
         shell: bash
+        continue-on-error: true
         run: set -o pipefail && cmake --build --preset iwyu --target iwyu 2>&1 | tee build/iwyu/iwyu-output.txt
 
       - name: Upload iwyu output
