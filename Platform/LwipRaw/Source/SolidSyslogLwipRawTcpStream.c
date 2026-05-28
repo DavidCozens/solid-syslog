@@ -193,7 +193,7 @@ static bool LwipRawTcpStream_Open(struct SolidSyslogStream* base, const struct S
  * thread (sleeping the lwIP thread mid-connect would starve RX/timers). */
 static void LwipRawTcpStream_DoOpenAndConnect(void* context)
 {
-    struct LwipRawTcpStream_OpenCall* call = context;
+    struct LwipRawTcpStream_OpenCall* call = (struct LwipRawTcpStream_OpenCall*) context;
     struct SolidSyslogLwipRawTcpStream* self = call->Self;
     self->Pcb = LwipRawTcpStream_OpenAndConfigurePcb(self);
     if (LwipRawTcpStream_IsOpen(self))
@@ -283,7 +283,7 @@ static bool LwipRawTcpStream_Send(struct SolidSyslogStream* base, const void* bu
 
 static void LwipRawTcpStream_DoSend(void* context)
 {
-    struct LwipRawTcpStream_SendCall* call = context;
+    struct LwipRawTcpStream_SendCall* call = (struct LwipRawTcpStream_SendCall*) context;
     call->Result = LwipRawTcpStream_SendOrCloseOnFailure(call->Self, call->Buffer, call->Size);
 }
 
@@ -350,7 +350,7 @@ static inline bool LwipRawTcpStream_HasReadWork(const struct SolidSyslogLwipRawT
 
 static void LwipRawTcpStream_DoRead(void* context)
 {
-    struct LwipRawTcpStream_ReadCall* call = context;
+    struct LwipRawTcpStream_ReadCall* call = (struct LwipRawTcpStream_ReadCall*) context;
     struct SolidSyslogLwipRawTcpStream* self = call->Self;
     if (LwipRawTcpStream_HasQueuedRx(self))
     {

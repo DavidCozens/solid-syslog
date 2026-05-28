@@ -137,7 +137,7 @@ static enum SolidSyslogDatagramSendResult LwipRawDatagram_SendTo(
  * outlives the synchronous hop, so no copy is needed. */
 static void LwipRawDatagram_DoSendTo(void* context)
 {
-    struct LwipRawDatagram_SendToCall* call = context;
+    struct LwipRawDatagram_SendToCall* call = (struct LwipRawDatagram_SendToCall*) context;
     call->Result = SOLIDSYSLOG_DATAGRAM_SEND_RESULT_FAILED;
     struct pbuf* p = pbuf_alloc(PBUF_TRANSPORT, (u16_t) call->Size, PBUF_REF);
     if (p != NULL)
