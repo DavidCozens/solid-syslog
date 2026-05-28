@@ -1,5 +1,153 @@
 # Dev Log
 
+## 2026-05-28 — S28.05 SolidSyslogLwipRawTcpStream
+
+Fifth story in E28 (#465, parent #439). TCP stream adapter for the
+lwIP Raw API, plus the `docs/integrating-lwip.md` guide that's been
+deferred since S28.03 landed the first OS-agnostic slice. The new
+ground here is bridging lwIP's callback-driven Raw TCP API to
+SolidSyslog's synchronous `Stream_Open`/`Send`/`Read`/`Close`
+contract — a richer problem than the Datagram side because TCP's
+`tcp_connect` is asynchronous and the receive path delivers
+arbitrary-sized pbufs that the wrapper has to buffer until
+`Stream_Read` drains them.
+
+### Design decisions
+
+The full set landed in the issue body up front (#465); five key calls.
+
+1. **`tcp_write` uses `TCP_WRITE_FLAG_COPY`.** Deliberate divergence
+   from S28.04's Datagram-side `PBUF_REF`. UDP is safe with REF
+   because `udp_sendto` is either synchronous or `etharp_query`
+   clones the payload on queue. TCP `tcp_write` defers transmission
+   indefinitely and depends on retransmits + peer ACKs — the
+   caller's buffer would have to live well past `Stream_Send`
+   return, which the synchronous contract doesn't allow. COPY costs
+   one `memcpy` per send; syslog records are small, well within
+   budget. `tcp_output` is called after every successful `tcp_write`
+   to nudge transmission; `ERR_MEM` from `tcp_output` is
+   queued-not-failed (lwIP owns the bytes, retries on next `tcp_tmr`).
+
+2. **Synchronous Open via spin-with-injected-sleep.** `tcp_connect`
+   returns immediately; the registered `connected_cb` fires when the
+   SYN/SYN-ACK exchange completes. The wrapper spins on a
+   `Connected` flag bounded by the existing per-instance
+   `GetConnectTimeoutMs` getter (the S12.17 pattern), sleeping
+   `SOLIDSYSLOG_LWIP_RAW_TCP_CONNECT_POLL_MS` (default 10 ms) per
+   iteration via the integrator-supplied `SolidSyslogSleepFunction`.
+   Semaphore-wakeup ruled out — under `NO_SYS=1` lwIP's callback
+   runs in the same thread as `Stream_Open`, so there's no other
+   thread to post a semaphore from; the spin+sleep pattern is the
+   only shape that covers both `NO_SYS=1` and `NO_SYS=0` with one
+   code path. Integrator's Sleep ticks `sys_check_timeouts` + RX
+   under `NO_SYS=1`; under `NO_SYS=0` it just yields.
+
+3. **`tcp_close`-after-`tcp_err` gotcha encapsulated.** lwIP's
+   `tcp_err` callback fires *after* lwIP has already released the
+   pcb — calling `tcp_close` on it would be a use-after-free. The
+   wrapper's `tcp_err` handler nulls `self->Pcb`; `Close` checks
+   `Pcb != NULL` before calling `tcp_close`. Integrators never see
+   the rule. Documented as background only in the integrator
+   guide ("don't poke at lwIP pcbs through the abstraction").
+
+4. **Bounded RX queue draining `tcp_recv`.** Fixed ring of
+   `struct pbuf*` pointers sized by `SOLIDSYSLOG_LWIP_RAW_TCP_RX_QUEUE_SIZE`
+   (default 8 — sized for the typical mTLS handshake flight).
+   `tcp_recv` callback enqueues; returns `ERR_MEM` when full so
+   lwIP retains the pbuf and replays (flow-control). `Stream_Read`
+   drains bytes from the head pbuf, calls `tcp_recved(pcb, n)` to
+   ACK back to lwIP's window, `pbuf_free`s the head when fully
+   drained. Peer FIN (`tcp_recv` with `p == NULL`) sets `Errored`
+   but lets queued bytes drain first — Read returns `-1` only once
+   the queue is empty AND Errored, and closes internally per the
+   Stream contract at that point.
+
+5. **`SOF_KEEPALIVE` set in `Open`.** Matches `SolidSyslogPosixTcpStream`.
+   The idle/intvl/cnt values come from the integrator's lwipopts.h
+   (`TCP_KEEPIDLE_DEFAULT` etc.); the wrapper just opts the pcb in.
+   No-op if `LWIP_TCP_KEEPALIVE=0` — documented as recommended-on
+   in the integrator guide.
+
+### Commit shape
+
+Four commits + one mid-story refactor:
+
+- **Commit 1 — Pool plumbing + tunables + 13 tests.** Three-TU split
+  (Static.c / Messages.c / .c with empty vtable / Private.h struct).
+  Three new tunables (`POOL_SIZE` = 2 to match the other TCP-stream
+  backends, `CONNECT_POLL_MS` = 10, `RX_QUEUE_SIZE` = 8). NULL
+  config or NULL Sleep → silent NullStream fallback (sibling pattern;
+  only POOL_EXHAUSTED + UNKNOWN_DESTROY reported).
+- **Commit 2 — Open/Close lifecycle + connect callback bridge.**
+  `LwipTcpFake` covering `tcp_new` / `tcp_arg` / `tcp_recv` /
+  `tcp_err` / `tcp_sent` / `tcp_connect` / `tcp_close` / `tcp_abort`
+  with captured callbacks tests can drive. 22 new tests.
+- **Commit 3 — Send / Read / RX queue + tcp_err handling.** The
+  COPY-flag Send path, ERR_MEM-after-write success branch, RX-ring
+  drain with `tcp_recved` ACK, peer-FIN-after-drain → -1, RX-queue
+  drain on Close/Destroy as a leak invariant. 20 new tests.
+- **Refactor — test cleanups.** David spotted three repetitions
+  worth lifting. `sendBytes()` / `readBytes()` helpers on the test
+  base (matches the Datagram precedent). `pushIncomingPbuf` returns
+  the `err_t` and only bumps the leak counter on `ERR_OK`, encoding
+  the ownership transfer in one place. `CHECK_FORWARDED_PCB` macro
+  for the recurring "this lwIP call received our pcb" intent. ~20
+  lines lighter; one inline test setup collapses to 3 lines.
+- **Commit 4 — Housekeeping.** Integrator guide, CLAUDE.md rows,
+  CMake STATUS strings + the `:155` comment (deferred PR #464 nit),
+  this DEVLOG entry, pre-PR three-step.
+
+### Test-fixture pattern that carried over
+
+S28.04's `TEST_BASE` + two `TEST_GROUP_BASE` split (Created-only vs
+Open-already) transferred 1:1. New convenience: shared `sendBuffer`
++ `readBuffer` fields with `sendBytes(len=1)` / `readBytes(cap=N)`
+helpers — same shape as the Datagram tests'  `sendBytes` from S28.04.
+Leak invariants in shared teardown: `LwipTcpFake_OutstandingPcbCount()`
+and `LwipPbufFake_OutstandingPbufCount()` both pinned to zero,
+exactly mirroring the Datagram precedent.
+
+The novel piece is the `LwipTcpFake`'s default behaviour for
+`tcp_connect`: synchronously invokes the registered `connected_cb`
+with `ERR_OK` before returning. That gives the happy-path Open tests
+a single line of work (`stream = …Create + Open` in the Connected
+group's setup) and surfaces the spin loop's Sleep-call-count as 0 on
+the happy path — pinned by `OpenHappyPathDoesNotSleep`. Tests that
+need to exercise the timeout / errored-cb paths call
+`LwipTcpFake_SetConnectCallbackFires(false)` /
+`SetConnectCallbackResult(ERR_RST)`.
+
+### New tunables, new error source
+
+- `SOLIDSYSLOG_LWIP_RAW_TCP_STREAM_POOL_SIZE` default `2U` — matches
+  every other TCP-stream backend; covers the TLS-over-plain-TCP
+  pair.
+- `SOLIDSYSLOG_LWIP_RAW_TCP_CONNECT_POLL_MS` default `10U` — 20
+  polls inside the default 200 ms connect deadline.
+- `SOLIDSYSLOG_LWIP_RAW_TCP_RX_QUEUE_SIZE` default `8U` — sized for
+  the typical mTLS handshake flight (ServerHello + Certificate +
+  ServerKeyExchange + ServerHelloDone is 2–4 segments; 8 leaves
+  margin).
+- `LwipRawTcpStreamErrorSource` with `POOL_EXHAUSTED` /
+  `UNKNOWN_DESTROY`, matching the other TCP-stream backends.
+
+### `docs/integrating-lwip.md`
+
+The deferred integrator guide picks up the lwipopts.h expectations
+both S28.04 (ARP_QUEUEING) and S28.05 (LWIP_TCP_KEEPALIVE) surfaced,
+plus the `NO_SYS=1` vs `NO_SYS=0` threading rule and the
+`tcpip_callback()` marshalling convention. Worked example for the
+bare-metal main loop shape; per-adapter design notes documenting the
+pbuf-strategy split (UDP REF, TCP COPY) so future readers don't
+re-litigate the inconsistency.
+
+### Next up
+
+S28.06 — `Bdd/Targets/FreeRtosLwip/` + three new CI jobs
+(`build-freertos-host-tdd-lwip`, `build-freertos-target-lwip`,
+`bdd-freertos-qemu-lwip`). Mirrors the existing FreeRTOS BDD target
+but with the lwIP adapters in place of PlusTcp.
+
 ## 2026-05-27 — S28.04 SolidSyslogLwipRawDatagram
 
 Fourth story in E28 (#463, parent #439). UDP datagram adapter for the

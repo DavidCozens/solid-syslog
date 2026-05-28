@@ -60,7 +60,7 @@ void LwipTcpFake_Reset(void)
     tcpNewCallCount = 0;
     /* Zero the fake pcb so so_options / state writes from prior tests don't
      * leak into the current one. */
-    fakePcb = (struct tcp_pcb){0};
+    fakePcb = (struct tcp_pcb) {0};
     lastTcpNewReturned = NULL;
     tcpNewFails = false;
 

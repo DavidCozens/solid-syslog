@@ -1,3 +1,4 @@
+#include "SolidSyslogLwipRawTcpStream.h"
 #include "SolidSyslogLwipRawTcpStreamPrivate.h"
 
 #include <stdbool.h>
@@ -8,21 +9,15 @@
 #include "lwip/arch.h"
 #include "lwip/err.h"
 #include "lwip/ip.h"
-#include "lwip/ip_addr.h"
 #include "lwip/pbuf.h"
 #include "lwip/tcp.h"
 #include "lwip/tcpbase.h"
 #include "SolidSyslogLwipRawAddressPrivate.h"
 #include "SolidSyslogNullStream.h"
 #include "SolidSyslogStream.h"
-#include "SolidSyslogStreamDefinition.h"
 #include "SolidSyslogTunables.h"
 
-struct SolidSyslogAddress;
-
-/* SolidSyslogStream_Read returns < 0 to signal EOF/error (socket closed
- * internally); -1 is the in-tree convention shared with Posix/Winsock/PlusTcp. */
-static const SolidSyslogSsize READ_FAILED = -1;
+struct SolidSyslogStream;
 
 static uint32_t LwipRawTcpStream_NullConnectTimeoutGetter(void* context);
 
@@ -32,6 +27,7 @@ static SolidSyslogSsize LwipRawTcpStream_Read(struct SolidSyslogStream* base, vo
 static void LwipRawTcpStream_Close(struct SolidSyslogStream* base);
 
 static inline struct SolidSyslogLwipRawTcpStream* LwipRawTcpStream_SelfFromBase(struct SolidSyslogStream* base);
+static inline struct SolidSyslogLwipRawTcpStream* LwipRawTcpStream_SelfFromArg(void* arg);
 static inline bool LwipRawTcpStream_ConfigProvidesGetter(const struct SolidSyslogLwipRawTcpStreamConfig* config);
 static inline bool LwipRawTcpStream_IsOpen(const struct SolidSyslogLwipRawTcpStream* self);
 static inline bool LwipRawTcpStream_HasQueuedRx(const struct SolidSyslogLwipRawTcpStream* self);
@@ -64,19 +60,18 @@ static err_t LwipRawTcpStream_RecvCallback(void* arg, struct tcp_pcb* tpcb, stru
 static err_t LwipRawTcpStream_SentCallback(void* arg, struct tcp_pcb* tpcb, u16_t len);
 static void LwipRawTcpStream_ErrCallback(void* arg, err_t err);
 
-void LwipRawTcpStream_Initialise(
-    struct SolidSyslogStream* base,
-    const struct SolidSyslogLwipRawTcpStreamConfig* config
-)
+void LwipRawTcpStream_Initialise(struct SolidSyslogStream* base, const struct SolidSyslogLwipRawTcpStreamConfig* config)
 {
     static const struct SolidSyslogLwipRawTcpStream DefaultLwipRawTcpStream = {
-        .Base = {.Open = LwipRawTcpStream_Open,
-                 .Send = LwipRawTcpStream_Send,
-                 .Read = LwipRawTcpStream_Read,
-                 .Close = LwipRawTcpStream_Close},
-        .Config = {.GetConnectTimeoutMs = LwipRawTcpStream_NullConnectTimeoutGetter,
-                   .ConnectTimeoutContext = NULL,
-                   .Sleep = NULL},
+        .Base =
+            {.Open = LwipRawTcpStream_Open,
+             .Send = LwipRawTcpStream_Send,
+             .Read = LwipRawTcpStream_Read,
+             .Close = LwipRawTcpStream_Close},
+        .Config =
+            {.GetConnectTimeoutMs = LwipRawTcpStream_NullConnectTimeoutGetter,
+             .ConnectTimeoutContext = NULL,
+             .Sleep = NULL},
         .Pcb = NULL,
         .Connected = false,
         .Errored = false,
@@ -115,6 +110,15 @@ static inline struct SolidSyslogLwipRawTcpStream* LwipRawTcpStream_SelfFromBase(
     return (struct SolidSyslogLwipRawTcpStream*) base;
 }
 
+/* Recovers our self pointer from the void* argument lwIP passes back into
+ * every callback we registered via tcp_arg(pcb, self). Single named helper
+ * so the void→struct cast lives in one place — and MISRA 11.5 has one
+ * suppression site, not one per callback. */
+static inline struct SolidSyslogLwipRawTcpStream* LwipRawTcpStream_SelfFromArg(void* arg)
+{
+    return (struct SolidSyslogLwipRawTcpStream*) arg;
+}
+
 void LwipRawTcpStream_Cleanup(struct SolidSyslogStream* base)
 {
     LwipRawTcpStream_Close(base);
@@ -144,7 +148,7 @@ static inline bool LwipRawTcpStream_IsOpen(const struct SolidSyslogLwipRawTcpStr
 
 static inline bool LwipRawTcpStream_HasQueuedRx(const struct SolidSyslogLwipRawTcpStream* self)
 {
-    return self->RxQueueCount > 0;
+    return self->RxQueueCount > 0U;
 }
 
 static inline bool LwipRawTcpStream_RxQueueIsFull(const struct SolidSyslogLwipRawTcpStream* self)
@@ -179,10 +183,7 @@ static bool LwipRawTcpStream_ConnectOrAbortOnFailure(
     return connected;
 }
 
-static bool LwipRawTcpStream_TryConnect(
-    struct SolidSyslogLwipRawTcpStream* self,
-    const struct SolidSyslogAddress* addr
-)
+static bool LwipRawTcpStream_TryConnect(struct SolidSyslogLwipRawTcpStream* self, const struct SolidSyslogAddress* addr)
 {
     const struct SolidSyslogLwipRawAddress* dst = SolidSyslogLwipRawAddress_AsConst(addr);
     self->Connected = false;
@@ -270,6 +271,10 @@ static bool LwipRawTcpStream_OutputResultIsAcceptable(err_t outputErr)
 
 static SolidSyslogSsize LwipRawTcpStream_Read(struct SolidSyslogStream* base, void* buffer, size_t size)
 {
+    /* SolidSyslogStream_Read returns < 0 to signal EOF/error (socket closed
+     * internally); -1 is the in-tree convention shared with Posix/Winsock/PlusTcp. */
+    static const SolidSyslogSsize READ_FAILED = -1;
+
     struct SolidSyslogLwipRawTcpStream* self = LwipRawTcpStream_SelfFromBase(base);
     SolidSyslogSsize result = READ_FAILED;
     if (LwipRawTcpStream_IsOpen(self))
@@ -303,7 +308,7 @@ static size_t LwipRawTcpStream_DrainHeadBytes(struct SolidSyslogLwipRawTcpStream
     struct pbuf* head = self->RxQueue[self->RxQueueHead];
     size_t available = (size_t) head->len - self->RxHeadOffset;
     size_t toCopy = (size < available) ? size : available;
-    (void) memcpy(buffer, ((const uint8_t*) head->payload) + self->RxHeadOffset, toCopy);
+    (void) memcpy(buffer, &((const uint8_t*) head->payload)[self->RxHeadOffset], toCopy);
     self->RxHeadOffset += toCopy;
     if (self->RxHeadOffset >= (size_t) head->len)
     {
@@ -361,7 +366,7 @@ static void LwipRawTcpStream_ClosePcb(struct SolidSyslogLwipRawTcpStream* self)
 static err_t LwipRawTcpStream_ConnectedCallback(void* arg, struct tcp_pcb* pcb, err_t err)
 {
     (void) pcb;
-    struct SolidSyslogLwipRawTcpStream* self = (struct SolidSyslogLwipRawTcpStream*) arg;
+    struct SolidSyslogLwipRawTcpStream* self = LwipRawTcpStream_SelfFromArg(arg);
     if (err == ERR_OK)
     {
         self->Connected = true;
@@ -381,7 +386,7 @@ static err_t LwipRawTcpStream_RecvCallback(void* arg, struct tcp_pcb* tpcb, stru
 {
     (void) tpcb;
     (void) err;
-    struct SolidSyslogLwipRawTcpStream* self = (struct SolidSyslogLwipRawTcpStream*) arg;
+    struct SolidSyslogLwipRawTcpStream* self = LwipRawTcpStream_SelfFromArg(arg);
     err_t result = ERR_OK;
     if (p == NULL)
     {
@@ -415,7 +420,7 @@ static err_t LwipRawTcpStream_SentCallback(void* arg, struct tcp_pcb* tpcb, u16_
 static void LwipRawTcpStream_ErrCallback(void* arg, err_t err)
 {
     (void) err;
-    struct SolidSyslogLwipRawTcpStream* self = (struct SolidSyslogLwipRawTcpStream*) arg;
+    struct SolidSyslogLwipRawTcpStream* self = LwipRawTcpStream_SelfFromArg(arg);
     self->Pcb = NULL;
     self->Errored = true;
 }

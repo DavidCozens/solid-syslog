@@ -18,7 +18,8 @@ EXTERN_C_BEGIN
             Sleep; /* required — drives the bounded-connect spin; NULL config falls back to NullStream */
     };
 
-    struct SolidSyslogStream* SolidSyslogLwipRawTcpStream_Create(const struct SolidSyslogLwipRawTcpStreamConfig* config);
+    struct SolidSyslogStream* SolidSyslogLwipRawTcpStream_Create(const struct SolidSyslogLwipRawTcpStreamConfig* config
+    );
     void SolidSyslogLwipRawTcpStream_Destroy(struct SolidSyslogStream * base);
 
 EXTERN_C_END

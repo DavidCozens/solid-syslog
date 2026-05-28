@@ -31,7 +31,7 @@ struct SolidSyslogStream* SolidSyslogLwipRawTcpStream_Create(const struct SolidS
     if (LwipRawTcpStream_IsValidConfig(config))
     {
         size_t index = SolidSyslogPoolAllocator_AcquireFirstFree(&LwipRawTcpStream_Allocator);
-        if (SolidSyslogPoolAllocator_IndexIsValid(&LwipRawTcpStream_Allocator, index))
+        if (SolidSyslogPoolAllocator_IndexIsValid(&LwipRawTcpStream_Allocator, index) == true)
         {
             LwipRawTcpStream_Initialise(&LwipRawTcpStream_Pool[index].Base, config);
             handle = &LwipRawTcpStream_Pool[index].Base;
@@ -53,12 +53,7 @@ void SolidSyslogLwipRawTcpStream_Destroy(struct SolidSyslogStream* base)
     size_t index = LwipRawTcpStream_IndexFromHandle(base);
     bool released =
         SolidSyslogPoolAllocator_IndexIsValid(&LwipRawTcpStream_Allocator, index) &&
-        SolidSyslogPoolAllocator_FreeIfInUse(
-            &LwipRawTcpStream_Allocator,
-            index,
-            LwipRawTcpStream_CleanupAtIndex,
-            NULL
-        );
+        SolidSyslogPoolAllocator_FreeIfInUse(&LwipRawTcpStream_Allocator, index, LwipRawTcpStream_CleanupAtIndex, NULL);
     if (!released)
     {
         SolidSyslog_Error(

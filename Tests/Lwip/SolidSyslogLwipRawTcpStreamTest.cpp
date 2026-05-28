@@ -22,8 +22,8 @@ using namespace CososoTesting;
 #include "SolidSyslogStreamDefinition.h"
 #include "SolidSyslogTunables.h"
 #include "lwip/err.h"
+#include "lwip/ip.h"
 #include "lwip/ip4_addr.h"
-#include "lwip/ip_addr.h"
 #include "lwip/pbuf.h"
 #include "lwip/tcp.h"
 #include "lwip/tcpbase.h"
@@ -731,6 +731,7 @@ TEST_GROUP(SolidSyslogLwipRawTcpStreamPool)
         }
     }
 };
+
 // clang-format on
 
 TEST(SolidSyslogLwipRawTcpStreamPool, FillingPoolThenOverflowReturnsDistinctFallback)

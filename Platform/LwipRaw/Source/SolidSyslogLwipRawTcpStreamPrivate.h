@@ -13,15 +13,15 @@ struct pbuf;
 
 struct SolidSyslogLwipRawTcpStream
 {
-    struct SolidSyslogStream                 Base;
+    struct SolidSyslogStream Base;
     struct SolidSyslogLwipRawTcpStreamConfig Config;
-    struct tcp_pcb*                          Pcb;
-    bool                                     Connected;
-    bool                                     Errored;
-    struct pbuf*                             RxQueue[SOLIDSYSLOG_LWIP_RAW_TCP_RX_QUEUE_SIZE];
-    size_t                                   RxQueueHead;
-    size_t                                   RxQueueCount;
-    size_t                                   RxHeadOffset;
+    struct tcp_pcb* Pcb;
+    bool Connected;
+    bool Errored;
+    struct pbuf* RxQueue[SOLIDSYSLOG_LWIP_RAW_TCP_RX_QUEUE_SIZE];
+    size_t RxQueueHead;
+    size_t RxQueueCount;
+    size_t RxHeadOffset;
 };
 
 void LwipRawTcpStream_Initialise(
