@@ -52,6 +52,11 @@ static const uint16_t TEST_PORT = 514;
         UNSIGNED_LONGS_EQUAL((code), ErrorHandlerFake_LastCode()); \
     } while (0)
 
+// Asserts the lwIP API call recorded the pcb the wrapper got back from
+// tcp_new — proves the wrapper forwarded the right handle. `getter` is
+// the LwipTcpFake_LastXxxPcb accessor function (zero-arg).
+#define CHECK_FORWARDED_PCB(getter) POINTERS_EQUAL(LwipTcpFake_LastTcpNewReturned(), getter())
+
 namespace
 {
 unsigned FakeSleep_CallCount = 0;
@@ -124,18 +129,41 @@ TEST_BASE(LwipRawTcpStreamTestBase)
         LONGS_EQUAL_TEXT(0, LwipPbufFake_OutstandingPbufCount(), "leaked pbuf past teardown");
     }
 
+    /* Send through the abstract base against the shared sendBuffer. Default
+     * length 1 covers the lifecycle / pcb-forwarding tests that don't care
+     * about content; size-specific tests pass it explicitly. */
+    bool sendBytes(size_t length = 1U) const
+    {
+        return SolidSyslogStream_Send(stream, sendBuffer, length);
+    }
+
+    /* Read through the abstract base into the shared readBuffer. Default
+     * capacity is the full buffer; partial-drain tests pass it explicitly. */
+    SolidSyslogSsize readBytes(size_t capacity = sizeof(readBuffer))
+    {
+        return SolidSyslogStream_Read(stream, readBuffer, capacity);
+    }
+
     /* Drive the wrapper's tcp_recv callback with a fabricated incoming
      * pbuf. Caller supplies stack storage for the pbuf so multi-pbuf
-     * tests can verify queue head advancement by pointer identity. */
-    void pushIncomingPbuf(struct pbuf* p, const void* data, uint16_t len)
+     * tests can verify queue head advancement by pointer identity.
+     * Returns the err_t the wrapper's callback returned — ERR_OK means
+     * the wrapper took ownership of the pbuf (leak counter bumped here);
+     * non-ERR_OK means lwIP retains the pbuf and the counter stays put,
+     * so backpressure tests can pin the contract without imbalance. */
+    err_t pushIncomingPbuf(struct pbuf* p, const void* data, uint16_t len)
     {
         p->payload = const_cast<void*>(data);
         p->len = len;
         p->tot_len = len;
         p->next = nullptr;
-        LwipPbufFake_NoteIncomingPbuf();
         tcp_recv_fn recvCb = LwipTcpFake_LastRecvFn();
-        (void) recvCb(LwipTcpFake_LastCallbackArg(), LwipTcpFake_LastTcpNewReturned(), p, ERR_OK);
+        err_t result = recvCb(LwipTcpFake_LastCallbackArg(), LwipTcpFake_LastTcpNewReturned(), p, ERR_OK);
+        if (result == ERR_OK)
+        {
+            LwipPbufFake_NoteIncomingPbuf();
+        }
+        return result;
     }
 
     /* Drive the wrapper's tcp_recv callback with NULL p — peer half-close
@@ -235,13 +263,13 @@ TEST(SolidSyslogLwipRawTcpStream, CloseBeforeOpenIsNoOp)
 
 TEST(SolidSyslogLwipRawTcpStream, SendBeforeOpenReturnsFalse)
 {
-    CHECK_FALSE(SolidSyslogStream_Send(stream, sendBuffer, sizeof(sendBuffer)));
+    CHECK_FALSE(sendBytes());
     CALLED_FAKE(LwipTcpFake_TcpWrite, NEVER);
 }
 
 TEST(SolidSyslogLwipRawTcpStream, ReadBeforeOpenReturnsMinusOne)
 {
-    LONGS_EQUAL(-1, SolidSyslogStream_Read(stream, readBuffer, sizeof(readBuffer)));
+    LONGS_EQUAL(-1, readBytes());
 }
 
 TEST(SolidSyslogLwipRawTcpStream, OpenCallsTcpNew)
@@ -290,7 +318,7 @@ TEST(SolidSyslogLwipRawTcpStream, OpenCallsTcpConnectWithAddressIpAndPort)
     SolidSyslogStream_Open(stream, address);
 
     CALLED_FAKE(LwipTcpFake_TcpConnect, ONCE);
-    POINTERS_EQUAL(LwipTcpFake_LastTcpNewReturned(), LwipTcpFake_LastConnectPcb());
+    CHECK_FORWARDED_PCB(LwipTcpFake_LastConnectPcb);
     POINTERS_EQUAL(&SolidSyslogLwipRawAddress_AsConst(address)->Ip, LwipTcpFake_LastConnectIpaddr());
     LONGS_EQUAL(TEST_PORT, LwipTcpFake_LastConnectPort());
     CHECK(LwipTcpFake_LastConnectedFn() != nullptr);
@@ -377,7 +405,7 @@ TEST(SolidSyslogLwipRawTcpStreamConnected, CloseCallsTcpCloseOnOpenPcb)
     SolidSyslogStream_Close(stream);
 
     CALLED_FAKE(LwipTcpFake_TcpClose, ONCE);
-    POINTERS_EQUAL(LwipTcpFake_LastTcpNewReturned(), LwipTcpFake_LastClosePcb());
+    CHECK_FORWARDED_PCB(LwipTcpFake_LastClosePcb);
 }
 
 TEST(SolidSyslogLwipRawTcpStreamConnected, SecondCloseDoesNotCloseAgain)
@@ -456,10 +484,10 @@ TEST(SolidSyslogLwipRawTcpStreamConnected, SendCallsTcpWriteWithCopyFlagAndSize)
 {
     memcpy(sendBuffer, "hello", 5);
 
-    SolidSyslogStream_Send(stream, sendBuffer, 5);
+    sendBytes(5);
 
     CALLED_FAKE(LwipTcpFake_TcpWrite, ONCE);
-    POINTERS_EQUAL(LwipTcpFake_LastTcpNewReturned(), LwipTcpFake_LastWritePcb());
+    CHECK_FORWARDED_PCB(LwipTcpFake_LastWritePcb);
     POINTERS_EQUAL(sendBuffer, LwipTcpFake_LastWriteDataptr());
     LONGS_EQUAL(5, LwipTcpFake_LastWriteLength());
     LONGS_EQUAL(TCP_WRITE_FLAG_COPY, LwipTcpFake_LastWriteApiFlags());
@@ -467,22 +495,22 @@ TEST(SolidSyslogLwipRawTcpStreamConnected, SendCallsTcpWriteWithCopyFlagAndSize)
 
 TEST(SolidSyslogLwipRawTcpStreamConnected, SendCallsTcpOutputAfterTcpWrite)
 {
-    SolidSyslogStream_Send(stream, sendBuffer, 1);
+    sendBytes();
 
     CALLED_FAKE(LwipTcpFake_TcpOutput, ONCE);
-    POINTERS_EQUAL(LwipTcpFake_LastTcpNewReturned(), LwipTcpFake_LastOutputPcb());
+    CHECK_FORWARDED_PCB(LwipTcpFake_LastOutputPcb);
 }
 
 TEST(SolidSyslogLwipRawTcpStreamConnected, SendReturnsTrueOnTcpWriteAndOutputOk)
 {
-    CHECK_TRUE(SolidSyslogStream_Send(stream, sendBuffer, 1));
+    CHECK_TRUE(sendBytes());
 }
 
 TEST(SolidSyslogLwipRawTcpStreamConnected, SendReturnsFalseAndClosesOnTcpWriteFails)
 {
     LwipTcpFake_SetTcpWriteError(ERR_MEM);
 
-    CHECK_FALSE(SolidSyslogStream_Send(stream, sendBuffer, 1));
+    CHECK_FALSE(sendBytes());
     CALLED_FAKE(LwipTcpFake_TcpOutput, NEVER);
     CALLED_FAKE(LwipTcpFake_TcpClose, ONCE);
 }
@@ -495,7 +523,7 @@ TEST(SolidSyslogLwipRawTcpStreamConnected, SendReturnsTrueWhenTcpOutputDefersWit
      * "kernel accepted into send buffer" semantics). */
     LwipTcpFake_SetTcpOutputError(ERR_MEM);
 
-    CHECK_TRUE(SolidSyslogStream_Send(stream, sendBuffer, 1));
+    CHECK_TRUE(sendBytes());
     CALLED_FAKE(LwipTcpFake_TcpClose, NEVER);
 }
 
@@ -503,7 +531,7 @@ TEST(SolidSyslogLwipRawTcpStreamConnected, SendReturnsFalseAndClosesOnTcpOutputO
 {
     LwipTcpFake_SetTcpOutputError(ERR_CONN);
 
-    CHECK_FALSE(SolidSyslogStream_Send(stream, sendBuffer, 1));
+    CHECK_FALSE(sendBytes());
     CALLED_FAKE(LwipTcpFake_TcpClose, ONCE);
 }
 
@@ -511,7 +539,7 @@ TEST(SolidSyslogLwipRawTcpStreamConnected, SendAfterTcpErrReturnsFalse)
 {
     pushTcpErr(ERR_RST);
 
-    CHECK_FALSE(SolidSyslogStream_Send(stream, sendBuffer, 1));
+    CHECK_FALSE(sendBytes());
     CALLED_FAKE(LwipTcpFake_TcpWrite, NEVER);
 }
 
@@ -522,7 +550,7 @@ TEST(SolidSyslogLwipRawTcpStreamConnected, SendAfterTcpErrReturnsFalse)
 TEST(SolidSyslogLwipRawTcpStreamConnected, ReadReturnsZeroWhenQueueEmpty)
 {
     /* Would-block semantic — keeps the connection alive. */
-    LONGS_EQUAL(0, SolidSyslogStream_Read(stream, readBuffer, sizeof(readBuffer)));
+    LONGS_EQUAL(0, readBytes());
     CALLED_FAKE(LwipTcpFake_TcpClose, NEVER);
 }
 
@@ -532,13 +560,13 @@ TEST(SolidSyslogLwipRawTcpStreamConnected, ReadDrainsHeadPbufAndAcksWithTcpRecve
     const char data[] = "ack";
     pushIncomingPbuf(&p, data, sizeof(data) - 1);
 
-    SolidSyslogSsize n = SolidSyslogStream_Read(stream, readBuffer, sizeof(readBuffer));
+    SolidSyslogSsize n = readBytes();
 
     LONGS_EQUAL(3, n);
     MEMCMP_EQUAL(data, readBuffer, 3);
     CALLED_FAKE(LwipTcpFake_TcpRecved, ONCE);
     LONGS_EQUAL(3, LwipTcpFake_LastRecvedLen());
-    POINTERS_EQUAL(LwipTcpFake_LastTcpNewReturned(), LwipTcpFake_LastRecvedPcb());
+    CHECK_FORWARDED_PCB(LwipTcpFake_LastRecvedPcb);
 }
 
 TEST(SolidSyslogLwipRawTcpStreamConnected, ReadFreesPbufWhenFullyDrained)
@@ -547,7 +575,7 @@ TEST(SolidSyslogLwipRawTcpStreamConnected, ReadFreesPbufWhenFullyDrained)
     const char data[] = "x";
     pushIncomingPbuf(&p, data, 1);
 
-    (void) SolidSyslogStream_Read(stream, readBuffer, sizeof(readBuffer));
+    (void) readBytes();
 
     CALLED_FAKE(LwipPbufFake_PbufFree, ONCE);
 }
@@ -558,14 +586,14 @@ TEST(SolidSyslogLwipRawTcpStreamConnected, ReadReturnsPartialWhenBufferSmallerTh
     const char data[] = "abcde";
     pushIncomingPbuf(&p, data, 5);
 
-    SolidSyslogSsize first = SolidSyslogStream_Read(stream, readBuffer, 2);
+    SolidSyslogSsize first = readBytes(2);
 
     LONGS_EQUAL(2, first);
     MEMCMP_EQUAL("ab", readBuffer, 2);
     /* Head not yet drained — pbuf still queued. */
     CALLED_FAKE(LwipPbufFake_PbufFree, NEVER);
 
-    SolidSyslogSsize second = SolidSyslogStream_Read(stream, readBuffer, sizeof(readBuffer));
+    SolidSyslogSsize second = readBytes();
 
     LONGS_EQUAL(3, second);
     MEMCMP_EQUAL("cde", readBuffer, 3);
@@ -581,8 +609,8 @@ TEST(SolidSyslogLwipRawTcpStreamConnected, ReadAdvancesPastDrainedPbufToNextInQu
     pushIncomingPbuf(&p1, d1, 2);
     pushIncomingPbuf(&p2, d2, 2);
 
-    SolidSyslogSsize n1 = SolidSyslogStream_Read(stream, readBuffer, sizeof(readBuffer));
-    SolidSyslogSsize n2 = SolidSyslogStream_Read(stream, readBuffer, sizeof(readBuffer));
+    SolidSyslogSsize n1 = readBytes();
+    SolidSyslogSsize n2 = readBytes();
 
     LONGS_EQUAL(2, n1);
     LONGS_EQUAL(2, n2);
@@ -598,10 +626,10 @@ TEST(SolidSyslogLwipRawTcpStreamConnected, ReadReturnsMinusOneAfterPeerFinAndDra
     pushPeerFin();
 
     /* Queued bytes drain first. */
-    LONGS_EQUAL(1, SolidSyslogStream_Read(stream, readBuffer, sizeof(readBuffer)));
+    LONGS_EQUAL(1, readBytes());
     /* Then the next Read sees empty queue + Errored and returns -1, closing
      * the pcb internally per the Stream contract. */
-    LONGS_EQUAL(-1, SolidSyslogStream_Read(stream, readBuffer, sizeof(readBuffer)));
+    LONGS_EQUAL(-1, readBytes());
     CALLED_FAKE(LwipTcpFake_TcpClose, ONCE);
 }
 
@@ -609,7 +637,7 @@ TEST(SolidSyslogLwipRawTcpStreamConnected, ReadReturnsMinusOneAfterTcpErrWithout
 {
     pushTcpErr(ERR_RST);
 
-    LONGS_EQUAL(-1, SolidSyslogStream_Read(stream, readBuffer, sizeof(readBuffer)));
+    LONGS_EQUAL(-1, readBytes());
     /* Pcb already nulled by tcp_err — no tcp_close. */
     CALLED_FAKE(LwipTcpFake_TcpClose, NEVER);
 }
@@ -617,28 +645,18 @@ TEST(SolidSyslogLwipRawTcpStreamConnected, ReadReturnsMinusOneAfterTcpErrWithout
 TEST(SolidSyslogLwipRawTcpStreamConnected, RecvCallbackBackpressuresWhenQueueFull)
 {
     struct pbuf pbufs[SOLIDSYSLOG_LWIP_RAW_TCP_RX_QUEUE_SIZE] = {};
-    const char data[] = "1";
     for (auto& p : pbufs)
     {
-        pushIncomingPbuf(&p, data, 1);
+        pushIncomingPbuf(&p, "1", 1);
     }
 
-    /* Next pbuf — queue is full, callback should return non-ERR_OK so
-     * lwIP holds onto the pbuf and replays the callback later. */
+    /* Next pbuf — queue is full, callback returns non-ERR_OK and
+     * pushIncomingPbuf's auto-balancing leaves the outstanding count
+     * untouched so teardown's leak invariant still passes. */
     struct pbuf overflow = {};
-    overflow.payload = const_cast<void*>(static_cast<const void*>(data));
-    overflow.len = 1;
-    overflow.tot_len = 1;
-    overflow.next = nullptr;
-    tcp_recv_fn recvCb = LwipTcpFake_LastRecvFn();
-    err_t result = recvCb(LwipTcpFake_LastCallbackArg(), LwipTcpFake_LastTcpNewReturned(), &overflow, ERR_OK);
+    err_t result = pushIncomingPbuf(&overflow, "1", 1);
 
     CHECK(result != ERR_OK);
-    /* Drain so teardown's leak invariant stays honest. */
-    for (size_t i = 0; i < SOLIDSYSLOG_LWIP_RAW_TCP_RX_QUEUE_SIZE; ++i)
-    {
-        (void) SolidSyslogStream_Read(stream, readBuffer, sizeof(readBuffer));
-    }
 }
 
 TEST(SolidSyslogLwipRawTcpStreamConnected, DestroyDrainsRxQueueOnCleanup)
