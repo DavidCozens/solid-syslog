@@ -2,6 +2,7 @@
 
 #include <stddef.h>
 
+#include "LwipFakeMarshalGuard.h"
 #include "lwip/arch.h"
 #include "lwip/pbuf.h"
 
@@ -76,6 +77,7 @@ void LwipPbufFake_NoteIncomingPbuf(void)
 
 struct pbuf* pbuf_alloc(pbuf_layer layer, u16_t length, pbuf_type type)
 {
+    LWIP_REQUIRE_MARSHAL_ACTIVE();
     ++pbufAllocCallCount;
     lastAllocLayer = layer;
     lastAllocLength = length;
@@ -97,6 +99,7 @@ struct pbuf* pbuf_alloc(pbuf_layer layer, u16_t length, pbuf_type type)
 
 u8_t pbuf_free(struct pbuf* p)
 {
+    LWIP_REQUIRE_MARSHAL_ACTIVE();
     (void) p;
     ++pbufFreeCallCount;
     --outstandingPbufCount;

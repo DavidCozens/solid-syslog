@@ -10,10 +10,22 @@
 #include "SolidSyslogDatagram.h"
 #include "SolidSyslogDatagramDefinition.h"
 #include "SolidSyslogLwipRawAddressPrivate.h"
+#include "SolidSyslogLwipRawMarshalPrivate.h"
 #include "SolidSyslogNullDatagram.h"
 #include "SolidSyslogUdpPayload.h"
 
 struct SolidSyslogAddress;
+
+/* Carries everything one SendTo operation needs across the single marshal
+ * hop, plus the result the caller reads back once the hop returns. */
+struct LwipRawDatagram_SendToCall
+{
+    struct udp_pcb* Pcb;
+    const struct SolidSyslogLwipRawAddress* Dst;
+    const void* Buffer;
+    size_t Size;
+    enum SolidSyslogDatagramSendResult Result;
+};
 
 static bool LwipRawDatagram_Open(struct SolidSyslogDatagram* base);
 static void LwipRawDatagram_Close(struct SolidSyslogDatagram* base);
@@ -26,7 +38,11 @@ static enum SolidSyslogDatagramSendResult LwipRawDatagram_SendTo(
 static size_t LwipRawDatagram_MaxPayload(struct SolidSyslogDatagram* base);
 
 static inline struct SolidSyslogLwipRawDatagram* LwipRawDatagram_SelfFromBase(struct SolidSyslogDatagram* base);
+static inline struct SolidSyslogLwipRawDatagram* LwipRawDatagram_SelfFromContext(void* context);
 static inline bool LwipRawDatagram_IsOpen(const struct SolidSyslogLwipRawDatagram* self);
+static void LwipRawDatagram_DoOpen(void* context);
+static void LwipRawDatagram_DoClose(void* context);
+static void LwipRawDatagram_DoSendTo(void* context);
 
 void LwipRawDatagram_Initialise(struct SolidSyslogDatagram* base)
 {
@@ -43,6 +59,14 @@ static inline struct SolidSyslogLwipRawDatagram* LwipRawDatagram_SelfFromBase(st
     return (struct SolidSyslogLwipRawDatagram*) base;
 }
 
+/* Recovers our self pointer from the void* context the marshal passes back
+ * into each Do* callback. Single named helper so the void→struct cast lives
+ * in one place. */
+static inline struct SolidSyslogLwipRawDatagram* LwipRawDatagram_SelfFromContext(void* context)
+{
+    return (struct SolidSyslogLwipRawDatagram*) context;
+}
+
 void LwipRawDatagram_Cleanup(struct SolidSyslogDatagram* base)
 {
     LwipRawDatagram_Close(base);
@@ -56,9 +80,15 @@ static void LwipRawDatagram_Close(struct SolidSyslogDatagram* base)
     struct SolidSyslogLwipRawDatagram* self = LwipRawDatagram_SelfFromBase(base);
     if (LwipRawDatagram_IsOpen(self))
     {
-        udp_remove(self->Pcb);
-        self->Pcb = NULL;
+        SolidSyslogLwipRaw_Marshal(LwipRawDatagram_DoClose, self);
     }
+}
+
+static void LwipRawDatagram_DoClose(void* context)
+{
+    struct SolidSyslogLwipRawDatagram* self = LwipRawDatagram_SelfFromContext(context);
+    udp_remove(self->Pcb);
+    self->Pcb = NULL;
 }
 
 static bool LwipRawDatagram_Open(struct SolidSyslogDatagram* base)
@@ -66,9 +96,15 @@ static bool LwipRawDatagram_Open(struct SolidSyslogDatagram* base)
     struct SolidSyslogLwipRawDatagram* self = LwipRawDatagram_SelfFromBase(base);
     if (!LwipRawDatagram_IsOpen(self))
     {
-        self->Pcb = udp_new();
+        SolidSyslogLwipRaw_Marshal(LwipRawDatagram_DoOpen, self);
     }
     return LwipRawDatagram_IsOpen(self);
+}
+
+static void LwipRawDatagram_DoOpen(void* context)
+{
+    struct SolidSyslogLwipRawDatagram* self = LwipRawDatagram_SelfFromContext(context);
+    self->Pcb = udp_new();
 }
 
 static inline bool LwipRawDatagram_IsOpen(const struct SolidSyslogLwipRawDatagram* self)
@@ -87,20 +123,38 @@ static enum SolidSyslogDatagramSendResult LwipRawDatagram_SendTo(
     enum SolidSyslogDatagramSendResult result = SOLIDSYSLOG_DATAGRAM_SEND_RESULT_FAILED;
     if (LwipRawDatagram_IsOpen(self))
     {
-        struct pbuf* p = pbuf_alloc(PBUF_TRANSPORT, (u16_t) size, PBUF_REF);
-        if (p != NULL)
-        {
-            const struct SolidSyslogLwipRawAddress* dst = SolidSyslogLwipRawAddress_AsConst(addr);
-            p->payload = (void*) buffer;
-            err_t err = udp_sendto(self->Pcb, p, &dst->Ip, dst->Port);
-            (void) pbuf_free(p);
-            if (err == ERR_OK)
-            {
-                result = SOLIDSYSLOG_DATAGRAM_SEND_RESULT_SENT;
-            }
-        }
+        struct LwipRawDatagram_SendToCall call = {
+            self->Pcb,
+            SolidSyslogLwipRawAddress_AsConst(addr),
+            buffer,
+            size,
+            SOLIDSYSLOG_DATAGRAM_SEND_RESULT_FAILED
+        };
+        SolidSyslogLwipRaw_Marshal(LwipRawDatagram_DoSendTo, &call);
+        result = call.Result;
     }
     return result;
+}
+
+/* Runs the whole send — pbuf alloc, sendto, free — in one marshalled hop so
+ * a NO_SYS=0 integrator pays a single tcpip-thread context switch per Send
+ * rather than three. PBUF_REF points lwIP at the caller's buffer; the buffer
+ * outlives the synchronous hop, so no copy is needed. */
+static void LwipRawDatagram_DoSendTo(void* context)
+{
+    struct LwipRawDatagram_SendToCall* call = context;
+    call->Result = SOLIDSYSLOG_DATAGRAM_SEND_RESULT_FAILED;
+    struct pbuf* p = pbuf_alloc(PBUF_TRANSPORT, (u16_t) call->Size, PBUF_REF);
+    if (p != NULL)
+    {
+        p->payload = (void*) call->Buffer;
+        err_t err = udp_sendto(call->Pcb, p, &call->Dst->Ip, call->Dst->Port);
+        (void) pbuf_free(p);
+        if (err == ERR_OK)
+        {
+            call->Result = SOLIDSYSLOG_DATAGRAM_SEND_RESULT_SENT;
+        }
+    }
 }
 
 static size_t LwipRawDatagram_MaxPayload(struct SolidSyslogDatagram* base)

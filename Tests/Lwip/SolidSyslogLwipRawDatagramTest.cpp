@@ -8,6 +8,7 @@ using namespace CososoTesting;
 
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
+#include "LwipFakeMarshalGuard.h"
 #include "LwipPbufFake.h"
 #include "LwipUdpFake.h"
 #include "SolidSyslogDatagram.h"
@@ -69,6 +70,8 @@ TEST_BASE(LwipRawDatagramTestBase)
     {
         LwipUdpFake_Reset();
         LwipPbufFake_Reset();
+        LwipFakeMarshalGuard_Reset();
+        SolidSyslogLwipRaw_SetMarshal(LwipFakeMarshalGuard_TrackingMarshal);
         datagram = SolidSyslogLwipRawDatagram_Create();
         address = SolidSyslogLwipRawAddress_Create();
         struct SolidSyslogLwipRawAddress* lwipAddress = SolidSyslogLwipRawAddress_As(address);
@@ -82,6 +85,8 @@ TEST_BASE(LwipRawDatagramTestBase)
         SolidSyslogLwipRawDatagram_Destroy(datagram);
         LONGS_EQUAL_TEXT(0, LwipUdpFake_OutstandingPcbCount(), "leaked udp_pcb past teardown");
         LONGS_EQUAL_TEXT(0, LwipPbufFake_OutstandingPbufCount(), "leaked pbuf past teardown");
+        LwipFakeMarshalGuard_CheckNoBreach();
+        SolidSyslogLwipRaw_SetMarshal(nullptr);
     }
 
     /* SendTo against the shared buffer + address. Default length 1 — most

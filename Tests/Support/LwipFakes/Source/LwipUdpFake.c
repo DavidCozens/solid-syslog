@@ -2,6 +2,7 @@
 
 #include <stddef.h>
 
+#include "LwipFakeMarshalGuard.h"
 #include "lwip/arch.h"
 #include "lwip/err.h"
 #include "lwip/udp.h"
@@ -101,6 +102,7 @@ int LwipUdpFake_OutstandingPcbCount(void)
 
 struct udp_pcb* udp_new(void)
 {
+    LWIP_REQUIRE_MARSHAL_ACTIVE();
     ++udpNewCallCount;
     if (udpNewFails)
     {
@@ -116,6 +118,7 @@ struct udp_pcb* udp_new(void)
 
 void udp_remove(struct udp_pcb* pcb)
 {
+    LWIP_REQUIRE_MARSHAL_ACTIVE();
     ++udpRemoveCallCount;
     lastUdpRemovePcb = pcb;
     --outstandingPcbCount;
@@ -123,6 +126,7 @@ void udp_remove(struct udp_pcb* pcb)
 
 err_t udp_sendto(struct udp_pcb* pcb, struct pbuf* p, const ip_addr_t* dst_ip, u16_t dst_port)
 {
+    LWIP_REQUIRE_MARSHAL_ACTIVE();
     ++udpSendtoCallCount;
     lastSendtoPcb = pcb;
     lastSendtoPbuf = p;
