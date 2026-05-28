@@ -21,32 +21,22 @@
 struct SolidSyslogAddress;
 struct SolidSyslogStream;
 
-/* Carries one Open operation across the setup-and-connect marshal hop. The
- * connect's spin-wait stays on the caller's thread, so only the lwIP setup
- * runs inside the hop; ConnectErr is read back once the hop returns. */
-struct LwipRawTcpStream_OpenCall
+/* Per-operation parameters carried across one marshal hop. Each public op
+ * fills only the fields it needs (Close/Abort set just Self); read-back
+ * results (ConnectErr / SendResult / ReadResult) are returned in the same
+ * struct. One struct per class so the void*-context recovery has a single
+ * cast site (LwipRawTcpStream_CallFromContext) — see D.002 in
+ * docs/misra-deviations.md. Send/Read fields never overlap in one call. */
+struct LwipRawTcpStream_Call
 {
     struct SolidSyslogLwipRawTcpStream* Self;
     const struct SolidSyslogLwipRawAddress* Dst;
+    const void* SendBuffer;
+    void* ReadBuffer;
+    size_t Length;
     err_t ConnectErr;
-};
-
-/* Carries one Send operation across its marshal hop; Result is read back. */
-struct LwipRawTcpStream_SendCall
-{
-    struct SolidSyslogLwipRawTcpStream* Self;
-    const void* Buffer;
-    size_t Size;
-    bool Result;
-};
-
-/* Carries one Read operation across its marshal hop; Result is read back. */
-struct LwipRawTcpStream_ReadCall
-{
-    struct SolidSyslogLwipRawTcpStream* Self;
-    void* Buffer;
-    size_t Size;
-    SolidSyslogSsize Result;
+    bool SendResult;
+    SolidSyslogSsize ReadResult;
 };
 
 static uint32_t LwipRawTcpStream_NullConnectTimeoutGetter(void* context);
@@ -58,7 +48,7 @@ static void LwipRawTcpStream_Close(struct SolidSyslogStream* base);
 
 static inline struct SolidSyslogLwipRawTcpStream* LwipRawTcpStream_SelfFromBase(struct SolidSyslogStream* base);
 static inline struct SolidSyslogLwipRawTcpStream* LwipRawTcpStream_SelfFromArg(void* arg);
-static inline struct SolidSyslogLwipRawTcpStream* LwipRawTcpStream_SelfFromContext(void* context);
+static inline struct LwipRawTcpStream_Call* LwipRawTcpStream_CallFromContext(void* context);
 static inline bool LwipRawTcpStream_ConfigProvidesGetter(const struct SolidSyslogLwipRawTcpStreamConfig* config);
 static inline bool LwipRawTcpStream_IsOpen(const struct SolidSyslogLwipRawTcpStream* self);
 static inline bool LwipRawTcpStream_HasQueuedRx(const struct SolidSyslogLwipRawTcpStream* self);
@@ -148,11 +138,12 @@ static inline struct SolidSyslogLwipRawTcpStream* LwipRawTcpStream_SelfFromArg(v
     return (struct SolidSyslogLwipRawTcpStream*) arg;
 }
 
-/* Recovers our self pointer from the void* context the marshal passes back
- * into the Do* callbacks that need only self (no per-call struct). */
-static inline struct SolidSyslogLwipRawTcpStream* LwipRawTcpStream_SelfFromContext(void* context)
+/* Recovers the per-op call struct from the void* context the marshal passes
+ * back into each Do* callback — the marshal-seam analogue of SelfFromArg,
+ * one cast site for all marshalled ops (see D.002). */
+static inline struct LwipRawTcpStream_Call* LwipRawTcpStream_CallFromContext(void* context)
 {
-    return (struct SolidSyslogLwipRawTcpStream*) context;
+    return (struct LwipRawTcpStream_Call*) context;
 }
 
 void LwipRawTcpStream_Cleanup(struct SolidSyslogStream* base)
@@ -168,7 +159,7 @@ static bool LwipRawTcpStream_Open(struct SolidSyslogStream* base, const struct S
     struct SolidSyslogLwipRawTcpStream* self = LwipRawTcpStream_SelfFromBase(base);
     if (!LwipRawTcpStream_IsOpen(self))
     {
-        struct LwipRawTcpStream_OpenCall call = {self, SolidSyslogLwipRawAddress_AsConst(addr), ERR_OK};
+        struct LwipRawTcpStream_Call call = {.Self = self, .Dst = SolidSyslogLwipRawAddress_AsConst(addr)};
         SolidSyslogLwipRaw_Marshal(LwipRawTcpStream_DoOpenAndConnect, &call);
         if (LwipRawTcpStream_IsOpen(self))
         {
@@ -179,7 +170,7 @@ static bool LwipRawTcpStream_Open(struct SolidSyslogStream* base, const struct S
             }
             if (!connected)
             {
-                SolidSyslogLwipRaw_Marshal(LwipRawTcpStream_DoAbort, self);
+                SolidSyslogLwipRaw_Marshal(LwipRawTcpStream_DoAbort, &call);
             }
         }
     }
@@ -193,7 +184,7 @@ static bool LwipRawTcpStream_Open(struct SolidSyslogStream* base, const struct S
  * thread (sleeping the lwIP thread mid-connect would starve RX/timers). */
 static void LwipRawTcpStream_DoOpenAndConnect(void* context)
 {
-    struct LwipRawTcpStream_OpenCall* call = (struct LwipRawTcpStream_OpenCall*) context;
+    struct LwipRawTcpStream_Call* call = LwipRawTcpStream_CallFromContext(context);
     struct SolidSyslogLwipRawTcpStream* self = call->Self;
     self->Pcb = LwipRawTcpStream_OpenAndConfigurePcb(self);
     if (LwipRawTcpStream_IsOpen(self))
@@ -263,7 +254,7 @@ static uint32_t LwipRawTcpStream_ResolveConnectTimeoutMs(struct SolidSyslogLwipR
  * tcp_abort (not tcp_close) because a half-open pcb has no graceful close. */
 static void LwipRawTcpStream_DoAbort(void* context)
 {
-    struct SolidSyslogLwipRawTcpStream* self = LwipRawTcpStream_SelfFromContext(context);
+    struct SolidSyslogLwipRawTcpStream* self = LwipRawTcpStream_CallFromContext(context)->Self;
     tcp_abort(self->Pcb);
     self->Pcb = NULL;
 }
@@ -274,17 +265,17 @@ static bool LwipRawTcpStream_Send(struct SolidSyslogStream* base, const void* bu
     bool sent = false;
     if (LwipRawTcpStream_IsOpen(self))
     {
-        struct LwipRawTcpStream_SendCall call = {self, buffer, size, false};
+        struct LwipRawTcpStream_Call call = {.Self = self, .SendBuffer = buffer, .Length = size};
         SolidSyslogLwipRaw_Marshal(LwipRawTcpStream_DoSend, &call);
-        sent = call.Result;
+        sent = call.SendResult;
     }
     return sent;
 }
 
 static void LwipRawTcpStream_DoSend(void* context)
 {
-    struct LwipRawTcpStream_SendCall* call = (struct LwipRawTcpStream_SendCall*) context;
-    call->Result = LwipRawTcpStream_SendOrCloseOnFailure(call->Self, call->Buffer, call->Size);
+    struct LwipRawTcpStream_Call* call = LwipRawTcpStream_CallFromContext(context);
+    call->SendResult = LwipRawTcpStream_SendOrCloseOnFailure(call->Self, call->SendBuffer, call->Length);
 }
 
 static bool LwipRawTcpStream_SendOrCloseOnFailure(
@@ -328,9 +319,14 @@ static SolidSyslogSsize LwipRawTcpStream_Read(struct SolidSyslogStream* base, vo
     {
         if (LwipRawTcpStream_HasReadWork(self))
         {
-            struct LwipRawTcpStream_ReadCall call = {self, buffer, size, READ_FAILED};
+            struct LwipRawTcpStream_Call call = {
+                .Self = self,
+                .ReadBuffer = buffer,
+                .Length = size,
+                .ReadResult = READ_FAILED,
+            };
             SolidSyslogLwipRaw_Marshal(LwipRawTcpStream_DoRead, &call);
-            result = call.Result;
+            result = call.ReadResult;
         }
         else
         {
@@ -350,18 +346,18 @@ static inline bool LwipRawTcpStream_HasReadWork(const struct SolidSyslogLwipRawT
 
 static void LwipRawTcpStream_DoRead(void* context)
 {
-    struct LwipRawTcpStream_ReadCall* call = (struct LwipRawTcpStream_ReadCall*) context;
+    struct LwipRawTcpStream_Call* call = LwipRawTcpStream_CallFromContext(context);
     struct SolidSyslogLwipRawTcpStream* self = call->Self;
     if (LwipRawTcpStream_HasQueuedRx(self))
     {
-        size_t copied = LwipRawTcpStream_DrainHeadBytes(self, call->Buffer, call->Size);
+        size_t copied = LwipRawTcpStream_DrainHeadBytes(self, call->ReadBuffer, call->Length);
         tcp_recved(self->Pcb, (u16_t) copied);
-        call->Result = (SolidSyslogSsize) copied;
+        call->ReadResult = (SolidSyslogSsize) copied;
     }
     else
     {
         /* Peer FIN drained → close internally per the Stream contract
-         * ("< 0 means EOF AND socket closed internally"); Result stays
+         * ("< 0 means EOF AND socket closed internally"); ReadResult stays
          * READ_FAILED. */
         LwipRawTcpStream_ClosePcb(self);
     }
@@ -415,7 +411,8 @@ static void LwipRawTcpStream_Close(struct SolidSyslogStream* base)
     struct SolidSyslogLwipRawTcpStream* self = LwipRawTcpStream_SelfFromBase(base);
     if (LwipRawTcpStream_HasCloseWork(self))
     {
-        SolidSyslogLwipRaw_Marshal(LwipRawTcpStream_DoClose, self);
+        struct LwipRawTcpStream_Call call = {.Self = self};
+        SolidSyslogLwipRaw_Marshal(LwipRawTcpStream_DoClose, &call);
     }
 }
 
@@ -429,7 +426,7 @@ static inline bool LwipRawTcpStream_HasCloseWork(const struct SolidSyslogLwipRaw
 
 static void LwipRawTcpStream_DoClose(void* context)
 {
-    LwipRawTcpStream_ClosePcb(LwipRawTcpStream_SelfFromContext(context));
+    LwipRawTcpStream_ClosePcb(LwipRawTcpStream_CallFromContext(context)->Self);
 }
 
 /* tcp_close must NOT be called on a pcb that has already been released by
