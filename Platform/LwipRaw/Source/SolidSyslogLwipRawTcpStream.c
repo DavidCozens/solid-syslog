@@ -17,6 +17,7 @@
 #include "SolidSyslogStream.h"
 #include "SolidSyslogTunables.h"
 
+struct SolidSyslogAddress;
 struct SolidSyslogStream;
 
 static uint32_t LwipRawTcpStream_NullConnectTimeoutGetter(void* context);

@@ -345,6 +345,14 @@ void tcp_sent(struct tcp_pcb* pcb, tcp_sent_fn sent)
     lastSentFn = sent;
 }
 
+/* Default tcp_connect semantics: when configured to succeed (no immediate
+ * error injected, the test wants the cb to fire, and a cb was registered),
+ * synchronously invoke the connected callback with the configured result. */
+static inline bool ShouldFireConnectCallback(tcp_connected_fn connected)
+{
+    return (tcpConnectError == ERR_OK) && connectCallbackFires && (connected != NULL);
+}
+
 err_t tcp_connect(struct tcp_pcb* pcb, const ip_addr_t* ipaddr, u16_t port, tcp_connected_fn connected)
 {
     ++tcpConnectCallCount;
@@ -352,7 +360,7 @@ err_t tcp_connect(struct tcp_pcb* pcb, const ip_addr_t* ipaddr, u16_t port, tcp_
     lastConnectIpaddr = ipaddr;
     lastConnectPort = port;
     lastConnectedFn = connected;
-    if ((tcpConnectError == ERR_OK) && connectCallbackFires && (connected != NULL))
+    if (ShouldFireConnectCallback(connected))
     {
         (void) connected(lastCallbackArg, pcb, connectCallbackResult);
     }

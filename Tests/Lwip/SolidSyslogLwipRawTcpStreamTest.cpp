@@ -30,6 +30,7 @@ using namespace CososoTesting;
 
 static const uint16_t TEST_PORT = 514;
 
+// NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 // Asserts handle is non-null and not one of the slots in pool.
 #define CHECK_IS_FALLBACK(handle, pool)                                                \
     do                                                                                 \
@@ -56,6 +57,7 @@ static const uint16_t TEST_PORT = 514;
 // tcp_new — proves the wrapper forwarded the right handle. `getter` is
 // the LwipTcpFake_LastXxxPcb accessor function (zero-arg).
 #define CHECK_FORWARDED_PCB(getter) POINTERS_EQUAL(LwipTcpFake_LastTcpNewReturned(), getter())
+// NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 
 namespace
 {
@@ -132,14 +134,14 @@ TEST_BASE(LwipRawTcpStreamTestBase)
     /* Send through the abstract base against the shared sendBuffer. Default
      * length 1 covers the lifecycle / pcb-forwarding tests that don't care
      * about content; size-specific tests pass it explicitly. */
-    bool sendBytes(size_t length = 1U) const
+    [[nodiscard]] bool sendBytes(size_t length = 1U) const
     {
         return SolidSyslogStream_Send(stream, sendBuffer, length);
     }
 
     /* Read through the abstract base into the shared readBuffer. Default
      * capacity is the full buffer; partial-drain tests pass it explicitly. */
-    SolidSyslogSsize readBytes(size_t capacity = sizeof(readBuffer))
+    [[nodiscard]] SolidSyslogSsize readBytes(size_t capacity = sizeof(readBuffer))
     {
         return SolidSyslogStream_Read(stream, readBuffer, capacity);
     }
@@ -151,8 +153,9 @@ TEST_BASE(LwipRawTcpStreamTestBase)
      * the wrapper took ownership of the pbuf (leak counter bumped here);
      * non-ERR_OK means lwIP retains the pbuf and the counter stays put,
      * so backpressure tests can pin the contract without imbalance. */
-    err_t pushIncomingPbuf(struct pbuf* p, const void* data, uint16_t len)
+    static err_t pushIncomingPbuf(struct pbuf* p, const void* data, uint16_t len)
     {
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast) -- pbuf->payload is void*; tests pass string literals
         p->payload = const_cast<void*>(data);
         p->len = len;
         p->tot_len = len;
@@ -168,7 +171,7 @@ TEST_BASE(LwipRawTcpStreamTestBase)
 
     /* Drive the wrapper's tcp_recv callback with NULL p — peer half-close
      * (FIN). lwIP retains the pcb; only the receive half is gone. */
-    void pushPeerFin() const
+    static void pushPeerFin()
     {
         tcp_recv_fn recvCb = LwipTcpFake_LastRecvFn();
         (void) recvCb(LwipTcpFake_LastCallbackArg(), LwipTcpFake_LastTcpNewReturned(), nullptr, ERR_OK);
@@ -177,7 +180,7 @@ TEST_BASE(LwipRawTcpStreamTestBase)
     /* Drive the wrapper's tcp_err callback — lwIP releases the pcb
      * upstream before this fires, so the leak invariant needs the
      * matching NotePcbReleasedByErr. */
-    void pushTcpErr(int8_t err) const
+    static void pushTcpErr(int8_t err)
     {
         tcp_err_fn errCb = LwipTcpFake_LastErrFn();
         errCb(LwipTcpFake_LastCallbackArg(), (err_t) err);
@@ -484,7 +487,7 @@ TEST(SolidSyslogLwipRawTcpStreamConnected, SendCallsTcpWriteWithCopyFlagAndSize)
 {
     memcpy(sendBuffer, "hello", 5);
 
-    sendBytes(5);
+    (void) sendBytes(5);
 
     CALLED_FAKE(LwipTcpFake_TcpWrite, ONCE);
     CHECK_FORWARDED_PCB(LwipTcpFake_LastWritePcb);
@@ -495,7 +498,7 @@ TEST(SolidSyslogLwipRawTcpStreamConnected, SendCallsTcpWriteWithCopyFlagAndSize)
 
 TEST(SolidSyslogLwipRawTcpStreamConnected, SendCallsTcpOutputAfterTcpWrite)
 {
-    sendBytes();
+    (void) sendBytes();
 
     CALLED_FAKE(LwipTcpFake_TcpOutput, ONCE);
     CHECK_FORWARDED_PCB(LwipTcpFake_LastOutputPcb);
