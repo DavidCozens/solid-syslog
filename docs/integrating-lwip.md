@@ -26,7 +26,7 @@ re-teach lwIP — for that, see the
 | Class | Wraps | Purpose |
 |---|---|---|
 | `SolidSyslogLwipRawAddress` | `ip_addr_t` + `u16_t` port | Destination handle the Resolver writes into and the Datagram/TcpStream read from. |
-| `SolidSyslogLwipRawResolver` | `ipaddr_aton` | Synchronous numeric IPv4 parsing. Rejects DNS names — they need the future `SolidSyslogLwipRawDnsResolver` (S28.07). |
+| `SolidSyslogLwipRawResolver` | `ipaddr_aton` | Synchronous numeric IPv4 parsing. Rejects DNS names — they need the future `SolidSyslogLwipRawDnsResolver` (S28.08). |
 | `SolidSyslogLwipRawDatagram` | `udp_new` / `udp_sendto` / `udp_remove` | UDP sender. Zero-copy `PBUF_REF` send. |
 | `SolidSyslogLwipRawTcpStream` | `tcp_new` / `tcp_connect` / `tcp_write` / `tcp_output` / `tcp_recv` / `tcp_recved` / `tcp_close` / `tcp_abort` | TCP byte transport. Bounded synchronous Open. Bounded RX pbuf queue. |
 
@@ -48,9 +48,45 @@ for the TLS side.
 
 lwIP supports both threading models. SolidSyslog supports both — the
 adapter code is the same; the difference is entirely in how *you*
-drive lwIP forward.
+drive lwIP forward, and which **marshal** you install.
+
+### The marshal seam
+
+Every Raw API call the adapters make — `udp_sendto`, `tcp_write`,
+`pbuf_alloc`, `tcp_close`, … — is routed through a single hop:
+
+```c
+#include "SolidSyslogLwipRawMarshal.h"
+
+SolidSyslogLwipRaw_SetMarshal(MyMarshal);   /* once, at boot */
+```
+
+The default (nothing installed, or `SolidSyslogLwipRaw_SetMarshal(NULL)`)
+is a **direct call** — the adapter calls lwIP on the calling thread. That
+is exactly right for `NO_SYS=1`. For `NO_SYS=0` you install a marshal that
+hops onto the thread owning the lwIP core.
+
+> **Earlier guidance was wrong.** Prior versions of this guide told you to
+> "marshal at the SolidSyslog API boundary" — wrap `SolidSyslog_Service()`
+> in `tcpip_callback()`. Don't. That puts file I/O, mbedTLS crypto, the
+> CircularBuffer mutex, the StreamSender's formatter work, and the Resolver
+> parse — none of which touch lwIP — on the tcpip thread, starving lwIP's
+> timer / RX path under load. The correct boundary is the **individual lwIP
+> Raw API call**, which is what the marshal seam gives you.
+
+**Contract.** The marshal MUST invoke its callback *synchronously* — before
+the marshal function returns. The adapter reads results the callback wrote
+immediately after the hop returns. `tcpip_callback_with_block(.., block=1)`
+honours this; a bare `tcpip_callback(..)` does not (it queues and returns).
+
+One global slot serves the whole process — there is one lwIP instance and
+one tcpip thread, so per-instance marshals would be flexibility without use.
 
 ### `NO_SYS=1` (bare-metal main-loop)
+
+Install nothing — the default direct-call marshal is correct. There is one
+execution context and no core to protect.
+
 
 Your `main()` is a forever-loop that, on each pass, calls
 `sys_check_timeouts()` and drives the RX path
@@ -78,38 +114,80 @@ void MyLwipSleep(int milliseconds)
 Without this, `tcp_connect`'s `connected_cb` never fires (lwIP can't
 advance its state machine while you sleep), and Open times out.
 
-### `NO_SYS=0` (tcpip thread)
+### `NO_SYS=0` (tcpip thread) — option A: `tcpip_callback`
 
-lwIP runs a dedicated `tcpip` thread that owns its state machine; you
-post work to it via `tcpip_callback()` or use the BSD Sockets /
-NETCONN APIs.
-
-**Threading rule for the Raw API**: every Raw API call from outside
-the tcpip thread must be marshalled via `tcpip_callback()` (or via
-the `LWIP_TCPIP_CORE_LOCKING_INPUT` lock if you've compiled with core
-locking). This applies to every call SolidSyslog's adapters make into
-lwIP — Datagram's `udp_sendto`, TcpStream's `tcp_write`, etc.
-
-**SolidSyslog does not marshal internally.** That would force every
-integrator to compile `tcpip.c` even when they're on `NO_SYS=1`. The
-expectation is that *you* call SolidSyslog APIs on the tcpip thread,
-either by running your Service loop on it, or by marshalling each
-call at the SolidSyslog API boundary:
+lwIP runs a dedicated `tcpip` thread that owns its state machine. Install a
+marshal that posts each adapter callback to it and **blocks until it runs**:
 
 ```c
-static void DoService(void* ctx)
+#include "lwip/tcpip.h"
+#include "SolidSyslogLwipRawMarshal.h"
+
+struct MarshalHop
 {
-    SolidSyslog_Service((struct SolidSyslog*) ctx);
+    SolidSyslogLwipRawCallback callback;
+    void*                      context;
+};
+
+static void RunHop(void* ctx)
+{
+    struct MarshalHop* hop = (struct MarshalHop*) ctx;
+    hop->callback(hop->context);
 }
 
-void MyServiceTick(struct SolidSyslog* handle)
+void MyTcpipMarshal(SolidSyslogLwipRawCallback callback, void* context)
 {
-    (void) tcpip_callback(DoService, handle);
+    /* Re-entry guard: if we are ALREADY on the tcpip thread (e.g. the adapter
+     * was called from inside a SolidSyslog callback that lwIP itself invoked),
+     * posting-and-blocking would deadlock. Run directly instead. */
+    if (sys_current_task_is_tcpip_thread()) /* your port's predicate */
+    {
+        callback(context);
+        return;
+    }
+
+    struct MarshalHop hop = {callback, context};
+    /* block=1 makes this synchronous — required by the marshal contract. */
+    (void) tcpip_callback_with_block(RunHop, &hop, 1);
 }
+
+/* ... at boot ... */
+SolidSyslogLwipRaw_SetMarshal(MyTcpipMarshal);
 ```
 
-Your injected `Sleep` callback under `NO_SYS=0` is just a yield —
-typically `vTaskDelay(pdMS_TO_TICKS(milliseconds))` on FreeRTOS:
+`tcpip_callback_with_block` needs an OS mailbox sized for the blocking post —
+ensure `TCPIP_MBOX_SIZE` is adequate. lwIP does not expose a portable
+"am I on the tcpip thread?" predicate; most ports compare the current task
+handle against the one passed to `tcpip_init`.
+
+### `NO_SYS=0` (tcpip thread) — option B: core locking
+
+If you compiled lwIP with `LWIP_TCPIP_CORE_LOCKING=1`, take the core lock
+around the hop instead of posting to the mailbox — lower latency, no context
+switch:
+
+```c
+#include "lwip/tcpip.h"
+#include "SolidSyslogLwipRawMarshal.h"
+
+void MyCoreLockMarshal(SolidSyslogLwipRawCallback callback, void* context)
+{
+    LOCK_TCPIP_CORE();
+    callback(context);
+    UNLOCK_TCPIP_CORE();
+}
+
+/* ... at boot ... */
+SolidSyslogLwipRaw_SetMarshal(MyCoreLockMarshal);
+```
+
+`LOCK_TCPIP_CORE` is a recursive lock on most ports, so this is safe even if
+the adapter is reached from a context that already holds it.
+
+### The `Sleep` callback under `NO_SYS=0`
+
+TcpStream's bounded-Open spin runs on *your* thread (never the tcpip thread),
+so its `Sleep` is just a yield — typically `vTaskDelay` on FreeRTOS:
 
 ```c
 void MyLwipSleep(int milliseconds)
@@ -118,8 +196,9 @@ void MyLwipSleep(int milliseconds)
 }
 ```
 
-The tcpip thread runs concurrently and processes the SYN/SYN-ACK
-exchange while you yield.
+The tcpip thread runs concurrently and processes the SYN/SYN-ACK exchange
+while you yield. A worked `NO_SYS=0` + `tcpip_callback` integration ships as
+the FreeRtosLwip BDD target (S28.07).
 
 ---
 
@@ -134,7 +213,8 @@ features you must enable are flagged.
 | `LWIP_RAW=1` | **Yes** | The whole point — Raw API. |
 | `LWIP_UDP=1` | **Yes (Datagram)** | Wraps `udp_*`. |
 | `LWIP_TCP=1` | **Yes (TcpStream)** | Wraps `tcp_*`. |
-| `LWIP_DNS` | No | The current Resolver only parses numeric IPv4 via `ipaddr_aton`. DNS lands in S28.07. |
+| `LWIP_DNS` | No | The current Resolver only parses numeric IPv4 via `ipaddr_aton`. DNS lands in S28.08. |
+| `LWIP_TCPIP_CORE_LOCKING` | Marshal-dependent | Only needed if you install the core-locking marshal (option B above). The default `tcpip_callback` marshal (option A) does not require it. `NO_SYS=1` never needs it. |
 | `ARP_QUEUEING=1` | **Recommended** | lwIP default. With it, the first datagram to an unresolved peer is `pbuf_clone`d into PBUF_RAM and queued behind the ARP request — when the reply lands, the packet ships. With `ARP_QUEUEING=0` the first datagram is silently dropped at the IP layer; cold-start logging loses messages. |
 | `LWIP_TCP_KEEPALIVE=1` | **Recommended** | Without this, the `SOF_KEEPALIVE` bit the adapter sets on every pcb is a no-op. Tune `TCP_KEEPIDLE_DEFAULT` / `TCP_KEEPINTVL_DEFAULT` / `TCP_KEEPCNT_DEFAULT` for your deadline budget. |
 | `TCP_MSS` | Per-platform | Default `536` (RFC-conservative). Bump to `1460` on Ethernet links if your MTU is 1500 and you want fewer segments per syslog record. |
@@ -328,11 +408,11 @@ the `SOLIDSYSLOG_USER_TUNABLES_FILE` CMake variable.
 
 - **DNS** — currently out of scope. `SolidSyslogLwipRawResolver` only
   parses numeric IPv4. `SolidSyslogLwipRawDnsResolver` lands in
-  S28.07.
+  S28.08.
 - **IPv6** — the current Address / Resolver are IPv4-only.
 - **Multi-`netif` routing** — neither Datagram nor TcpStream selects
   an output interface; lwIP's routing table decides.
 - **Jumbo-frame MTU discovery** — `Datagram_MaxPayload` returns
   `SOLIDSYSLOG_UDP_IPV6_SAFE_PAYLOAD` (1232 bytes) unconditionally.
 - **BDD coverage** — the FreeRTOS-on-lwIP BDD target arrives in
-  S28.06.
+  S28.07.

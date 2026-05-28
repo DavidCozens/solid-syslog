@@ -10,6 +10,7 @@ using namespace CososoTesting;
 
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
+#include "LwipFakeMarshalGuard.h"
 #include "LwipPbufFake.h"
 #include "LwipTcpFake.h"
 #include "SolidSyslogLwipRawAddress.h"
@@ -117,6 +118,8 @@ TEST_BASE(LwipRawTcpStreamTestBase)
         LwipPbufFake_Reset();
         FakeSleep_Reset();
         FakeGetConnectTimeoutMs_Reset();
+        LwipFakeMarshalGuard_Reset();
+        SolidSyslogLwipRaw_SetMarshal(LwipFakeMarshalGuard_TrackingMarshal);
         config = {};
         config.Sleep = FakeSleep;
         stream = SolidSyslogLwipRawTcpStream_Create(&config);
@@ -132,6 +135,8 @@ TEST_BASE(LwipRawTcpStreamTestBase)
         SolidSyslogLwipRawTcpStream_Destroy(stream);
         LONGS_EQUAL_TEXT(0, LwipTcpFake_OutstandingPcbCount(), "leaked tcp_pcb past teardown");
         LONGS_EQUAL_TEXT(0, LwipPbufFake_OutstandingPbufCount(), "leaked pbuf past teardown");
+        LwipFakeMarshalGuard_CheckNoBreach();
+        SolidSyslogLwipRaw_SetMarshal(nullptr);
     }
 
     /* Send through the abstract base against the shared sendBuffer. Default

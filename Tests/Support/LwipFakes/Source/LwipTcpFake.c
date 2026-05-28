@@ -2,6 +2,7 @@
 
 #include <stddef.h>
 
+#include "LwipFakeMarshalGuard.h"
 #include "lwip/arch.h"
 #include "lwip/err.h"
 #include "lwip/ip_addr.h"
@@ -304,6 +305,7 @@ void LwipTcpFake_NotePcbReleasedByErr(void)
 
 struct tcp_pcb* tcp_new(void)
 {
+    LWIP_REQUIRE_MARSHAL_ACTIVE();
     ++tcpNewCallCount;
     if (tcpNewFails)
     {
@@ -319,6 +321,7 @@ struct tcp_pcb* tcp_new(void)
 
 void tcp_arg(struct tcp_pcb* pcb, void* arg)
 {
+    LWIP_REQUIRE_MARSHAL_ACTIVE();
     (void) pcb;
     ++tcpArgCallCount;
     lastCallbackArg = arg;
@@ -326,6 +329,7 @@ void tcp_arg(struct tcp_pcb* pcb, void* arg)
 
 void tcp_recv(struct tcp_pcb* pcb, tcp_recv_fn recv)
 {
+    LWIP_REQUIRE_MARSHAL_ACTIVE();
     (void) pcb;
     ++tcpRecvCallCount;
     lastRecvFn = recv;
@@ -333,6 +337,7 @@ void tcp_recv(struct tcp_pcb* pcb, tcp_recv_fn recv)
 
 void tcp_err(struct tcp_pcb* pcb, tcp_err_fn err)
 {
+    LWIP_REQUIRE_MARSHAL_ACTIVE();
     (void) pcb;
     ++tcpErrCallCount;
     lastErrFn = err;
@@ -340,6 +345,7 @@ void tcp_err(struct tcp_pcb* pcb, tcp_err_fn err)
 
 void tcp_sent(struct tcp_pcb* pcb, tcp_sent_fn sent)
 {
+    LWIP_REQUIRE_MARSHAL_ACTIVE();
     (void) pcb;
     ++tcpSentCallCount;
     lastSentFn = sent;
@@ -355,11 +361,15 @@ static inline bool ShouldFireConnectCallback(tcp_connected_fn connected)
 
 err_t tcp_connect(struct tcp_pcb* pcb, const ip_addr_t* ipaddr, u16_t port, tcp_connected_fn connected)
 {
+    LWIP_REQUIRE_MARSHAL_ACTIVE();
     ++tcpConnectCallCount;
     lastConnectPcb = pcb;
     lastConnectIpaddr = ipaddr;
     lastConnectPort = port;
     lastConnectedFn = connected;
+    /* The fake fires the connected callback synchronously here, inside the
+     * marshalled tcp_connect, mirroring production routing the whole
+     * setup-and-connect through one marshal hop. */
     if (ShouldFireConnectCallback(connected))
     {
         (void) connected(lastCallbackArg, pcb, connectCallbackResult);
@@ -369,6 +379,7 @@ err_t tcp_connect(struct tcp_pcb* pcb, const ip_addr_t* ipaddr, u16_t port, tcp_
 
 err_t tcp_close(struct tcp_pcb* pcb)
 {
+    LWIP_REQUIRE_MARSHAL_ACTIVE();
     ++tcpCloseCallCount;
     lastClosePcb = pcb;
     if (tcpCloseError == ERR_OK)
@@ -380,6 +391,7 @@ err_t tcp_close(struct tcp_pcb* pcb)
 
 void tcp_abort(struct tcp_pcb* pcb)
 {
+    LWIP_REQUIRE_MARSHAL_ACTIVE();
     ++tcpAbortCallCount;
     lastAbortPcb = pcb;
     --outstandingPcbCount;
@@ -387,6 +399,7 @@ void tcp_abort(struct tcp_pcb* pcb)
 
 err_t tcp_write(struct tcp_pcb* pcb, const void* dataptr, u16_t len, u8_t apiflags)
 {
+    LWIP_REQUIRE_MARSHAL_ACTIVE();
     ++tcpWriteCallCount;
     lastWritePcb = pcb;
     lastWriteDataptr = dataptr;
@@ -397,6 +410,7 @@ err_t tcp_write(struct tcp_pcb* pcb, const void* dataptr, u16_t len, u8_t apifla
 
 err_t tcp_output(struct tcp_pcb* pcb)
 {
+    LWIP_REQUIRE_MARSHAL_ACTIVE();
     ++tcpOutputCallCount;
     lastOutputPcb = pcb;
     return tcpOutputError;
@@ -404,6 +418,7 @@ err_t tcp_output(struct tcp_pcb* pcb)
 
 void tcp_recved(struct tcp_pcb* pcb, u16_t len)
 {
+    LWIP_REQUIRE_MARSHAL_ACTIVE();
     ++tcpRecvedCallCount;
     lastRecvedPcb = pcb;
     lastRecvedLen = len;
