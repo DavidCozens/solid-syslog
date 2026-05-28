@@ -56,8 +56,9 @@ static const uint16_t TEST_PORT = 514;
 // Asserts the lwIP API call recorded the pcb the wrapper got back from
 // tcp_new — proves the wrapper forwarded the right handle. `getter` is
 // the LwipTcpFake_LastXxxPcb accessor function (zero-arg).
-#define CHECK_FORWARDED_PCB(getter) \
-    POINTERS_EQUAL(LwipTcpFake_LastTcpNewReturned(), getter())
+// clang-format off
+#define CHECK_FORWARDED_PCB(getter) POINTERS_EQUAL(LwipTcpFake_LastTcpNewReturned(), getter())
+// clang-format on
 
 // NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 
