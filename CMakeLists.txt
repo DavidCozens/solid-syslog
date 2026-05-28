@@ -150,12 +150,12 @@ endif()
 # time. CI builds PLUSTCP and LWIP in isolation; BOTH is a dev-container
 # convenience.
 #
-# S28.03 lands the first slice of the lwIP backend (Address + Resolver,
-# literal IPv4 only). LWIP and BOTH configure but the backend is still
-# partial — Datagram/TcpStream/BDD arrive in S28.04-S28.06. Platform/LwipRaw
-# is OS-agnostic by construction (wraps lwIP only, no FreeRTOS coupling)
-# and is gated separately on LWIP_PATH below; this option only controls
-# which adapter pack the FreeRTOS BDD target wires up.
+# S28.03-S28.05 land the OS-agnostic slices (Address, Resolver, Datagram,
+# TcpStream). LWIP and BOTH configure but the backend is still partial —
+# BDD arrives in S28.06. Platform/LwipRaw is OS-agnostic by construction
+# (wraps lwIP only, no FreeRTOS coupling) and is gated separately on
+# LWIP_PATH below; this option only controls which adapter pack the
+# FreeRTOS BDD target wires up.
 set(SOLIDSYSLOG_FREERTOS_NET "PLUSTCP" CACHE STRING
     "FreeRTOS networking backend: PLUSTCP (default), LWIP, or BOTH")
 set_property(CACHE SOLIDSYSLOG_FREERTOS_NET PROPERTY STRINGS PLUSTCP LWIP BOTH)
@@ -169,12 +169,12 @@ endif()
 if(SOLIDSYSLOG_FREERTOS_NET STREQUAL "LWIP")
     message(STATUS
         "SOLIDSYSLOG_FREERTOS_NET=LWIP: lwIP backend partial — "
-        "Address+Resolver+Datagram only; TcpStream/BDD arrive in S28.05-S28.06.")
+        "Address+Resolver+Datagram+TcpStream only; BDD arrives in S28.06.")
 endif()
 if(SOLIDSYSLOG_FREERTOS_NET STREQUAL "BOTH")
     message(STATUS
         "SOLIDSYSLOG_FREERTOS_NET=BOTH: lwIP backend partial — "
-        "Address+Resolver+Datagram only; TcpStream/BDD arrive in S28.05-S28.06.")
+        "Address+Resolver+Datagram+TcpStream only; BDD arrives in S28.06.")
 endif()
 
 # Build-time tunables (E21: Port-Time Configurability). Integrators override

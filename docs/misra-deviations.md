@@ -172,6 +172,33 @@ lifecycle is fundamentally per-call, not per-class. Rules 11.2 / 11.3
 fire on the cast between `SolidSyslogFormatterStorage*` and `struct
 SolidSyslogFormatter*`.
 
+#### (c) Third-party callback `void*` arg — `SelfFromArg` and byte-buffer reinterprets
+
+Several wrapped libraries expose callback-style APIs where we register a
+function pointer plus an opaque `void*` context that the library passes
+back to us when it invokes the callback. mbedTLS's `mbedtls_ssl_set_bio`
+hands us back `void* ctx` in `BioSend` / `BioRecv`; lwIP Raw's
+`tcp_arg(pcb, self)` hands us back `void* arg` in every `tcp_recv` /
+`tcp_err` / `tcp_connected` / `tcp_sent` callback we registered. The
+implementation has to cast that `void*` back to the concrete
+implementation struct to do any work — Rule 11.5 (advisory) fires on
+every such cast.
+
+This is structurally the same OO-in-C downcast as (a) — the library API
+is the "base" type (`void*`), our struct is the "derived" type — just
+happening at the callback boundary rather than the vtable-method
+boundary. Each affected wrapper concentrates the cast in a single
+`SelfFromArg`-style helper so the suppression has one site per class,
+not one per callback (see `LwipRawTcpStream_SelfFromArg` for the
+canonical shape).
+
+A second 11.5 sub-case the library leans on is the
+`void* ↔ const uint8_t*` cast in `SolidSyslogUdpSender` when trimming
+codepoint-boundary bytes from the caller's `const void*` buffer — a
+byte-buffer reinterpretation that crosses the same advisory rule. The
+third-party API contract (the public `Send` / `SendTo` interface) is
+`void*` for opacity; the byte-level work needs a concrete unit type.
+
 ### Rationale
 
 The pool migration under E11 / E24 retired the caller-supplied-storage
@@ -197,7 +224,11 @@ opaque-type design).
   the per-platform Address downcast is similarly locked down because
   the pool slot is statically-typed `struct SolidSyslog<Plat>Address`,
   so the cast back from the opaque `struct SolidSyslogAddress*` cannot
-  lie.
+  lie. For (c) callback `void*` args, the pointer that goes out via
+  the registration call (e.g. `tcp_arg(pcb, self)`,
+  `mbedtls_ssl_set_bio(..., self, ...)`) is the same pointer that
+  comes back — the library is a pass-through; the cast can only
+  succeed against the type the wrapper passed in.
 - **Alignment** — Storage types are declared as `intptr_t storage[N]`
   (or a struct of the same shape), giving alignment at least as strict
   as any pointer or scalar the impl contains. The cast is therefore

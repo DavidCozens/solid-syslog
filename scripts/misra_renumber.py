@@ -76,6 +76,7 @@ CPPCHECK_CMD = [
     "-IPlatform/MbedTls/Interface",
     "-IPlatform/FreeRtos/Interface",
     "-IPlatform/PlusTcp/Interface",
+    "-IPlatform/LwipRaw/Interface",
     "-IPlatform/FatFs/Interface",
     "--xml",
     "--xml-version=2",
@@ -87,6 +88,7 @@ CPPCHECK_CMD = [
     "Platform/MbedTls/Source/",
     "Platform/FreeRtos/Source/",
     "Platform/PlusTcp/Source/",
+    "Platform/LwipRaw/Source/",
     "Platform/FatFs/Source/",
 ]
 
