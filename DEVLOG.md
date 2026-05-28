@@ -1,5 +1,61 @@
 # Dev Log
 
+## 2026-05-28 — S28.06 LwipRaw marshal injection
+
+Sixth story under E28. Added `SolidSyslogLwipRaw_SetMarshal` — a
+process-global seam that routes every lwIP Raw API call the adapters make
+through one hop per public operation. Default is a direct-call null object
+(correct for `NO_SYS=1`); `NO_SYS=0` integrators install a
+`tcpip_callback_with_block` shim or a `LOCK_TCPIP_CORE` pair to pin the
+calls to the lwIP-owning thread. Same single-global-slot shape as
+`SolidSyslog_SetErrorHandler`. Motivation: the S28.05 guide's "marshal at
+the SolidSyslog API boundary" advice was wrong — it dragged file I/O,
+crypto, the buffer mutex, and the formatter work onto the tcpip thread. The
+right boundary is the individual lwIP call.
+
+The public header carries only the integrator setter; the internal
+dispatch `SolidSyslogLwipRaw_Marshal` lives in a private header (David's
+call when we paired on the API shape).
+
+### Slicing deviated from the issue, deliberately
+
+The issue's slice 1 ("arm the rail, existing tests go red, then green via a
+tracking marshal — before any routing") can't actually go green: the rail
+flag only flips inside the tracking marshal, which only runs once production
+*routes* through the marshal. And `LwipPbufFake` is shared by the Datagram
+and TcpStream test exes, so guarding it couples both wrappers into one
+commit. Reordered to: (1) marshal TU with its own red/green/refactor; (2)
+route both wrappers + arm the rail together, rail as the genuine red; (3)
+Resolver no-op note; (4) docs. Same end state, every commit green. Agreed
+the reorder with David up front.
+
+### The rail
+
+`LwipFakeMarshalGuard` arms every faked lwIP function (`udp_*`, `tcp_*`,
+`pbuf_*`) to record a breach if called while no marshal is active. Couldn't
+fail at the call site directly — the fakes are C and CppUTest aborts by
+throwing/longjmp, which is UB through C frames. So the guard *records* the
+first breach (with the fake's `__FILE__`/`__LINE__`) and a teardown
+`CheckNoBreach()` fails in safe C++ context, still reporting the exact lwIP
+call site. Any future refactor that drops a call site out of its marshal
+auto-fails the relevant test.
+
+### TcpStream Open keeps the spin on the caller's thread
+
+Open marshals setup+`tcp_connect` in one hop, then the bounded connect spin
+(`Sleep` between polls) runs on the *caller's* thread — sleeping the tcpip
+thread mid-connect would starve RX/timers — then a `tcp_abort`-on-failure is
+a second hop. Send/Read/Close take one hop each; the pure would-block Read
+and the no-pcb Close take none. The lwIP callbacks (`connected`/`recv`/
+`err`/`sent`) already run on the tcpip thread and touch no lwIP API, so
+they're not marshalled.
+
+### Resolver
+
+`ipaddr_aton` is a pure parser touching no lwIP state — left a forward-
+looking comment marking where the DnsResolver's `dns_gethostbyname` hop will
+belong instead.
+
 ## 2026-05-28 — S24.13 IWYU lanes switched to advisory
 
 Pivot story under E24. Started out scoped as "replace IWYU with
