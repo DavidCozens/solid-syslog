@@ -170,3 +170,25 @@ set_target_properties(SolidSyslogLwipRawTcpStreamTest PROPERTIES
 )
 
 add_test(NAME SolidSyslogLwipRawTcpStreamTest COMMAND SolidSyslogLwipRawTcpStreamTest)
+
+# ---- SolidSyslogLwipRawMarshalTest ----
+
+add_executable(SolidSyslogLwipRawMarshalTest
+    SolidSyslogLwipRawMarshalTest.cpp
+    main.cpp
+    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawMarshal.c
+)
+
+target_link_libraries(SolidSyslogLwipRawMarshalTest PRIVATE
+    ${PROJECT_NAME}
+    CppUTest
+    CppUTestExt
+)
+
+target_include_directories(SolidSyslogLwipRawMarshalTest PRIVATE ${LWIP_TEST_INCLUDE_DIRS})
+
+set_target_properties(SolidSyslogLwipRawMarshalTest PROPERTIES
+    CXX_CPPCHECK ""
+)
+
+add_test(NAME SolidSyslogLwipRawMarshalTest COMMAND SolidSyslogLwipRawMarshalTest)
