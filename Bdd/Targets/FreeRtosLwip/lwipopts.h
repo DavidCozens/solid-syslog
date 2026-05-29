@@ -69,8 +69,20 @@
 #define MEMP_NUM_UDP_PCB 4
 #define MEMP_NUM_TCP_PCB 4
 #define MEMP_NUM_TCP_PCB_LISTEN 2
-#define MEMP_NUM_TCP_SEG 16
-#define MEMP_NUM_PBUF 16
+/* TLS/mTLS handshake sizing (S28.11). A mutual-TLS handshake is the heaviest
+ * traffic this target sees: it exchanges TWO certificate chains — the server's
+ * inbound and the client's outbound — where plain TLS sends none from the
+ * client, so its peak demand on the segment + pbuf pools (and the TCP window
+ * below) is materially higher, and whether it fits depends on segment-arrival
+ * timing. At the S28.09/.10 values (16/16/16 + 4*MSS) the handshake stalls; even
+ * 32/32/24 left mTLS flaky. These counts are sized so a full bidirectional
+ * mutual-TLS flight stays in flight without tcp_write hitting ERR_MEM (which
+ * SolidSyslogLwipRawTcpStream treats as a hard send failure and tears the
+ * connection down). The window/send-buffer below (6*MSS) and these counts move
+ * in lockstep — lwIP derives TCP_SND_QUEUELEN from TCP_SND_BUF. Plain TLS fits a
+ * smaller budget, but both transports share this one netif. */
+#define MEMP_NUM_TCP_SEG 48
+#define MEMP_NUM_PBUF 48
 #define MEMP_NUM_RAW_PCB 2
 #define MEMP_NUM_ARP_QUEUE 4
 /* tcpip thread message pools: API callbacks (the marshal) + inbound packets
@@ -78,12 +90,16 @@
 #define MEMP_NUM_TCPIP_MSG_API 8
 #define MEMP_NUM_TCPIP_MSG_INPKT 8
 
-#define PBUF_POOL_SIZE 16
+#define PBUF_POOL_SIZE 32
 
 /* --- TCP sizing ------------------------------------------------------- */
 #define TCP_MSS 1460
-#define TCP_WND (4 * TCP_MSS)
-#define TCP_SND_BUF (4 * TCP_MSS)
+/* 6*MSS (was 4 in S28.09/.10) so a full mutual-TLS handshake flight — the
+ * client Certificate chain + ClientKeyExchange + CertificateVerify, ~6 KB of
+ * back-to-back ~2 KB records — fits the send buffer without an ERR_MEM tear-down
+ * mid-handshake. See the MEMP_NUM_TCP_SEG / PBUF note above for the coupling. */
+#define TCP_WND (6 * TCP_MSS)
+#define TCP_SND_BUF (6 * TCP_MSS)
 #define TCP_QUEUE_OOSEQ 0
 
 /* --- Diagnostics ------------------------------------------------------ */
