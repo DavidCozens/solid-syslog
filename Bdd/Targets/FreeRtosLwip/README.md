@@ -1,25 +1,40 @@
-# FreeRTOS + lwIP (Raw API) link-probe target
+# FreeRTOS + lwIP (Raw API) BDD target
 
-`SolidSyslogBddTargetLwip` is a **cross-build link probe**, not a runnable BDD
-target. It exists to prove — cheaply, in CI — that the `Platform/LwipRaw/`
-adapter tree (`Address`, `Resolver`, `Datagram`, `TcpStream`, `Marshal`)
-cross-compiles and links for a Cortex-M3 FreeRTOS target against lwIP core,
-**with zero dependency on `Platform/PlusTcp/` or FreeRTOS-Plus-TCP** (S28.07,
-epic E28).
+`SolidSyslogBddTargetLwip` is a runnable FreeRTOS-on-lwIP BDD target for QEMU
+`mps2-an385` (Cortex-M3). It proves the `Platform/LwipRaw/` adapter tree
+(`Address`, `Resolver`, `Datagram`, `TcpStream`, `Marshal`) end-to-end against
+lwIP core under `NO_SYS=0`, **with zero dependency on `Platform/PlusTcp/` or
+FreeRTOS-Plus-TCP** (S28.09, epic E28). It is the worked counterpart to the
+FreeRTOS-Plus-TCP target in [`../FreeRtos/`](../FreeRtos/) — same interactive /
+service-task shape, Common code, startup, linker, and CMSDK UART, with the
+network backend swapped PlusTcp → LwipRaw.
 
 It is selected by `SOLIDSYSLOG_FREERTOS_NET=LWIP` (see the top-level
-`CMakeLists.txt`), built by the `freertos-cross-lwip` preset and the advisory
-`build-freertos-target-lwip` CI lane. There is no LAN9118 netif driver and no
-QEMU run: `main.c` starts the scheduler and a single probe task that
-`_Create`/`_Destroy`s each adapter, so the linker must resolve every adapter
-entry point and the lwIP core symbols behind it.
+`CMakeLists.txt`), built by the `freertos-cross-lwip` preset, and run on QEMU by
+the advisory `bdd-freertos-qemu-lwip` CI lane against the shared syslog-ng
+oracle.
 
-`lwipopts.h` pins `NO_SYS=1` (the LwipRaw default direct-call marshal is
-correct for a single lwIP-owning context). The worked `NO_SYS=0` runtime — a
-real netif, `tcpip_init`, the `tcpip_callback` marshal (S28.06), and the UDP
-BDD feature green on QEMU — lands with **S28.09**, which reuses this
-directory's `lwipopts.h`, `FreeRTOSConfig.h`, and `arch/cc.h` and grows
-`main.c` into the full integration.
+## What it does
+
+- `main.c`: installs the `tcpip_callback` marshal
+  (`SolidSyslogLwipRaw_SetMarshal`, S28.06), calls `tcpip_init`, then brings the
+  netif up on the tcpip thread (`netif_add` + static IP `10.0.2.15` + link-up).
+  Each `send N` over the UART emits N RFC 5424 datagrams to
+  `{10.0.2.2, 5514}` via `SolidSyslogUdpSender` over `SolidSyslogLwipRawDatagram`.
+- `netif/EthernetIf.c`: a hand-written lwIP `netif` driver over the vendored Arm
+  LAN9118 (SMSC9220) low-level driver. RX is driven by the IRQ-13 `EthernetISR`
+  through a task notification; TX sends pbufs via `smsc9220_send_by_chunks`.
+- `netif/smsc9220_eth_drv.{c,h}`, `netif/smsc9220_emac_config.h`: the Arm
+  low-level driver, vendored verbatim from FreeRTOS-Plus-TCP's MPS2_AN385
+  network interface (Apache-2.0; copyright and license headers preserved).
+
+## Scope
+
+UDP for S28.09. The `SwitchingSender` keeps TCP / TLS slots wired to the shared
+`NullSender` so `set transport tcp|tls` resolves cleanly (drops on the floor)
+rather than crashing; the real LwipRaw TCP / TLS senders land in later E28
+stories. `lwipopts.h` runs `NO_SYS=0` (tcpip thread + the contrib FreeRTOS
+`sys_arch`); `FreeRTOSConfig.h` mirrors the +TCP networking config.
 
 ## Build
 
@@ -30,3 +45,11 @@ cmake --build --preset freertos-cross-lwip --target SolidSyslogBddTargetLwip
 
 Requires the `cpputest-freertos-cross` container (arm-none-eabi toolchain,
 `FREERTOS_KERNEL_PATH=/opt/freertos/kernel`, `LWIP_PATH=/opt/lwip`).
+
+## Run on QEMU
+
+```sh
+docker compose -f ci/docker-compose.bdd.yml up \
+  --abort-on-container-exit --exit-code-from behave-freertos-lwip \
+  behave-freertos-lwip syslog-ng-freertos-lwip
+```

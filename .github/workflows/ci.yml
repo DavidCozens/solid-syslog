@@ -1037,26 +1037,36 @@ jobs:
       - name: Configure (ARM cross, NET=LWIP)
         run: cmake --preset freertos-cross-lwip
 
-      - name: Cross-build FreeRTOS+lwIP link-probe ELF
+      - name: Cross-build FreeRTOS+lwIP BDD target ELF
         run: cmake --build --preset freertos-cross-lwip --target SolidSyslogBddTargetLwip
 
       - name: Assert no PlusTcp / Plus-TCP symbols linked
         run: |
           elf=build/freertos-cross-lwip/Bdd/Targets/FreeRtosLwip/SolidSyslogBddTargetLwip.elf
-          arm-none-eabi-nm "$elf" > /tmp/lwip-probe-symbols.txt
-          if grep -E -i 'PlusTcp|FreeRTOS_socket|FreeRTOS_sendto|FreeRTOS_recv|FreeRTOS_IPInit' /tmp/lwip-probe-symbols.txt; then
-            echo "::error::PlusTcp / FreeRTOS-Plus-TCP symbol linked into the lwIP probe ELF"
+          arm-none-eabi-nm "$elf" > /tmp/lwip-symbols.txt
+          if grep -E -i 'PlusTcp|FreeRTOS_socket|FreeRTOS_sendto|FreeRTOS_recv|FreeRTOS_IPInit' /tmp/lwip-symbols.txt; then
+            echo "::error::PlusTcp / FreeRTOS-Plus-TCP symbol linked into the lwIP BDD target ELF"
             exit 1
           fi
-          echo "OK: no PlusTcp / FreeRTOS-Plus-TCP symbols in the lwIP probe ELF"
+          echo "OK: no PlusTcp / FreeRTOS-Plus-TCP symbols in the lwIP BDD target ELF"
 
-      - name: Upload FreeRTOS+lwIP link-probe ELF
+      - name: Upload FreeRTOS+lwIP BDD target ELF
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: solid-syslog-bdd-target-freertos-lwip
           path: build/freertos-cross-lwip/Bdd/Targets/FreeRtosLwip/SolidSyslogBddTargetLwip.elf
           retention-days: 1
           compression-level: 0
+
+      # BDD-side mirror of build-time tunables (configure_file). The lwIP bdd
+      # lane consumes this so environment.py's runtime tag gates track the lwIP
+      # target's SOLIDSYSLOG_MAX_MESSAGE_SIZE (512, same as +TCP).
+      - name: Upload BDD Python tunables (FreeRTOS+lwIP)
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: bdd-tunables-freertos-lwip
+          path: Bdd/features/steps/solidsyslog_tunables.py
+          retention-days: 1
 
   bdd-freertos-qemu-plustcp:
     needs: build-freertos-target-plustcp
@@ -1103,6 +1113,60 @@ jobs:
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: junit-bdd-freertos-qemu-plustcp
+          path: Bdd/junit/TESTS-*.xml
+          retention-days: 1
+
+      - name: Compose logs on failure
+        if: failure()
+        run: docker compose -f ci/docker-compose.bdd.yml logs --no-color
+
+  # Advisory (S28.09): not in summary.needs, so a failure does not block
+  # merges while the lwIP netif beds in. S28.11 promotes it to required.
+  bdd-freertos-qemu-lwip:
+    needs: build-freertos-target-lwip
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: solid-syslog-bdd-target-freertos-lwip
+          path: build/freertos-cross-lwip/Bdd/Targets/FreeRtosLwip/
+
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: bdd-tunables-freertos-lwip
+          path: Bdd/features/steps/
+
+      - name: Make ELF readable
+        run: chmod +r build/freertos-cross-lwip/Bdd/Targets/FreeRtosLwip/SolidSyslogBddTargetLwip.elf
+
+      - name: Prepare BDD output directory
+        run: mkdir -p Bdd/junit && chmod 777 Bdd/junit
+
+      - name: Run BDD tests
+        run: >
+          docker compose -f ci/docker-compose.bdd.yml
+          up --abort-on-container-exit --exit-code-from behave-freertos-lwip
+          behave-freertos-lwip syslog-ng-freertos-lwip
+
+      - name: BDD Test Report (FreeRTOS+lwIP)
+        uses: dorny/test-reporter@v3
+        if: success() || failure()
+        with:
+          name: Test Results (BDD FreeRTOS+lwIP)
+          path: Bdd/junit/TESTS-*.xml
+          reporter: java-junit
+
+      - name: Upload JUnit XML
+        if: success() || failure()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: junit-bdd-freertos-qemu-lwip
           path: Bdd/junit/TESTS-*.xml
           retention-days: 1
 

@@ -168,15 +168,14 @@ if(NOT SOLIDSYSLOG_FREERTOS_NET STREQUAL "PLUSTCP"
 endif()
 if(SOLIDSYSLOG_FREERTOS_NET STREQUAL "LWIP")
     message(STATUS
-        "SOLIDSYSLOG_FREERTOS_NET=LWIP: cross builds the FreeRtosLwip "
-        "link-probe (Address+Resolver+Datagram+TcpStream+Marshal against "
-        "lwIP core); netif + QEMU BDD arrive in S28.09.")
+        "SOLIDSYSLOG_FREERTOS_NET=LWIP: cross builds the FreeRtosLwip BDD "
+        "target (LAN9118 netif + NO_SYS=0 tcpip + LwipRaw adapters), run on "
+        "QEMU mps2-an385 by the advisory bdd-freertos-qemu-lwip lane (S28.09).")
 endif()
 if(SOLIDSYSLOG_FREERTOS_NET STREQUAL "BOTH")
     message(STATUS
         "SOLIDSYSLOG_FREERTOS_NET=BOTH: cross builds the PlusTcp BDD target; "
-        "the lwIP backend cross-builds in isolation under NET=LWIP "
-        "(S28.07) — netif + QEMU BDD arrive in S28.09.")
+        "the lwIP backend cross-builds in isolation under NET=LWIP.")
 endif()
 
 # Build-time tunables (E21: Port-Time Configurability). Integrators override
@@ -274,8 +273,8 @@ endif()
 # toolchain file (see Bdd/Targets/FreeRtos/cmake/arm-none-eabi.cmake); it
 # only enters the build when a freertos-cross preset is active. The chosen
 # networking backend picks which target: PLUSTCP/BOTH builds the full
-# FreeRTOS-Plus-TCP BDD target; LWIP builds the FreeRtosLwip link-probe
-# (S28.07) — a stub proving Platform/LwipRaw cross-links with no PlusTcp.
+# FreeRTOS-Plus-TCP BDD target; LWIP builds the FreeRtosLwip BDD target
+# (S28.09) — LAN9118 netif + NO_SYS=0 lwIP + LwipRaw adapters, no PlusTcp.
 if(CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_PROCESSOR STREQUAL "arm")
     if(SOLIDSYSLOG_FREERTOS_NET STREQUAL "LWIP")
         add_subdirectory(Bdd/Targets/FreeRtosLwip)
