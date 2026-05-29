@@ -1,16 +1,18 @@
-# FreeRTOS + lwIP (Raw API) link-probe ELF for QEMU mps2-an385 (Cortex-M3).
+# FreeRTOS + lwIP (Raw API, NO_SYS=0) BDD target ELF for QEMU mps2-an385
+# (Cortex-M3).
 #
-# S28.07: cross-build the Platform/LwipRaw adapter tree for a FreeRTOS/ARM
-# target, selected via SOLIDSYSLOG_FREERTOS_NET=LWIP, proving it links against
-# lwIP core with zero dependency on Platform/PlusTcp / FreeRTOS-Plus-TCP. No
-# LAN9118 netif driver and no QEMU run — those land with S28.09, which reuses
-# this directory's lwipopts.h / FreeRTOSConfig.h / arch/cc.h and grows main.c
-# into the real netif + tcpip integration.
+# S28.09: grew the S28.07 link-probe into a runnable BDD target — a real
+# LAN9118 lwIP netif (netif/EthernetIf.c over the vendored Arm smsc9220
+# driver), tcpip_init + a static IP, and the SolidSyslog UDP pipeline reaching
+# the syslog-ng oracle on QEMU. Selected via SOLIDSYSLOG_FREERTOS_NET=LWIP,
+# with zero dependency on Platform/PlusTcp / FreeRTOS-Plus-TCP.
 #
 # Source layout mirrors Bdd/Targets/FreeRtos/CMakeLists.txt: upstream
-# FreeRTOS-Kernel + lwIP-core sources compile into a separate OBJECT library
+# FreeRTOS-Kernel + lwIP-core + lwIP-api + the contrib FreeRTOS sys_arch + the
+# vendored LAN9118 driver compile into a separate OBJECT library
 # (`solid_syslog_freertos_lwip_upstream`) under a relaxed warning set; our own
-# code (main.c, the reused Cortex-M3 startup, and the Platform/LwipRaw adapter
+# code (main.c, the reused Cortex-M3 startup, netif/EthernetIf.c, the
+# Platform/LwipRaw + Platform/FreeRtos adapters, and the shared BddTarget
 # sources) stays in the executable under the strict project warning bar.
 
 set(FREERTOS_KERNEL_PATH "$ENV{FREERTOS_KERNEL_PATH}")
@@ -27,32 +29,48 @@ if(NOT LWIP_DIR)
         "which sets this to /opt/lwip.")
 endif()
 
-# lwIP ships its source lists as *_SRCS variables via Filelists.cmake (it is
-# explicitly NOT an add_subdirectory target). We consume the minimal IPv4 core
-# set — no api/ (NO_SYS=1, no sequential/socket API), no ipv6, no netif driver.
+# lwIP ships its source lists as *_SRCS variables via Filelists.cmake. For
+# NO_SYS=0 we consume the IPv4 core set plus the api/ set (tcpip.c, api_lib,
+# api_msg, …) — the tcpip thread, timeouts, and tcpip_callback marshal hop
+# live there. No ipv6.
 include(${LWIP_DIR}/src/Filelists.cmake)
 
+set(LWIP_CONTRIB_FREERTOS_DIR "${LWIP_DIR}/contrib/ports/freertos")
+
 set(FREERTOS_PORT_DIR "${FREERTOS_KERNEL_PATH}/portable/GCC/ARM_CM3")
-set(FREERTOS_COMMON_DIR "${CMAKE_SOURCE_DIR}/Bdd/Targets/FreeRtos/Common")
+set(FREERTOS_TCP_TARGET_DIR "${CMAKE_SOURCE_DIR}/Bdd/Targets/FreeRtos")
+set(FREERTOS_COMMON_DIR "${FREERTOS_TCP_TARGET_DIR}/Common")
 
 # --- Upstream OBJECT library --------------------------------------------------
 #
-# FreeRTOS kernel (minimal: scheduler + heap) + lwIP IPv4 core, compiled with
-# the relaxed warning set those upstream sources require. The executable
-# consumes the objects via $<TARGET_OBJECTS:...> so the relaxations don't leak.
+# FreeRTOS kernel + lwIP IPv4 core + lwIP api (tcpip thread) + the contrib
+# FreeRTOS sys_arch + the vendored Arm LAN9118 driver, compiled with the
+# relaxed warning set those upstream / third-party sources require. The
+# executable consumes the objects via $<TARGET_OBJECTS:...> so the relaxations
+# don't leak into project code.
 
 add_library(solid_syslog_freertos_lwip_upstream OBJECT
     ${FREERTOS_KERNEL_PATH}/tasks.c
     ${FREERTOS_KERNEL_PATH}/queue.c
     ${FREERTOS_KERNEL_PATH}/list.c
+    ${FREERTOS_KERNEL_PATH}/timers.c
+    ${FREERTOS_KERNEL_PATH}/event_groups.c
     ${FREERTOS_PORT_DIR}/port.c
     ${FREERTOS_KERNEL_PATH}/portable/MemMang/heap_4.c
     ${lwipcore_SRCS}
     ${lwipcore4_SRCS}
+    ${lwipapi_SRCS}
     # etharp (in core4) emits ARP frames via ethernet_output/ethbroadcast/
     # ethzero from netif/ethernet.c — pull that one netif source in (but not
-    # bridgeif/slipif from lwipnetif_SRCS, which this probe has no use for).
+    # bridgeif/slipif from lwipnetif_SRCS, which this target has no use for).
     ${LWIP_DIR}/src/netif/ethernet.c
+    # lwIP FreeRTOS OS-abstraction port (sys_mutex/sem/mbox/thread) — required
+    # for NO_SYS=0.
+    ${LWIP_CONTRIB_FREERTOS_DIR}/sys_arch.c
+    # Vendored Arm LAN9118 (SMSC9220) low-level driver (Apache-2.0). The lwIP
+    # netif wrapper over it (netif/EthernetIf.c) stays in the executable under
+    # the strict bar; this third-party source sits under the relaxations.
+    ${CMAKE_CURRENT_SOURCE_DIR}/netif/smsc9220/smsc9220_eth_drv.c
 )
 
 target_compile_options(solid_syslog_freertos_lwip_upstream PRIVATE
@@ -61,10 +79,10 @@ target_compile_options(solid_syslog_freertos_lwip_upstream PRIVATE
     -ffunction-sections
     -fdata-sections
     -fno-common
-    # FreeRTOS-Kernel + lwIP use non-prototype declarations, type-narrowing
-    # constructs, sign-conversion patterns, and shadowed locals that trip our
-    # strict host warnings. Scoped to this OBJECT library so the relaxations
-    # never reach project code.
+    # FreeRTOS-Kernel + lwIP + the Arm driver use non-prototype declarations,
+    # type-narrowing constructs, sign-conversion patterns, and shadowed locals
+    # that trip our strict host warnings. Scoped to this OBJECT library so the
+    # relaxations never reach project code.
     -Wno-unused-parameter
     -Wno-unused-but-set-variable
     -Wno-implicit-fallthrough
@@ -77,9 +95,11 @@ target_compile_options(solid_syslog_freertos_lwip_upstream PRIVATE
 
 target_include_directories(solid_syslog_freertos_lwip_upstream PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}                       # FreeRTOSConfig.h, lwipopts.h, arch/cc.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/netif/smsc9220        # smsc9220_eth_drv.h, smsc9220_emac_config.h
     ${FREERTOS_KERNEL_PATH}/include
     ${FREERTOS_PORT_DIR}                              # portmacro.h
     ${LWIP_DIR}/src/include
+    ${LWIP_CONTRIB_FREERTOS_DIR}/include              # arch/sys_arch.h
 )
 
 # --- Executable ---------------------------------------------------------------
@@ -89,7 +109,10 @@ target_include_directories(solid_syslog_freertos_lwip_upstream PRIVATE
 
 add_executable(SolidSyslogBddTargetLwip
     main.c
-    ${FREERTOS_COMMON_DIR}/startup.c
+    ${FREERTOS_TCP_TARGET_DIR}/Startup.c              # Ethernet variant: IRQ 13 -> EthernetISR
+    ${FREERTOS_COMMON_DIR}/CmsdkUart.c
+    ${FREERTOS_COMMON_DIR}/Syscalls.c
+    netif/EthernetIf.c
     ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawAddress.c
     ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawAddressMessages.c
     ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawAddressStatic.c
@@ -103,6 +126,14 @@ add_executable(SolidSyslogBddTargetLwip
     ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawTcpStreamMessages.c
     ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawTcpStreamStatic.c
     ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawMarshal.c
+    ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosMutex.c
+    ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosMutexMessages.c
+    ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosMutexStatic.c
+    ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosSysUpTime.c
+    ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/BddTargetInteractive.c
+    ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/BddTargetIps.c
+    ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/BddTargetLanguage.c
+    ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/BddTargetSwitchConfig.c
     $<TARGET_OBJECTS:solid_syslog_freertos_lwip_upstream>
 )
 
@@ -118,13 +149,20 @@ target_compile_options(SolidSyslogBddTargetLwip PRIVATE
 
 target_include_directories(SolidSyslogBddTargetLwip PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}                       # FreeRTOSConfig.h, lwipopts.h, arch/cc.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/netif                 # EthernetIf.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/netif/smsc9220        # smsc9220_eth_drv.h, smsc9220_emac_config.h
+    ${FREERTOS_COMMON_DIR}                            # CmsdkUart.h
     ${CMAKE_SOURCE_DIR}/Core/Interface                # SolidSyslog*.h
     ${CMAKE_SOURCE_DIR}/Core/Source                   # internal headers consumed by adapters
-    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Interface    # SolidSyslogLwipRaw{Address,Resolver,Datagram,TcpStream}.h
+    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Interface    # SolidSyslogLwipRaw{Address,Resolver,Datagram,TcpStream,Marshal}.h
     ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source        # SolidSyslogLwipRaw*Private.h
+    ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Interface   # SolidSyslogFreeRtos{Mutex,SysUpTime}.h
+    ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source      # SolidSyslogFreeRtosMutexPrivate.h
+    ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common            # BddTargetInteractive.h, BddTargetSwitchConfig.h, …
     ${FREERTOS_KERNEL_PATH}/include
     ${FREERTOS_PORT_DIR}                              # portmacro.h
     ${LWIP_DIR}/src/include
+    ${LWIP_CONTRIB_FREERTOS_DIR}/include              # arch/sys_arch.h (via lwip/sys.h)
 )
 
 target_link_libraries(SolidSyslogBddTargetLwip PRIVATE

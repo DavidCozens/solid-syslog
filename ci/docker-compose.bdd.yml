@@ -123,12 +123,72 @@ services:
     # solidsyslog_user_tunables.h changes.
     command: behave --junit --junit-directory Bdd/junit --tags='not @wip and not @freertoswip and not @rtc and not @windows_wip and (@udp or @tcp or @tls or @mtls)' Bdd/features/
 
+  # FreeRTOS + lwIP pair (S28.09). Same shape as the freertos (+TCP) pair —
+  # its own syslog-ng on its own bridge network, behave sharing the netns so
+  # QEMU's slirp gateway 10.0.2.2 NATs to the pair's loopback where syslog-ng
+  # listens on 0.0.0.0:5514. The only differences are EXAMPLE_BINARY (the lwIP
+  # ELF) and the tag filter: this advisory lane runs UDP only for S28.09 —
+  # TCP / TLS / mTLS / store land in later E28 stories, and @freertoslwipwip
+  # is the per-scenario escape hatch while the netif is bedding in.
+  syslog-ng-freertos-lwip:
+    image: balabit/syslog-ng:4.8.2
+    volumes:
+      - ../Bdd/syslog-ng/syslog-ng.conf:/etc/syslog-ng/syslog-ng.conf
+      - ../Bdd/syslog-ng/tls:/etc/syslog-ng/tls:ro
+      - bdd-output-freertos-lwip:/var/log/syslog-ng
+      - syslog-ng-ctl-freertos-lwip:/var/lib/syslog-ng
+    entrypoint: ["bash", "-c"]
+    command:
+      - |
+        syslog-ng -F &
+        pid=$$!
+        deadline=$$((SECONDS + 30))
+        while [ ! -S /var/lib/syslog-ng/syslog-ng.ctl ]; do
+          kill -0 "$$pid" 2>/dev/null || { echo "syslog-ng exited unexpectedly"; exit 1; }
+          [ "$$SECONDS" -ge "$$deadline" ] && { echo "Timed out waiting for syslog-ng control socket"; kill "$$pid" 2>/dev/null; exit 1; }
+          sleep 0.1
+        done
+        chmod 0777 /var/lib/syslog-ng/syslog-ng.ctl
+        wait
+    networks:
+      freertos-lwip:
+        aliases:
+          - syslog-ng
+    healthcheck:
+      test: ["CMD-SHELL", "test -S /var/lib/syslog-ng/syslog-ng.ctl"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  behave-freertos-lwip:
+    # Cross image carries qemu-system-arm + python3 + behave.
+    image: ghcr.io/davidcozens/cpputest-freertos-cross:sha-a0c1c0a
+    user: "0"
+    volumes:
+      - ..:/workspaces/SolidSyslog
+      - bdd-output-freertos-lwip:/workspaces/SolidSyslog/Bdd/output
+      - syslog-ng-ctl-freertos-lwip:/var/lib/syslog-ng
+    working_dir: /workspaces/SolidSyslog
+    network_mode: service:syslog-ng-freertos-lwip
+    depends_on:
+      syslog-ng-freertos-lwip:
+        condition: service_healthy
+    environment:
+      # The QEMU launch + UART `set` protocol are target-agnostic, so the lwIP
+      # ELF rides the existing freertos driver — only the binary path differs.
+      - BDD_TARGET=freertos
+      - EXAMPLE_BINARY=build/freertos-cross-lwip/Bdd/Targets/FreeRtosLwip/SolidSyslogBddTargetLwip.elf
+    command: behave --junit --junit-directory Bdd/junit --tags='not @wip and not @freertoswip and not @freertoslwipwip and not @rtc and not @windows_wip and @udp and not @tcp and not @tls and not @mtls and not @store' Bdd/features/
+
 volumes:
   bdd-output-linux:
   bdd-output-freertos:
+  bdd-output-freertos-lwip:
   syslog-ng-ctl-linux:
   syslog-ng-ctl-freertos:
+  syslog-ng-ctl-freertos-lwip:
 
 networks:
   linux:
   freertos:
+  freertos-lwip:
