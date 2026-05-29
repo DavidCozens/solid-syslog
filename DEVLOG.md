@@ -69,10 +69,12 @@ and CodeRabbit run in parallel.
   are promoted into `summary.needs`, so the draft PR's `bdd-freertos-qemu-lwip`
   check is RED until mTLS is fixed. Branch-protection required-checks update is
   David's manual step (noted in the PR).
-- **Resolve-failure logging (new in-scope work).** The numeric-resolver-rejects-a-
-  hostname path is silent. Agreed to add a `SolidSyslog_Error` on resolve failure,
-  TDD'd (a test that provokes it asserts the error fires) — diagnosis-driven
-  logging added with its cause, not deferred to a future story.
+- **Resolve-failure logging — queued as the next change on this branch (not yet
+  implemented).** The numeric-resolver-rejects-a-hostname path is silent today.
+  Agreed approach: add a `SolidSyslog_Error` on resolve failure, TDD'd (a test
+  provokes the silent failure and asserts the error fires). Listed here as
+  pending work that lands on this PR — diagnosis-driven logging belongs with its
+  cause rather than being split into a separate future story.
 
 ---
 

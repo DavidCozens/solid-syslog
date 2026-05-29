@@ -90,19 +90,17 @@ static mbedtls_pk_context clientKey;
 static void* FreeRtosMbedTlsCalloc(size_t nmemb, size_t size)
 {
     void* result = NULL;
-    if ((nmemb != 0U) && (size != 0U))
+    /* Guard the multiplication against wrap BEFORE multiplying: a maliciously
+     * huge request must not underestimate the allocation size, or pvPortMalloc
+     * would hand back a too-small buffer the caller then writes past. With size
+     * already known non-zero, nmemb <= SIZE_MAX / size proves nmemb * size fits. */
+    if ((nmemb != 0U) && (size != 0U) && (nmemb <= (SIZE_MAX / size)))
     {
         size_t bytes = nmemb * size;
-        /* Detect the multiplication wrap so a maliciously huge request can't
-         * underestimate the allocation size — pvPortMalloc would then hand
-         * back a too-small buffer that the caller writes past. */
-        if ((bytes / nmemb) == size)
+        result = pvPortMalloc(bytes);
+        if (result != NULL)
         {
-            result = pvPortMalloc(bytes);
-            if (result != NULL)
-            {
-                memset(result, 0, bytes);
-            }
+            memset(result, 0, bytes);
         }
     }
     return result;
