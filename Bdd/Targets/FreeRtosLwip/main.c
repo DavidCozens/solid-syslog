@@ -201,9 +201,16 @@ int main(void)
      * pxCurrentTCB if run before the scheduler. */
     tcpip_init(NULL, NULL);
 
-    (void) xTaskCreate(InteractiveTask, "interactive", INTERACTIVE_TASK_STACK_DEPTH, NULL, tskIDLE_PRIORITY + 1, NULL);
-    (void
-    ) xTaskCreate(ServiceTask, "service", SERVICE_TASK_STACK_DEPTH, NULL, tskIDLE_PRIORITY + 1, &serviceTaskHandle);
+    if (xTaskCreate(InteractiveTask, "interactive", INTERACTIVE_TASK_STACK_DEPTH, NULL, tskIDLE_PRIORITY + 1, NULL) !=
+        pdPASS)
+    {
+        SemihostingExit(1);
+    }
+    if (xTaskCreate(ServiceTask, "service", SERVICE_TASK_STACK_DEPTH, NULL, tskIDLE_PRIORITY + 1, &serviceTaskHandle) !=
+        pdPASS)
+    {
+        SemihostingExit(1);
+    }
 
     vTaskStartScheduler();
 
@@ -275,9 +282,15 @@ static void WarmUpGatewayArp(void)
 
 static void LwipTcpipMarshal(SolidSyslogLwipRawCallback callback, void* context)
 {
-    /* Blocking variant: posts to the tcpip thread and waits for completion, so
-     * the LwipRaw wrapper can read results immediately after this returns
-     * (the synchronous-marshal contract in SolidSyslogLwipRawMarshal.h). */
+    /* tcpip_callback posts to the tcpip thread and returns once the message is
+     * queued — not once the callback has run. We satisfy the synchronous-marshal
+     * contract (SolidSyslogLwipRawMarshal.h: results must be ready when this
+     * returns) by priority: TCPIP_THREAD_PRIO (configMAX_PRIORITIES - 1) is
+     * strictly above every task that marshals, so the post immediately preempts
+     * the caller, the tcpip thread runs the callback to completion, then control
+     * returns here. See PR #476 review (#4) — switching to the
+     * LOCK_TCPIP_CORE/UNLOCK_TCPIP_CORE pair would make this synchronous
+     * independent of priorities. */
     (void) tcpip_callback(callback, context);
 }
 
@@ -368,6 +381,10 @@ static bool OnSet(const char* name, const char* value)
     else if (strcmp(name, "host") == 0)
     {
         handled = TryUpdateString(host, sizeof(host), value);
+        if (handled)
+        {
+            endpointVersion++;
+        }
     }
     else if (strcmp(name, "port") == 0)
     {

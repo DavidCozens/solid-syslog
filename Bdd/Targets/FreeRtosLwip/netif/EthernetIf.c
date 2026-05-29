@@ -75,6 +75,7 @@ static void EthernetIf_NvicEnableIrq(void);
 static err_t EthernetIf_LowLevelOutput(struct netif* netif, struct pbuf* p);
 static void EthernetIf_RxTask(void* parameters);
 static struct pbuf* EthernetIf_LowLevelInput(void);
+static void EthernetIf_DiscardFrame(uint32_t length);
 
 err_t EthernetIf_Init(struct netif* netif)
 {
@@ -215,7 +216,33 @@ static struct pbuf* EthernetIf_LowLevelInput(void)
             LINK_STATS_INC(link.drop);
         }
     }
+    else if (length > sizeof(EthernetIf_RxBuffer))
+    {
+        /* An oversize/corrupt frame must still be pulled from the RX FIFO or it
+         * is peeked again forever and wedges all subsequent receive. */
+        EthernetIf_DiscardFrame(length);
+        LINK_STATS_INC(link.lenerr);
+        LINK_STATS_INC(link.drop);
+    }
     return p;
+}
+
+/* The RX data FIFO must be drained by the frame's full word-aligned footprint
+ * or the read pointer desyncs. The vendored driver only reads a whole packet
+ * into a caller buffer, so drain a too-large frame in buffer-sized,
+ * word-aligned chunks (the final, possibly shorter, chunk carries the
+ * sub-word remainder) and discard each. */
+static void EthernetIf_DiscardFrame(uint32_t length)
+{
+    const struct smsc9220_eth_dev_t* dev = &ETHERNETIF_DEV;
+    const uint32_t chunkCap = sizeof(EthernetIf_RxBuffer) & ~3U;
+
+    while (length > 0U)
+    {
+        uint32_t chunk = (length > chunkCap) ? chunkCap : length;
+        (void) smsc9220_receive_by_chunks(dev, EthernetIf_RxBuffer, chunk);
+        length -= chunk;
+    }
 }
 
 void EthernetISR(void)

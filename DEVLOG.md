@@ -12988,9 +12988,16 @@ MISRA rule — different category, doesn't set precedent.
   `sys_arch.c`. `main` calls `tcpip_init` pre-scheduler; netif bring-up
   runs from the interactive task via `tcpip_callback` because
   `smsc9220_init` calls `vTaskDelay` and must run post-scheduler. The
-  Datagram/TcpStream adapters route through a
-  `tcpip_callback_with_block` marshal shim installed with
-  `SolidSyslogLwipRaw_SetMarshal`.
+  Datagram/TcpStream adapters route through `LwipTcpipMarshal` (installed
+  with `SolidSyslogLwipRaw_SetMarshal`), which calls lwIP `tcpip_callback`.
+  Note `tcpip_callback` only blocks until the work is *queued*, not until
+  it runs — the synchronous-marshal contract is satisfied here by priority:
+  `TCPIP_THREAD_PRIO` is `configMAX_PRIORITIES - 1`, above every task that
+  marshals, so the post preempts the caller and the callback completes
+  before control returns. PR #476 review flagged that this is implicit;
+  the `LOCK_TCPIP_CORE`/`UNLOCK_TCPIP_CORE` pair (core-locking is already
+  enabled) would make it synchronous independent of priority — tracked as
+  a follow-up.
 
 - **Oracle parity confirms the UDP path.** Slice 4 ran the
   `behave-freertos-lwip` + `syslog-ng-freertos-lwip` compose pair in

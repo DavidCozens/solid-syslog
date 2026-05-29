@@ -24,9 +24,11 @@ oracle.
 - `netif/EthernetIf.c`: a hand-written lwIP `netif` driver over the vendored Arm
   LAN9118 (SMSC9220) low-level driver. RX is driven by the IRQ-13 `EthernetISR`
   through a task notification; TX sends pbufs via `smsc9220_send_by_chunks`.
-- `netif/smsc9220_eth_drv.{c,h}`, `netif/smsc9220_emac_config.h`: the Arm
-  low-level driver, vendored verbatim from FreeRTOS-Plus-TCP's MPS2_AN385
-  network interface (Apache-2.0; copyright and license headers preserved).
+- `netif/smsc9220/smsc9220_eth_drv.{c,h}`, `netif/smsc9220/smsc9220_emac_config.h`:
+  the Arm low-level driver, vendored verbatim from FreeRTOS-Plus-TCP's MPS2_AN385
+  network interface (Apache-2.0; copyright and license headers preserved). Kept in
+  its own `smsc9220/` subdirectory with a `DisableFormat` `.clang-format` so
+  `analyze-format` leaves the third-party source untouched.
 
 ## Scope
 
