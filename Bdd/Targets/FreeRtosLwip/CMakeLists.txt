@@ -202,9 +202,9 @@ add_executable(SolidSyslogBddTargetLwip
     ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawAddress.c
     ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawAddressMessages.c
     ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawAddressStatic.c
-    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawResolver.c
-    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawResolverMessages.c
-    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawResolverStatic.c
+    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawDnsResolver.c
+    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawDnsResolverMessages.c
+    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawDnsResolverStatic.c
     ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawDatagram.c
     ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawDatagramMessages.c
     ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawDatagramStatic.c
@@ -247,7 +247,7 @@ target_include_directories(SolidSyslogBddTargetLwip PRIVATE
     ${FREERTOS_COMMON_DIR}                            # CmsdkUart.h
     ${CMAKE_SOURCE_DIR}/Core/Interface                # SolidSyslog*.h
     ${CMAKE_SOURCE_DIR}/Core/Source                   # internal headers consumed by adapters
-    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Interface    # SolidSyslogLwipRaw{Address,Resolver,Datagram,TcpStream,Marshal}.h
+    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Interface    # SolidSyslogLwipRaw{Address,DnsResolver,Datagram,TcpStream,Marshal}.h
     ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source        # SolidSyslogLwipRaw*Private.h
     ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Interface   # SolidSyslogFreeRtos{Mutex,SysUpTime}.h
     ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source      # SolidSyslogFreeRtosMutexPrivate.h

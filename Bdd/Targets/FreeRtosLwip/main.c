@@ -19,8 +19,11 @@
  * the destination port (6514 vs 6515) is dispatched at Connect time.
  *
  * Static IPv4 (10.0.2.15) on the QEMU slirp network, host reachable at the
- * slirp gateway 10.0.2.2 — numeric, because slirp has no route to the docker
- * DNS alias the Linux target uses. */
+ * slirp gateway 10.0.2.2. The oracle is addressed by name ("syslog-ng") via
+ * SolidSyslogLwipRawDnsResolver; lwIP's DNS_LOCAL_HOSTLIST (see lwipopts.h)
+ * maps that name statically to 10.0.2.2, since slirp cannot return a reachable
+ * address for the docker alias over real DNS. This is the by-name end-to-end
+ * path S28.08 delivers — host now equals the TLS serverName, so no numeric pin. */
 
 #include "CmsdkUart.h"
 #include "EthernetIf.h"
@@ -29,9 +32,7 @@
 #include "BddTargetInteractive.h"
 #include "BddTargetIps.h"
 #include "BddTargetLanguage.h"
-#include "BddTargetMtlsConfig.h"
 #include "BddTargetSwitchConfig.h"
-#include "BddTargetTlsConfig.h"
 #include "BddTargetTlsSender.h"
 
 #include "SolidSyslog.h"
@@ -45,8 +46,8 @@
 #include "SolidSyslogFreeRtosSysUpTime.h"
 #include "SolidSyslogLwipRawAddress.h"
 #include "SolidSyslogLwipRawDatagram.h"
+#include "SolidSyslogLwipRawDnsResolver.h"
 #include "SolidSyslogLwipRawMarshal.h"
-#include "SolidSyslogLwipRawResolver.h"
 #include "SolidSyslogLwipRawTcpStream.h"
 #include "SolidSyslogMetaSd.h"
 #include "SolidSyslogMutex.h"
@@ -93,7 +94,7 @@
 static char appName[49] = "SolidSyslogBddTarget";
 static char messageId[33] = "example";
 static char msg[SOLIDSYSLOG_MAX_MESSAGE_SIZE] = "Hello from FreeRTOS lwIP";
-static char host[16] = "10.0.2.2";
+static char host[16] = "syslog-ng";
 static uint16_t port = (uint16_t) BDD_TARGET_UDP_PORT;
 static uint32_t endpointVersion = 0U;
 
@@ -489,21 +490,17 @@ static void InteractiveTask(void* argument)
      * first send is not lost to a cache miss (see WarmUpGatewayArp). */
     WarmUpGatewayArp();
 
-    /* Pin the TLS / mTLS destination host to the slirp gateway 10.0.2.2 (the
-     * same numeric path UDP / TCP take) rather than the "syslog-ng" docker DNS
-     * alias the shared BddTargetTlsConfig defaults to: SolidSyslogLwipRawResolver
-     * is numeric-only (ipaddr_aton, no DNS), so a hostname would fail to resolve
-     * and the TLS StreamSender would never connect. ServerName for SNI / cert
-     * verification stays "syslog-ng" (the cert's subject); without that the
-     * handshake fails because the syslog-ng cert isn't issued for 10.0.2.2.
-     * Mirrors Bdd/Targets/FreeRtos/main.c (the +TCP target's PlusTcpResolver
-     * ignores the host, so this only bites the numeric lwIP resolver). */
-    BddTargetTlsConfig_SetHost("10.0.2.2");
-    BddTargetTlsConfig_SetServerName("syslog-ng");
-    BddTargetMtlsConfig_SetHost("10.0.2.2");
-    BddTargetMtlsConfig_SetServerName("syslog-ng");
-
-    resolver = SolidSyslogLwipRawResolver_Create();
+    /* No host pin needed: SolidSyslogLwipRawDnsResolver resolves the oracle by
+     * name, and the DNS_LOCAL_HOSTLIST entry maps "syslog-ng" -> 10.0.2.2 on the
+     * guest. The shared BddTargetTlsConfig already defaults host to "syslog-ng"
+     * with serverName falling back to it, so the destination host now equals the
+     * TLS serverName / cert subject without any override. RtosSleep drives the
+     * resolver's bounded async-resolve spin (a local-hostlist hit returns
+     * synchronously, so it never actually spins here). */
+    struct SolidSyslogLwipRawDnsResolverConfig dnsConfig = {
+        .Sleep = RtosSleep,
+    };
+    resolver = SolidSyslogLwipRawDnsResolver_Create(&dnsConfig);
     datagram = SolidSyslogLwipRawDatagram_Create();
     udpAddress = SolidSyslogLwipRawAddress_Create();
 
@@ -673,7 +670,7 @@ static void TeardownAll(void)
     SolidSyslogLwipRawAddress_Destroy(udpAddress);
     SolidSyslogLwipRawAddress_Destroy(tcpAddress);
     SolidSyslogLwipRawDatagram_Destroy(datagram);
-    SolidSyslogLwipRawResolver_Destroy(resolver);
+    SolidSyslogLwipRawDnsResolver_Destroy(resolver);
 }
 
 static void SemihostingExit(int status)
