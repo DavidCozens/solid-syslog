@@ -111,6 +111,41 @@ set_target_properties(SolidSyslogLwipRawResolverTest PROPERTIES
 
 add_test(NAME SolidSyslogLwipRawResolverTest COMMAND SolidSyslogLwipRawResolverTest)
 
+# ---- SolidSyslogLwipRawDnsResolverTest ----
+
+add_executable(SolidSyslogLwipRawDnsResolverTest
+    SolidSyslogLwipRawDnsResolverTest.cpp
+    main.cpp
+    ${CMAKE_SOURCE_DIR}/Tests/Support/LwipFakes/Source/LwipFakeMarshalGuard.cpp
+    ${CMAKE_SOURCE_DIR}/Tests/Support/LwipFakes/Source/LwipDnsFake.c
+    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawAddress.c
+    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawAddressMessages.c
+    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawAddressStatic.c
+    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawMarshal.c
+    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawDnsResolver.c
+    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawDnsResolverMessages.c
+    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawDnsResolverStatic.c
+)
+# NB LwipDnsFake.c + the marshal are listed now (not slice-1 strict-minimal) so
+# the executable's source set is stable across the async-bridge slices that
+# follow; the slice-1 Resolve stub simply touches neither yet.
+
+target_link_libraries(SolidSyslogLwipRawDnsResolverTest PRIVATE
+    ${PROJECT_NAME}
+    ConfigLockFake
+    ErrorHandlerFake
+    CppUTest
+    CppUTestExt
+)
+
+target_include_directories(SolidSyslogLwipRawDnsResolverTest PRIVATE ${LWIP_TEST_INCLUDE_DIRS})
+
+set_target_properties(SolidSyslogLwipRawDnsResolverTest PROPERTIES
+    CXX_CPPCHECK ""
+)
+
+add_test(NAME SolidSyslogLwipRawDnsResolverTest COMMAND SolidSyslogLwipRawDnsResolverTest)
+
 # ---- SolidSyslogLwipRawDatagramTest ----
 
 add_executable(SolidSyslogLwipRawDatagramTest
