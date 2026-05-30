@@ -226,6 +226,61 @@ TEST(SolidSyslogLwipRawDnsResolver, ResolveSpinsUntilAsyncCallbackFires)
     LONGS_EQUAL(SOLIDSYSLOG_LWIP_RAW_DNS_RESOLVE_POLL_MS, FakeSleep_LastMs);
 }
 
+TEST(SolidSyslogLwipRawDnsResolver, ResolveReturnsFalseWhenAsyncCallbackDeliversNull)
+{
+    LwipDnsFake_SetResult(ERR_INPROGRESS);
+    FakeSleep_FireArmed = true;
+    FakeSleep_FireWithAddr = false; // deliver NULL — lookup failed
+
+    CHECK_FALSE(Resolve());
+}
+
+TEST(SolidSyslogLwipRawDnsResolver, ResolveReturnsFalseOnTimeout)
+{
+    LwipDnsFake_SetResult(ERR_INPROGRESS); // callback never fires
+
+    CHECK_FALSE(Resolve());
+}
+
+TEST(SolidSyslogLwipRawDnsResolver, ResolveSleepsUntilDeadlineOnTimeout)
+{
+    LwipDnsFake_SetResult(ERR_INPROGRESS); // callback never fires
+
+    Resolve();
+
+    LONGS_EQUAL(
+        SOLIDSYSLOG_DNS_RESOLVE_TIMEOUT_MS / SOLIDSYSLOG_LWIP_RAW_DNS_RESOLVE_POLL_MS,
+        FakeSleep_CallCount
+    );
+    LONGS_EQUAL(SOLIDSYSLOG_LWIP_RAW_DNS_RESOLVE_POLL_MS, FakeSleep_LastMs);
+}
+
+TEST(SolidSyslogLwipRawDnsResolver, ResolveReportsWarningOnTimeout)
+{
+    ErrorHandlerFake_Install(nullptr);
+    LwipDnsFake_SetResult(ERR_INPROGRESS); // callback never fires
+
+    Resolve();
+
+    CHECK_REPORTED(SOLIDSYSLOG_SEVERITY_WARNING, LwipRawDnsResolverErrorSource, LWIPRAWDNSRESOLVER_ERROR_RESOLVE_TIMEOUT);
+}
+
+TEST(SolidSyslogLwipRawDnsResolver, ResolveReturnsFalseOnErrArg)
+{
+    LwipDnsFake_SetResult(ERR_ARG);
+
+    CHECK_FALSE(Resolve());
+}
+
+TEST(SolidSyslogLwipRawDnsResolver, ResolveDoesNotSpinOnErrArg)
+{
+    LwipDnsFake_SetResult(ERR_ARG);
+
+    Resolve();
+
+    LONGS_EQUAL(0, FakeSleep_CallCount);
+}
+
 // clang-format off
 TEST_GROUP(SolidSyslogLwipRawDnsResolverPool)
 {

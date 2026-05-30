@@ -2,10 +2,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "SolidSyslogError.h"
 #include "SolidSyslogLwipRawAddressPrivate.h"
+#include "SolidSyslogLwipRawDnsResolverErrors.h"
 #include "SolidSyslogLwipRawDnsResolverPrivate.h"
 #include "SolidSyslogLwipRawMarshalPrivate.h"
 #include "SolidSyslogNullResolver.h"
+#include "SolidSyslogPrival.h"
 #include "SolidSyslogResolverDefinition.h"
 #include "SolidSyslogTransport.h"
 #include "SolidSyslogTunables.h"
@@ -136,6 +139,14 @@ static bool LwipRawDnsResolver_WaitForCallback(struct SolidSyslogLwipRawDnsResol
     {
         self->Config.Sleep((int) pollMs);
         elapsedMs += pollMs;
+    }
+    if (!self->Done)
+    {
+        SolidSyslog_Error(
+            SOLIDSYSLOG_SEVERITY_WARNING,
+            &LwipRawDnsResolverErrorSource,
+            (uint8_t) LWIPRAWDNSRESOLVER_ERROR_RESOLVE_TIMEOUT
+        );
     }
     return self->Done && self->ResolvedOk;
 }
