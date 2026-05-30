@@ -424,7 +424,7 @@ TEST_GROUP(SolidSyslogMbedTlsStreamResumption)
 
     /* One Open -> Send -> (the test closes if reconnecting) cycle on the same
      * stream. Returns whether the Open and Send both succeeded. */
-    bool ConnectAndDeliver(const char* payload)
+    bool ConnectAndDeliver(const char* payload) const
     {
         bool opened = SolidSyslogStream_Open(tlsStream, addr);
         bool sent = opened && SolidSyslogStream_Send(tlsStream, payload, 8U);
