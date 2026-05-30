@@ -77,6 +77,21 @@ extern "C" void FakeSleep(int milliseconds)
     }
 }
 
+// Counts marshal hops while keeping the MarshalGuard's active rail set around
+// each callback (same contract as LwipFakeMarshalGuard_TrackingMarshal, so the
+// teardown breach check still holds). Used to pin that the async-completion
+// result is read under a SECOND marshal hop (DoPublishResult) rather than off
+// the volatile Done flag on the caller's thread — the cross-thread data-race fix.
+unsigned Marshal_CallCount = 0;
+
+extern "C" void CountingTrackingMarshal(SolidSyslogLwipRawCallback callback, void* context)
+{
+    Marshal_CallCount++;
+    LwipFakeMarshalGuard_Active = true;
+    callback(context);
+    LwipFakeMarshalGuard_Active = false;
+}
+
 static ip_addr_t Ipv4(uint8_t a, uint8_t b, uint8_t c, uint8_t d)
 {
     ip_addr_t address;
@@ -100,8 +115,9 @@ TEST_GROUP(SolidSyslogLwipRawDnsResolver)
     {
         LwipDnsFake_Reset();
         FakeSleep_Reset();
+        Marshal_CallCount = 0;
         LwipFakeMarshalGuard_Reset();
-        SolidSyslogLwipRaw_SetMarshal(LwipFakeMarshalGuard_TrackingMarshal);
+        SolidSyslogLwipRaw_SetMarshal(CountingTrackingMarshal);
         config.Sleep = FakeSleep;
         resolver     = SolidSyslogLwipRawDnsResolver_Create(&config);
         addr         = SolidSyslogLwipRawAddress_Create();
@@ -224,6 +240,43 @@ TEST(SolidSyslogLwipRawDnsResolver, ResolveSpinsUntilAsyncCallbackFires)
     // Fired on the first sleep, so exactly one poll happened before completion.
     LONGS_EQUAL(1, FakeSleep_CallCount);
     LONGS_EQUAL(SOLIDSYSLOG_LWIP_RAW_DNS_RESOLVE_POLL_MS, FakeSleep_LastMs);
+}
+
+TEST(SolidSyslogLwipRawDnsResolver, SynchronousHitTakesExactlyOneMarshalHop)
+{
+    // ERR_OK publishes inline (read-after-marshal is ordered by the hop return),
+    // so only the dns_gethostbyname hop runs — no separate publish hop.
+    LwipDnsFake_SetResult(ERR_OK);
+
+    Resolve();
+
+    LONGS_EQUAL(1, Marshal_CallCount);
+}
+
+TEST(SolidSyslogLwipRawDnsResolver, AsyncSuccessReadsResultUnderASecondMarshalHop)
+{
+    // The cross-thread fix: after the spin observes the volatile Done flag, the
+    // non-volatile ResolvedIp / ResolvedOk are read back on the lwIP thread via a
+    // SECOND marshal hop (DoPublishResult) — never off the flag on the caller's
+    // thread. Two hops total: dns_gethostbyname + publish.
+    LwipDnsFake_SetResult(ERR_INPROGRESS);
+    FakeSleep_FireArmed = true;
+    FakeSleep_FireWithAddr = true;
+    FakeSleep_FireIp = Ipv4(10, 0, 2, 2);
+
+    Resolve();
+
+    LONGS_EQUAL(2, Marshal_CallCount);
+}
+
+TEST(SolidSyslogLwipRawDnsResolver, TimeoutDoesNotTakeThePublishHop)
+{
+    // No completion → no publish hop; only the dns_gethostbyname hop ran.
+    LwipDnsFake_SetResult(ERR_INPROGRESS); // callback never fires
+
+    Resolve();
+
+    LONGS_EQUAL(1, Marshal_CallCount);
 }
 
 TEST(SolidSyslogLwipRawDnsResolver, ResolveReturnsFalseWhenAsyncCallbackDeliversNull)

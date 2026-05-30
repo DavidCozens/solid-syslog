@@ -18,14 +18,23 @@
 
 struct SolidSyslogAddress;
 
-/* Per-resolve parameters carried across the marshal hop. The dns_gethostbyname
+/* Per-resolve parameters carried across the marshal hops. The dns_gethostbyname
  * call runs on the lwIP-owning thread; its immediate return code comes back in
- * Err. One struct so the void*-context recovery has a single cast site. */
+ * Err. The async-completion result is published the same way: DoPublishResult
+ * runs on the lwIP thread, copies the resolved address into Destination, and
+ * reports the outcome in Resolved — so the multi-byte ResolvedIp / ResolvedOk
+ * fields the dns_found_callback wrote are read on the thread that wrote them
+ * (race-free, with the marshal providing the cross-thread barrier) rather than
+ * on the caller's thread off the back of the volatile Done flag. One struct so
+ * the void*-context recovery has a single cast site. */
 struct LwipRawDnsResolverCall
 {
     struct SolidSyslogLwipRawDnsResolver* Self;
     const char* Host;
+    struct SolidSyslogLwipRawAddress* Destination;
+    uint16_t Port;
     err_t Err;
+    bool Resolved;
 };
 
 static bool LwipRawDnsResolver_Resolve(
@@ -41,6 +50,7 @@ static inline struct LwipRawDnsResolverCall* LwipRawDnsResolverCallFromContext(v
 static void LwipRawDnsResolver_DoGetHostByName(void* context);
 static void LwipRawDnsResolver_FoundCallback(const char* name, const ip_addr_t* ipaddr, void* arg);
 static bool LwipRawDnsResolver_WaitForCallback(struct SolidSyslogLwipRawDnsResolver* self);
+static void LwipRawDnsResolver_DoPublishResult(void* context);
 
 void LwipRawDnsResolver_Initialise(
     struct SolidSyslogResolver* base,
@@ -78,34 +88,45 @@ static bool LwipRawDnsResolver_Resolve(
 
     /* dns_gethostbyname touches lwIP core state (unlike the numeric resolver's
      * pure ipaddr_aton parse), so it must run under the marshal hop. */
-    struct LwipRawDnsResolverCall call = {.Self = self, .Host = host, .Err = ERR_OK};
+    struct LwipRawDnsResolverCall call = {
+        .Self = self,
+        .Host = host,
+        .Destination = destination,
+        .Port = port,
+        .Err = ERR_OK,
+        .Resolved = false,
+    };
     SolidSyslogLwipRaw_Marshal(LwipRawDnsResolver_DoGetHostByName, &call);
 
-    bool resolved = false;
     if (call.Err == ERR_OK)
     {
-        /* Synchronous hit: numeric literal, DNS cache, or local hostlist — the
-         * address was written into ResolvedIp before dns_gethostbyname returned. */
-        resolved = true;
+        /* Synchronous hit: numeric literal, DNS cache, or local hostlist —
+         * dns_gethostbyname wrote ResolvedIp under the marshal hop above and the
+         * found_callback never fired, so reading it here (ordered after the
+         * marshal returned) is safe and on a single thread. */
+        destination->Ip = self->ResolvedIp;
+        destination->Port = port;
+        call.Resolved = true;
     }
     else if (call.Err == ERR_INPROGRESS)
     {
         /* Query queued: bound-spin on the caller's thread until the
-         * dns_found_callback fires (on the lwIP thread) or the deadline passes.
-         * On success the callback has written the resolved address into ResolvedIp. */
-        resolved = LwipRawDnsResolver_WaitForCallback(self);
+         * dns_found_callback signals completion via the volatile Done flag (or
+         * the deadline passes). The callback wrote the multi-byte ResolvedIp /
+         * ResolvedOk on the lwIP thread, so the authoritative read + publish runs
+         * back on that thread via DoPublishResult — never off the volatile flag
+         * on the caller's thread, which would be an unsynchronised data race. */
+        if (LwipRawDnsResolver_WaitForCallback(self))
+        {
+            SolidSyslogLwipRaw_Marshal(LwipRawDnsResolver_DoPublishResult, &call);
+        }
     }
     else
     {
-        /* ERR_ARG / any other immediate rejection — resolved stays false.
+        /* ERR_ARG / any other immediate rejection — Resolved stays false.
          * Terminating else per MISRA 15.7. */
     }
-    if (resolved)
-    {
-        destination->Ip = self->ResolvedIp;
-        destination->Port = port;
-    }
-    return resolved;
+    return call.Resolved;
 }
 
 static void LwipRawDnsResolver_DoGetHostByName(void* context)
@@ -133,8 +154,10 @@ static void LwipRawDnsResolver_FoundCallback(const char* name, const ip_addr_t* 
 /* Bounded async-resolve spin: each iteration sleeps via the integrator-injected
  * Sleep so lwIP's DNS timer / RX paths get cycles to advance the query. Runs on
  * the caller's thread — never the lwIP thread. Exits when the callback has set
- * Done (success or NULL-delivery failure) or the deadline elapses (timeout).
- * Returns true only when the callback delivered a valid address. */
+ * the volatile Done flag (success or NULL-delivery failure) or the deadline
+ * elapses (timeout). Returns whether completion was observed; the authoritative
+ * success/address read happens under the marshal in DoPublishResult, so this
+ * deliberately does NOT read the non-volatile ResolvedOk / ResolvedIp here. */
 static bool LwipRawDnsResolver_WaitForCallback(struct SolidSyslogLwipRawDnsResolver* self)
 {
     const uint32_t pollMs = (uint32_t) SOLIDSYSLOG_LWIP_RAW_DNS_RESOLVE_POLL_MS;
@@ -153,7 +176,25 @@ static bool LwipRawDnsResolver_WaitForCallback(struct SolidSyslogLwipRawDnsResol
             (uint8_t) LWIPRAWDNSRESOLVER_ERROR_RESOLVE_TIMEOUT
         );
     }
-    return self->Done && self->ResolvedOk;
+    return self->Done;
+}
+
+/* Marshalled result read for the async path: runs on the lwIP thread (the same
+ * thread the dns_found_callback wrote ResolvedOk / ResolvedIp on), so the read
+ * is race-free and the marshal hop carries the cross-thread happens-before that
+ * the volatile Done flag alone cannot. Publishes into the caller-owned
+ * Destination and reports the outcome in Resolved (read after the marshal
+ * returns, ordered by it). */
+static void LwipRawDnsResolver_DoPublishResult(void* context)
+{
+    struct LwipRawDnsResolverCall* call = LwipRawDnsResolverCallFromContext(context);
+    struct SolidSyslogLwipRawDnsResolver* self = call->Self;
+    call->Resolved = self->ResolvedOk;
+    if (self->ResolvedOk)
+    {
+        call->Destination->Ip = self->ResolvedIp;
+        call->Destination->Port = call->Port;
+    }
 }
 
 static inline struct SolidSyslogLwipRawDnsResolver* LwipRawDnsResolver_SelfFromBase(struct SolidSyslogResolver* base)
