@@ -8,6 +8,7 @@
 #include "SolidSyslogNullResolver.h"
 #include "SolidSyslogResolverDefinition.h"
 #include "SolidSyslogTransport.h"
+#include "SolidSyslogTunables.h"
 #include "lwip/dns.h"
 #include "lwip/err.h"
 #include "lwip/ip_addr.h"
@@ -36,6 +37,7 @@ static inline struct SolidSyslogLwipRawDnsResolver* LwipRawDnsResolver_SelfFromB
 static inline struct LwipRawDnsResolverCall* LwipRawDnsResolverCallFromContext(void* context);
 static void LwipRawDnsResolver_DoGetHostByName(void* context);
 static void LwipRawDnsResolver_FoundCallback(const char* name, const ip_addr_t* ipaddr, void* arg);
+static bool LwipRawDnsResolver_WaitForCallback(struct SolidSyslogLwipRawDnsResolver* self);
 
 void LwipRawDnsResolver_Initialise(
     struct SolidSyslogResolver* base,
@@ -81,9 +83,19 @@ static bool LwipRawDnsResolver_Resolve(
     {
         /* Synchronous hit: numeric literal, DNS cache, or local hostlist — the
          * address was written into ResolvedIp before dns_gethostbyname returned. */
+        resolved = true;
+    }
+    else if (call.Err == ERR_INPROGRESS)
+    {
+        /* Query queued: bound-spin on the caller's thread until the
+         * dns_found_callback fires (on the lwIP thread) or the deadline passes.
+         * On success the callback has written the resolved address into ResolvedIp. */
+        resolved = LwipRawDnsResolver_WaitForCallback(self);
+    }
+    if (resolved)
+    {
         destination->Ip = self->ResolvedIp;
         destination->Port = port;
-        resolved = true;
     }
     return resolved;
 }
@@ -97,7 +109,7 @@ static void LwipRawDnsResolver_DoGetHostByName(void* context)
 
 /* lwIP fires this on the tcpip thread when an async lookup completes. ipaddr is
  * the resolved address, or NULL on failure. Touches no lwIP API, so it needs no
- * marshalling; sets the flags the bounded spin (Resolve) polls. */
+ * marshalling; sets the flags the bounded spin (WaitForCallback) polls. */
 static void LwipRawDnsResolver_FoundCallback(const char* name, const ip_addr_t* ipaddr, void* arg)
 {
     (void) name;
@@ -108,6 +120,24 @@ static void LwipRawDnsResolver_FoundCallback(const char* name, const ip_addr_t* 
         self->ResolvedOk = true;
     }
     self->Done = true;
+}
+
+/* Bounded async-resolve spin: each iteration sleeps via the integrator-injected
+ * Sleep so lwIP's DNS timer / RX paths get cycles to advance the query. Runs on
+ * the caller's thread — never the lwIP thread. Exits when the callback has set
+ * Done (success or NULL-delivery failure) or the deadline elapses (timeout).
+ * Returns true only when the callback delivered a valid address. */
+static bool LwipRawDnsResolver_WaitForCallback(struct SolidSyslogLwipRawDnsResolver* self)
+{
+    const uint32_t pollMs = (uint32_t) SOLIDSYSLOG_LWIP_RAW_DNS_RESOLVE_POLL_MS;
+    const uint32_t deadlineMs = (uint32_t) SOLIDSYSLOG_DNS_RESOLVE_TIMEOUT_MS;
+    uint32_t elapsedMs = 0;
+    while (!self->Done && (elapsedMs < deadlineMs))
+    {
+        self->Config.Sleep((int) pollMs);
+        elapsedMs += pollMs;
+    }
+    return self->Done && self->ResolvedOk;
 }
 
 static inline struct SolidSyslogLwipRawDnsResolver* LwipRawDnsResolver_SelfFromBase(struct SolidSyslogResolver* base)

@@ -50,16 +50,31 @@ static const uint16_t TEST_PORT = 514;
 unsigned FakeSleep_CallCount = 0;
 int FakeSleep_LastMs = 0;
 
+// When armed, FakeSleep fires the pending dns_found_callback the first time it
+// is called with a callback outstanding — the host stand-in for the tcpip
+// thread completing the lookup while the caller spins. Delivers &FakeSleep_FireIp
+// when FakeSleep_FireWithAddr, else NULL (lookup failure).
+bool FakeSleep_FireArmed = false;
+bool FakeSleep_FireWithAddr = false;
+ip_addr_t FakeSleep_FireIp;
+
 void FakeSleep_Reset()
 {
     FakeSleep_CallCount = 0;
     FakeSleep_LastMs = 0;
+    FakeSleep_FireArmed = false;
+    FakeSleep_FireWithAddr = false;
+    ip_addr_set_zero(&FakeSleep_FireIp);
 }
 
 extern "C" void FakeSleep(int milliseconds)
 {
     FakeSleep_CallCount++;
     FakeSleep_LastMs = milliseconds;
+    if (FakeSleep_FireArmed && LwipDnsFake_HasPendingCallback())
+    {
+        LwipDnsFake_FireCallback(FakeSleep_FireWithAddr ? &FakeSleep_FireIp : nullptr);
+    }
 }
 
 static ip_addr_t Ipv4(uint8_t a, uint8_t b, uint8_t c, uint8_t d)
@@ -160,6 +175,55 @@ TEST(SolidSyslogLwipRawDnsResolver, ResolvePassesHostToDnsGetHostByName)
     Resolve("syslog-ng");
 
     STRCMP_EQUAL("syslog-ng", LwipDnsFake_LastHostname());
+}
+
+TEST(SolidSyslogLwipRawDnsResolver, ResolveReturnsTrueWhenAsyncCallbackDeliversAddress)
+{
+    LwipDnsFake_SetResult(ERR_INPROGRESS);
+    FakeSleep_FireArmed = true;
+    FakeSleep_FireWithAddr = true;
+    FakeSleep_FireIp = Ipv4(10, 0, 2, 2);
+
+    CHECK_TRUE(Resolve());
+}
+
+TEST(SolidSyslogLwipRawDnsResolver, ResolvePopulatesIpFromAsyncCallback)
+{
+    ip_addr_t delivered = Ipv4(192, 0, 2, 7);
+    LwipDnsFake_SetResult(ERR_INPROGRESS);
+    FakeSleep_FireArmed = true;
+    FakeSleep_FireWithAddr = true;
+    FakeSleep_FireIp = delivered;
+
+    Resolve();
+
+    LONGS_EQUAL(Ipv4U32(&delivered), Ipv4U32(&SolidSyslogLwipRawAddress_AsConst(addr)->Ip));
+}
+
+TEST(SolidSyslogLwipRawDnsResolver, ResolvePopulatesPortFromArgOnAsyncCallback)
+{
+    LwipDnsFake_SetResult(ERR_INPROGRESS);
+    FakeSleep_FireArmed = true;
+    FakeSleep_FireWithAddr = true;
+    FakeSleep_FireIp = Ipv4(10, 0, 2, 2);
+
+    Resolve(TEST_HOST, 6514);
+
+    LONGS_EQUAL(6514, SolidSyslogLwipRawAddress_AsConst(addr)->Port);
+}
+
+TEST(SolidSyslogLwipRawDnsResolver, ResolveSpinsUntilAsyncCallbackFires)
+{
+    LwipDnsFake_SetResult(ERR_INPROGRESS);
+    FakeSleep_FireArmed = true;
+    FakeSleep_FireWithAddr = true;
+    FakeSleep_FireIp = Ipv4(10, 0, 2, 2);
+
+    Resolve();
+
+    // Fired on the first sleep, so exactly one poll happened before completion.
+    LONGS_EQUAL(1, FakeSleep_CallCount);
+    LONGS_EQUAL(SOLIDSYSLOG_LWIP_RAW_DNS_RESOLVE_POLL_MS, FakeSleep_LastMs);
 }
 
 // clang-format off
