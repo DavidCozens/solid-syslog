@@ -1,5 +1,54 @@
 # Dev Log
 
+## 2026-05-30 — S24.14 CI supply-chain hardening + Node 24 artifact actions
+
+### Decisions
+
+- **`persist-credentials: false` on all 26 `actions/checkout` steps** (25 in
+  `ci.yml`, 1 in `sbom.yml`) — closes the zizmor `artipacked` finding deferred
+  from the S28.09 (#476) review. The 25 `ci.yml` checkouts were bare
+  `- uses: …` with no `with:` block, so each gained a fresh two-line block;
+  `sbom.yml`'s checkout already had `with: { fetch-depth: 0 }`, so the key was
+  appended. The credential exposure was only ever to first-party CI containers,
+  but the BDD compose lanes bind-mount the repo root in, so dropping the
+  persisted token is the clean posture.
+- **SHA-pinned the three remaining tag-pinned actions** (#477 item 2):
+  `dorny/test-reporter@v3` → `a43b3a5…` (v3.0.0, ×13),
+  `actions/cache@v4` → `0057852…` (v4.3.0, ×2),
+  `uhafner/quality-monitor@v1` → `778e3a6…` (v1.14.0, ×1). Every other action
+  was already SHA-pinned; the workflow tree is now zizmor `unpinned-uses`-clean.
+- **Swept the whole workflow tree off the deprecated Node 20 runtime** (in scope
+  per David — same supply-chain hygiene surface; GitHub forces Node 20 off the
+  runner from 2026-06-16). After the first CI run's annotations flagged more
+  node20 actions than the artifact pair, a `using:` audit of every pinned SHA
+  across `ci.yml`, `sbom.yml`, and `release-please.yml` was the gate. All bumped
+  to the node24 release of each (latest major):
+  - `actions/upload-artifact` → `043fb46…` (v7.0.1) — ci.yml (was v5.0.0) + sbom.yml (was v4.6.2)
+  - `actions/download-artifact` → `3e5f45b…` (v8.0.1) — ci.yml (was v5.0.0) + sbom.yml (was v4.3.0)
+  - `actions/cache` → `27d5ce7…` (v5.0.5) — ci.yml (this PR had first pinned it to v4.3.0/node20; corrected to v5)
+  - `actions/github-script` → `ed59741…` (v8.0.0) — ci.yml (was v7.1.0/node20, pre-existing pin)
+  - `actions/deploy-pages` → `cd2ce8f…` (v5.0.0) — ci.yml (was v4.0.5/node20; lane only runs on main, so no PR annotation surfaced it)
+  - `googleapis/release-please-action` → `45996ed…` (v5.0.0) — release-please.yml (was v4.4.0/node20)
+  Verified node24-clean: a script parses all three workflows, fetches each
+  pinned SHA's `action.yml`, and asserts no `using: node20` remains (only
+  node24 + composite/docker). No `unpinned-uses` either.
+
+### Deferred
+
+- **Windows runner-image notices** (`windows-latest` → `windows-2025-vs2026`
+  redirect by 2026-06-15) — left as `windows-latest`. Informational only; the
+  redirect is transparent and runner images can't be SHA-pinned the way actions
+  can. Not worth normalising.
+
+### Open questions
+
+- **Behaviour changes ride along with the major bumps** (acceptable pre-release,
+  no released version to break): `download-artifact@v8` defaults a download hash
+  mismatch to a hard ERROR (was a warning) and moved to ESM;
+  `release-please-action@v5` flags node24 as a "breaking change" but it is *only*
+  the runtime bump (no config-schema change). Watch the first post-merge
+  release-please + Pages-deploy runs on main, since neither lane runs on PRs.
+
 ## 2026-05-30 — S28.11 FreeRtosLwip TLS/mTLS (mbedTLS over LwipRawTcpStream)
 
 Wiring complete; **both plain TLS and mutual TLS are green** on the lwIP BDD
