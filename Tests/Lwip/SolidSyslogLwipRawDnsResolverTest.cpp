@@ -248,10 +248,7 @@ TEST(SolidSyslogLwipRawDnsResolver, ResolveSleepsUntilDeadlineOnTimeout)
 
     Resolve();
 
-    LONGS_EQUAL(
-        SOLIDSYSLOG_DNS_RESOLVE_TIMEOUT_MS / SOLIDSYSLOG_LWIP_RAW_DNS_RESOLVE_POLL_MS,
-        FakeSleep_CallCount
-    );
+    LONGS_EQUAL(SOLIDSYSLOG_DNS_RESOLVE_TIMEOUT_MS / SOLIDSYSLOG_LWIP_RAW_DNS_RESOLVE_POLL_MS, FakeSleep_CallCount);
     LONGS_EQUAL(SOLIDSYSLOG_LWIP_RAW_DNS_RESOLVE_POLL_MS, FakeSleep_LastMs);
 }
 
@@ -262,7 +259,11 @@ TEST(SolidSyslogLwipRawDnsResolver, ResolveReportsWarningOnTimeout)
 
     Resolve();
 
-    CHECK_REPORTED(SOLIDSYSLOG_SEVERITY_WARNING, LwipRawDnsResolverErrorSource, LWIPRAWDNSRESOLVER_ERROR_RESOLVE_TIMEOUT);
+    CHECK_REPORTED(
+        SOLIDSYSLOG_SEVERITY_WARNING,
+        LwipRawDnsResolverErrorSource,
+        LWIPRAWDNSRESOLVER_ERROR_RESOLVE_TIMEOUT
+    );
 }
 
 TEST(SolidSyslogLwipRawDnsResolver, ResolveReturnsFalseOnErrArg)
@@ -468,7 +469,11 @@ TEST(SolidSyslogLwipRawDnsResolverPool, DestroyOfUnknownHandleReportsWarning)
 
     SolidSyslogLwipRawDnsResolver_Destroy(&stranger);
 
-    CHECK_REPORTED(SOLIDSYSLOG_SEVERITY_WARNING, LwipRawDnsResolverErrorSource, LWIPRAWDNSRESOLVER_ERROR_UNKNOWN_DESTROY);
+    CHECK_REPORTED(
+        SOLIDSYSLOG_SEVERITY_WARNING,
+        LwipRawDnsResolverErrorSource,
+        LWIPRAWDNSRESOLVER_ERROR_UNKNOWN_DESTROY
+    );
 }
 
 TEST(SolidSyslogLwipRawDnsResolverPool, DestroyOfStaleHandleReportsWarning)
@@ -480,5 +485,9 @@ TEST(SolidSyslogLwipRawDnsResolverPool, DestroyOfStaleHandleReportsWarning)
     SolidSyslogLwipRawDnsResolver_Destroy(pooled[0]);
     pooled[0] = nullptr;
 
-    CHECK_REPORTED(SOLIDSYSLOG_SEVERITY_WARNING, LwipRawDnsResolverErrorSource, LWIPRAWDNSRESOLVER_ERROR_UNKNOWN_DESTROY);
+    CHECK_REPORTED(
+        SOLIDSYSLOG_SEVERITY_WARNING,
+        LwipRawDnsResolverErrorSource,
+        LWIPRAWDNSRESOLVER_ERROR_UNKNOWN_DESTROY
+    );
 }

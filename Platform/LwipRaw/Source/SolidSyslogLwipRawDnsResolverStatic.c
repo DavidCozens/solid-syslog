@@ -53,14 +53,13 @@ struct SolidSyslogResolver* SolidSyslogLwipRawDnsResolver_Create(
 void SolidSyslogLwipRawDnsResolver_Destroy(struct SolidSyslogResolver* base)
 {
     size_t index = LwipRawDnsResolver_IndexFromHandle(base);
-    bool released =
-        SolidSyslogPoolAllocator_IndexIsValid(&LwipRawDnsResolver_Allocator, index) &&
-        SolidSyslogPoolAllocator_FreeIfInUse(
-            &LwipRawDnsResolver_Allocator,
-            index,
-            LwipRawDnsResolver_CleanupAtIndex,
-            NULL
-        );
+    bool released = SolidSyslogPoolAllocator_IndexIsValid(&LwipRawDnsResolver_Allocator, index) &&
+                    SolidSyslogPoolAllocator_FreeIfInUse(
+                        &LwipRawDnsResolver_Allocator,
+                        index,
+                        LwipRawDnsResolver_CleanupAtIndex,
+                        NULL
+                    );
     if (!released)
     {
         SolidSyslog_Error(

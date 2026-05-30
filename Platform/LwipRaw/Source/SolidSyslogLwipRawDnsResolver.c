@@ -95,6 +95,11 @@ static bool LwipRawDnsResolver_Resolve(
          * On success the callback has written the resolved address into ResolvedIp. */
         resolved = LwipRawDnsResolver_WaitForCallback(self);
     }
+    else
+    {
+        /* ERR_ARG / any other immediate rejection — resolved stays false.
+         * Terminating else per MISRA 15.7. */
+    }
     if (resolved)
     {
         destination->Ip = self->ResolvedIp;

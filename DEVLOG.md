@@ -1,5 +1,68 @@
 # Dev Log
 
+## 2026-05-30 — S28.08 SolidSyslogLwipRawDnsResolver (DNS via dns_gethostbyname) + FreeRtosLwip BDD by-name
+
+Last implementation story of E28. Adds the DNS sibling of the numeric
+`SolidSyslogLwipRawResolver`, wrapping lwIP's async `dns_gethostbyname`, and
+switches the FreeRtosLwip BDD target to resolve the oracle by name.
+
+### Decisions
+
+- **Independent class, not an extension of the numeric resolver.** The two
+  Resolve bodies don't overlap (numeric = pure `ipaddr_aton`; DNS = async
+  marshal + bounded spin), `dns_gethostbyname` already subsumes the numeric case
+  (returns `ERR_OK` for literals/cache/hostlist — a free superset), and the two
+  target different `lwipopts` (`LWIP_DNS` off vs on), so both must exist
+  standalone. Injecting the numeric resolver as a sub-component would add a
+  cross-pool dependency for zero behavioural gain. The pooled-class scaffolding
+  (`Static`/`Messages`/`Errors`) and the lifecycle test suite *were* copy-renamed
+  from the numeric resolver (the story sanctions copying the pool suite); only
+  the genuinely-new async bridge was strict-TDD'd slice by slice.
+
+- **Async→sync bridge mirrors `SolidSyslogLwipRawTcpStream`.** `dns_gethostbyname`
+  runs under the `SolidSyslogLwipRaw_Marshal` hop (it touches lwIP core state —
+  the numeric resolver's `ipaddr_aton` does not, which is why only this one
+  marshals). `ERR_OK` → immediate; `ERR_INPROGRESS` → bounded spin on the
+  caller's thread (injected `Sleep`) polling a volatile `Done` flag the
+  `dns_found_callback` sets on the lwIP thread; deadline → fail + a
+  `LWIPRAWDNSRESOLVER_ERROR_RESOLVE_TIMEOUT` report. New tunables
+  `SOLIDSYSLOG_DNS_RESOLVE_TIMEOUT_MS` (5000) and
+  `SOLIDSYSLOG_LWIP_RAW_DNS_RESOLVE_POLL_MS` (10). No runtime timeout getter —
+  DNS timeout rarely needs live tuning.
+
+- **Removes the S28.11 numeric-pin workaround.** With the DNS resolver in place,
+  the FreeRtosLwip target drops the `BddTargetTlsConfig_SetHost("10.0.2.2")` /
+  `SetServerName("syslog-ng")` block: host defaults to `"syslog-ng"` (== the
+  shared serverName/cert-subject default), and `DNS_LOCAL_HOSTLIST` maps it to
+  `10.0.2.2` on the guest. The silent resolve-failure that cost debugging time in
+  S28.11 is now the natural path.
+
+- **BDD exercises only the synchronous local-hostlist branch — by design.** The
+  QEMU slirp + docker topology can't hand the guest a reachable address for the
+  `syslog-ng` docker alias over real DNS (slirp's `10.0.2.3` resolves it to a
+  docker-bridge IP with no route; only `10.0.2.2` reaches the oracle). So
+  `DNS_LOCAL_HOSTLIST` pins the name and the resolve completes on-device. The
+  async / over-the-wire / timeout branches are unit-tested only — documented
+  honestly in the target README and `docs/integrating-lwip.md`.
+
+### Test surface
+
+New `LwipDnsFake` (sibling of `LwipUdpFake`/`LwipTcpFake`): a controllable
+`dns_gethostbyname` returning `ERR_OK` / `ERR_INPROGRESS` (with a deferred
+`LwipDnsFake_FireCallback` the test drives from its injected `Sleep`, the host
+stand-in for the tcpip thread) / `ERR_ARG`, marshal-guarded. 30 tests cover all
+five outcomes (sync hit, async-addr, async-NULL, timeout, ERR_ARG), the
+marshal-hop, transport-insensitivity, numeric pass-through, and the full
+pool/lifecycle suite. 100% line/branch on the logic-bearing TUs.
+
+### Verification
+
+Host lwIP TDD lane green (DNS test + all four siblings, after flipping
+`LWIP_DNS=1` in the fakes' `lwipopts.h`). FreeRtosLwip ELF builds under
+`freertos-cross-lwip`; QEMU smoke boot reaches the prompt and `send 1` emits a
+datagram (hostlist hit resolves `syslog-ng` → `10.0.2.2`). Oracle-receipt
+verification runs in the `bdd-freertos-qemu-lwip` lane (docker shared netns).
+
 ## 2026-05-30 — S24.14 CI supply-chain hardening + Node 24 artifact actions
 
 ### Decisions
@@ -48,6 +111,7 @@
   `release-please-action@v5` flags node24 as a "breaking change" but it is *only*
   the runtime bump (no config-schema change). Watch the first post-merge
   release-please + Pages-deploy runs on main, since neither lane runs on PRs.
+
 
 ## 2026-05-30 — S28.11 FreeRtosLwip TLS/mTLS (mbedTLS over LwipRawTcpStream)
 

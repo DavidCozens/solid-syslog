@@ -71,10 +71,7 @@
  * are in scope. */
 #define LWIP_DNS 1
 #define DNS_LOCAL_HOSTLIST 1
-#define DNS_LOCAL_HOSTLIST_INIT \
-    {                           \
-        DNS_LOCAL_HOSTLIST_ELEM("syslog-ng", IPADDR4_INIT_BYTES(10, 0, 2, 2)) \
-    }
+#define DNS_LOCAL_HOSTLIST_INIT {DNS_LOCAL_HOSTLIST_ELEM("syslog-ng", IPADDR4_INIT_BYTES(10, 0, 2, 2))}
 
 /* etharp queues the first packet to a destination while ARP resolves it —
  * keep queueing on so the first UDP datagram after boot is not dropped
