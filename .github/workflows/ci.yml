@@ -25,6 +25,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Configure
         run: cmake --preset debug
@@ -36,7 +38,7 @@ jobs:
         run: cd build/debug && ./Tests/Bdd/Targets/BddTargetTests -ojunit -k BddTargetTests
 
       - name: Test Report
-        uses: dorny/test-reporter@v3
+        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         if: success() || failure()
         with:
           name: Test Results (GCC)
@@ -45,14 +47,14 @@ jobs:
 
       - name: Upload JUnit XML
         if: success() || failure()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: junit-build-linux-gcc
           path: build/debug/cpputest_*.xml
           retention-days: 1
 
       - name: Upload BDD target binaries
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: solid-syslog-bdd-targets
           path: |
@@ -64,7 +66,7 @@ jobs:
       # bdd-linux-syslog-ng downloads this into Bdd/features/steps/ so behave
       # can `import solidsyslog_tunables` (the file is gitignored, not in checkout).
       - name: Upload BDD Python tunables (Linux)
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: bdd-tunables-linux
           path: Bdd/features/steps/solidsyslog_tunables.py
@@ -85,6 +87,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Configure
         run: cmake --preset debug
@@ -96,7 +100,7 @@ jobs:
         run: cd build/debug && ./Tests/OpenSslIntegration/OpenSslIntegrationTests -v -ojunit -k OpenSslIntegrationTests
 
       - name: Test Report
-        uses: dorny/test-reporter@v3
+        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         if: success() || failure()
         with:
           name: Test Results (OpenSSL Integration)
@@ -105,7 +109,7 @@ jobs:
 
       - name: Upload JUnit XML
         if: success() || failure()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: junit-integration-linux-openssl
           path: build/debug/cpputest_*.xml
@@ -128,6 +132,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Configure
         run: cmake --preset debug
@@ -139,7 +145,7 @@ jobs:
         run: cd build/debug && ./Tests/MbedTlsIntegration/MbedTlsIntegrationTests -v -ojunit -k MbedTlsIntegrationTests
 
       - name: Test Report
-        uses: dorny/test-reporter@v3
+        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         if: success() || failure()
         with:
           name: Test Results (mbedTLS Integration)
@@ -148,7 +154,7 @@ jobs:
 
       - name: Upload JUnit XML
         if: success() || failure()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: junit-integration-linux-mbedtls
           path: build/debug/cpputest_*.xml
@@ -164,9 +170,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Enable vcpkg binary cache
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
@@ -180,7 +188,7 @@ jobs:
       # windows runners — hardcoded here so the cache step doesn't depend
       # on a runner-image-set env var (the linter can't see those).
       - name: Cache vcpkg installed tree
-        uses: actions/cache@v4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: C:\vcpkg\installed
           key: ${{ runner.os }}-vcpkg-cpputest-openssl-v1
@@ -203,7 +211,7 @@ jobs:
           ./OpenSslIntegrationTests.exe -v -ojunit -k OpenSslIntegrationTests
 
       - name: Test Report
-        uses: dorny/test-reporter@v3
+        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         if: success() || failure()
         with:
           name: Test Results (OpenSSL Integration Windows)
@@ -212,7 +220,7 @@ jobs:
 
       - name: Upload JUnit XML
         if: success() || failure()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: junit-integration-windows-openssl
           path: build/msvc-debug/Tests/OpenSslIntegration/Debug/cpputest_*.xml
@@ -233,6 +241,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Configure with tunable override
         run: cmake --preset tunable-override-debug
@@ -241,7 +251,7 @@ jobs:
         run: cmake --build --preset tunable-override-debug --target junit
 
       - name: Test Report
-        uses: dorny/test-reporter@v3
+        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         if: success() || failure()
         with:
           name: Test Results (Tunable Override)
@@ -250,7 +260,7 @@ jobs:
 
       - name: Upload JUnit XML
         if: success() || failure()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: junit-build-linux-tunable-override
           path: build/tunable-override-debug/cpputest_*.xml
@@ -271,6 +281,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Configure
         run: cmake --preset clang-debug
@@ -279,7 +291,7 @@ jobs:
         run: cmake --build --preset clang-debug --target junit
 
       - name: Test Report
-        uses: dorny/test-reporter@v3
+        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         if: success() || failure()
         with:
           name: Test Results (Clang)
@@ -288,7 +300,7 @@ jobs:
 
       - name: Upload JUnit XML
         if: success() || failure()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: junit-build-linux-clang
           path: build/clang-debug/cpputest_*.xml
@@ -309,6 +321,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Configure
         run: cmake --preset sanitize
@@ -317,7 +331,7 @@ jobs:
         run: cmake --build --preset sanitize --target junit
 
       - name: Test Report
-        uses: dorny/test-reporter@v3
+        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         if: success() || failure()
         with:
           name: Test Results (Sanitize)
@@ -326,7 +340,7 @@ jobs:
 
       - name: Upload JUnit XML
         if: success() || failure()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: junit-sanitize-linux-gcc
           path: build/sanitize/cpputest_*.xml
@@ -349,6 +363,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Configure
         run: cmake --preset coverage
@@ -413,7 +429,7 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
 
   analyze-tidy:
     runs-on: ubuntu-latest
@@ -427,6 +443,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Configure
         run: cmake --preset tidy
@@ -437,7 +455,7 @@ jobs:
 
       - name: Upload clang-tidy output
         if: success() || failure()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: clang-tidy-report
           path: build/tidy/clang-tidy-output.txt
@@ -455,6 +473,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Configure
         run: cmake --preset iwyu
@@ -471,7 +491,7 @@ jobs:
 
       - name: Upload iwyu output
         if: success() || failure()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: iwyu-report
           path: build/iwyu/iwyu-output.txt
@@ -494,6 +514,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Configure
         run: cmake --preset tidy
@@ -504,7 +526,7 @@ jobs:
 
       - name: Upload clang-tidy output
         if: success() || failure()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: clang-tidy-report-freertos-plustcp
           path: build/tidy/clang-tidy-output.txt
@@ -528,6 +550,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Configure
         run: cmake --preset iwyu -DCMAKE_C_COMPILER=clang-19 -DCMAKE_CXX_COMPILER=clang++-19
@@ -540,7 +564,7 @@ jobs:
 
       - name: Upload iwyu output
         if: success() || failure()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: iwyu-report-freertos-plustcp
           path: build/iwyu/iwyu-output.txt
@@ -563,6 +587,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Configure
         run: cmake --preset tidy -DSOLIDSYSLOG_FREERTOS_NET=LWIP
@@ -573,7 +599,7 @@ jobs:
 
       - name: Upload clang-tidy output
         if: success() || failure()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: clang-tidy-report-freertos-lwip
           path: build/tidy/clang-tidy-output.txt
@@ -594,6 +620,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Configure
         run: cmake --preset iwyu -DSOLIDSYSLOG_FREERTOS_NET=LWIP -DCMAKE_C_COMPILER=clang-19 -DCMAKE_CXX_COMPILER=clang++-19
@@ -606,7 +634,7 @@ jobs:
 
       - name: Upload iwyu output
         if: success() || failure()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: iwyu-report-freertos-lwip
           path: build/iwyu/iwyu-output.txt
@@ -624,6 +652,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Check clang-format
         run: |
@@ -642,6 +672,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Configure
         run: cmake --preset cppcheck
@@ -683,7 +715,7 @@ jobs:
 
       - name: Upload cppcheck report
         if: success() || failure()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cppcheck-report
           path: build/cppcheck/cppcheck-report.xml
@@ -761,7 +793,7 @@ jobs:
 
       - name: Upload cppcheck-misra report
         if: success() || failure()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cppcheck-misra-report
           path: build/cppcheck-misra/cppcheck-misra-report.xml
@@ -776,9 +808,11 @@ jobs:
       VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Enable vcpkg binary cache
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
@@ -787,7 +821,7 @@ jobs:
       # Same cache as integration-windows-openssl — both jobs share one
       # entry. See that job's comment for rationale and key-bump policy.
       - name: Cache vcpkg installed tree
-        uses: actions/cache@v4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: C:\vcpkg\installed
           key: ${{ runner.os }}-vcpkg-cpputest-openssl-v1
@@ -804,7 +838,7 @@ jobs:
         run: cmake --build --preset msvc-debug --target junit SolidSyslogBddTarget
 
       - name: Test Report
-        uses: dorny/test-reporter@v3
+        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         if: success() || failure()
         with:
           name: Test Results (MSVC)
@@ -813,14 +847,14 @@ jobs:
 
       - name: Upload JUnit XML
         if: success() || failure()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: junit-build-windows-msvc
           path: build/msvc-debug/cpputest_*.xml
           retention-days: 1
 
       - name: Upload Windows BDD target binary
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: solid-syslog-bdd-target-windows
           path: build/msvc-debug/Bdd/Targets/Debug/SolidSyslogBddTarget.exe
@@ -828,7 +862,7 @@ jobs:
           compression-level: 0
 
       - name: Upload BDD Python tunables (Windows)
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: bdd-tunables-windows
           path: Bdd/features/steps/solidsyslog_tunables.py
@@ -846,13 +880,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
-      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: solid-syslog-bdd-target-windows
           path: build/msvc-debug/Bdd/Targets/Debug/
 
-      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: bdd-tunables-windows
           path: Bdd/features/steps/
@@ -924,7 +960,7 @@ jobs:
           Bdd/features/
 
       - name: BDD Test Report (Windows)
-        uses: dorny/test-reporter@v3
+        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         if: success() || failure()
         with:
           name: Test Results (BDD Windows)
@@ -933,7 +969,7 @@ jobs:
 
       - name: Upload JUnit XML
         if: success() || failure()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: junit-bdd-windows-otel
           path: Bdd/junit/TESTS-*.xml
@@ -956,13 +992,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
-      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: solid-syslog-bdd-targets
           path: build/debug/Bdd/Targets/
 
-      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: bdd-tunables-linux
           path: Bdd/features/steps/
@@ -980,7 +1018,7 @@ jobs:
           behave-linux syslog-ng-linux
 
       - name: BDD Test Report
-        uses: dorny/test-reporter@v3
+        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         if: success() || failure()
         with:
           name: Test Results (BDD)
@@ -989,7 +1027,7 @@ jobs:
 
       - name: Upload JUnit XML
         if: success() || failure()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: junit-bdd-linux-syslog-ng
           path: Bdd/junit/TESTS-*.xml
@@ -1014,6 +1052,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       # Smoke check: configure + build the regular host preset under the
       # cpputest-freertos image. FREERTOS_KERNEL_PATH is set, so
@@ -1029,7 +1069,7 @@ jobs:
         run: cd build/debug && ./Tests/Bdd/Targets/BddTargetTests -ojunit -k BddTargetTests
 
       - name: Test Report
-        uses: dorny/test-reporter@v3
+        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         if: success() || failure()
         with:
           name: Test Results (FreeRTOS host)
@@ -1038,7 +1078,7 @@ jobs:
 
       - name: Upload JUnit XML
         if: success() || failure()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: junit-build-freertos-host-tdd-plustcp
           path: build/debug/cpputest_*.xml
@@ -1058,6 +1098,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Configure (ARM cross)
         run: cmake --preset freertos-cross
@@ -1066,7 +1108,7 @@ jobs:
         run: cmake --build --preset freertos-cross --target SolidSyslogBddTarget
 
       - name: Upload FreeRTOS BDD target ELF
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: solid-syslog-bdd-target-freertos
           path: build/freertos-cross/Bdd/Targets/FreeRtos/SolidSyslogBddTarget.elf
@@ -1074,7 +1116,7 @@ jobs:
           compression-level: 0
 
       - name: Upload BDD Python tunables (FreeRTOS)
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: bdd-tunables-freertos
           path: Bdd/features/steps/solidsyslog_tunables.py
@@ -1099,6 +1141,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Configure (ARM cross, NET=LWIP)
         run: cmake --preset freertos-cross-lwip
@@ -1117,7 +1161,7 @@ jobs:
           echo "OK: no PlusTcp / FreeRTOS-Plus-TCP symbols in the lwIP BDD target ELF"
 
       - name: Upload FreeRTOS+lwIP BDD target ELF
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: solid-syslog-bdd-target-freertos-lwip
           path: build/freertos-cross-lwip/Bdd/Targets/FreeRtosLwip/SolidSyslogBddTargetLwip.elf
@@ -1128,7 +1172,7 @@ jobs:
       # lane consumes this so environment.py's runtime tag gates track the lwIP
       # target's SOLIDSYSLOG_MAX_MESSAGE_SIZE (512, same as +TCP).
       - name: Upload BDD Python tunables (FreeRTOS+lwIP)
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: bdd-tunables-freertos-lwip
           path: Bdd/features/steps/solidsyslog_tunables.py
@@ -1143,13 +1187,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
-      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: solid-syslog-bdd-target-freertos
           path: build/freertos-cross/Bdd/Targets/FreeRtos/
 
-      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: bdd-tunables-freertos
           path: Bdd/features/steps/
@@ -1167,7 +1213,7 @@ jobs:
           behave-freertos syslog-ng-freertos
 
       - name: BDD Test Report (FreeRTOS)
-        uses: dorny/test-reporter@v3
+        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         if: success() || failure()
         with:
           name: Test Results (BDD FreeRTOS)
@@ -1176,7 +1222,7 @@ jobs:
 
       - name: Upload JUnit XML
         if: success() || failure()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: junit-bdd-freertos-qemu-plustcp
           path: Bdd/junit/TESTS-*.xml
@@ -1199,13 +1245,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
-      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: solid-syslog-bdd-target-freertos-lwip
           path: build/freertos-cross-lwip/Bdd/Targets/FreeRtosLwip/
 
-      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: bdd-tunables-freertos-lwip
           path: Bdd/features/steps/
@@ -1223,7 +1271,7 @@ jobs:
           behave-freertos-lwip syslog-ng-freertos-lwip
 
       - name: BDD Test Report (FreeRTOS+lwIP)
-        uses: dorny/test-reporter@v3
+        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         if: success() || failure()
         with:
           name: Test Results (BDD FreeRTOS+lwIP)
@@ -1232,7 +1280,7 @@ jobs:
 
       - name: Upload JUnit XML
         if: success() || failure()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: junit-bdd-freertos-qemu-lwip
           path: Bdd/junit/TESTS-*.xml
@@ -1253,36 +1301,38 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Download JUnit artifacts
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: junit-*
           path: quality-reports/
 
       - name: Download clang-tidy report
         continue-on-error: true
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: clang-tidy-report
           path: quality-reports/
 
       - name: Download cppcheck report
         continue-on-error: true
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: cppcheck-report
           path: quality-reports/
 
       - name: Download iwyu report
         continue-on-error: true
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: iwyu-report
           path: quality-reports/
 
       - name: Quality Monitor
-        uses: uhafner/quality-monitor@v1
+        uses: uhafner/quality-monitor@778e3a640bb5bf89d0f9d2f446bd4802d4821838 # v1.14.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           pr-number: ${{ github.event.pull_request.number }}
