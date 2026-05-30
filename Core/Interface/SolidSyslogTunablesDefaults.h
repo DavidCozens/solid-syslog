@@ -570,6 +570,28 @@
 #endif
 
 /*
+ * Number of SolidSyslogLwipRawDnsResolver instances the library's
+ * internal static pool can simultaneously hold. Each instance carries
+ * the in-flight async-resolve state (done flag + resolved address) the
+ * dns_found_callback writes and the bounded spin polls, so unlike the
+ * stateless numeric SolidSyslogLwipRawResolver it is not freely shareable
+ * mid-resolve — but the Service loop is single-threaded per sender, so one
+ * instance per sender comfortably serialises its own lookups.
+ *
+ * Default 1 — almost all integrators wire a single resolver. Bump via
+ * SOLIDSYSLOG_USER_TUNABLES_FILE if multiple concurrent resolvers surface.
+ *
+ * Floor: 1. Sub-floor values rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_LWIP_RAW_DNS_RESOLVER_POOL_SIZE
+#define SOLIDSYSLOG_LWIP_RAW_DNS_RESOLVER_POOL_SIZE 1U
+#endif
+
+#if SOLIDSYSLOG_LWIP_RAW_DNS_RESOLVER_POOL_SIZE < 1
+#error "SOLIDSYSLOG_LWIP_RAW_DNS_RESOLVER_POOL_SIZE must be >= 1"
+#endif
+
+/*
  * Number of SolidSyslogLwipRawDatagram instances the library's internal
  * static pool can simultaneously hold. Each instance carries a single
  * struct udp_pcb pointer the wrapper holds across Open/SendTo/Close.
@@ -627,6 +649,51 @@
 
 #if SOLIDSYSLOG_LWIP_RAW_TCP_CONNECT_POLL_MS < 1
 #error "SOLIDSYSLOG_LWIP_RAW_TCP_CONNECT_POLL_MS must be >= 1"
+#endif
+
+/*
+ * Bounded deadline (milliseconds) the SolidSyslogLwipRawDnsResolver waits for
+ * an async dns_gethostbyname lookup to complete before giving up and reporting
+ * a failed resolution. The synchronous Resolve() contract bridges lwIP's async
+ * DNS by spinning on the caller's thread (sleeping via the injected
+ * SolidSyslogSleepFunction) until the dns_found_callback fires or this deadline
+ * elapses.
+ *
+ * Default 5000 ms — DNS is markedly slower than the 200 ms TCP connect: a cold
+ * lookup may traverse a recursive resolver and the network round-trip dominates.
+ * There is deliberately no per-instance runtime getter (unlike the TCP connect
+ * timeout); DNS timeout rarely needs live tuning. Override at build time via
+ * SOLIDSYSLOG_USER_TUNABLES_FILE if a deployment's resolver is slower.
+ *
+ * Floor: 1 ms. Sub-floor values rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_DNS_RESOLVE_TIMEOUT_MS
+#define SOLIDSYSLOG_DNS_RESOLVE_TIMEOUT_MS 5000U
+#endif
+
+#if SOLIDSYSLOG_DNS_RESOLVE_TIMEOUT_MS < 1
+#error "SOLIDSYSLOG_DNS_RESOLVE_TIMEOUT_MS must be >= 1"
+#endif
+
+/*
+ * Period (milliseconds) the SolidSyslogLwipRawDnsResolver bounded-resolve spin
+ * loop sleeps between polls of the lwIP-side dns_found_callback done flag.
+ * Each iteration calls the integrator-injected SolidSyslogSleepFunction so the
+ * loop never busy-waits — under NO_SYS=1 the integrator's Sleep ticks
+ * sys_check_timeouts and drives the DNS retransmit timer; under NO_SYS=0 it
+ * yields to the tcpip thread (vTaskDelay or equivalent). Mirrors
+ * SOLIDSYSLOG_LWIP_RAW_TCP_CONNECT_POLL_MS.
+ *
+ * Default 10 ms gives 500 polls inside the default 5000 ms resolve deadline.
+ *
+ * Floor: 1 ms. Sub-floor values rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_LWIP_RAW_DNS_RESOLVE_POLL_MS
+#define SOLIDSYSLOG_LWIP_RAW_DNS_RESOLVE_POLL_MS 10U
+#endif
+
+#if SOLIDSYSLOG_LWIP_RAW_DNS_RESOLVE_POLL_MS < 1
+#error "SOLIDSYSLOG_LWIP_RAW_DNS_RESOLVE_POLL_MS must be >= 1"
 #endif
 
 /*

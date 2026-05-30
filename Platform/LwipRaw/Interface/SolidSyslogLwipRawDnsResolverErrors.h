@@ -1,0 +1,22 @@
+#ifndef SOLIDSYSLOGLWIPRAWDNSRESOLVERERRORS_H
+#define SOLIDSYSLOGLWIPRAWDNSRESOLVERERRORS_H
+
+#include "ExternC.h"
+
+EXTERN_C_BEGIN
+
+    struct SolidSyslogErrorSource;
+
+    enum SolidSyslogLwipRawDnsResolverErrors
+    {
+        LWIPRAWDNSRESOLVER_ERROR_POOL_EXHAUSTED,
+        LWIPRAWDNSRESOLVER_ERROR_UNKNOWN_DESTROY,
+        LWIPRAWDNSRESOLVER_ERROR_RESOLVE_TIMEOUT,
+        LWIPRAWDNSRESOLVER_ERROR_MAX
+    };
+
+    extern const struct SolidSyslogErrorSource LwipRawDnsResolverErrorSource;
+
+EXTERN_C_END
+
+#endif /* SOLIDSYSLOGLWIPRAWDNSRESOLVERERRORS_H */

@@ -26,7 +26,8 @@ re-teach lwIP — for that, see the
 | Class | Wraps | Purpose |
 |---|---|---|
 | `SolidSyslogLwipRawAddress` | `ip_addr_t` + `u16_t` port | Destination handle the Resolver writes into and the Datagram/TcpStream read from. |
-| `SolidSyslogLwipRawResolver` | `ipaddr_aton` | Synchronous numeric IPv4 parsing. Rejects DNS names — they need the future `SolidSyslogLwipRawDnsResolver` (S28.08). |
+| `SolidSyslogLwipRawResolver` | `ipaddr_aton` | Synchronous numeric IPv4 parsing. Rejects DNS names — use `SolidSyslogLwipRawDnsResolver` for those. Needs no `LWIP_DNS`. |
+| `SolidSyslogLwipRawDnsResolver` | `dns_gethostbyname` | DNS name resolution (superset — numeric literals, the DNS cache, and the local hostlist all resolve too). Bridges lwIP's async DNS to the synchronous `Resolve()` contract via a bounded spin (see [DNS](#dns) below). Requires `LWIP_DNS=1`. |
 | `SolidSyslogLwipRawDatagram` | `udp_new` / `udp_sendto` / `udp_remove` | UDP sender. Zero-copy `PBUF_REF` send. |
 | `SolidSyslogLwipRawTcpStream` | `tcp_new` / `tcp_connect` / `tcp_write` / `tcp_output` / `tcp_recv` / `tcp_recved` / `tcp_close` / `tcp_abort` | TCP byte transport. Bounded synchronous Open. Bounded RX pbuf queue. |
 
@@ -213,7 +214,8 @@ features you must enable are flagged.
 | `LWIP_RAW=1` | **Yes** | The whole point — Raw API. |
 | `LWIP_UDP=1` | **Yes (Datagram)** | Wraps `udp_*`. |
 | `LWIP_TCP=1` | **Yes (TcpStream)** | Wraps `tcp_*`. |
-| `LWIP_DNS` | No | The current Resolver only parses numeric IPv4 via `ipaddr_aton`. DNS lands in S28.08. |
+| `LWIP_DNS` | DNS-dependent | Required for `SolidSyslogLwipRawDnsResolver`. The numeric `SolidSyslogLwipRawResolver` needs nothing. See [DNS](#dns). |
+| `DNS_LOCAL_HOSTLIST` | Optional | A static name→address map consulted before any DNS server, returned synchronously. Pins names without a server (handy for fixed deployments and for test topologies a real resolver can't reach). See [DNS](#dns). |
 | `LWIP_TCPIP_CORE_LOCKING` | Marshal-dependent | Only needed if you install the core-locking marshal (option B above). The default `tcpip_callback` marshal (option A) does not require it. `NO_SYS=1` never needs it. |
 | `ARP_QUEUEING=1` | **Recommended** | lwIP default. With it, the first datagram to an unresolved peer is `pbuf_clone`d into PBUF_RAM and queued behind the ARP request — when the reply lands, the packet ships. With `ARP_QUEUEING=0` the first datagram is silently dropped at the IP layer; cold-start logging loses messages. |
 | `LWIP_TCP_KEEPALIVE=1` | **Recommended** | Without this, the `SOF_KEEPALIVE` bit the adapter sets on every pcb is a no-op. Tune `TCP_KEEPIDLE_DEFAULT` / `TCP_KEEPINTVL_DEFAULT` / `TCP_KEEPCNT_DEFAULT` for your deadline budget. |
@@ -394,7 +396,10 @@ the `SOLIDSYSLOG_USER_TUNABLES_FILE` CMake variable.
 
 | Tunable | Default | Adjust when |
 |---|---|---|
-| `SOLIDSYSLOG_LWIP_RAW_RESOLVER_POOL_SIZE` | `1U` | You need multiple concurrent resolver instances (rare). |
+| `SOLIDSYSLOG_LWIP_RAW_RESOLVER_POOL_SIZE` | `1U` | You need multiple concurrent numeric resolver instances (rare). |
+| `SOLIDSYSLOG_LWIP_RAW_DNS_RESOLVER_POOL_SIZE` | `1U` | You need multiple concurrent DNS resolver instances (rare). |
+| `SOLIDSYSLOG_DNS_RESOLVE_TIMEOUT_MS` | `5000U` | Default suits a healthy recursive resolver. Raise for a slow / distant DNS server. |
+| `SOLIDSYSLOG_LWIP_RAW_DNS_RESOLVE_POLL_MS` | `10U` | Default gives 500 polls inside the 5 s resolve deadline. Lower to notice completion sooner; raise to reduce spin overhead on a constrained MCU. |
 | `SOLIDSYSLOG_LWIP_RAW_DATAGRAM_POOL_SIZE` | `1U` | You wire more than one UDP sender. |
 | `SOLIDSYSLOG_LWIP_RAW_TCP_STREAM_POOL_SIZE` | `2U` | You wire more than the canonical plain-TCP + TLS-underlying-TCP pair. |
 | `SOLIDSYSLOG_ADDRESS_POOL_SIZE` | `3U` | Shared with PlusTcp / Posix / Winsock — bump if you need >3 concurrent destinations. |
@@ -404,15 +409,86 @@ the `SOLIDSYSLOG_USER_TUNABLES_FILE` CMake variable.
 
 ---
 
+## DNS
+
+`SolidSyslogLwipRawDnsResolver` resolves the destination **by name** via
+lwIP's `dns_gethostbyname`. It is a superset of the numeric
+`SolidSyslogLwipRawResolver` — numeric literals, DNS-cache hits, and
+local-hostlist entries all resolve through it too — so you only need one
+resolver, picked by whether you compile DNS in.
+
+### The async bridge
+
+`dns_gethostbyname` is asynchronous: a cold lookup returns `ERR_INPROGRESS`
+and lwIP invokes a `dns_found_callback` later, on the tcpip thread, when the
+answer arrives. The library's `SolidSyslogResolver_Resolve` contract is
+synchronous, so the adapter bridges the two exactly as `SolidSyslogLwipRawTcpStream`
+bridges `tcp_connect`:
+
+1. The `dns_gethostbyname` call is made **under the marshal hop**
+   (`SolidSyslogLwipRaw_SetMarshal`) — it touches lwIP core state, unlike the
+   numeric resolver's pure `ipaddr_aton` parse, which is why only this resolver
+   marshals.
+2. `ERR_OK` (synchronous hit — numeric, cache, or local hostlist) → the address
+   is ready immediately; no spin.
+3. `ERR_INPROGRESS` → the adapter spins on the **caller's** thread, sleeping via
+   your injected `Sleep` between polls of a flag the callback sets, until the
+   answer arrives or the deadline elapses. The spin never sleeps the tcpip
+   thread (that would starve the DNS retransmit timer and RX).
+4. A delivered address → success; a delivered `NULL` (no such host) → failure;
+   deadline exceeded → failure plus a `SolidSyslog_Error` report
+   (`LWIPRAWDNSRESOLVER_ERROR_RESOLVE_TIMEOUT`).
+
+`Sleep` is **required** (a `NULL` config falls back to `NullResolver`). The
+deadline and poll period come from `SOLIDSYSLOG_DNS_RESOLVE_TIMEOUT_MS` (5 s)
+and `SOLIDSYSLOG_LWIP_RAW_DNS_RESOLVE_POLL_MS` (10 ms) — build-time only; DNS
+timeout rarely needs runtime tuning, so there is no per-instance getter.
+
+### Local hostlist (no DNS server)
+
+For fixed deployments — or test topologies where a real resolver can't return a
+*reachable* address — `DNS_LOCAL_HOSTLIST` maps names statically. A hostlist hit
+returns `ERR_OK` before any server is consulted, so the resolve completes
+synchronously and entirely on-device:
+
+```c
+/* lwipopts.h */
+#define LWIP_DNS                1
+#define DNS_LOCAL_HOSTLIST      1
+#define DNS_LOCAL_HOSTLIST_INIT \
+    { DNS_LOCAL_HOSTLIST_ELEM("syslog-ng", IPADDR4_INIT_BYTES(10, 0, 2, 2)) }
+```
+
+### Wiring
+
+```c
+#include "SolidSyslogLwipRawDnsResolver.h"
+
+extern void MyLwipSleep(int milliseconds);   /* same Sleep the TcpStream uses */
+
+struct SolidSyslogLwipRawDnsResolverConfig dnsCfg = { .Sleep = MyLwipSleep };
+struct SolidSyslogResolver* resolver = SolidSyslogLwipRawDnsResolver_Create(&dnsCfg);
+/* hand `resolver` to the UdpSender / StreamSender config exactly as the
+   numeric resolver — the destination host is now a name, e.g. "logs.example.com". */
+```
+
+> **Known limitation — over-the-wire DNS is not BDD-covered.** The
+> FreeRTOS-on-lwIP BDD target resolves the oracle by name, but only through the
+> *synchronous local-hostlist* branch: the QEMU slirp + docker topology cannot
+> hand the guest a reachable address for the `syslog-ng` alias over real DNS
+> (slirp's forwarder resolves it to a docker-bridge IP the guest has no route
+> to; only `10.0.2.2` reaches the oracle). The async / over-the-wire / timeout
+> branches are unit-tested instead
+> (`Tests/Lwip/SolidSyslogLwipRawDnsResolverTest`), consistent with the
+> project's integration-over-BDD stance for paths the harness can't realistically
+> drive.
+
+---
+
 ## What this guide does not cover
 
-- **DNS** — currently out of scope. `SolidSyslogLwipRawResolver` only
-  parses numeric IPv4. `SolidSyslogLwipRawDnsResolver` lands in
-  S28.08.
 - **IPv6** — the current Address / Resolver are IPv4-only.
 - **Multi-`netif` routing** — neither Datagram nor TcpStream selects
   an output interface; lwIP's routing table decides.
 - **Jumbo-frame MTU discovery** — `Datagram_MaxPayload` returns
   `SOLIDSYSLOG_UDP_IPV6_SAFE_PAYLOAD` (1232 bytes) unconditionally.
-- **BDD coverage** — the FreeRTOS-on-lwIP BDD target arrives in
-  S28.07.

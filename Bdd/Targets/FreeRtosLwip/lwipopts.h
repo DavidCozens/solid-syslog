@@ -51,9 +51,27 @@
 #define LWIP_TCP 1
 #define LWIP_ARP 1
 #define LWIP_DHCP 0
-#define LWIP_DNS 0
 #define LWIP_ICMP 1
 #define LWIP_IGMP 0
+
+/* --- DNS (local hostlist only) ---------------------------------------- */
+/* LWIP_DNS on so SolidSyslogLwipRawDnsResolver can resolve the oracle by name
+ * ("syslog-ng") instead of the numeric 10.0.2.2 it was pinned to. We do NOT
+ * configure a DNS server: the QEMU slirp forwarder (10.0.2.3) would resolve the
+ * "syslog-ng" docker alias to a docker-bridge IP the guest has no route to —
+ * only 10.0.2.2 (slirp NAT -> shared-namespace host loopback) reaches the
+ * oracle. So we map the name statically via DNS_LOCAL_HOSTLIST: dns_gethostbyname
+ * consults the hostlist before any server and returns ERR_OK synchronously for a
+ * hit, so the resolve never leaves the guest. This exercises only the resolver's
+ * synchronous local-hostlist branch end-to-end; the async / over-the-wire /
+ * timeout branches are unit-tested (Tests/Lwip/SolidSyslogLwipRawDnsResolverTest)
+ * — slirp cannot hand the guest a reachable address for the docker alias.
+ * DNS_LOCAL_HOSTLIST_INIT is expanded inside lwIP's dns.c, where
+ * DNS_LOCAL_HOSTLIST_ELEM (lwip/dns.h) and IPADDR4_INIT_BYTES (lwip/ip_addr.h)
+ * are in scope. */
+#define LWIP_DNS 1
+#define DNS_LOCAL_HOSTLIST 1
+#define DNS_LOCAL_HOSTLIST_INIT {DNS_LOCAL_HOSTLIST_ELEM("syslog-ng", IPADDR4_INIT_BYTES(10, 0, 2, 2))}
 
 /* etharp queues the first packet to a destination while ARP resolves it —
  * keep queueing on so the first UDP datagram after boot is not dropped
