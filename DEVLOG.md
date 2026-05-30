@@ -1,10 +1,11 @@
 # Dev Log
 
-## 2026-05-29 — S28.11 FreeRtosLwip TLS/mTLS (mbedTLS over LwipRawTcpStream) — WIP
+## 2026-05-30 — S28.11 FreeRtosLwip TLS/mTLS (mbedTLS over LwipRawTcpStream)
 
-Wiring is complete and plain TLS is green; mutual TLS has an unsolved
-server-side delivery gap (investigation ongoing). Opened as a draft PR so CI
-and CodeRabbit run in parallel.
+Wiring complete; **both plain TLS and mutual TLS are green** on the lwIP BDD
+lane at main's original `lwipopts.h` sizing. The "mTLS blocker" recorded in the
+WIP draft of this entry turned out to be a **measurement artifact in the
+verification harness, not a defect** — see Verification.
 
 ### Decisions
 
@@ -27,54 +28,56 @@ and CodeRabbit run in parallel.
   +TCP target dodges this because its `PlusTcpResolver` ignores the host. This silent
   failure cost real debugging time — see Deferred (resolve-failure logging).
 
-- **Nagle disabled on the lwIP TCP pcb (Tier-2, `tcp_nagle_disable`).** Packet
-  capture proved a mid-handshake send-stall: the client sent ClientHello + CCS,
-  then the Certificate/CertVerify/Finished flight was accepted by `tcp_write`
-  (returned OK, sndbuf healthy) but **never put on the wire** — Nagle held the
-  sub-MSS segments waiting for an ACK that the peer only sends per-flight. With
-  `TCP_NODELAY` the full flight (and the app-data record) goes out and is ACK'd.
-  `TCP_NODELAY` is the correct default for this small-record request/response
-  workload anyway. Driven by a new unit test (`OpenDisablesNagleOnPcb`) asserting
-  `TF_NODELAY` on the pcb after Open.
+- **Nagle disabled on the lwIP TCP pcb (Tier-2, `tcp_nagle_disable`) — the actual
+  fix.** Packet capture proved a mid-handshake send-stall: the client sent
+  ClientHello + CCS, then the Certificate/CertVerify/Finished flight was accepted
+  by `tcp_write` (returned OK, sndbuf healthy) but **never put on the wire** —
+  Nagle held the sub-MSS segments waiting for an ACK that the peer only sends
+  per-flight. With `TCP_NODELAY` the full flight (and the app-data record) goes
+  out and is ACK'd. `TCP_NODELAY` is the correct default for this small-record
+  request/response workload anyway. Driven by a new unit test
+  (`OpenDisablesNagleOnPcb`) asserting `TF_NODELAY` on the pcb after Open.
 
-- **`lwipopts.h` pbuf/segment/window bump is provisional.** Counts went
-  16/16/16 → 32/32/24 → 48/48/32 and `TCP_WND`/`TCP_SND_BUF` 4→6×MSS while
-  chasing the mTLS failure. Packet capture later showed the failing mTLS runs do
-  **not** exhaust pbufs/segments/sndbuf (RX queue peaks at 2; no `ERR_MEM`), so
-  this bump is **not** the mTLS fix and is likely larger than plain TLS needs.
-  Kept for now per the agreed plan — to be dropped back to the minimum once mTLS
-  is root-caused, then re-verified.
+- **`lwipopts.h` reverted to main's minimum — the provisional bump was
+  unnecessary.** During the WIP investigation the counts were bumped
+  16/16/16 → 48/48/32 and `TCP_WND`/`TCP_SND_BUF` 4→6×MSS, on the belief that
+  lower values left mTLS "flaky". That flakiness observation was the same
+  measurement artifact (see Verification). Re-tested this session at main's
+  original `16/16/16 + 4×MSS`: mTLS delivered **5/5** in the corrected manual
+  sweep, and the full lwIP BDD lane (`@tls`, `@mtls`, TLS 1.3, TCP→TLS switch)
+  is green. The bump is reverted; the file is now identical to `main`. The
+  `tcp_write`-`ERR_MEM`-tears-down-the-connection coupling is real, but a single
+  mutual-TLS handshake fits the 4×MSS budget comfortably.
 
 ### Verification
 
 - Cross ELF builds clean under the strict bar (no PlusTcp symbols; mbedTLS +
   TLS-sender symbols present). `Tests/Lwip` 57 tests green (added the Nagle test).
-- **Plain TLS over lwIP: PASS** on the oracle (`tls_transport`). After the Nagle
-  fix, the encrypted record is delivered and ACK'd; syslog-ng logs it.
-- **mTLS over lwIP: FAIL (unsolved).** The full mutual-auth handshake completes,
-  syslog-ng validates the client cert (`subject='CN=solidsyslog-bdd-client'`,
-  chains to the trusted CA, no error, no RST), and the encrypted syslog record is
-  delivered + ACK'd — yet syslog-ng never parses/logs it. Ruled out: heap
-  (53 KB free), send-side `ERR_MEM`, RX pbuf exhaustion, 0.5-RTT timing (a 1 s
-  post-handshake delay didn't help), cert rejection. Both transports negotiate
-  TLS 1.3 (the oracle disables ≤1.2). The +TCP target's mTLS passes the same 6515
-  listener, so the difference is lwIP's on-wire segmentation interacting with the
-  server's handling of the 1-RTT app-data. Next: server-side TLS-keylog decrypt +
-  `strace` of syslog-ng's `SSL_read`.
+- **Plain TLS over lwIP: PASS.** After the Nagle fix the encrypted record is
+  delivered, ACK'd, and logged.
+- **mTLS over lwIP: PASS.** The full lwIP BDD lane reports `13 features passed,
+  0 failed`; `mtls_transport` junit shows `status="passed" skipped="0"`, and the
+  delivered record (`Hello from FreeRTOS lwIP`) lands in `received_mtls.log`.
+  Confirmed deterministic (5/5 manual fresh-boot runs) via syslog-ng's own
+  `source(s_mtls)` processed counter.
+- **The WIP "mTLS FAIL (unsolved)" was a harness artifact.** The manual probe
+  loop (`mtls_loop.sh`) did `rm -f received_mtls.log` before each run *while
+  syslog-ng held the file open* — syslog-ng kept writing to the now-unlinked
+  inode, so the line-count check always read 0. The real BDD harness counts a
+  baseline→delta on the file (no `rm`), which is why `bdd-freertos-qemu-lwip` was
+  **green in CI the whole time**. The earlier `strace` "`recvmsg`→`EAGAIN`"
+  evidence was captured before the Nagle fix was built into the ELF. Lesson:
+  never reset a log file the server has open — truncate-in-place or baseline the
+  offset.
 
 ### Deferred
 
-- **mTLS root cause + lane scope.** The lwIP BDD lane filter is open to
-  `@tls/@mtls` and the lwIP jobs (`build`/`bdd`/`analyze-tidy`/`analyze-iwyu`)
-  are promoted into `summary.needs`, so the draft PR's `bdd-freertos-qemu-lwip`
-  check is RED until mTLS is fixed. Branch-protection required-checks update is
-  David's manual step (noted in the PR).
-- **Resolve-failure logging — queued as the next change on this branch (not yet
-  implemented).** The numeric-resolver-rejects-a-hostname path is silent today.
-  Agreed approach: add a `SolidSyslog_Error` on resolve failure, TDD'd (a test
-  provokes the silent failure and asserts the error fires). Listed here as
-  pending work that lands on this PR — diagnosis-driven logging belongs with its
-  cause rather than being split into a separate future story.
+- **Resolve-failure logging — still queued (not implemented).** The
+  numeric-resolver-rejects-a-hostname path is silent today (cost real debugging
+  time via the resolver/host bug above). Agreed approach: add a
+  `SolidSyslog_Error` on resolve failure, TDD'd (a test provokes the silent
+  failure and asserts the error fires). Surfaced for David's call on whether to
+  fold it into this PR (interactive TDD) or take it as a follow-up.
 
 ---
 
