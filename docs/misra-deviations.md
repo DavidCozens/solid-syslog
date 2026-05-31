@@ -1021,8 +1021,10 @@ only one TU.
 
 ### Scope
 
-`Platform/MbedTls/Source/SolidSyslogMbedTlsHmacSha256PolicyMessages.c` —
-`MbedTlsHmacSha256PolicyErrorSource`.
+- `Platform/MbedTls/Source/SolidSyslogMbedTlsHmacSha256PolicyMessages.c` —
+  `MbedTlsHmacSha256PolicyErrorSource`.
+- `Platform/OpenSsl/Source/SolidSyslogOpenSslHmacSha256PolicyMessages.c` —
+  `OpenSslHmacSha256PolicyErrorSource` (the OpenSSL sibling; S17.01).
 
 The deviation extends to any `SolidSyslogErrorSource` instance whose internal
 references are confined to a single TU. Most error sources escape rule 8.7

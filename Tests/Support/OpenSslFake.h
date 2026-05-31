@@ -4,6 +4,8 @@
 #include "ExternC.h"
 
 #include <stdbool.h> // IWYU pragma: keep — dual-use header (C and C++ TUs); IWYU only sees the C++ side and would drop this.
+#include <stddef.h>
+#include <stdint.h>
 
 /* Forward-declared OpenSSL types — full definitions live in <openssl/ssl.h>. */
 struct ssl_ctx_st;
@@ -162,6 +164,32 @@ EXTERN_C_BEGIN
     int OpenSslFake_CheckPrivateKeyCallCount(void);
     struct ssl_ctx_st* OpenSslFake_LastCheckPrivateKeyCtxArg(void);
     void OpenSslFake_SetCheckPrivateKeyFails(bool fails);
+
+    /* HMAC / EVP_sha256 / OPENSSL_cleanse — drive the at-rest HMAC-SHA256
+     * SecurityPolicy without linking real libcrypto. */
+    int OpenSslFake_HmacCallCount(void);
+    const void* OpenSslFake_LastHmacMd(void); /* compare against EVP_sha256() to assert SHA-256 was selected */
+    const uint8_t* OpenSslFake_LastHmacKey(void);
+    int OpenSslFake_LastHmacKeyLen(void);
+    const uint8_t* OpenSslFake_LastHmacInput(void);
+    size_t OpenSslFake_LastHmacInputLen(void);
+    void OpenSslFake_SetHmacFails(bool fails);
+
+    /* Computes the same deterministic, non-cryptographic 32-byte tag the fake's
+     * HMAC writes — derived from (key, input) so tests can predict the tag and
+     * exercise round-trip / tamper / wrong-key behaviour. NOT a real HMAC. */
+    void OpenSslFake_ComputeExpectedTag(
+        const uint8_t* key,
+        size_t keyLength,
+        const uint8_t* input,
+        size_t inputLength,
+        uint8_t* tagOut
+    );
+
+    /* OPENSSL_cleanse */
+    int OpenSslFake_CleanseCallCount(void);
+    const void* OpenSslFake_LastCleanseBuf(void);
+    size_t OpenSslFake_LastCleanseLen(void);
 
 EXTERN_C_END
 
