@@ -45,7 +45,7 @@ static bool TestGetKey(void* context, uint8_t* keyOut, size_t capacity, size_t* 
     lastGetKeyBuffer = keyOut;
     lastGetKeyCapacity = capacity;
     const bool* available = static_cast<const bool*>(context);
-    if ((available != nullptr) && (*available == false))
+    if ((available != nullptr) && !*available)
     {
         return false;
     }
@@ -83,11 +83,6 @@ TEST_BASE(MbedTlsHmacSha256PolicyTestBase)
         config.GetKey     = TestGetKey;
         config.KeyContext = &keyAvailable;
     }
-
-    void uninstall() const
-    {
-        ConfigLockFake_Uninstall();
-    }
 };
 
 TEST_GROUP_BASE(SolidSyslogMbedTlsHmacSha256Policy, MbedTlsHmacSha256PolicyTestBase)
@@ -113,7 +108,7 @@ TEST_GROUP_BASE(SolidSyslogMbedTlsHmacSha256Policy, MbedTlsHmacSha256PolicyTestB
         {
             SolidSyslogMbedTlsHmacSha256Policy_Destroy(overflow);
         }
-        uninstall();
+        ConfigLockFake_Uninstall();
     }
 
     void FillPool()
@@ -138,7 +133,7 @@ TEST_GROUP_BASE(SolidSyslogMbedTlsHmacSha256PolicySeal, MbedTlsHmacSha256PolicyT
     void teardown() override
     {
         SolidSyslogMbedTlsHmacSha256Policy_Destroy(policy);
-        uninstall();
+        ConfigLockFake_Uninstall();
     }
 
     bool seal(const uint8_t* record, size_t length, uint8_t* tag) const

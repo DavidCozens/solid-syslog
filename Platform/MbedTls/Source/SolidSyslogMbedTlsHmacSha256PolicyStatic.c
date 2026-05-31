@@ -24,9 +24,8 @@ static struct SolidSyslogPoolAllocator MbedTlsHmacSha256Policy_Allocator = {
     SOLIDSYSLOG_MBED_TLS_HMAC_SHA256_POLICY_POOL_SIZE
 };
 
-struct SolidSyslogSecurityPolicy* SolidSyslogMbedTlsHmacSha256Policy_Create(
-    const struct SolidSyslogMbedTlsHmacSha256PolicyConfig* config
-)
+struct SolidSyslogSecurityPolicy*
+SolidSyslogMbedTlsHmacSha256Policy_Create(const struct SolidSyslogMbedTlsHmacSha256PolicyConfig* config)
 {
     struct SolidSyslogSecurityPolicy* handle = SolidSyslogNullSecurityPolicy_Get();
     if (MbedTlsHmacSha256Policy_ConfigIsValid(config))
@@ -52,13 +51,11 @@ struct SolidSyslogSecurityPolicy* SolidSyslogMbedTlsHmacSha256Policy_Create(
 void SolidSyslogMbedTlsHmacSha256Policy_Destroy(struct SolidSyslogSecurityPolicy* base)
 {
     size_t index = MbedTlsHmacSha256Policy_IndexFromHandle(base);
-    bool released = SolidSyslogPoolAllocator_IndexIsValid(&MbedTlsHmacSha256Policy_Allocator, index) &&
-                    SolidSyslogPoolAllocator_FreeIfInUse(
-                        &MbedTlsHmacSha256Policy_Allocator,
-                        index,
-                        MbedTlsHmacSha256Policy_CleanupAtIndex,
-                        NULL
-                    );
+    bool released =
+        SolidSyslogPoolAllocator_IndexIsValid(&MbedTlsHmacSha256Policy_Allocator, index) &&
+        SolidSyslogPoolAllocator_FreeIfInUse(
+            &MbedTlsHmacSha256Policy_Allocator, index, MbedTlsHmacSha256Policy_CleanupAtIndex, NULL
+        );
     if (!released)
     {
         MbedTlsHmacSha256Policy_Report(SOLIDSYSLOG_SEVERITY_WARNING, MBEDTLSHMACSHA256POLICY_ERROR_UNKNOWN_DESTROY);

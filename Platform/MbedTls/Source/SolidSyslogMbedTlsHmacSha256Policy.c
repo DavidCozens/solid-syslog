@@ -135,10 +135,10 @@ static inline bool MbedTlsHmacSha256Policy_ConstantTimeEquals(const uint8_t* a, 
     /* Accumulate every byte difference so the loop runs the full length
      * regardless of where a mismatch occurs — no early exit, no timing oracle
      * on the tag comparison. */
-    uint8_t difference = 0;
+    uint8_t difference = 0U;
     for (size_t index = 0; index < length; index++)
     {
         difference |= (uint8_t) (a[index] ^ b[index]);
     }
-    return difference == 0;
+    return difference == 0U;
 }
