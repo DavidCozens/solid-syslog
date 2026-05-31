@@ -657,3 +657,23 @@ SafeString is compiled into test executables only — never linked into the prod
 
 `_CRT_SECURE_NO_WARNINGS` was removed from CMakeLists.txt and must not be re-added.
 `memset`, `memcpy`, and `strcmp` are not SDL-banned and do not trigger MSVC C4996.
+
+---
+
+## Bash execution rules
+
+- The Bash tool runs in a persistent session. The working directory is
+  dynamic — it is NOT fixed at the launch directory and persists across calls.
+- Prefer absolute paths in all file and shell operations. Do not rely on the
+  current working directory being where you expect it.
+- Do not use bare `cd` to move between dependent steps. If a sequence needs a
+  specific directory, chain it in ONE command with `&&`
+  (e.g. `cd /abs/path && cmd`) so the directory and the command succeed or
+  fail together.
+- Never issue multiple parallel Bash calls that depend on shared session state
+  (working directory, environment variables, or each other's output). Run
+  interdependent commands sequentially in a single Bash call.
+- Only parallelise Bash calls that are genuinely independent and read-only
+  (e.g. `git status`, `git diff`, `git log`).
+- If a command fails, do not assume the session state (including cwd) is intact;
+  re-establish it explicitly before continuing.
