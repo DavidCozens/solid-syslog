@@ -6,6 +6,7 @@ extern "C"
 {
 #include "ConfigLockFake.h"
 #include "ErrorHandlerFake.h"
+#include "MbedTlsFake.h"
 #include "SolidSyslogMbedTlsHmacSha256Policy.h"
 #include "SolidSyslogMbedTlsHmacSha256PolicyErrors.h"
 #include "SolidSyslogNullSecurityPolicy.h"
@@ -13,6 +14,8 @@ extern "C"
 #include "SolidSyslogSecurityPolicyDefinition.h"
 #include "SolidSyslogTunables.h"
 }
+
+#include <mbedtls/md.h>
 
 #include "TestUtils.h"
 
@@ -25,29 +28,76 @@ enum
     TEST_KEY_BYTE = 0x2B
 };
 
-/* A valid key accessor — slice 3 never invokes it (the seal/verify stubs are
- * no-ops), but Create requires a non-NULL GetKey. Writes a fixed key so the
- * signature is exercised honestly. */
+/* Record bytes a seal/verify test runs through the policy. */
+static const uint8_t TEST_RECORD[] = {0x10, 0x20, 0x30, 0x40};
+
+/* The buffer + capacity the policy handed to GetKey on the most recent fetch —
+ * lets a test assert the key buffer is wiped at exactly that pointer and size. */
+static const uint8_t* lastGetKeyBuffer = nullptr;
+static size_t lastGetKeyCapacity = 0;
+
+/* A key accessor: writes a fixed TEST_KEY_BYTE key. The policy fetches this on
+ * every seal and verify; expectedTagFor() mirrors it so tests can predict the
+ * fake's deterministic tag. `context` points at a bool the test can clear to
+ * simulate the key being unavailable (GetKey returns false). */
 static bool TestGetKey(void* context, uint8_t* keyOut, size_t capacity, size_t* keyLengthOut)
 {
-    (void) context;
+    lastGetKeyBuffer = keyOut;
+    lastGetKeyCapacity = capacity;
+    const bool* available = static_cast<const bool*>(context);
+    if ((available != nullptr) && (*available == false))
+    {
+        return false;
+    }
     size_t written = (capacity < TEST_KEY_SIZE) ? capacity : (size_t) TEST_KEY_SIZE;
     memset(keyOut, TEST_KEY_BYTE, written);
     *keyLengthOut = written;
     return true;
 }
 
+/* Asserts exactly one error of (severity, code) was reported from this policy's source. */
+// NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
+#define CHECK_REPORTED_ERROR(severity, code)                                                \
+    do                                                                                      \
+    {                                                                                       \
+        CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);                                         \
+        LONGS_EQUAL((severity), ErrorHandlerFake_LastSeverity());                           \
+        POINTERS_EQUAL(&MbedTlsHmacSha256PolicyErrorSource, ErrorHandlerFake_LastSource()); \
+        UNSIGNED_LONGS_EQUAL((code), ErrorHandlerFake_LastCode());                          \
+    } while (0)
+// NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
+
+#define CHECK_IS_NULL_FALLBACK(handle) POINTERS_EQUAL(SolidSyslogNullSecurityPolicy_Get(), (handle))
+
 // clang-format off
-TEST_GROUP(SolidSyslogMbedTlsHmacSha256Policy)
+TEST_BASE(MbedTlsHmacSha256PolicyTestBase)
 {
     struct SolidSyslogMbedTlsHmacSha256PolicyConfig config = {};
+    bool keyAvailable = true;
+
+    void armConfig()
+    {
+        MbedTlsFake_Reset();
+        lastGetKeyBuffer  = nullptr;
+        lastGetKeyCapacity = 0;
+        config.GetKey     = TestGetKey;
+        config.KeyContext = &keyAvailable;
+    }
+
+    void uninstall() const
+    {
+        ConfigLockFake_Uninstall();
+    }
+};
+
+TEST_GROUP_BASE(SolidSyslogMbedTlsHmacSha256Policy, MbedTlsHmacSha256PolicyTestBase)
+{
     struct SolidSyslogSecurityPolicy* pooled[SOLIDSYSLOG_MBED_TLS_HMAC_SHA256_POLICY_POOL_SIZE] = {};
     struct SolidSyslogSecurityPolicy* overflow = nullptr;
 
     void setup() override
     {
-        config.GetKey     = TestGetKey;
-        config.KeyContext = nullptr;
+        armConfig();
     }
 
     void teardown() override
@@ -63,7 +113,7 @@ TEST_GROUP(SolidSyslogMbedTlsHmacSha256Policy)
         {
             SolidSyslogMbedTlsHmacSha256Policy_Destroy(overflow);
         }
-        ConfigLockFake_Uninstall();
+        uninstall();
     }
 
     void FillPool()
@@ -72,6 +122,40 @@ TEST_GROUP(SolidSyslogMbedTlsHmacSha256Policy)
         {
             slot = SolidSyslogMbedTlsHmacSha256Policy_Create(&config);
         }
+    }
+};
+
+TEST_GROUP_BASE(SolidSyslogMbedTlsHmacSha256PolicySeal, MbedTlsHmacSha256PolicyTestBase)
+{
+    struct SolidSyslogSecurityPolicy* policy = nullptr;
+
+    void setup() override
+    {
+        armConfig();
+        policy = SolidSyslogMbedTlsHmacSha256Policy_Create(&config);
+    }
+
+    void teardown() override
+    {
+        SolidSyslogMbedTlsHmacSha256Policy_Destroy(policy);
+        uninstall();
+    }
+
+    bool seal(const uint8_t* record, size_t length, uint8_t* tag) const
+    {
+        return policy->ComputeIntegrity(policy, record, (uint16_t) length, tag);
+    }
+
+    bool verify(const uint8_t* record, size_t length, const uint8_t* tag) const
+    {
+        return policy->VerifyIntegrity(policy, record, (uint16_t) length, tag);
+    }
+
+    static void expectedTagFor(const uint8_t* record, size_t length, uint8_t* tagOut)
+    {
+        uint8_t key[TEST_KEY_SIZE];
+        memset(key, TEST_KEY_BYTE, sizeof key);
+        MbedTlsFake_ComputeExpectedTag(key, TEST_KEY_SIZE, record, length, tagOut);
     }
 };
 
@@ -102,7 +186,7 @@ TEST(SolidSyslogMbedTlsHmacSha256Policy, FillingPoolThenOverflowReturnsNullFallb
 
     overflow = SolidSyslogMbedTlsHmacSha256Policy_Create(&config);
 
-    POINTERS_EQUAL(SolidSyslogNullSecurityPolicy_Get(), overflow);
+    CHECK_IS_NULL_FALLBACK(overflow);
 }
 
 TEST(SolidSyslogMbedTlsHmacSha256Policy, ExhaustedCreateReportsError)
@@ -112,22 +196,19 @@ TEST(SolidSyslogMbedTlsHmacSha256Policy, ExhaustedCreateReportsError)
 
     overflow = SolidSyslogMbedTlsHmacSha256Policy_Create(&config);
 
-    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
-    POINTERS_EQUAL(&MbedTlsHmacSha256PolicyErrorSource, ErrorHandlerFake_LastSource());
-    UNSIGNED_LONGS_EQUAL(MBEDTLSHMACSHA256POLICY_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastCode());
+    CHECK_REPORTED_ERROR(SOLIDSYSLOG_SEVERITY_ERROR, MBEDTLSHMACSHA256POLICY_ERROR_POOL_EXHAUSTED);
 }
 
 TEST(SolidSyslogMbedTlsHmacSha256Policy, NullConfigReturnsNullFallback)
 {
-    POINTERS_EQUAL(SolidSyslogNullSecurityPolicy_Get(), SolidSyslogMbedTlsHmacSha256Policy_Create(nullptr));
+    CHECK_IS_NULL_FALLBACK(SolidSyslogMbedTlsHmacSha256Policy_Create(nullptr));
 }
 
 TEST(SolidSyslogMbedTlsHmacSha256Policy, NullGetKeyReturnsNullFallback)
 {
     config.GetKey = nullptr;
 
-    POINTERS_EQUAL(SolidSyslogNullSecurityPolicy_Get(), SolidSyslogMbedTlsHmacSha256Policy_Create(&config));
+    CHECK_IS_NULL_FALLBACK(SolidSyslogMbedTlsHmacSha256Policy_Create(&config));
 }
 
 TEST(SolidSyslogMbedTlsHmacSha256Policy, BadConfigReportsError)
@@ -136,10 +217,7 @@ TEST(SolidSyslogMbedTlsHmacSha256Policy, BadConfigReportsError)
 
     SolidSyslogMbedTlsHmacSha256Policy_Create(nullptr);
 
-    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
-    POINTERS_EQUAL(&MbedTlsHmacSha256PolicyErrorSource, ErrorHandlerFake_LastSource());
-    UNSIGNED_LONGS_EQUAL(MBEDTLSHMACSHA256POLICY_ERROR_BAD_CONFIG, ErrorHandlerFake_LastCode());
+    CHECK_REPORTED_ERROR(SOLIDSYSLOG_SEVERITY_ERROR, MBEDTLSHMACSHA256POLICY_ERROR_BAD_CONFIG);
 }
 
 TEST(SolidSyslogMbedTlsHmacSha256Policy, CreateAcquiresAndReleasesConfigLockOnFirstFreeSlot)
@@ -171,10 +249,7 @@ TEST(SolidSyslogMbedTlsHmacSha256Policy, DestroyOfUnknownHandleReportsWarning)
 
     SolidSyslogMbedTlsHmacSha256Policy_Destroy(&stranger);
 
-    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
-    POINTERS_EQUAL(&MbedTlsHmacSha256PolicyErrorSource, ErrorHandlerFake_LastSource());
-    UNSIGNED_LONGS_EQUAL(MBEDTLSHMACSHA256POLICY_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
+    CHECK_REPORTED_ERROR(SOLIDSYSLOG_SEVERITY_WARNING, MBEDTLSHMACSHA256POLICY_ERROR_UNKNOWN_DESTROY);
 }
 
 TEST(SolidSyslogMbedTlsHmacSha256Policy, DestroyOfStaleHandleReportsWarning)
@@ -186,6 +261,93 @@ TEST(SolidSyslogMbedTlsHmacSha256Policy, DestroyOfStaleHandleReportsWarning)
     SolidSyslogMbedTlsHmacSha256Policy_Destroy(pooled[0]);
     pooled[0] = nullptr;
 
-    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    UNSIGNED_LONGS_EQUAL(MBEDTLSHMACSHA256POLICY_ERROR_UNKNOWN_DESTROY, ErrorHandlerFake_LastCode());
+    CHECK_REPORTED_ERROR(SOLIDSYSLOG_SEVERITY_WARNING, MBEDTLSHMACSHA256POLICY_ERROR_UNKNOWN_DESTROY);
+}
+
+TEST(SolidSyslogMbedTlsHmacSha256PolicySeal, ComputeIntegrityHmacsTheRecordWithTheFetchedKey)
+{
+    uint8_t expectedKey[TEST_KEY_SIZE];
+    memset(expectedKey, TEST_KEY_BYTE, sizeof expectedKey);
+    uint8_t tag[HMAC_SHA256_TAG_SIZE] = {};
+
+    seal(TEST_RECORD, sizeof TEST_RECORD, tag);
+
+    LONGS_EQUAL(1, MbedTlsFake_MdHmacCallCount());
+    LONGS_EQUAL(MBEDTLS_MD_SHA256, MbedTlsFake_LastMdInfoType());
+    LONGS_EQUAL(TEST_KEY_SIZE, MbedTlsFake_LastMdHmacKeyLen());
+    MEMCMP_EQUAL(expectedKey, MbedTlsFake_LastMdHmacKey(), TEST_KEY_SIZE);
+    LONGS_EQUAL(sizeof TEST_RECORD, MbedTlsFake_LastMdHmacInputLen());
+    MEMCMP_EQUAL(TEST_RECORD, MbedTlsFake_LastMdHmacInput(), sizeof TEST_RECORD);
+}
+
+TEST(SolidSyslogMbedTlsHmacSha256PolicySeal, ComputeIntegrityWritesTheTagIntoTheIntegrityBuffer)
+{
+    uint8_t expected[HMAC_SHA256_TAG_SIZE];
+    expectedTagFor(TEST_RECORD, sizeof TEST_RECORD, expected);
+    uint8_t tag[HMAC_SHA256_TAG_SIZE] = {};
+
+    seal(TEST_RECORD, sizeof TEST_RECORD, tag);
+
+    MEMCMP_EQUAL(expected, tag, HMAC_SHA256_TAG_SIZE);
+}
+
+TEST(SolidSyslogMbedTlsHmacSha256PolicySeal, ComputeIntegrityReportsHmacFailure)
+{
+    ErrorHandlerFake_Install(nullptr);
+    MbedTlsFake_SetMdHmacReturn(-1);
+    uint8_t tag[HMAC_SHA256_TAG_SIZE] = {};
+
+    bool sealed = seal(TEST_RECORD, sizeof TEST_RECORD, tag);
+
+    CHECK_FALSE(sealed);
+    CHECK_REPORTED_ERROR(SOLIDSYSLOG_SEVERITY_ERROR, MBEDTLSHMACSHA256POLICY_ERROR_HMAC_FAILED);
+}
+
+TEST(SolidSyslogMbedTlsHmacSha256PolicySeal, ComputeIntegrityReportsKeyUnavailable)
+{
+    ErrorHandlerFake_Install(nullptr);
+    keyAvailable = false;
+    uint8_t tag[HMAC_SHA256_TAG_SIZE] = {};
+
+    bool sealed = seal(TEST_RECORD, sizeof TEST_RECORD, tag);
+
+    CHECK_FALSE(sealed);
+    CHECK_REPORTED_ERROR(SOLIDSYSLOG_SEVERITY_ERROR, MBEDTLSHMACSHA256POLICY_ERROR_KEY_UNAVAILABLE);
+}
+
+TEST(SolidSyslogMbedTlsHmacSha256PolicySeal, ComputeIntegrityWipesTheKeyBufferAfterUse)
+{
+    uint8_t tag[HMAC_SHA256_TAG_SIZE] = {};
+
+    seal(TEST_RECORD, sizeof TEST_RECORD, tag);
+
+    LONGS_EQUAL(1, MbedTlsFake_PlatformZeroizeCallCount());
+    POINTERS_EQUAL(lastGetKeyBuffer, MbedTlsFake_LastPlatformZeroizeBuf());
+    LONGS_EQUAL(lastGetKeyCapacity, MbedTlsFake_LastPlatformZeroizeLen());
+}
+
+TEST(SolidSyslogMbedTlsHmacSha256PolicySeal, VerifyIntegrityAcceptsATagItProduced)
+{
+    uint8_t tag[HMAC_SHA256_TAG_SIZE] = {};
+    seal(TEST_RECORD, sizeof TEST_RECORD, tag);
+
+    CHECK_TRUE(verify(TEST_RECORD, sizeof TEST_RECORD, tag));
+}
+
+TEST(SolidSyslogMbedTlsHmacSha256PolicySeal, VerifyIntegrityRejectsAModifiedTag)
+{
+    uint8_t tag[HMAC_SHA256_TAG_SIZE] = {};
+    seal(TEST_RECORD, sizeof TEST_RECORD, tag);
+    tag[0] ^= 0xFFU;
+
+    CHECK_FALSE(verify(TEST_RECORD, sizeof TEST_RECORD, tag));
+}
+
+TEST(SolidSyslogMbedTlsHmacSha256PolicySeal, VerifyIntegrityFailsClosedWhenKeyUnavailable)
+{
+    uint8_t tag[HMAC_SHA256_TAG_SIZE] = {};
+    seal(TEST_RECORD, sizeof TEST_RECORD, tag);
+    keyAvailable = false;
+
+    CHECK_FALSE(verify(TEST_RECORD, sizeof TEST_RECORD, tag));
 }

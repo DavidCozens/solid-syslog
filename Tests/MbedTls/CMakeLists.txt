@@ -97,6 +97,7 @@ target_link_libraries(SolidSyslogMbedTlsHmacSha256PolicyTest PRIVATE
     ${PROJECT_NAME}
     ConfigLockFake
     ErrorHandlerFake
+    MbedTlsFakes
     CppUTest
     CppUTestExt
 )
@@ -106,6 +107,14 @@ target_include_directories(SolidSyslogMbedTlsHmacSha256PolicyTest PRIVATE
     ${CMAKE_SOURCE_DIR}/Core/Interface
     ${CMAKE_SOURCE_DIR}/Core/Source
     ${CMAKE_SOURCE_DIR}/Tests
+)
+
+# The policy source pulls in <mbedtls/md.h>; cppcheck cannot resolve mbedTLS's
+# MBEDTLS_USER_CONFIG_FILE macro indirection. Disable per-target, same as the
+# stream test exes.
+set_target_properties(SolidSyslogMbedTlsHmacSha256PolicyTest PROPERTIES
+    C_CPPCHECK ""
+    CXX_CPPCHECK ""
 )
 
 add_test(NAME SolidSyslogMbedTlsHmacSha256PolicyTest COMMAND SolidSyslogMbedTlsHmacSha256PolicyTest)

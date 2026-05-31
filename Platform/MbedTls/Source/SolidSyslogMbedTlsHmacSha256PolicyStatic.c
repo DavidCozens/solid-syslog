@@ -4,7 +4,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "SolidSyslogError.h"
 #include "SolidSyslogMbedTlsHmacSha256PolicyErrors.h"
 #include "SolidSyslogMbedTlsHmacSha256PolicyPrivate.h"
 #include "SolidSyslogNullSecurityPolicy.h"
@@ -39,20 +38,12 @@ SolidSyslogMbedTlsHmacSha256Policy_Create(const struct SolidSyslogMbedTlsHmacSha
         }
         else
         {
-            SolidSyslog_Error(
-                SOLIDSYSLOG_SEVERITY_ERROR,
-                &MbedTlsHmacSha256PolicyErrorSource,
-                (uint8_t) MBEDTLSHMACSHA256POLICY_ERROR_POOL_EXHAUSTED
-            );
+            MbedTlsHmacSha256Policy_Report(SOLIDSYSLOG_SEVERITY_ERROR, MBEDTLSHMACSHA256POLICY_ERROR_POOL_EXHAUSTED);
         }
     }
     else
     {
-        SolidSyslog_Error(
-            SOLIDSYSLOG_SEVERITY_ERROR,
-            &MbedTlsHmacSha256PolicyErrorSource,
-            (uint8_t) MBEDTLSHMACSHA256POLICY_ERROR_BAD_CONFIG
-        );
+        MbedTlsHmacSha256Policy_Report(SOLIDSYSLOG_SEVERITY_ERROR, MBEDTLSHMACSHA256POLICY_ERROR_BAD_CONFIG);
     }
     return handle;
 }
@@ -67,11 +58,7 @@ void SolidSyslogMbedTlsHmacSha256Policy_Destroy(struct SolidSyslogSecurityPolicy
         );
     if (!released)
     {
-        SolidSyslog_Error(
-            SOLIDSYSLOG_SEVERITY_WARNING,
-            &MbedTlsHmacSha256PolicyErrorSource,
-            (uint8_t) MBEDTLSHMACSHA256POLICY_ERROR_UNKNOWN_DESTROY
-        );
+        MbedTlsHmacSha256Policy_Report(SOLIDSYSLOG_SEVERITY_WARNING, MBEDTLSHMACSHA256POLICY_ERROR_UNKNOWN_DESTROY);
     }
 }
 

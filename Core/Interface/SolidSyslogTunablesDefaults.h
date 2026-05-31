@@ -865,6 +865,25 @@
 #endif
 
 /*
+ * Maximum HMAC key length, in bytes, a keyed SecurityPolicy will fetch from
+ * its SolidSyslogKeyFunction into a transient on-stack buffer (wiped after
+ * each use). Sized for the SHA-256 HMAC block (64 bytes): RFC 2104 keys up to
+ * the hash block size are used directly; longer keys are pre-hashed by the
+ * HMAC itself, so 64 covers the recommended range. Bump via
+ * SOLIDSYSLOG_USER_TUNABLES_FILE only if an integrator's GetKey returns a
+ * longer key verbatim.
+ *
+ * Floor: 32 (the SHA-256 output size, the RFC-recommended minimum key length).
+ */
+#ifndef SOLIDSYSLOG_MAX_HMAC_KEY_SIZE
+#define SOLIDSYSLOG_MAX_HMAC_KEY_SIZE 64U
+#endif
+
+#if SOLIDSYSLOG_MAX_HMAC_KEY_SIZE < 32
+#error "SOLIDSYSLOG_MAX_HMAC_KEY_SIZE must be >= 32"
+#endif
+
+/*
  * Number of SolidSyslog{Posix,Winsock,FreeRtos}Address instances the
  * library's internal static pool can simultaneously hold. Each instance
  * carries one platform sockaddr (struct sockaddr_in on POSIX/Windows,
