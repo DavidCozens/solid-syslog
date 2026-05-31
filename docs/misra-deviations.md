@@ -705,7 +705,7 @@ Project owner — David Cozens. Recorded under
 
 ---
 
-## D.010 — Rule 20.10: `#` stringification in `_Static_assert` polyfill
+## D.010 — Rule 20.10: `#` stringification in the `SOLIDSYSLOG_STATIC_ASSERT` polyfill
 
 ### Rule
 
@@ -714,19 +714,26 @@ Project owner — David Cozens. Recorded under
 
 ### Deviation
 
-`Core/Source/SolidSyslogMacros.h` defines the `SOLIDSYSLOG_STATIC_ASSERT`
-macro on top of C11 `_Static_assert`. `_Static_assert`'s second argument
-must be a string literal; the project's macro accepts the message as an
-identifier or any token sequence at the call site and stringifies it via
-the standard two-step `#`-operator idiom:
+`Core/Source/SolidSyslogMacros.h` defines `SOLIDSYSLOG_STATIC_ASSERT`. The
+native C++/C11 expansions need a string-literal message, so the macro
+stringifies its `msg` argument via the standard two-step `#`-operator idiom:
 
 ```c
-#define SOLIDSYSLOG_STATIC_ASSERT_STRING_INNER(s) #s
+#define SOLIDSYSLOG_STATIC_ASSERT_STRING_INNER(s) #s                    /* <- # */
 #define SOLIDSYSLOG_STATIC_ASSERT_STRING(s)       SOLIDSYSLOG_STATIC_ASSERT_STRING_INNER(s)
+#if defined(__cplusplus)
+#define SOLIDSYSLOG_STATIC_ASSERT(cond, msg)      static_assert((cond), SOLIDSYSLOG_STATIC_ASSERT_STRING(msg))
+#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
 #define SOLIDSYSLOG_STATIC_ASSERT(cond, msg)      _Static_assert((cond), SOLIDSYSLOG_STATIC_ASSERT_STRING(msg))
+#else
+#define SOLIDSYSLOG_STATIC_ASSERT(cond, msg)      extern char SolidSyslogStaticAssertViolated[(cond) ? 1 : -1]
+#endif
 ```
 
-The inner `#s` operator is the deviation.
+The `#s` operator is the deviation. The C99 fallback (`extern char` array) uses
+no preprocessor operators — a fixed name suffices because identical extern
+declarations in one translation unit are compatible, so no `__LINE__` pasting
+(and no `##`) is required.
 
 ### Scope
 
@@ -735,23 +742,22 @@ The inner `#s` operator is the deviation.
 
 ### Rationale
 
-`_Static_assert` is C11's standard compile-time assertion primitive and
-the project compiles at `--std=c11`. Its second argument is a string
-literal — there is no way to convert an arbitrary identifier-shaped
-message at the call site into that string literal without the `#`
-operator. The alternatives all regress:
+C++ `static_assert` and C11 `_Static_assert` are the standard compile-time
+assertion primitives, and the project compiles at `--std=c11` (so the
+`_Static_assert` branch is what every normal and CI build — including the
+cppcheck-misra lane — compiles). Their message argument is a string literal,
+and there is no way to convert an arbitrary identifier-shaped message into one
+without `#`. The alternatives all regress:
 
 | Alternative | Why rejected |
 |-------------|--------------|
 | Hard-coded literal message in the macro | Loses per-site context — every assertion would report the same generic string. |
-| Force every caller to pass a string literal | Spreads strings across ~16 call sites and gives up the per-site identifier form some files already use. |
+| Force every caller to pass a string literal | Spreads strings across the call sites and gives up the per-site identifier form some files already use. |
 | Drop the message argument entirely | Loses readability at the assertion site. |
-| Hand-rolled negative-array-size trick (pre-C11 idiom) | The previous form. It collided with MISRA 5.6 (typedef name uniqueness) across translation units; resolving that required a `##` deviation anyway, which is worse than the current `#` one. |
 
-The advisory rule's intent is to discourage opaque token games. The
-two-step stringify idiom here is the standard, documented C
-preprocessor pattern and has been since C89; it is neither opaque nor
-novel.
+The advisory rule's intent is to discourage opaque token games. The two-step
+stringify idiom here is the standard, documented C preprocessor pattern and has
+been since C89; it is neither opaque nor novel.
 
 ### Risk and mitigation
 
