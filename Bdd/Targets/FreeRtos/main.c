@@ -276,6 +276,22 @@ static BaseType_t interactiveTaskCreated = pdFALSE;
  * report its peak stack usage alongside its own on `quit`. */
 static TaskHandle_t serviceTaskHandle = NULL;
 
+/* The task awaiting ServiceTask's exit during teardown. Set by TeardownAll
+ * (inside the lifecycle critical section, so ServiceTask reads it atomically
+ * with the teardown flag); ServiceTask notifies it the instant before it
+ * self-deletes, letting TeardownAll destroy the lifecycle mutex on a real
+ * "service stopped" signal instead of a fixed delay. */
+static TaskHandle_t serviceStopWaiter = NULL;
+
+/* Upper bound on the teardown wait for ServiceTask to self-delete. ServiceTask
+ * observes the flag within one ~1 ms iteration, so this is only ever reached if
+ * the Service task never started (xTaskCreate failure); it bounds teardown
+ * rather than timing it. */
+enum
+{
+    SERVICE_STOP_TIMEOUT_MS = 1000,
+};
+
 extern NetworkInterface_t* pxMPS2_FillInterfaceDescriptor(BaseType_t xEMACIndex, NetworkInterface_t* pxInterface);
 
 static void SetEthernetIrqPriority(void);
@@ -869,6 +885,7 @@ static void OnThresholdCrossed(void* context)
 static void TeardownAll(void)
 {
     SolidSyslogMutex_Lock(lifecycleMutex);
+    serviceStopWaiter = xTaskGetCurrentTaskHandle();
     solidSyslogTeardown = true;
     solidSyslogReady = false;
     SolidSyslog_Destroy(solidSyslog);
@@ -885,11 +902,16 @@ static void TeardownAll(void)
     }
     SolidSyslogMutex_Unlock(lifecycleMutex);
 
-    /* Give Service one full iteration (vTaskDelay 1ms + lock-check) to
-     * observe the teardown flag and vTaskDelete itself before we destroy
-     * the lifecycle mutex out from under it. 20ms is generous against
-     * Service's worst-case iteration time. */
-    vTaskDelay(pdMS_TO_TICKS(20));
+    /* Wait for Service to observe the teardown flag and vTaskDelete itself
+     * before we destroy the lifecycle mutex out from under it. ServiceTask
+     * notifies us from its self-delete path, so this returns the moment it
+     * has actually exited rather than after a fixed guess. Bounded so a
+     * Service task that never started (xTaskCreate failure → NULL handle)
+     * cannot wedge teardown. */
+    if (serviceTaskHandle != NULL)
+    {
+        (void) ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(SERVICE_STOP_TIMEOUT_MS));
+    }
     serviceTaskHandle = NULL;
 
     SolidSyslogCircularBuffer_Destroy(buffer);
@@ -1113,10 +1135,16 @@ static void ServiceTask(void* argument)
         SolidSyslogMutex_Lock(lifecycleMutex);
         if (solidSyslogTeardown)
         {
-            /* Teardown set this flag inside the lifecycle critical section,
-             * then is sleeping briefly waiting for us to exit. Release and
+            /* Teardown set this flag inside the lifecycle critical section and
+             * is now blocked waiting for us to exit. Capture the waiter under
+             * the lock, release, notify it that Service has stopped, then
              * self-delete before Teardown destroys the mutex. */
+            TaskHandle_t waiter = serviceStopWaiter;
             SolidSyslogMutex_Unlock(lifecycleMutex);
+            if (waiter != NULL)
+            {
+                (void) xTaskNotifyGive(waiter);
+            }
             vTaskDelete(NULL);
         }
         if (solidSyslogReady)
