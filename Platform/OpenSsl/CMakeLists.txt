@@ -6,6 +6,9 @@ target_sources(${PROJECT_NAME} PRIVATE
     Source/SolidSyslogTlsStream.c
     Source/SolidSyslogTlsStreamMessages.c
     Source/SolidSyslogTlsStreamStatic.c
+    Source/SolidSyslogOpenSslHmacSha256Policy.c
+    Source/SolidSyslogOpenSslHmacSha256PolicyMessages.c
+    Source/SolidSyslogOpenSslHmacSha256PolicyStatic.c
 )
 
 # Headers at compile time; libssl is linked by consumers (real linkage) or

@@ -135,6 +135,7 @@ if(SOLIDSYSLOG_OPENSSL)
     list(APPEND TEST_SOURCES
         SolidSyslogTlsStreamTest.cpp
         SolidSyslogTlsStreamPoolTest.cpp
+        SolidSyslogOpenSslHmacSha256PolicyTest.cpp
         OpenSslFakeTest.cpp
     )
 endif()

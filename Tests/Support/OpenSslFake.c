@@ -3,7 +3,12 @@
 #include <openssl/ssl.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
+#include <string.h>
 #include <openssl/bio.h>
+#include <openssl/crypto.h>
+#include <openssl/evp.h>
+#include <openssl/hmac.h>
 #include <openssl/types.h>
 
 /* -------------------------------------------------------------------------
@@ -19,6 +24,27 @@ static char fakeCtxStorage;
 static char fakeMethodStorage;
 static char fakeSslStorage;
 static char fakeBioMethStorage;
+static char fakeSha256Storage;
+
+/* HMAC / EVP_sha256 / OPENSSL_cleanse capture — backs the at-rest
+ * HMAC-SHA256 SecurityPolicy tests. */
+enum
+{
+    OPENSSLFAKE_MAX_KEY = 64,
+    OPENSSLFAKE_MAX_INPUT = 256
+};
+
+static int hmacCallCount;
+static const void* lastHmacMd;
+static uint8_t lastHmacKey[OPENSSLFAKE_MAX_KEY];
+static int lastHmacKeyLen;
+static uint8_t lastHmacInput[OPENSSLFAKE_MAX_INPUT];
+static size_t lastHmacInputLen;
+static bool hmacFails;
+
+static int cleanseCallCount;
+static const void* lastCleanseBuf;
+static size_t lastCleanseLen;
 
 /* Pool of fake BIOs. Each slot is independent so callers can exercise
  * multiple BIOs without aliasing. The address of `slot` is the BIO handle
@@ -272,6 +298,16 @@ void OpenSslFake_Reset(void)
     checkPrivateKeyCallCount = 0;
     lastCheckPrivateKeyCtxArg = NULL;
     checkPrivateKeyFails = false;
+    hmacCallCount = 0;
+    lastHmacMd = NULL;
+    lastHmacKeyLen = 0;
+    lastHmacInputLen = 0;
+    hmacFails = false;
+    memset(lastHmacKey, 0, sizeof lastHmacKey);
+    memset(lastHmacInput, 0, sizeof lastHmacInput);
+    cleanseCallCount = 0;
+    lastCleanseBuf = NULL;
+    lastCleanseLen = 0;
 }
 
 /* -------------------------------------------------------------------------
@@ -1006,4 +1042,126 @@ SSL_CTX* OpenSslFake_LastCheckPrivateKeyCtxArg(void)
 void OpenSslFake_SetCheckPrivateKeyFails(bool fails)
 {
     checkPrivateKeyFails = fails;
+}
+
+/* Deterministic, NON-cryptographic tag: an FNV-1a fold over the key then the
+ * input then each output position. Sensitive to key, input, and position so a
+ * changed key, tampered data, or tampered tag all produce a different value —
+ * enough to exercise the policy's round-trip / tamper / wrong-key paths without
+ * linking real libcrypto. */
+void OpenSslFake_ComputeExpectedTag(
+    const uint8_t* key,
+    size_t keyLength,
+    const uint8_t* input,
+    size_t inputLength,
+    uint8_t* tagOut
+)
+{
+    uint32_t hash = 2166136261U;
+    for (size_t index = 0; index < keyLength; index++)
+    {
+        hash = (hash ^ key[index]) * 16777619U;
+    }
+    for (size_t index = 0; index < inputLength; index++)
+    {
+        hash = (hash ^ input[index]) * 16777619U;
+    }
+    for (size_t index = 0; index < 32U; index++)
+    {
+        hash = (hash ^ (uint32_t) index) * 16777619U;
+        tagOut[index] = (uint8_t) (hash >> 24U);
+    }
+}
+
+const EVP_MD* EVP_sha256(void)
+{
+    return (const EVP_MD*) &fakeSha256Storage;
+}
+
+unsigned char* HMAC(
+    const EVP_MD* evp_md,
+    const void* key,
+    int key_len,
+    const unsigned char* d,
+    size_t n,
+    unsigned char* md,
+    unsigned int* md_len
+)
+{
+    hmacCallCount++;
+    lastHmacMd = evp_md;
+    lastHmacKeyLen = key_len;
+    size_t keyCopyLen = ((size_t) key_len < sizeof lastHmacKey) ? (size_t) key_len : sizeof lastHmacKey;
+    memcpy(lastHmacKey, key, keyCopyLen);
+    lastHmacInputLen = n;
+    size_t inputCopyLen = (n < sizeof lastHmacInput) ? n : sizeof lastHmacInput;
+    memcpy(lastHmacInput, d, inputCopyLen);
+    if (hmacFails)
+    {
+        return NULL;
+    }
+    OpenSslFake_ComputeExpectedTag((const uint8_t*) key, (size_t) key_len, d, n, md);
+    if (md_len != NULL)
+    {
+        *md_len = 32U;
+    }
+    return md;
+}
+
+void OPENSSL_cleanse(void* ptr, size_t len)
+{
+    cleanseCallCount++;
+    lastCleanseBuf = ptr;
+    lastCleanseLen = len;
+    memset(ptr, 0, len);
+}
+
+int OpenSslFake_HmacCallCount(void)
+{
+    return hmacCallCount;
+}
+
+const void* OpenSslFake_LastHmacMd(void)
+{
+    return lastHmacMd;
+}
+
+const uint8_t* OpenSslFake_LastHmacKey(void)
+{
+    return lastHmacKey;
+}
+
+int OpenSslFake_LastHmacKeyLen(void)
+{
+    return lastHmacKeyLen;
+}
+
+const uint8_t* OpenSslFake_LastHmacInput(void)
+{
+    return lastHmacInput;
+}
+
+size_t OpenSslFake_LastHmacInputLen(void)
+{
+    return lastHmacInputLen;
+}
+
+void OpenSslFake_SetHmacFails(bool fails)
+{
+    hmacFails = fails;
+}
+
+int OpenSslFake_CleanseCallCount(void)
+{
+    return cleanseCallCount;
+}
+
+const void* OpenSslFake_LastCleanseBuf(void)
+{
+    return lastCleanseBuf;
+}
+
+size_t OpenSslFake_LastCleanseLen(void)
+{
+    return lastCleanseLen;
 }
