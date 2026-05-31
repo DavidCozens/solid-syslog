@@ -1,5 +1,48 @@
 # Dev Log
 
+## 2026-05-31 — S17.01 OpenSSL HMAC-SHA256 at-rest SecurityPolicy (Linux + Windows)
+
+The OpenSSL sibling of S17.02's mbedTLS HMAC policy. Confirmed up front that
+the policy is almost entirely platform-agnostic — across the six S17.02 files,
+only three lines touch the crypto backend — so the route was a structural
+mirror with the crypto core swapped, driven test-first to the same refactored
+end state, not a blind paste.
+
+### Decisions
+
+- **Copy-mirror, crypto-swap.** `mbedtls_md_hmac` → `HMAC(EVP_sha256(), …)`,
+  `mbedtls_platform_zeroize` → `OPENSSL_cleanse`. Everything else (vtable wiring,
+  key-on-demand `ComputeTag`, hand-rolled constant-time compare, E11 pool
+  plumbing, error-source/`_Report` split) is identical modulo the
+  `MbedTls`→`OpenSsl` token. The hand-rolled `ConstantTimeEquals` was kept (not
+  swapped for `CRYPTO_memcmp`) to keep the two platform siblings symmetrical.
+- **Scope reduced per the E17 correction.** The `SealRecord`/`OpenRecord`/
+  `TrailerSize` reshape stays deferred to S17.03 — the keyed vtable shape
+  (`self` + `bool`) already landed in S17.02, so S17.01 is purely additive.
+- **Unit + BDD only, no integration harness** (David's call). `OpenSslFake`
+  gained deterministic `HMAC`/`EVP_sha256`/`OPENSSL_cleanse` interposition
+  mirroring `MbedTlsFake_ComputeExpectedTag`; 19 policy tests + 5 parser tests.
+- **`--security-policy` selector ported to the Linux and Windows BDD targets**
+  (both previously hard-coded CRC-16). The existing `@hmac` power-cycle-replay
+  scenario now runs on the Linux (syslog-ng) and Windows (OTEL) runners too —
+  `@hmac` dropped from both behave tag filters. FreeRTOS-lwip stays excluded
+  via `@store`.
+- **MISRA** — mirrored the sibling's three deviations (11.3 downcast / 5.7
+  shared enum tag / 8.7 public extern error-source, D.014) with corrected line
+  numbers; verified 0 unsuppressed violations tree-wide with the CI
+  cppcheck-misra invocation. IWYU clean, clang-format clean tree-wide.
+
+### Deferred
+
+- **CLAUDE.md header-audiences table** has no row for *either* HMAC policy
+  (S17.02 didn't add the mbedTLS one). Left consistent — neither added — rather
+  than unilaterally documenting one sibling. Flag for a doc-sweep decision.
+
+### Open questions
+
+- None outstanding. Local verification was debug unit/BDD-parser tests +
+  cppcheck-misra + IWYU + format; the BDD scenarios themselves run in CI.
+
 ## 2026-05-31 — Drop TLS session resumption from both reference integrations (revert S26.04, won't-do S26.01)
 
 Decision session, not a feature. TLS session resumption is now **out of scope**
