@@ -845,6 +845,26 @@
 #endif
 
 /*
+ * Number of SolidSyslogMbedTlsHmacSha256Policy instances the library's internal
+ * static pool can simultaneously hold. Each instance carries the integrator's
+ * key-accessor callback (SolidSyslogKeyFunction) and its context — the policy
+ * fetches the key on demand and never stores it.
+ *
+ * Default 1 — a single at-rest store with one integrity policy is the common
+ * case. Bump via SOLIDSYSLOG_USER_TUNABLES_FILE if more than one store with an
+ * independent key is genuinely needed.
+ *
+ * Floor: 1. Sub-floor values rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_MBED_TLS_HMAC_SHA256_POLICY_POOL_SIZE
+#define SOLIDSYSLOG_MBED_TLS_HMAC_SHA256_POLICY_POOL_SIZE 1U
+#endif
+
+#if SOLIDSYSLOG_MBED_TLS_HMAC_SHA256_POLICY_POOL_SIZE < 1
+#error "SOLIDSYSLOG_MBED_TLS_HMAC_SHA256_POLICY_POOL_SIZE must be >= 1"
+#endif
+
+/*
  * Number of SolidSyslog{Posix,Winsock,FreeRtos}Address instances the
  * library's internal static pool can simultaneously hold. Each instance
  * carries one platform sockaddr (struct sockaddr_in on POSIX/Windows,
