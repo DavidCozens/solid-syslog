@@ -1,5 +1,55 @@
 # Dev Log
 
+## 2026-05-31 — Drop TLS session resumption from both reference integrations (revert S26.04, won't-do S26.01)
+
+Decision session, not a feature. TLS session resumption is now **out of scope**
+for both reference TLS integrations (`Platform/OpenSsl/`, `Platform/MbedTls/`),
+on either backend, for either TLS 1.2 or TLS 1.3. This commit reverts the merged
+mbedTLS work (S26.04, #489) and the OpenSSL story (S26.01, #280) is closed
+won't-do.
+
+### Decision
+
+- **mbedTLS (S26.04, #489, already on main):** reverted here via a clean
+  single-parent `git revert d37ef31`. The production diff was purely additive
+  (42 add / 0 del) with no bundled bug fix to preserve, so the revert is total.
+- **OpenSSL (S26.01, #280):** won't-do. The in-progress slices 1–5 are dropped
+  (abandoned `feat/s26-01-openssl-session-resumption` branch). The one genuine
+  independent bug found along the way — `SSL_CTX` leaked on `Close` under the
+  fail-fast reconnect cycle — is kept and lands as its own PR
+  (`fix/openssl-tlsstream-ctx-leak`).
+
+### Why (architectural rationale)
+
+1. **Resumption is an optimization, never correctness.** A full handshake must
+   always succeed on every (re)connect without disrupting core operation;
+   products must be architected for that regardless.
+2. **Long-lived connections make it near-worthless here.** The TCP streams use
+   keepalive — a syslog client does one handshake then streams for a long time.
+   Resumption only pays at reconnect, and reconnects are rare.
+3. **When reconnects DO happen, resumption is least likely to be available.** A
+   reconnect is usually triggered by a disgraceful close — exactly when the
+   server has discarded the state needed to resume. The optimization tends to be
+   absent in the very case it was meant to help.
+4. **Disproportionate cost/complexity to do honestly.** TLS 1.2 (RFC 5077) and
+   1.3 (RFC 8446 PSK) use different mechanisms; 1.3 tickets arrive post-handshake
+   and need a defined read to capture; mTLS-on-resume has separate identity
+   semantics. Four real cases ({1.2,1.3} × {server-auth, mTLS}), each needing an
+   honest mechanism-correct test — a large surface for an optional speedup.
+
+TLS 1.3 0-RTT / early data was already out of scope and stays out.
+
+### Test-strategy lesson (if ever revisited)
+
+Don't hand-roll a TLS server in the harness — it encodes our own fallible
+understanding of resumption semantics, so a failing test can't distinguish a
+client bug from a server-config bug. This cost real time. Prefer driving the
+**real sender stack** against an **off-the-shelf** server (`openssl s_server` /
+stunnel), observed **server-side** — one backend-neutral server covers both
+OpenSSL and mbedTLS clients and all four cases via flags. That is process-level
+(real port), so it belongs in the BDD/compose layer, not the in-process CppUTest
+binary.
+
 ## 2026-05-30 — S28.08 SolidSyslogLwipRawDnsResolver (DNS via dns_gethostbyname) + FreeRtosLwip BDD by-name
 
 Last implementation story of E28. Adds the DNS sibling of the numeric
@@ -13336,40 +13386,3 @@ MISRA rule — different category, doesn't set precedent.
 
 - None outstanding. Forum post drafted for David to post under the
   Libraries category at his discretion; in-repo docs land via this PR.
-
-## 2026-05-30 — S26.04 mbedTLS client-side session resumption
-
-### Decisions
-- **Mirror the OpenSSL story's intent, independent of its code.** S26.01
-  (#280, OpenSSL) is still open; S26.04 is independent so we built the
-  mbedTLS backend first. Capture the negotiated session with
-  `mbedtls_ssl_get_session` after a successful handshake, feed it back via
-  `mbedtls_ssl_set_session` before the next handshake, on the same
-  `SolidSyslogMbedTlsStream` instance.
-- **Free on Destroy, not Close.** The story said "Close / Destroy", but the
-  saved session must survive the S12.14 fail-fast Close to be resumable on
-  the next Open — so it lives for the life of the instance and is freed only
-  in `_Cleanup` (plus free-before-recapture so `get_session`'s deep copy
-  never leaks the prior peer cert / ticket). Eager `session_init` in Create
-  keeps that free always safe.
-- **Best-effort, silent.** A failed capture or restore never fails the Open
-  and emits no error code — resumption is an optimisation, not a delivery
-  precondition; the sibling OpenSSL story emits nothing either. Keeps the
-  error channel meaningful.
-- **Integration observable = server-side ticket-parse wrapper.** mbedTLS has
-  no client-side `SSL_session_reused()`, so the in-test server wraps its
-  ticket write/parse callbacks (shared `p_ticket`) and records when a
-  presented ticket parses successfully. A new reconnecting socketpair
-  transport double feeds the stream a fresh connection per Open (no TCP
-  ports → deterministic); a two-handshake ticket server shares one ticket
-  key for the resume case and rotates it for the non-resuming-peer fallback.
-  Verified non-vacuous by disabling the production restore and watching only
-  the resume assertion fail while delivery still passed.
-
-### Deferred
-- **Test/code hygiene pass.** David will take a separate PR for tidy-ups on
-  the new tests and adapter.
-- **S26.01 (OpenSSL backend).** Still open; can now mirror this one.
-
-### Open questions
-- None outstanding.
