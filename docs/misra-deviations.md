@@ -705,7 +705,7 @@ Project owner — David Cozens. Recorded under
 
 ---
 
-## D.010 — Rule 20.10: `#` stringification and `##` tag-pasting in the `SOLIDSYSLOG_STATIC_ASSERT` polyfill
+## D.010 — Rule 20.10: `#` stringification in the `SOLIDSYSLOG_STATIC_ASSERT` polyfill
 
 ### Rule
 
@@ -714,43 +714,40 @@ Project owner — David Cozens. Recorded under
 
 ### Deviation
 
-`Core/Source/SolidSyslogMacros.h` defines `SOLIDSYSLOG_STATIC_ASSERT` with two
-expansions selected on the language standard:
+`Core/Source/SolidSyslogMacros.h` defines `SOLIDSYSLOG_STATIC_ASSERT`. The
+native C++/C11 expansions need a string-literal message, so the macro
+stringifies its `msg` argument via the standard two-step `#`-operator idiom:
 
 ```c
-#if defined(__cplusplus) || (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L))
-#define SOLIDSYSLOG_STATIC_ASSERT_STRING_INNER(s) #s                            /* <- # */
+#define SOLIDSYSLOG_STATIC_ASSERT_STRING_INNER(s) #s                    /* <- # */
 #define SOLIDSYSLOG_STATIC_ASSERT_STRING(s)       SOLIDSYSLOG_STATIC_ASSERT_STRING_INNER(s)
+#if defined(__cplusplus)
+#define SOLIDSYSLOG_STATIC_ASSERT(cond, msg)      static_assert((cond), SOLIDSYSLOG_STATIC_ASSERT_STRING(msg))
+#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
 #define SOLIDSYSLOG_STATIC_ASSERT(cond, msg)      _Static_assert((cond), SOLIDSYSLOG_STATIC_ASSERT_STRING(msg))
 #else
-#define SOLIDSYSLOG_STATIC_ASSERT_PASTE_INNER(a, b) a##b                        /* <- ## */
-#define SOLIDSYSLOG_STATIC_ASSERT_PASTE(a, b)       SOLIDSYSLOG_STATIC_ASSERT_PASTE_INNER(a, b)
-#define SOLIDSYSLOG_STATIC_ASSERT(cond, msg) \
-    struct SOLIDSYSLOG_STATIC_ASSERT_PASTE(SolidSyslogStaticAssert_, __LINE__) { ... }
+#define SOLIDSYSLOG_STATIC_ASSERT(cond, msg)      extern char SolidSyslogStaticAssertViolated[(cond) ? 1 : -1]
 #endif
 ```
 
-Two operators are the deviation:
-
-- The `#s` in the **C11/C++ branch** — stringifies the call-site message for
-  `_Static_assert`'s string-literal second argument.
-- The `a##b` in the **C99 fallback branch** — pastes `__LINE__` onto the struct
-  tag so each negative-width-bitfield assertion has a translation-unit-unique
-  name (MISRA 5.6 / 5.7).
+The `#s` operator is the deviation. The C99 fallback (`extern char` array) uses
+no preprocessor operators — a fixed name suffices because identical extern
+declarations in one translation unit are compatible, so no `__LINE__` pasting
+(and no `##`) is required.
 
 ### Scope
 
-`Core/Source/SolidSyslogMacros.h` only. Two lines — the
-`SOLIDSYSLOG_STATIC_ASSERT_STRING_INNER` definition (`#`) and the
-`SOLIDSYSLOG_STATIC_ASSERT_PASTE_INNER` definition (`##`).
+`Core/Source/SolidSyslogMacros.h` only. One line — the
+`SOLIDSYSLOG_STATIC_ASSERT_STRING_INNER` definition.
 
 ### Rationale
 
-`_Static_assert` is C11's standard compile-time assertion primitive and the
-project compiles at `--std=c11`, so that is the active branch on every normal
-and CI build — including the cppcheck-misra lane. Its second argument is a
-string literal, and there is no way to convert an arbitrary identifier-shaped
-message into one without `#`. The alternatives all regress:
+C++ `static_assert` and C11 `_Static_assert` are the standard compile-time
+assertion primitives, and the project compiles at `--std=c11` (so the
+`_Static_assert` branch is what every normal and CI build — including the
+cppcheck-misra lane — compiles). Their message argument is a string literal,
+and there is no way to convert an arbitrary identifier-shaped message into one
+without `#`. The alternatives all regress:
 
 | Alternative | Why rejected |
 |-------------|--------------|
@@ -758,27 +755,18 @@ message into one without `#`. The alternatives all regress:
 | Force every caller to pass a string literal | Spreads strings across the call sites and gives up the per-site identifier form some files already use. |
 | Drop the message argument entirely | Loses readability at the assertion site. |
 
-The `##` in the C99 fallback is the price of C99 portability (S24.16): a strict
-C99 toolchain has no `_Static_assert`, so the macro falls back to a uniquely
-named struct carrying a bit-field whose width goes negative when the condition
-is false. The unique name needs `__LINE__` pasting. This is the same family of
-trade-off the C11 branch makes — both are the standard, documented preprocessor
-idioms for their respective standards, neither opaque nor novel. Crucially, the
-`##` lives **only in the `#else` branch, which the C11 build never compiles**;
-the active-path operator situation is unchanged from before this story.
-cppcheck-misra nonetheless analyses the inactive branch, so the `##` line
-carries its own suppression.
+The advisory rule's intent is to discourage opaque token games. The two-step
+stringify idiom here is the standard, documented C preprocessor pattern and has
+been since C89; it is neither opaque nor novel.
 
 ### Risk and mitigation
 
 - **Single-site exposure.** The deviation is the macro definition
-  itself — two specific lines in one file. Any future `#`/`##` use
-  elsewhere would surface as a fresh 20.10 finding, not absorbed by
-  these suppressions.
+  itself, line-specific. Any future `#`/`##` use elsewhere would
+  surface as a fresh 20.10 finding, not absorbed by this suppression.
 - **Elimination path.** If the project ever drops the `msg` parameter
   (or moves entirely to inline `_Static_assert((cond), "literal")` at
-  call sites), the `#` line can be retired. The `##` line retires if the
-  C99 portability target is ever dropped.
+  call sites), the deviation can be retired.
 
 ### Approval
 

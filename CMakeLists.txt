@@ -16,9 +16,18 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# CppUTest is only needed when the unit-test suite is built. Library-only
+# configurations (e.g. the `c99` portability preset) set BUILD_TESTING=OFF so
+# they configure without it present. Threads is needed more widely (the host
+# BDD targets link it), so it stays outside the BUILD_TESTING guard.
+option(BUILD_TESTING "Build the unit test suite" ON)
+
 if(NOT CMAKE_CROSSCOMPILING)
-    find_package(CppUTest REQUIRED)
     find_package(Threads REQUIRED)
+endif()
+
+if(BUILD_TESTING AND NOT CMAKE_CROSSCOMPILING)
+    find_package(CppUTest REQUIRED)
 endif()
 
 if(MSVC)
@@ -309,7 +318,7 @@ if(CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_PROCESSOR STREQUAL "arm")
     endif()
 endif()
 
-if(NOT CMAKE_CROSSCOMPILING)
+if(BUILD_TESTING AND NOT CMAKE_CROSSCOMPILING)
     enable_testing()
     add_subdirectory(Tests)
 endif()
