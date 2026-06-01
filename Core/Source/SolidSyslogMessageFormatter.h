@@ -1,0 +1,42 @@
+#ifndef SOLIDSYSLOGMESSAGEFORMATTER_H
+#define SOLIDSYSLOGMESSAGEFORMATTER_H
+
+#include "ExternC.h"
+
+#include <stddef.h>
+
+#include "SolidSyslogStringFunction.h"
+#include "SolidSyslogTimestamp.h"
+
+EXTERN_C_BEGIN
+
+    struct SolidSyslogFormatter;
+    struct SolidSyslogMessage;
+    struct SolidSyslogStructuredData;
+
+    /* The per-instance inputs the message formatter reads while building an
+     * RFC 5424 frame. Owned by struct SolidSyslog as its single copy; the
+     * install/reset sites write through it. */
+    struct SolidSyslogMessageFormatterContext
+    {
+        SolidSyslogClockFunction Clock;
+        SolidSyslogStringFunction GetHostname;
+        SolidSyslogStringFunction GetAppName;
+        SolidSyslogStringFunction GetProcessId;
+        struct SolidSyslogStructuredData** Sd;
+        size_t SdCount;
+    };
+
+    /* Emits a full RFC 5424 SYSLOG-MSG into f:
+     * <PRIVAL>1 TIMESTAMP HOSTNAME APP-NAME PROCID MSGID SD [SP BOM MSG].
+     * Captures the timestamp via context->Clock and delegates its formatting
+     * to SolidSyslogTimestampFormatter_Format. */
+    void SolidSyslogMessageFormatter_Format(
+        struct SolidSyslogFormatter * formatter,
+        const struct SolidSyslogMessage* message,
+        const struct SolidSyslogMessageFormatterContext* context
+    );
+
+EXTERN_C_END
+
+#endif /* SOLIDSYSLOGMESSAGEFORMATTER_H */

@@ -100,14 +100,19 @@ misra-c2012-18.7:Core/Source/SolidSyslogFormatter.c:12
 # D.006 — Rule 11.8: const-strip false-positives + platform-API (Winsock, lwIP)
 # See docs/misra-deviations.md#d006
 misra-c2012-11.8:Core/Source/BlockSequence.c:465
-misra-c2012-11.8:Core/Source/SolidSyslog.c:85
-misra-c2012-11.8:Core/Source/SolidSyslog.c:86
-misra-c2012-11.8:Core/Source/SolidSyslog.c:87
-misra-c2012-11.8:Core/Source/SolidSyslog.c:88
-misra-c2012-11.8:Core/Source/SolidSyslog.c:89
-misra-c2012-11.8:Core/Source/SolidSyslog.c:90
-misra-c2012-11.8:Core/Source/SolidSyslog.c:91
-misra-c2012-11.8:Core/Source/SolidSyslog.c:92
+misra-c2012-11.8:Core/Source/SolidSyslog.c:50
+misra-c2012-11.8:Core/Source/SolidSyslog.c:51
+misra-c2012-11.8:Core/Source/SolidSyslog.c:52
+misra-c2012-11.8:Core/Source/SolidSyslog.c:53
+misra-c2012-11.8:Core/Source/SolidSyslog.c:54
+misra-c2012-11.8:Core/Source/SolidSyslog.c:55
+misra-c2012-11.8:Core/Source/SolidSyslog.c:56
+misra-c2012-11.8:Core/Source/SolidSyslog.c:57
+misra-c2012-11.8:Core/Source/SolidSyslogMessageFormatter.c:57
+misra-c2012-11.8:Core/Source/SolidSyslogMessageFormatter.c:59
+misra-c2012-11.8:Core/Source/SolidSyslogMessageFormatter.c:61
+misra-c2012-11.8:Core/Source/SolidSyslogMessageFormatter.c:63
+misra-c2012-11.8:Core/Source/SolidSyslogMessageFormatter.c:67
 misra-c2012-11.8:Core/Source/SolidSyslogBlockStoreStatic.c:40
 misra-c2012-11.8:Platform/LwipRaw/Source/SolidSyslogLwipRawDatagram.c:155
 misra-c2012-11.8:Platform/Windows/Source/SolidSyslogWinsockTcpStream.c:93
@@ -159,7 +164,7 @@ misra-c2012-5.7:Core/Interface/SolidSyslogFormatter.h:14
 misra-c2012-5.7:Core/Interface/SolidSyslogSecurityPolicyDefinition.h:13
 misra-c2012-5.7:Core/Interface/SolidSyslogTimeQuality.h:12
 misra-c2012-5.7:Core/Interface/SolidSyslogTransport.h:5
-misra-c2012-5.7:Core/Source/SolidSyslog.c:31
+misra-c2012-5.7:Core/Source/SolidSyslogMessageFormatter.c:19
 misra-c2012-5.7:Core/Source/SolidSyslogCircularBuffer.c:15
 misra-c2012-5.7:Core/Source/SolidSyslogCrc16.c:12
 misra-c2012-5.7:Core/Source/SolidSyslogCrc16Policy.c:10

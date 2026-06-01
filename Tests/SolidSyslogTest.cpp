@@ -20,6 +20,7 @@
 #include "StoreFake.h"
 #include "SenderFake.h"
 #include "StringFake.h"
+#include "SyslogFieldParser.h"
 #include "SolidSyslogBuffer.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogStore.h"
@@ -32,67 +33,19 @@ using namespace CososoTesting;
 
 class TEST_SolidSyslogTimestamp_NullClockProducesNilvalue_Test;
 class TEST_SolidSyslogTimestamp_TimestampAppearsInCorrectMessageFieldPosition_Test;
-class TEST_SolidSyslog_AllFieldsAtMaxLengthProducesValidMessage_Test;
-class TEST_SolidSyslog_AppNameAt48CharsIsAccepted_Test;
-class TEST_SolidSyslog_AppNameAt49CharsIsTruncatedTo48_Test;
-class TEST_SolidSyslog_AppNameCallbackIsInvokedPerLogCall_Test;
-class TEST_SolidSyslog_AppNameFromGetAppNameAppearsInMessage_Test;
-class TEST_SolidSyslog_AppNameNonPrintableByteIsSubstitutedWithQuestionMark_Test;
-class TEST_SolidSyslog_EmptyAppNameProducesNilvalue_Test;
-class TEST_SolidSyslog_EmptyHostnameProducesNilvalue_Test;
-class TEST_SolidSyslog_EmptyMessageIdProducesNilvalue_Test;
-class TEST_SolidSyslog_EmptyProcessIdProducesNilvalue_Test;
-class TEST_SolidSyslog_FacilityAppearsInPrival_Test;
-class TEST_SolidSyslog_HighestFacilityProducesCorrectPrival_Test;
-class TEST_SolidSyslog_HighestSeverityProducesCorrectPrival_Test;
-class TEST_SolidSyslog_HostnameAt255CharsIsAccepted_Test;
-class TEST_SolidSyslog_HostnameAt256CharsIsTruncatedTo255_Test;
-class TEST_SolidSyslog_HostnameCallbackIsInvokedPerLogCall_Test;
-class TEST_SolidSyslog_HostnameFromGetHostnameAppearsInMessage_Test;
-class TEST_SolidSyslog_HostnameNonPrintableByteIsSubstitutedWithQuestionMark_Test;
 class TEST_SolidSyslog_LogAfterDestroyAndRecreateWithNullFunctionsProducesNilvalues_Test;
-class TEST_SolidSyslog_LowestFacilityProducesCorrectPrival_Test;
-class TEST_SolidSyslog_LowestSeverityProducesCorrectPrival_Test;
-class TEST_SolidSyslog_MessageIdAppearsInMessage_Test;
-class TEST_SolidSyslog_MessageIdAt32CharsIsAccepted_Test;
-class TEST_SolidSyslog_MessageIdAt33CharsIsTruncatedTo32_Test;
-class TEST_SolidSyslog_MessageIdIsNotHardCoded_Test;
-class TEST_SolidSyslog_MessageIdNonPrintableByteIsSubstitutedWithQuestionMark_Test;
 class TEST_SolidSyslog_NullGetAppNameProducesNilvalue_Test;
 class TEST_SolidSyslog_NullGetHostnameProducesNilvalue_Test;
 class TEST_SolidSyslog_NullGetProcessIdProducesNilvalue_Test;
-class TEST_SolidSyslog_NullMessageIdProducesNilvalue_Test;
-class TEST_SolidSyslog_OutOfRangeFacilityProducesErrorPrival_Test;
-class TEST_SolidSyslog_OutOfRangeSeverityProducesErrorPrival_Test;
-class TEST_SolidSyslog_PriValIs134_Test;
-class TEST_SolidSyslog_ProcessIdAt128CharsIsAccepted_Test;
-class TEST_SolidSyslog_ProcessIdAt129CharsIsTruncatedTo128_Test;
-class TEST_SolidSyslog_ProcessIdCallbackIsInvokedPerLogCall_Test;
-class TEST_SolidSyslog_ProcessIdFromGetProcessIdAppearsInMessage_Test;
-class TEST_SolidSyslog_ProcessIdNonPrintableByteIsSubstitutedWithQuestionMark_Test;
-class TEST_SolidSyslog_SeverityAppearsInPrival_Test;
 struct SolidSyslogAtomicCounter;
 struct SolidSyslogBuffer;
 struct SolidSyslogSender;
 struct SolidSyslogStore;
 
 // clang-format off
-static const char * const TEST_PRIVAL    = "<134>";
-static const char * const TEST_MSGID     = "54";
 static const char * const TEST_SDATA     = "-";
 static const char * const TEST_MSG       = "hello world";
-
-static const int SYSLOG_FIELD_HEADER    = 0;
-static const int SYSLOG_FIELD_TIMESTAMP = 1;
-static const int SYSLOG_FIELD_HOSTNAME  = 2;
-static const int SYSLOG_FIELD_APP_NAME  = 3;
-static const int SYSLOG_FIELD_PROCID    = 4;
-static const int SYSLOG_FIELD_MSGID     = 5;
-static const int SYSLOG_FIELD_SDATA     = 6;
 // clang-format on
-
-#define CHECK_PRIVAL(expected) \
-    STRNCMP_EQUAL(expected, SyslogField(lastMessage(), SYSLOG_FIELD_HEADER).c_str(), strlen(expected))
 
 #define CHECK_TIMESTAMP(expected) STRCMP_EQUAL(expected, SyslogField(lastMessage(), SYSLOG_FIELD_TIMESTAMP).c_str())
 
@@ -103,8 +56,6 @@ static const int SYSLOG_FIELD_SDATA     = 6;
 #define CHECK_APP_NAME(expected) STRCMP_EQUAL(expected, SyslogField(lastMessage(), SYSLOG_FIELD_APP_NAME).c_str())
 
 #define CHECK_PROCID(expected) STRCMP_EQUAL(expected, SyslogField(lastMessage(), SYSLOG_FIELD_PROCID).c_str())
-
-#define CHECK_MSGID(expected) STRCMP_EQUAL(expected, SyslogField(lastMessage(), SYSLOG_FIELD_MSGID).c_str())
 
 static const char SD_SPY_TEXT[] = "[spy]";
 static const char SD_SPY2_TEXT[] = "[spy2]";
@@ -132,107 +83,6 @@ static struct SolidSyslogStructuredData sdFail = {SdFailFormat};
 static void IntegrationGetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
 {
     *timeQuality = {true, true, SOLIDSYSLOG_SYNC_ACCURACY_OMIT};
-}
-
-static std::string::size_type SkipSdata(const std::string& s, std::string::size_type pos)
-{
-    if (pos < s.size() && s[pos] == '[')
-    {
-        while (pos < s.size() && s[pos] == '[')
-        {
-            pos = s.find(']', pos);
-            if (pos == std::string::npos)
-            {
-                return std::string::npos;
-            }
-            pos++;
-        }
-        return pos;
-    }
-    auto end = s.find(' ', pos);
-    return end == std::string::npos ? s.size() : end;
-}
-
-static std::string::size_type FindFieldStart(const std::string& s, int n)
-{
-    std::string::size_type pos = 0;
-    for (int i = 0; i < n; i++)
-    {
-        if (i == SYSLOG_FIELD_SDATA)
-        {
-            pos = SkipSdata(s, pos);
-        }
-        else
-        {
-            pos = s.find(' ', pos);
-        }
-        if (pos == std::string::npos)
-        {
-            return std::string::npos;
-        }
-        if (s[pos] == ' ')
-        {
-            pos++;
-        }
-    }
-    return pos;
-}
-
-static std::string SyslogField(const char* buffer, int n)
-{
-    std::string s(buffer);
-    std::string::size_type pos = FindFieldStart(s, n);
-    if (pos == std::string::npos)
-    {
-        return {};
-    }
-
-    std::string::size_type end = (n == SYSLOG_FIELD_SDATA) ? SkipSdata(s, pos) : s.find(' ', pos);
-    return s.substr(pos, end == std::string::npos ? std::string::npos : end - pos);
-}
-
-static const char UTF8_BOM[] = "\xEF\xBB\xBF";
-static const auto UTF8_BOM_LENGTH = sizeof(UTF8_BOM) - 1;
-
-static std::string::size_type SyslogMsgStart(const std::string& s)
-{
-    std::string::size_type pos = FindFieldStart(s, SYSLOG_FIELD_SDATA);
-    if (pos == std::string::npos)
-    {
-        return std::string::npos;
-    }
-    pos = SkipSdata(s, pos);
-    if (pos == std::string::npos || pos >= s.size())
-    {
-        return std::string::npos;
-    }
-    if (s[pos] == ' ')
-    {
-        pos++;
-    }
-    return pos;
-}
-
-static bool SyslogMsgHasBom(const char* buffer)
-{
-    std::string s(buffer);
-    std::string::size_type pos = SyslogMsgStart(s);
-    return (pos != std::string::npos) && (s.compare(pos, UTF8_BOM_LENGTH, UTF8_BOM) == 0);
-}
-
-static std::string SyslogMsg(const char* buffer)
-{
-    std::string s(buffer);
-    std::string::size_type pos = SyslogMsgStart(s);
-    if (pos == std::string::npos)
-    {
-        return {};
-    }
-    if (s.compare(pos, UTF8_BOM_LENGTH, UTF8_BOM) == 0)
-    {
-        pos += UTF8_BOM_LENGTH;
-    }
-    return s.substr(pos);
 }
 
 // clang-format off
@@ -313,72 +163,6 @@ TEST(SolidSyslog, SingleLogCallResultsInOneSend)
     CALLED_FAKE_ON(SenderFake_Send, fakeSender, ONCE);
 }
 
-TEST(SolidSyslog, PriValIs134)
-{
-    Log();
-    CHECK_PRIVAL(TEST_PRIVAL);
-}
-
-TEST(SolidSyslog, FacilityAppearsInPrival)
-{
-    message.Facility = SOLIDSYSLOG_FACILITY_NEWS;
-    Log();
-    CHECK_PRIVAL("<62>");
-}
-
-TEST(SolidSyslog, SeverityAppearsInPrival)
-{
-    message.Severity = SOLIDSYSLOG_SEVERITY_CRITICAL;
-    Log();
-    CHECK_PRIVAL("<130>");
-}
-
-TEST(SolidSyslog, LowestFacilityProducesCorrectPrival)
-{
-    message.Facility = SOLIDSYSLOG_FACILITY_KERN;
-    Log();
-    CHECK_PRIVAL("<6>");
-}
-
-TEST(SolidSyslog, HighestFacilityProducesCorrectPrival)
-{
-    message.Facility = SOLIDSYSLOG_FACILITY_LOCAL7;
-    Log();
-    CHECK_PRIVAL("<190>");
-}
-
-TEST(SolidSyslog, LowestSeverityProducesCorrectPrival)
-{
-    message.Severity = SOLIDSYSLOG_SEVERITY_EMERGENCY;
-    Log();
-    CHECK_PRIVAL("<128>");
-}
-
-TEST(SolidSyslog, HighestSeverityProducesCorrectPrival)
-{
-    message.Severity = SOLIDSYSLOG_SEVERITY_DEBUG;
-    Log();
-    CHECK_PRIVAL("<135>");
-}
-
-TEST(SolidSyslog, OutOfRangeFacilityProducesErrorPrival)
-{
-    // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange) -- intentionally testing out-of-range input
-    message.Facility = (enum SolidSyslogFacility) 24;
-    Log();
-    CHECK_PRIVAL("<43>");
-}
-
-TEST(SolidSyslog, OutOfRangeSeverityProducesErrorPrival)
-{
-    enum SolidSyslogSeverity invalid = SOLIDSYSLOG_SEVERITY_DEBUG;
-    // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange) -- intentionally testing out-of-range input
-    invalid = static_cast<enum SolidSyslogSeverity>(static_cast<int>(invalid) + 1);
-    message.Severity = invalid;
-    Log();
-    CHECK_PRIVAL("<43>");
-}
-
 TEST(SolidSyslog, VersionIs1)
 {
     Log();
@@ -396,23 +180,6 @@ TEST(SolidSyslog, NullGetHostnameProducesNilvalue)
     CHECK_HOSTNAME("-");
 }
 
-TEST(SolidSyslog, HostnameFromGetHostnameAppearsInMessage)
-{
-    StringFake_SetHostname("MyHost");
-    Log();
-    CHECK_HOSTNAME("MyHost");
-}
-
-TEST(SolidSyslog, HostnameCallbackIsInvokedPerLogCall)
-{
-    StringFake_SetHostname("FirstHost");
-    Log();
-    CHECK_HOSTNAME("FirstHost");
-    StringFake_SetHostname("SecondHost");
-    Log();
-    CHECK_HOSTNAME("SecondHost");
-}
-
 TEST(SolidSyslog, NullGetAppNameProducesNilvalue)
 {
     config.GetAppName = nullptr;
@@ -422,23 +189,6 @@ TEST(SolidSyslog, NullGetAppNameProducesNilvalue)
     CHECK_APP_NAME("-");
 }
 
-TEST(SolidSyslog, AppNameFromGetAppNameAppearsInMessage)
-{
-    StringFake_SetAppName("MyApp");
-    Log();
-    CHECK_APP_NAME("MyApp");
-}
-
-TEST(SolidSyslog, AppNameCallbackIsInvokedPerLogCall)
-{
-    StringFake_SetAppName("FirstApp");
-    Log();
-    CHECK_APP_NAME("FirstApp");
-    StringFake_SetAppName("SecondApp");
-    Log();
-    CHECK_APP_NAME("SecondApp");
-}
-
 TEST(SolidSyslog, NullGetProcessIdProducesNilvalue)
 {
     config.GetProcessId = nullptr;
@@ -446,74 +196,6 @@ TEST(SolidSyslog, NullGetProcessIdProducesNilvalue)
     solidSyslog = SolidSyslog_Create(&config);
     Log();
     CHECK_PROCID("-");
-}
-
-TEST(SolidSyslog, ProcessIdFromGetProcessIdAppearsInMessage)
-{
-    StringFake_SetProcessId("9999");
-    Log();
-    CHECK_PROCID("9999");
-}
-
-TEST(SolidSyslog, ProcessIdCallbackIsInvokedPerLogCall)
-{
-    StringFake_SetProcessId("1111");
-    Log();
-    CHECK_PROCID("1111");
-    StringFake_SetProcessId("2222");
-    Log();
-    CHECK_PROCID("2222");
-}
-
-TEST(SolidSyslog, NullMessageIdProducesNilvalue)
-{
-    Log();
-    CHECK_MSGID("-");
-}
-
-TEST(SolidSyslog, MessageIdAppearsInMessage)
-{
-    message.MessageId = "ID47";
-    Log();
-    CHECK_MSGID("ID47");
-}
-
-TEST(SolidSyslog, MessageIdIsNotHardCoded)
-{
-    message.MessageId = TEST_MSGID;
-    Log();
-    CHECK_MSGID(TEST_MSGID);
-}
-
-TEST(SolidSyslog, EmptyMessageIdProducesNilvalue)
-{
-    message.MessageId = "";
-    Log();
-    CHECK_MSGID("-");
-}
-
-TEST(SolidSyslog, MessageIdAt32CharsIsAccepted)
-{
-    std::string maxMsgId(32, 'M');
-    message.MessageId = maxMsgId.c_str();
-    Log();
-    CHECK_MSGID(maxMsgId.c_str());
-}
-
-TEST(SolidSyslog, MessageIdAt33CharsIsTruncatedTo32)
-{
-    std::string longMsgId(33, 'M');
-    message.MessageId = longMsgId.c_str();
-    Log();
-    std::string expected(32, 'M');
-    CHECK_MSGID(expected.c_str());
-}
-
-TEST(SolidSyslog, MessageIdNonPrintableByteIsSubstitutedWithQuestionMark)
-{
-    message.MessageId = "a b";
-    Log();
-    CHECK_MSGID("a?b");
 }
 
 TEST(SolidSyslog, StructuredDataIsNilValue)
@@ -780,124 +462,6 @@ TEST(SolidSyslogTimestamp, TimestampAppearsInCorrectMessageFieldPosition)
 {
     Log();
     CHECK_TIMESTAMP("2026-04-02T14:30:07.000042Z");
-}
-
-TEST(SolidSyslog, HostnameAt255CharsIsAccepted)
-{
-    std::string longHostname(255, 'H');
-    StringFake_SetHostname(longHostname.c_str());
-    Log();
-    CHECK_HOSTNAME(longHostname.c_str());
-}
-
-TEST(SolidSyslog, HostnameAt256CharsIsTruncatedTo255)
-{
-    std::string longHostname(256, 'H');
-    StringFake_SetHostname(longHostname.c_str());
-    Log();
-    std::string expected(255, 'H');
-    CHECK_HOSTNAME(expected.c_str());
-}
-
-TEST(SolidSyslog, HostnameNonPrintableByteIsSubstitutedWithQuestionMark)
-{
-    StringFake_SetHostname("a\x01"
-                           "b");
-    Log();
-    CHECK_HOSTNAME("a?b");
-}
-
-TEST(SolidSyslog, AppNameAt48CharsIsAccepted)
-{
-    std::string longAppName(48, 'A');
-    StringFake_SetAppName(longAppName.c_str());
-    Log();
-    CHECK_APP_NAME(longAppName.c_str());
-}
-
-TEST(SolidSyslog, AppNameAt49CharsIsTruncatedTo48)
-{
-    std::string longAppName(49, 'A');
-    StringFake_SetAppName(longAppName.c_str());
-    Log();
-    std::string expected(48, 'A');
-    CHECK_APP_NAME(expected.c_str());
-}
-
-TEST(SolidSyslog, AppNameNonPrintableByteIsSubstitutedWithQuestionMark)
-{
-    StringFake_SetAppName("a\x7F"
-                          "b");
-    Log();
-    CHECK_APP_NAME("a?b");
-}
-
-TEST(SolidSyslog, ProcessIdAt128CharsIsAccepted)
-{
-    std::string longProcessId(128, 'P');
-    StringFake_SetProcessId(longProcessId.c_str());
-    Log();
-    CHECK_PROCID(longProcessId.c_str());
-}
-
-TEST(SolidSyslog, ProcessIdAt129CharsIsTruncatedTo128)
-{
-    std::string longProcessId(129, 'P');
-    StringFake_SetProcessId(longProcessId.c_str());
-    Log();
-    std::string expected(128, 'P');
-    CHECK_PROCID(expected.c_str());
-}
-
-TEST(SolidSyslog, ProcessIdNonPrintableByteIsSubstitutedWithQuestionMark)
-{
-    StringFake_SetProcessId("a\xC3"
-                            "b");
-    Log();
-    CHECK_PROCID("a?b");
-}
-
-TEST(SolidSyslog, AllFieldsAtMaxLengthProducesValidMessage)
-{
-    std::string maxHostname(255, 'H');
-    std::string maxAppName(48, 'A');
-    std::string maxProcessId(128, 'P');
-    StringFake_SetHostname(maxHostname.c_str());
-    StringFake_SetAppName(maxAppName.c_str());
-    StringFake_SetProcessId(maxProcessId.c_str());
-    stubTimestamp = {9999, 12, 31, 23, 59, 59, 999999, 840};
-    config.Clock = StubClock;
-    SolidSyslog_Destroy(solidSyslog);
-    solidSyslog = SolidSyslog_Create(&config);
-    message.Facility = SOLIDSYSLOG_FACILITY_LOCAL7;
-    message.Severity = SOLIDSYSLOG_SEVERITY_DEBUG;
-    Log();
-    CHECK_PRIVAL("<191>");
-    CHECK_TIMESTAMP("9999-12-31T23:59:59.999999+14:00");
-    CHECK_HOSTNAME(maxHostname.c_str());
-    CHECK_APP_NAME(maxAppName.c_str());
-    CHECK_PROCID(maxProcessId.c_str());
-}
-
-TEST(SolidSyslog, EmptyHostnameProducesNilvalue)
-{
-    StringFake_SetHostname("");
-    Log();
-    CHECK_HOSTNAME("-");
-}
-
-TEST(SolidSyslog, EmptyAppNameProducesNilvalue)
-{
-    StringFake_SetAppName("");
-    Log();
-    CHECK_APP_NAME("-");
-}
-
-TEST(SolidSyslog, EmptyProcessIdProducesNilvalue)
-{
-    StringFake_SetProcessId("");
-    Log();
-    CHECK_PROCID("-");
 }
 
 TEST(SolidSyslog, ServiceSendsMessageReadFromBuffer)

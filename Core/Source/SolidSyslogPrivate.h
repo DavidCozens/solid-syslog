@@ -1,9 +1,7 @@
 #ifndef SOLIDSYSLOGPRIVATE_H
 #define SOLIDSYSLOGPRIVATE_H
 
-#include <stddef.h>
-
-#include "SolidSyslogStringFunction.h"
+#include "SolidSyslogMessageFormatter.h"
 #include "SolidSyslogTimestamp.h"
 
 struct SolidSyslogBuffer;
@@ -11,19 +9,13 @@ struct SolidSyslogConfig;
 struct SolidSyslogFormatter;
 struct SolidSyslogSender;
 struct SolidSyslogStore;
-struct SolidSyslogStructuredData;
 
 struct SolidSyslog
 {
     struct SolidSyslogBuffer* Buffer;
     struct SolidSyslogSender* Sender;
-    SolidSyslogClockFunction Clock;
-    SolidSyslogStringFunction GetHostname;
-    SolidSyslogStringFunction GetAppName;
-    SolidSyslogStringFunction GetProcessId;
     struct SolidSyslogStore* Store;
-    struct SolidSyslogStructuredData** Sd;
-    size_t SdCount;
+    struct SolidSyslogMessageFormatterContext Format;
 };
 
 void SolidSyslog_Initialise(struct SolidSyslog* self, const struct SolidSyslogConfig* config);

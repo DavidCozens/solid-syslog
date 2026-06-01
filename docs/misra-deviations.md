@@ -391,7 +391,7 @@ Project owner — David Cozens. Recorded under
 
 Two distinct site categories trigger this rule:
 
-1. **Field-access "false positive" (10 sites)** — reading a non-const
+1. **Field-access "false positive" (15 sites)** — reading a non-const
    pointer field through a `const struct*` parameter:
 
    ```c
@@ -412,6 +412,15 @@ Two distinct site categories trigger this rule:
    expression. The accepted interpretation in the MISRA community is
    that 11.8 applies to *pointer casts*, not to member-access yielding
    a non-`const`-qualified pointer rvalue.
+
+   The same pattern recurs in
+   `SolidSyslogMessageFormatter_Format(const struct
+   SolidSyslogMessageFormatterContext* context)` (5 sites — `context->Clock`,
+   `GetHostname`, `GetAppName`, `GetProcessId`, `Sd`), which reads its
+   read-only context exactly as `_Create` reads its config. The `const`
+   is deliberate (the formatter must not mutate the context); keeping it
+   and accepting the false positive is preferred over weakening the
+   signature to silence the tool.
 
 2. **Platform-API const-strip (2 sites)** —
 
@@ -451,9 +460,12 @@ Two distinct site categories trigger this rule:
 
 ### Scope
 
-- **Strict tier** — 10 field-access sites: 8 in `Core/Source/SolidSyslog.c`
+- **Strict tier** — 15 field-access sites: 8 in `Core/Source/SolidSyslog.c`
   (the `SolidSyslog_Install*` functions reading `config->` pointer
-  fields), 1 in `Core/Source/BlockSequence.c`
+  fields), 5 in `Core/Source/SolidSyslogMessageFormatter.c`
+  (`SolidSyslogMessageFormatter_Format` reading `context->Clock`,
+  `GetHostname`, `GetAppName`, `GetProcessId`, `Sd`), 1 in
+  `Core/Source/BlockSequence.c`
   (`BlockSequence_IsReadBlockFullyDrained` passing
   `blockSequence->BlockDevice` to `SolidSyslogBlockDevice_Size`), and
   1 in `Core/Source/SolidSyslogBlockStoreStatic.c`
