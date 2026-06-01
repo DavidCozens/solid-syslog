@@ -42,6 +42,7 @@ void SolidSyslogCrc16Policy_Destroy(void)
 
 /* CRC-16 is a checksum, not an AEAD — it authenticates the whole content and
  * has no use for the header/body split, so headerLength is ignored. */
+// NOLINTBEGIN(bugprone-easily-swappable-parameters) -- contentLength / headerLength are fixed by the SolidSyslogSecurityPolicy vtable contract
 static bool Crc16Policy_Crc16SealRecord(
     struct SolidSyslogSecurityPolicy* self,
     // NOLINTNEXTLINE(readability-non-const-parameter) -- content is non-const to match the vtable signature
@@ -74,3 +75,5 @@ static bool Crc16Policy_Crc16OpenRecord(
     uint16_t expected = (uint16_t) ((uint16_t) (trailerIn[0] << 8U) | trailerIn[1]);
     return crc == expected;
 }
+
+// NOLINTEND(bugprone-easily-swappable-parameters)

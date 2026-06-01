@@ -72,6 +72,7 @@ static inline struct SolidSyslogOpenSslHmacSha256Policy* OpenSslHmacSha256Policy
 
 /* HMAC authenticates the whole content as one buffer — the header/body split
  * only matters to AEAD policies, so headerLength is ignored here. */
+// NOLINTBEGIN(bugprone-easily-swappable-parameters) -- contentLength / headerLength are fixed by the SolidSyslogSecurityPolicy vtable contract
 static bool OpenSslHmacSha256Policy_SealRecord(
     struct SolidSyslogSecurityPolicy* self,
     uint8_t* content,
@@ -88,6 +89,8 @@ static bool OpenSslHmacSha256Policy_SealRecord(
         trailerOut
     );
 }
+
+// NOLINTEND(bugprone-easily-swappable-parameters)
 
 /* Fetches the key on demand into a transient buffer, computes HMAC-SHA256 over
  * `data` into `tagOut`, then wipes the key buffer — the key never lingers
@@ -125,6 +128,7 @@ static bool OpenSslHmacSha256Policy_ComputeTag(
     return computed;
 }
 
+// NOLINTBEGIN(bugprone-easily-swappable-parameters) -- contentLength / headerLength are fixed by the SolidSyslogSecurityPolicy vtable contract
 static bool OpenSslHmacSha256Policy_OpenRecord(
     struct SolidSyslogSecurityPolicy* self,
     uint8_t* content,
@@ -147,6 +151,8 @@ static bool OpenSslHmacSha256Policy_OpenRecord(
     }
     return verified;
 }
+
+// NOLINTEND(bugprone-easily-swappable-parameters)
 
 static inline bool OpenSslHmacSha256Policy_ConstantTimeEquals(const uint8_t* a, const uint8_t* b, size_t length)
 {

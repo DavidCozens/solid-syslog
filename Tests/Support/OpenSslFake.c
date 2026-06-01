@@ -54,7 +54,6 @@ static size_t lastCleanseLen;
  * suite against libcrypto. */
 enum
 {
-    FAKE_GCM_CTX_POOL = 4,
     FAKE_GCM_KEY_SIZE = 32,
     FAKE_GCM_NONCE_SIZE = 12,
     FAKE_GCM_TAG_SIZE = 16,
@@ -64,7 +63,6 @@ enum
 
 typedef struct
 {
-    bool InUse;
     bool Encrypting;
     uint8_t Key[FAKE_GCM_KEY_SIZE];
     uint8_t Nonce[FAKE_GCM_NONCE_SIZE];
@@ -72,7 +70,12 @@ typedef struct
     uint8_t ExpectedTag[FAKE_GCM_TAG_SIZE];
 } FakeGcmCtx;
 
-static FakeGcmCtx gcmCtxPool[FAKE_GCM_CTX_POOL];
+/* A single context is enough: the production code allocates one EVP context per
+ * seal or open, uses it, and frees it before the next — never two at once. The
+ * handle is a char sentinel (like the SSL/BIO fakes); state lives here, so the
+ * opaque handle is never cast back to a struct. */
+static FakeGcmCtx fakeGcmCtx;
+static char fakeGcmCtxStorage;
 static char fakeAesGcmCipherStorage;
 
 static int gcmSealCount; /* GET_TAG calls */
@@ -353,10 +356,7 @@ void OpenSslFake_Reset(void)
     cleanseCallCount = 0;
     lastCleanseBuf = NULL;
     lastCleanseLen = 0;
-    for (size_t index = 0; index < FAKE_GCM_CTX_POOL; index++)
-    {
-        gcmCtxPool[index].InUse = false;
-    }
+    memset(&fakeGcmCtx, 0, sizeof fakeGcmCtx);
     gcmSealCount = 0;
     gcmOpenCount = 0;
     gcmEncryptFails = false;
@@ -1264,18 +1264,17 @@ static void FakeGcm_FinalizeTag(const FakeGcmCtx* ctx, uint8_t* tagOut)
 }
 
 static int FakeGcm_Init(
-    EVP_CIPHER_CTX* ctx,
-    const EVP_CIPHER* type,
+    const EVP_CIPHER* cipher,
     const unsigned char* key,
     const unsigned char* iv,
     bool encrypting,
     bool injectFailure
 )
 {
-    FakeGcmCtx* fake = (FakeGcmCtx*) (void*) ctx;
+    FakeGcmCtx* fake = &fakeGcmCtx;
     fake->Encrypting = encrypting;
     int result = 1;
-    if ((type != NULL) && injectFailure)
+    if ((cipher != NULL) && injectFailure)
     {
         result = 0;
     }
@@ -1299,9 +1298,9 @@ static int FakeGcm_Init(
     return result;
 }
 
-static int FakeGcm_Update(EVP_CIPHER_CTX* ctx, unsigned char* out, int* outl, const unsigned char* in, int inl)
+static int FakeGcm_Update(unsigned char* out, int* outl, const unsigned char* in, int inl)
 {
-    FakeGcmCtx* fake = (FakeGcmCtx*) (void*) ctx;
+    FakeGcmCtx* fake = &fakeGcmCtx;
     size_t length = (size_t) inl;
     if (out == NULL)
     {
@@ -1347,62 +1346,54 @@ const EVP_CIPHER* EVP_aes_256_gcm(void)
 
 EVP_CIPHER_CTX* EVP_CIPHER_CTX_new(void)
 {
-    EVP_CIPHER_CTX* handle = NULL;
-    for (size_t index = 0; index < FAKE_GCM_CTX_POOL; index++)
-    {
-        if (!gcmCtxPool[index].InUse)
-        {
-            memset(&gcmCtxPool[index], 0, sizeof gcmCtxPool[index]);
-            gcmCtxPool[index].InUse = true;
-            handle = (EVP_CIPHER_CTX*) (void*) &gcmCtxPool[index];
-            break;
-        }
-    }
-    return handle;
+    memset(&fakeGcmCtx, 0, sizeof fakeGcmCtx);
+    return (EVP_CIPHER_CTX*) &fakeGcmCtxStorage;
 }
 
 void EVP_CIPHER_CTX_free(EVP_CIPHER_CTX* ctx)
 {
-    if (ctx != NULL)
-    {
-        ((FakeGcmCtx*) (void*) ctx)->InUse = false;
-    }
+    (void) ctx;
 }
 
 int EVP_EncryptInit_ex(
     EVP_CIPHER_CTX* ctx,
-    const EVP_CIPHER* type,
+    const EVP_CIPHER* cipher,
     ENGINE* impl,
     const unsigned char* key,
     const unsigned char* iv
 )
 {
+    (void) ctx;
     (void) impl;
-    return FakeGcm_Init(ctx, type, key, iv, true, gcmEncryptFails);
+    return FakeGcm_Init(cipher, key, iv, true, gcmEncryptFails);
 }
 
 int EVP_DecryptInit_ex(
     EVP_CIPHER_CTX* ctx,
-    const EVP_CIPHER* type,
+    const EVP_CIPHER* cipher,
     ENGINE* impl,
     const unsigned char* key,
     const unsigned char* iv
 )
 {
+    (void) ctx;
     (void) impl;
-    return FakeGcm_Init(ctx, type, key, iv, false, gcmDecryptFails);
+    return FakeGcm_Init(cipher, key, iv, false, gcmDecryptFails);
 }
 
 int EVP_EncryptUpdate(EVP_CIPHER_CTX* ctx, unsigned char* out, int* outl, const unsigned char* in, int inl)
 {
-    return FakeGcm_Update(ctx, out, outl, in, inl);
+    (void) ctx;
+    return FakeGcm_Update(out, outl, in, inl);
 }
 
 int EVP_DecryptUpdate(EVP_CIPHER_CTX* ctx, unsigned char* out, int* outl, const unsigned char* in, int inl)
 {
-    return FakeGcm_Update(ctx, out, outl, in, inl);
+    (void) ctx;
+    return FakeGcm_Update(out, outl, in, inl);
 }
 
+// NOLINTNEXTLINE(readability-non-const-parameter) -- signature fixed by OpenSSL API
 int EVP_EncryptFinal_ex(EVP_CIPHER_CTX* ctx, unsigned char* out, int* outl)
 {
     (void) ctx;
@@ -1411,21 +1402,23 @@ int EVP_EncryptFinal_ex(EVP_CIPHER_CTX* ctx, unsigned char* out, int* outl)
     return 1;
 }
 
+// NOLINTNEXTLINE(readability-non-const-parameter) -- signature fixed by OpenSSL API
 int EVP_DecryptFinal_ex(EVP_CIPHER_CTX* ctx, unsigned char* outm, int* outl)
 {
+    (void) ctx;
     (void) outm;
-    FakeGcmCtx* fake = (FakeGcmCtx*) (void*) ctx;
     *outl = 0;
     gcmOpenCount++;
     uint8_t computed[FAKE_GCM_TAG_SIZE];
-    FakeGcm_FinalizeTag(fake, computed);
-    return (memcmp(computed, fake->ExpectedTag, FAKE_GCM_TAG_SIZE) == 0) ? 1 : 0;
+    FakeGcm_FinalizeTag(&fakeGcmCtx, computed);
+    return (memcmp(computed, fakeGcmCtx.ExpectedTag, FAKE_GCM_TAG_SIZE) == 0) ? 1 : 0;
 }
 
 int EVP_CIPHER_CTX_ctrl(EVP_CIPHER_CTX* ctx, int type, int arg, void* ptr)
 {
+    (void) ctx;
     (void) arg;
-    FakeGcmCtx* fake = (FakeGcmCtx*) (void*) ctx;
+    FakeGcmCtx* fake = &fakeGcmCtx;
     if (type == EVP_CTRL_GCM_GET_TAG)
     {
         gcmSealCount++;

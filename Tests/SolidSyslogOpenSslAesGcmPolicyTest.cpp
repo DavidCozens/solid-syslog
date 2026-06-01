@@ -158,7 +158,7 @@ TEST_GROUP_BASE(SolidSyslogOpenSslAesGcmPolicySeal, OpenSslAesGcmPolicyTestBase)
         return policy->OpenRecord(policy, content, TEST_CONTENT_LEN, TEST_HEADER_LEN, trailer);
     }
 
-    const uint8_t* body() const
+    [[nodiscard]] const uint8_t* body() const
     {
         return &content[TEST_HEADER_LEN];
     }
@@ -277,10 +277,9 @@ TEST(SolidSyslogOpenSslAesGcmPolicySeal, SealRecordGeneratesAFreshNonceIntoTheTr
     LONGS_EQUAL(GCM_NONCE_SIZE, OpenSslFake_LastRandBytesLen());
     POINTERS_EQUAL(trailer, OpenSslFake_LastRandBytesBuf());
     /* The fake's RAND_bytes fills 0xA0, 0xA1, … — assert it reached the trailer. */
-    for (int index = 0; index < GCM_NONCE_SIZE; index++)
-    {
-        BYTES_EQUAL(0xA0 + index, trailer[index]);
-    }
+    static const uint8_t expectedNonce[GCM_NONCE_SIZE] =
+        {0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, 0xAA, 0xAB};
+    MEMCMP_EQUAL(expectedNonce, trailer, GCM_NONCE_SIZE);
 }
 
 TEST(SolidSyslogOpenSslAesGcmPolicySeal, SealRecordEncryptsTheBodyInPlace)

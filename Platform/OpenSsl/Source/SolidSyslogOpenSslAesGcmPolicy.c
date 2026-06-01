@@ -22,15 +22,6 @@ enum
     AES_GCM_TRAILER_SIZE = GCM_NONCE_SIZE + GCM_TAG_SIZE
 };
 
-/* Open splits a genuine OpenSSL error (worth reporting) from an authentication
- * mismatch (the expected tamper-detected path — silent, like the HMAC verify). */
-enum OpenSslAesGcmPolicy_OpenResult
-{
-    AES_GCM_OPEN_OK,
-    AES_GCM_OPEN_AUTH_FAILED,
-    AES_GCM_OPEN_ERROR
-};
-
 static inline struct SolidSyslogOpenSslAesGcmPolicy* OpenSslAesGcmPolicy_SelfFromBase(
     struct SolidSyslogSecurityPolicy* base
 );
@@ -58,7 +49,7 @@ static bool OpenSslAesGcmPolicy_GcmEncrypt(
     uint16_t aadLength,
     uint8_t* tagOut
 );
-static enum OpenSslAesGcmPolicy_OpenResult OpenSslAesGcmPolicy_GcmDecrypt(
+static bool OpenSslAesGcmPolicy_GcmDecrypt(
     const uint8_t* key,
     const uint8_t* nonce,
     uint8_t* body,
@@ -99,6 +90,7 @@ static inline struct SolidSyslogOpenSslAesGcmPolicy* OpenSslAesGcmPolicy_SelfFro
  * remaining bytes. The header (content[0..headerLength)) is authenticated as
  * associated data and left in clear; the body (the rest) is encrypted in place.
  * Fetches the key on demand and wipes it before returning. */
+// NOLINTBEGIN(bugprone-easily-swappable-parameters) -- contentLength / headerLength are fixed by the SolidSyslogSecurityPolicy vtable contract
 static bool OpenSslAesGcmPolicy_SealRecord(
     struct SolidSyslogSecurityPolicy* self,
     uint8_t* content,
@@ -136,6 +128,8 @@ static bool OpenSslAesGcmPolicy_SealRecord(
     OPENSSL_cleanse(key, sizeof key);
     return sealed;
 }
+
+// NOLINTEND(bugprone-easily-swappable-parameters)
 
 /* Fetches the AES-256 key on demand. Fails closed (and reports) if the key is
  * unavailable or not exactly 32 bytes — AES-256 admits no other key length. */
@@ -183,6 +177,7 @@ static bool OpenSslAesGcmPolicy_GcmEncrypt(
  * (associated data) and ciphertext. Fetches the key on demand and wipes it. A
  * tag mismatch is the expected tamper-detected outcome and returns false
  * silently; only a genuine OpenSSL error is reported. */
+// NOLINTBEGIN(bugprone-easily-swappable-parameters) -- contentLength / headerLength are fixed by the SolidSyslogSecurityPolicy vtable contract
 static bool OpenSslAesGcmPolicy_OpenRecord(
     struct SolidSyslogSecurityPolicy* self,
     uint8_t* content,
@@ -201,19 +196,15 @@ static bool OpenSslAesGcmPolicy_OpenRecord(
     uint8_t key[AES_256_KEY_SIZE];
     if (OpenSslAesGcmPolicy_FetchKey(policy, key))
     {
-        enum OpenSslAesGcmPolicy_OpenResult result =
-            OpenSslAesGcmPolicy_GcmDecrypt(key, nonce, body, bodyLength, content, headerLength, tag);
-        opened = (result == AES_GCM_OPEN_OK);
-        if (result == AES_GCM_OPEN_ERROR)
-        {
-            OpenSslAesGcmPolicy_Report(SOLIDSYSLOG_SEVERITY_ERROR, OPENSSLAESGCMPOLICY_ERROR_DECRYPT_FAILED);
-        }
+        opened = OpenSslAesGcmPolicy_GcmDecrypt(key, nonce, body, bodyLength, content, headerLength, tag);
     }
     OPENSSL_cleanse(key, sizeof key);
     return opened;
 }
 
-static enum OpenSslAesGcmPolicy_OpenResult OpenSslAesGcmPolicy_GcmDecrypt(
+// NOLINTEND(bugprone-easily-swappable-parameters)
+
+static bool OpenSslAesGcmPolicy_GcmDecrypt(
     const uint8_t* key,
     const uint8_t* nonce,
     uint8_t* body,
@@ -228,7 +219,11 @@ static enum OpenSslAesGcmPolicy_OpenResult OpenSslAesGcmPolicy_GcmDecrypt(
     uint8_t tag[GCM_TAG_SIZE];
     (void) memcpy(tag, tagIn, sizeof tag);
 
-    enum OpenSslAesGcmPolicy_OpenResult result = AES_GCM_OPEN_ERROR;
+    /* A tag mismatch is the expected tamper-detected outcome — return false
+     * silently, like the HMAC verify. Only a genuine OpenSSL failure (context
+     * allocation or any setup step) is reported. */
+    bool opened = false;
+    bool errored = true;
     EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
     if (ctx != NULL)
     {
@@ -242,10 +237,14 @@ static enum OpenSslAesGcmPolicy_OpenResult OpenSslAesGcmPolicy_GcmDecrypt(
         if (setUp)
         {
             int finalLength = 0;
-            result = (EVP_DecryptFinal_ex(ctx, &body[outLength], &finalLength) == 1) ? AES_GCM_OPEN_OK
-                                                                                     : AES_GCM_OPEN_AUTH_FAILED;
+            errored = false;
+            opened = (EVP_DecryptFinal_ex(ctx, &body[outLength], &finalLength) == 1);
         }
         EVP_CIPHER_CTX_free(ctx);
     }
-    return result;
+    if (errored)
+    {
+        OpenSslAesGcmPolicy_Report(SOLIDSYSLOG_SEVERITY_ERROR, OPENSSLAESGCMPOLICY_ERROR_DECRYPT_FAILED);
+    }
+    return opened;
 }

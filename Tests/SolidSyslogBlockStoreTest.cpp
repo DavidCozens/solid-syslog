@@ -1374,6 +1374,7 @@ static uint8_t sealContentData[CONTENT_REGION_MAX];
 static uint16_t sealContentLength;
 static uint16_t sealHeaderLength;
 
+// NOLINTBEGIN(bugprone-easily-swappable-parameters) -- contentLength / headerLength are fixed by the SolidSyslogSecurityPolicy vtable contract
 static bool SpySealRecord(
     struct SolidSyslogSecurityPolicy* self,
     // NOLINTNEXTLINE(readability-non-const-parameter) -- content is non-const to match the vtable signature
@@ -1415,6 +1416,7 @@ static bool SpyOpenRecord(
     memcpy(openContentData, content, contentLength);
     return true;
 }
+// NOLINTEND(bugprone-easily-swappable-parameters)
 
 static struct SolidSyslogSecurityPolicy spyPolicy = {
     0,
