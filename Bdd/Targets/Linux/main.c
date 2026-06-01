@@ -65,8 +65,9 @@ static struct SolidSyslogDatagram* udpDatagram;
 static struct SolidSyslogAddress* udpAddress;
 static struct SolidSyslogResolver* sharedResolver;
 /* Holds the created at-rest SecurityPolicy handle so DestroyStore can release
- * it. Only the keyed hmac-sha256 policy needs the handle to destroy; crc16 and
- * null are dispatched by name. */
+ * it. The keyed policies (hmac-sha256, aes-256-gcm) need the handle to destroy;
+ * crc16 is dispatched by name to its singleton Destroy, and null needs no
+ * cleanup. */
 static struct SolidSyslogSecurityPolicy* securityPolicy;
 
 static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
