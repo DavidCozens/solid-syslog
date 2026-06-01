@@ -45,10 +45,7 @@ static inline bool TimestampFormatter_IsValid(const struct SolidSyslogTimestamp*
     return valid;
 }
 
-static inline void TimestampFormatter_FormatValid(
-    struct SolidSyslogFormatter* f,
-    const struct SolidSyslogTimestamp* ts
-)
+static inline void TimestampFormatter_FormatValid(struct SolidSyslogFormatter* f, const struct SolidSyslogTimestamp* ts)
 {
     SolidSyslogFormatter_FourDigit(f, ts->Year);
     SolidSyslogFormatter_AsciiCharacter(f, '-');

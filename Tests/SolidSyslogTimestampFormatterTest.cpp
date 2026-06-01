@@ -10,14 +10,14 @@ enum
     TEST_BUFFER_SIZE = 64
 };
 
-static const uint16_t TEST_YEAR        = 2026;
-static const uint8_t  TEST_MONTH       = 4;
-static const uint8_t  TEST_DAY         = 2;
-static const uint8_t  TEST_HOUR        = 14;
-static const uint8_t  TEST_MINUTE      = 30;
-static const uint8_t  TEST_SECOND      = 7;
+static const uint16_t TEST_YEAR = 2026;
+static const uint8_t TEST_MONTH = 4;
+static const uint8_t TEST_DAY = 2;
+static const uint8_t TEST_HOUR = 14;
+static const uint8_t TEST_MINUTE = 30;
+static const uint8_t TEST_SECOND = 7;
 static const uint32_t TEST_MICROSECOND = 42;
-static const int16_t  TEST_UTC_OFFSET  = 0;
+static const int16_t TEST_UTC_OFFSET = 0;
 
 #define CHECK_FORMATTED(expected)                                              \
     STRCMP_EQUAL(expected, SolidSyslogFormatter_AsFormattedBuffer(formatter)); \
@@ -35,7 +35,10 @@ TEST_GROUP(SolidSyslogTimestampFormatter)
         ts = {TEST_YEAR, TEST_MONTH, TEST_DAY, TEST_HOUR, TEST_MINUTE, TEST_SECOND, TEST_MICROSECOND, TEST_UTC_OFFSET};
     }
 
-    void format() { SolidSyslogTimestampFormatter_Format(formatter, &ts); }
+    void format()
+    {
+        SolidSyslogTimestampFormatter_Format(formatter, &ts);
+    }
 };
 
 // A full-string oracle on the canonical value proves every separator and
