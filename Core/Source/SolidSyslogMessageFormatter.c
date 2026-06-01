@@ -182,11 +182,19 @@ static inline void MessageFormatter_FormatStructuredData(
 
 static inline void MessageFormatter_FormatMsg(struct SolidSyslogFormatter* f, const char* msg)
 {
+    /* Guard msg before SkipLeadingBom dereferences it, then guard the
+     * post-strip body so a caller-supplied BOM-only string emits no
+     * dangling SP-BOM (RFC 5424 §6.4 — the BOM belongs to a non-empty MSG). */
     if (MessageFormatter_StringIsValid(msg))
     {
-        SolidSyslogFormatter_AsciiCharacter(f, ' ');
-        SolidSyslogFormatter_Bom(f);
-        SolidSyslogFormatter_BoundedString(f, MessageFormatter_SkipLeadingBom(msg), SOLIDSYSLOG_MAX_MESSAGE_SIZE);
+        const char* body = MessageFormatter_SkipLeadingBom(msg);
+
+        if (MessageFormatter_StringIsValid(body))
+        {
+            SolidSyslogFormatter_AsciiCharacter(f, ' ');
+            SolidSyslogFormatter_Bom(f);
+            SolidSyslogFormatter_BoundedString(f, body, SOLIDSYSLOG_MAX_MESSAGE_SIZE);
+        }
     }
 }
 
