@@ -10,6 +10,7 @@ set(SOURCES
     SolidSyslogBuffer.c
     SolidSyslogFormatter.c
     SolidSyslogTimestampFormatter.c
+    SolidSyslogMessageFormatter.c
     SolidSyslogMetaSd.c
     SolidSyslogMetaSdMessages.c
     SolidSyslogMetaSdStatic.c
