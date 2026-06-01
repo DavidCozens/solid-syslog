@@ -54,6 +54,7 @@ set(TEST_SOURCES
     SolidSyslogConfigLockTest.cpp
     SolidSyslogFormatterTest.cpp
     SolidSyslogTimestampFormatterTest.cpp
+    SolidSyslogMessageFormatterTest.cpp
     SolidSyslogUdpPayloadTest.cpp
     Support/SyslogFieldParser.cpp
     BufferFakeTest.cpp
