@@ -191,6 +191,26 @@ EXTERN_C_BEGIN
     const void* OpenSslFake_LastCleanseBuf(void);
     size_t OpenSslFake_LastCleanseLen(void);
 
+    /* AES-256-GCM EVP cipher + RAND_bytes — drive the at-rest AES-GCM
+     * SecurityPolicy without linking real libcrypto. The fake's cipher is a
+     * reversible XOR keystream with an FNV tag over key‖nonce‖aad‖ciphertext;
+     * round-trip and tamper behaviour hold, but it is NOT real AES-GCM. */
+    int OpenSslFake_GcmSealCount(void); /* EVP_CTRL_GCM_GET_TAG calls (seals) */
+    int OpenSslFake_GcmOpenCount(void); /* EVP_DecryptFinal_ex calls (opens) */
+    const uint8_t* OpenSslFake_LastGcmKey(void); /* 32 bytes */
+    const uint8_t* OpenSslFake_LastGcmNonce(void); /* 12 bytes */
+    const uint8_t* OpenSslFake_LastGcmAad(void);
+    size_t OpenSslFake_LastGcmAadLen(void);
+    const uint8_t* OpenSslFake_LastGcmPlaintext(void); /* body bytes before encryption */
+    size_t OpenSslFake_LastGcmPlaintextLen(void);
+    void OpenSslFake_SetGcmEncryptFails(bool fails); /* fail an encrypt EVP step */
+    void OpenSslFake_SetGcmDecryptFails(bool fails); /* fail a decrypt setup EVP step */
+
+    int OpenSslFake_RandBytesCallCount(void);
+    const void* OpenSslFake_LastRandBytesBuf(void);
+    int OpenSslFake_LastRandBytesLen(void);
+    void OpenSslFake_SetRandBytesFails(bool fails);
+
 EXTERN_C_END
 
 #endif /* OPENSSLFAKE_H */

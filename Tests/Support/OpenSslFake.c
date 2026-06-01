@@ -9,6 +9,7 @@
 #include <openssl/crypto.h>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
+#include <openssl/rand.h>
 #include <openssl/types.h>
 
 /* -------------------------------------------------------------------------
@@ -45,6 +46,50 @@ static bool hmacFails;
 static int cleanseCallCount;
 static const void* lastCleanseBuf;
 static size_t lastCleanseLen;
+
+/* AES-256-GCM fake — backs the at-rest AES-GCM SecurityPolicy tests. Not real
+ * crypto: a reversible XOR keystream plus an FNV tag over key‖nonce‖aad‖
+ * ciphertext, enough to prove round-trip, tamper, and wrong-key behaviour
+ * deterministically. Real-crypto correctness is covered by the OpenSslIntegration
+ * suite against libcrypto. */
+enum
+{
+    FAKE_GCM_CTX_POOL = 4,
+    FAKE_GCM_KEY_SIZE = 32,
+    FAKE_GCM_NONCE_SIZE = 12,
+    FAKE_GCM_TAG_SIZE = 16,
+    FAKE_GCM_MAX_AAD = 16,
+    FAKE_GCM_MAX_BODY = 256
+};
+
+typedef struct
+{
+    bool InUse;
+    bool Encrypting;
+    uint8_t Key[FAKE_GCM_KEY_SIZE];
+    uint8_t Nonce[FAKE_GCM_NONCE_SIZE];
+    uint32_t Hash; /* running FNV over key|nonce|aad|ciphertext */
+    uint8_t ExpectedTag[FAKE_GCM_TAG_SIZE];
+} FakeGcmCtx;
+
+static FakeGcmCtx gcmCtxPool[FAKE_GCM_CTX_POOL];
+static char fakeAesGcmCipherStorage;
+
+static int gcmSealCount; /* GET_TAG calls */
+static int gcmOpenCount; /* DecryptFinal calls */
+static uint8_t lastGcmKey[FAKE_GCM_KEY_SIZE];
+static uint8_t lastGcmNonce[FAKE_GCM_NONCE_SIZE];
+static uint8_t lastGcmAad[FAKE_GCM_MAX_AAD];
+static size_t lastGcmAadLen;
+static uint8_t lastGcmPlaintext[FAKE_GCM_MAX_BODY];
+static size_t lastGcmPlaintextLen;
+static bool gcmEncryptFails;
+static bool gcmDecryptFails;
+
+static int randCallCount;
+static const void* lastRandBuf;
+static int lastRandLen;
+static bool randFails;
 
 /* Pool of fake BIOs. Each slot is independent so callers can exercise
  * multiple BIOs without aliasing. The address of `slot` is the BIO handle
@@ -308,6 +353,24 @@ void OpenSslFake_Reset(void)
     cleanseCallCount = 0;
     lastCleanseBuf = NULL;
     lastCleanseLen = 0;
+    for (size_t index = 0; index < FAKE_GCM_CTX_POOL; index++)
+    {
+        gcmCtxPool[index].InUse = false;
+    }
+    gcmSealCount = 0;
+    gcmOpenCount = 0;
+    gcmEncryptFails = false;
+    gcmDecryptFails = false;
+    lastGcmAadLen = 0;
+    lastGcmPlaintextLen = 0;
+    memset(lastGcmKey, 0, sizeof lastGcmKey);
+    memset(lastGcmNonce, 0, sizeof lastGcmNonce);
+    memset(lastGcmAad, 0, sizeof lastGcmAad);
+    memset(lastGcmPlaintext, 0, sizeof lastGcmPlaintext);
+    randCallCount = 0;
+    lastRandBuf = NULL;
+    lastRandLen = 0;
+    randFails = false;
 }
 
 /* -------------------------------------------------------------------------
@@ -1164,4 +1227,303 @@ const void* OpenSslFake_LastCleanseBuf(void)
 size_t OpenSslFake_LastCleanseLen(void)
 {
     return lastCleanseLen;
+}
+
+/* -------------------------------------------------------------------------
+ * AES-256-GCM — link-interposed EVP cipher + RAND_bytes.
+ * ------------------------------------------------------------------------- */
+
+static uint8_t FakeGcm_KeystreamByte(const FakeGcmCtx* ctx, size_t index)
+{
+    return (uint8_t) (ctx->Key[index % FAKE_GCM_KEY_SIZE] ^ ctx->Nonce[index % FAKE_GCM_NONCE_SIZE] ^ (uint8_t) index);
+}
+
+static void FakeGcm_Fold(FakeGcmCtx* ctx, const uint8_t* data, size_t length)
+{
+    for (size_t index = 0; index < length; index++)
+    {
+        ctx->Hash = (ctx->Hash ^ data[index]) * 16777619U;
+    }
+}
+
+static void FakeGcm_SeedHash(FakeGcmCtx* ctx)
+{
+    ctx->Hash = 2166136261U;
+    FakeGcm_Fold(ctx, ctx->Key, FAKE_GCM_KEY_SIZE);
+    FakeGcm_Fold(ctx, ctx->Nonce, FAKE_GCM_NONCE_SIZE);
+}
+
+static void FakeGcm_FinalizeTag(const FakeGcmCtx* ctx, uint8_t* tagOut)
+{
+    uint32_t hash = ctx->Hash;
+    for (size_t index = 0; index < FAKE_GCM_TAG_SIZE; index++)
+    {
+        hash = (hash ^ (uint32_t) index) * 16777619U;
+        tagOut[index] = (uint8_t) (hash >> 24U);
+    }
+}
+
+static int FakeGcm_Init(
+    EVP_CIPHER_CTX* ctx,
+    const EVP_CIPHER* type,
+    const unsigned char* key,
+    const unsigned char* iv,
+    bool encrypting,
+    bool injectFailure
+)
+{
+    FakeGcmCtx* fake = (FakeGcmCtx*) (void*) ctx;
+    fake->Encrypting = encrypting;
+    int result = 1;
+    if ((type != NULL) && injectFailure)
+    {
+        result = 0;
+    }
+    else
+    {
+        if (key != NULL)
+        {
+            memcpy(fake->Key, key, FAKE_GCM_KEY_SIZE);
+            memcpy(lastGcmKey, key, FAKE_GCM_KEY_SIZE);
+        }
+        if (iv != NULL)
+        {
+            memcpy(fake->Nonce, iv, FAKE_GCM_NONCE_SIZE);
+            memcpy(lastGcmNonce, iv, FAKE_GCM_NONCE_SIZE);
+        }
+        if ((key != NULL) && (iv != NULL))
+        {
+            FakeGcm_SeedHash(fake);
+        }
+    }
+    return result;
+}
+
+static int FakeGcm_Update(EVP_CIPHER_CTX* ctx, unsigned char* out, int* outl, const unsigned char* in, int inl)
+{
+    FakeGcmCtx* fake = (FakeGcmCtx*) (void*) ctx;
+    size_t length = (size_t) inl;
+    if (out == NULL)
+    {
+        /* Associated data — authenticated, not transformed. */
+        FakeGcm_Fold(fake, in, length);
+        lastGcmAadLen = length;
+        memcpy(lastGcmAad, in, (length < sizeof lastGcmAad) ? length : sizeof lastGcmAad);
+    }
+    else
+    {
+        /* Body. GCM authenticates the ciphertext, so both directions fold the
+         * ciphertext bytes — on encrypt that is the transformed output; on
+         * decrypt it is the untransformed input. A valid round-trip therefore
+         * folds identical bytes and yields the same tag. */
+        size_t capped = (length < sizeof lastGcmPlaintext) ? length : sizeof lastGcmPlaintext;
+        if (fake->Encrypting)
+        {
+            lastGcmPlaintextLen = length;
+            memcpy(lastGcmPlaintext, in, capped);
+            for (size_t index = 0; index < length; index++)
+            {
+                out[index] = (uint8_t) (in[index] ^ FakeGcm_KeystreamByte(fake, index));
+            }
+            FakeGcm_Fold(fake, out, length);
+        }
+        else
+        {
+            FakeGcm_Fold(fake, in, length);
+            for (size_t index = 0; index < length; index++)
+            {
+                out[index] = (uint8_t) (in[index] ^ FakeGcm_KeystreamByte(fake, index));
+            }
+        }
+    }
+    *outl = inl;
+    return 1;
+}
+
+const EVP_CIPHER* EVP_aes_256_gcm(void)
+{
+    return (const EVP_CIPHER*) &fakeAesGcmCipherStorage;
+}
+
+EVP_CIPHER_CTX* EVP_CIPHER_CTX_new(void)
+{
+    EVP_CIPHER_CTX* handle = NULL;
+    for (size_t index = 0; index < FAKE_GCM_CTX_POOL; index++)
+    {
+        if (!gcmCtxPool[index].InUse)
+        {
+            memset(&gcmCtxPool[index], 0, sizeof gcmCtxPool[index]);
+            gcmCtxPool[index].InUse = true;
+            handle = (EVP_CIPHER_CTX*) (void*) &gcmCtxPool[index];
+            break;
+        }
+    }
+    return handle;
+}
+
+void EVP_CIPHER_CTX_free(EVP_CIPHER_CTX* ctx)
+{
+    if (ctx != NULL)
+    {
+        ((FakeGcmCtx*) (void*) ctx)->InUse = false;
+    }
+}
+
+int EVP_EncryptInit_ex(
+    EVP_CIPHER_CTX* ctx,
+    const EVP_CIPHER* type,
+    ENGINE* impl,
+    const unsigned char* key,
+    const unsigned char* iv
+)
+{
+    (void) impl;
+    return FakeGcm_Init(ctx, type, key, iv, true, gcmEncryptFails);
+}
+
+int EVP_DecryptInit_ex(
+    EVP_CIPHER_CTX* ctx,
+    const EVP_CIPHER* type,
+    ENGINE* impl,
+    const unsigned char* key,
+    const unsigned char* iv
+)
+{
+    (void) impl;
+    return FakeGcm_Init(ctx, type, key, iv, false, gcmDecryptFails);
+}
+
+int EVP_EncryptUpdate(EVP_CIPHER_CTX* ctx, unsigned char* out, int* outl, const unsigned char* in, int inl)
+{
+    return FakeGcm_Update(ctx, out, outl, in, inl);
+}
+
+int EVP_DecryptUpdate(EVP_CIPHER_CTX* ctx, unsigned char* out, int* outl, const unsigned char* in, int inl)
+{
+    return FakeGcm_Update(ctx, out, outl, in, inl);
+}
+
+int EVP_EncryptFinal_ex(EVP_CIPHER_CTX* ctx, unsigned char* out, int* outl)
+{
+    (void) ctx;
+    (void) out;
+    *outl = 0;
+    return 1;
+}
+
+int EVP_DecryptFinal_ex(EVP_CIPHER_CTX* ctx, unsigned char* outm, int* outl)
+{
+    (void) outm;
+    FakeGcmCtx* fake = (FakeGcmCtx*) (void*) ctx;
+    *outl = 0;
+    gcmOpenCount++;
+    uint8_t computed[FAKE_GCM_TAG_SIZE];
+    FakeGcm_FinalizeTag(fake, computed);
+    return (memcmp(computed, fake->ExpectedTag, FAKE_GCM_TAG_SIZE) == 0) ? 1 : 0;
+}
+
+int EVP_CIPHER_CTX_ctrl(EVP_CIPHER_CTX* ctx, int type, int arg, void* ptr)
+{
+    (void) arg;
+    FakeGcmCtx* fake = (FakeGcmCtx*) (void*) ctx;
+    if (type == EVP_CTRL_GCM_GET_TAG)
+    {
+        gcmSealCount++;
+        FakeGcm_FinalizeTag(fake, (uint8_t*) ptr);
+    }
+    else if (type == EVP_CTRL_GCM_SET_TAG)
+    {
+        memcpy(fake->ExpectedTag, ptr, FAKE_GCM_TAG_SIZE);
+    }
+    else
+    {
+        /* EVP_CTRL_GCM_SET_IVLEN and any other control: accepted, no-op. */
+    }
+    return 1;
+}
+
+int RAND_bytes(unsigned char* buf, int num)
+{
+    randCallCount++;
+    lastRandBuf = buf;
+    lastRandLen = num;
+    if (randFails)
+    {
+        return 0;
+    }
+    for (int index = 0; index < num; index++)
+    {
+        buf[index] = (unsigned char) (0xA0 + index);
+    }
+    return 1;
+}
+
+int OpenSslFake_GcmSealCount(void)
+{
+    return gcmSealCount;
+}
+
+int OpenSslFake_GcmOpenCount(void)
+{
+    return gcmOpenCount;
+}
+
+const uint8_t* OpenSslFake_LastGcmKey(void)
+{
+    return lastGcmKey;
+}
+
+const uint8_t* OpenSslFake_LastGcmNonce(void)
+{
+    return lastGcmNonce;
+}
+
+const uint8_t* OpenSslFake_LastGcmAad(void)
+{
+    return lastGcmAad;
+}
+
+size_t OpenSslFake_LastGcmAadLen(void)
+{
+    return lastGcmAadLen;
+}
+
+const uint8_t* OpenSslFake_LastGcmPlaintext(void)
+{
+    return lastGcmPlaintext;
+}
+
+size_t OpenSslFake_LastGcmPlaintextLen(void)
+{
+    return lastGcmPlaintextLen;
+}
+
+void OpenSslFake_SetGcmEncryptFails(bool fails)
+{
+    gcmEncryptFails = fails;
+}
+
+void OpenSslFake_SetGcmDecryptFails(bool fails)
+{
+    gcmDecryptFails = fails;
+}
+
+int OpenSslFake_RandBytesCallCount(void)
+{
+    return randCallCount;
+}
+
+const void* OpenSslFake_LastRandBytesBuf(void)
+{
+    return lastRandBuf;
+}
+
+int OpenSslFake_LastRandBytesLen(void)
+{
+    return lastRandLen;
+}
+
+void OpenSslFake_SetRandBytesFails(bool fails)
+{
+    randFails = fails;
 }
