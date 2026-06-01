@@ -53,6 +53,7 @@ set(TEST_SOURCES
     SolidSyslogErrorTest.cpp
     SolidSyslogConfigLockTest.cpp
     SolidSyslogFormatterTest.cpp
+    SolidSyslogTimestampFormatterTest.cpp
     SolidSyslogUdpPayloadTest.cpp
     BufferFakeTest.cpp
     AddressFake.c

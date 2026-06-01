@@ -18,6 +18,7 @@
 #include "SolidSyslogStringFunction.h"
 #include "SolidSyslogStructuredData.h"
 #include "SolidSyslogTimestamp.h"
+#include "SolidSyslogTimestampFormatter.h"
 #include "SolidSyslogTunables.h"
 
 struct SolidSyslogBuffer;
@@ -34,16 +35,10 @@ enum
     SOLIDSYSLOG_MAX_PROCESS_ID_SIZE = 129
 };
 
-static inline int16_t SolidSyslog_AbsoluteInt16(int16_t value);
-static inline bool SolidSyslog_CaptureTimestamp(struct SolidSyslogTimestamp* ts, SolidSyslogClockFunction clock);
 static inline uint8_t SolidSyslog_CombineFacilityAndSeverity(uint8_t facility, uint8_t severity);
 static inline bool SolidSyslog_FacilityIsValid(uint8_t facility);
 static inline void SolidSyslog_DrainBufferIntoStore(struct SolidSyslog* self);
 static inline void SolidSyslog_SendOneFromStore(struct SolidSyslog* self);
-static inline void SolidSyslog_FormatCapturedTimestamp(
-    struct SolidSyslogFormatter* f,
-    const struct SolidSyslogTimestamp* ts
-);
 static inline void SolidSyslog_FormatMessage(
     struct SolidSyslogFormatter* f,
     struct SolidSyslog* self,
@@ -51,8 +46,6 @@ static inline void SolidSyslog_FormatMessage(
 );
 static inline void SolidSyslog_FormatMsg(struct SolidSyslogFormatter* f, const char* msg);
 static inline void SolidSyslog_FormatMsgId(struct SolidSyslogFormatter* f, const char* messageId);
-static inline void SolidSyslog_FormatNilvalue(struct SolidSyslogFormatter* f);
-static inline void SolidSyslog_FormatNonZeroUtcOffset(struct SolidSyslogFormatter* f, int16_t offsetMinutes);
 static inline void SolidSyslog_FormatPrival(struct SolidSyslogFormatter* f, uint8_t prival);
 static inline void SolidSyslog_FormatStringField(
     struct SolidSyslogFormatter* f,
@@ -65,7 +58,6 @@ static inline void SolidSyslog_FormatStructuredData(
     size_t sdCount
 );
 static inline void SolidSyslog_FormatTimestamp(struct SolidSyslogFormatter* f, SolidSyslogClockFunction clock);
-static inline void SolidSyslog_FormatUtcOffset(struct SolidSyslogFormatter* f, int16_t offsetMinutes);
 static void SolidSyslog_InstallAppName(struct SolidSyslog* self, SolidSyslogStringFunction configured);
 static void SolidSyslog_InstallBuffer(struct SolidSyslog* self, struct SolidSyslogBuffer* configured);
 static void SolidSyslog_InstallClock(struct SolidSyslog* self, SolidSyslogClockFunction configured);
@@ -86,7 +78,6 @@ static void SolidSyslog_ResetToDefaults(struct SolidSyslog* self);
 static inline bool SolidSyslog_SeverityIsValid(uint8_t severity);
 static inline const char* SolidSyslog_SkipLeadingBom(const char* msg);
 static inline bool SolidSyslog_StringIsValid(const char* value);
-static inline bool SolidSyslog_TimestampIsValid(const struct SolidSyslogTimestamp* ts);
 
 void SolidSyslog_Initialise(struct SolidSyslog* self, const struct SolidSyslogConfig* config)
 {
@@ -378,90 +369,8 @@ static inline void SolidSyslog_FormatTimestamp(struct SolidSyslogFormatter* f, S
 {
     struct SolidSyslogTimestamp ts = {0};
 
-    if (SolidSyslog_CaptureTimestamp(&ts, clock))
-    {
-        SolidSyslog_FormatCapturedTimestamp(f, &ts);
-    }
-    else
-    {
-        SolidSyslog_FormatNilvalue(f);
-    }
-}
-
-static inline bool SolidSyslog_CaptureTimestamp(struct SolidSyslogTimestamp* ts, SolidSyslogClockFunction clock)
-{
-    clock(ts);
-    return SolidSyslog_TimestampIsValid(ts);
-}
-
-static inline bool SolidSyslog_TimestampIsValid(const struct SolidSyslogTimestamp* ts)
-{
-    bool valid = true;
-
-    valid = valid && (ts->Month >= 1U) && (ts->Month <= 12U);
-    valid = valid && (ts->Day >= 1U) && (ts->Day <= 31U);
-    valid = valid && (ts->Hour <= 23U);
-    valid = valid && (ts->Minute <= 59U);
-    valid = valid && (ts->Second <= 59U);
-    valid = valid && (ts->Microsecond <= 999999U);
-    valid = valid && (ts->UtcOffsetMinutes >= -720) && (ts->UtcOffsetMinutes <= 840);
-
-    return valid;
-}
-
-static inline void SolidSyslog_FormatCapturedTimestamp(
-    struct SolidSyslogFormatter* f,
-    const struct SolidSyslogTimestamp* ts
-)
-{
-    SolidSyslogFormatter_FourDigit(f, ts->Year);
-    SolidSyslogFormatter_AsciiCharacter(f, '-');
-    SolidSyslogFormatter_TwoDigit(f, ts->Month);
-    SolidSyslogFormatter_AsciiCharacter(f, '-');
-    SolidSyslogFormatter_TwoDigit(f, ts->Day);
-    SolidSyslogFormatter_AsciiCharacter(f, 'T');
-    SolidSyslogFormatter_TwoDigit(f, ts->Hour);
-    SolidSyslogFormatter_AsciiCharacter(f, ':');
-    SolidSyslogFormatter_TwoDigit(f, ts->Minute);
-    SolidSyslogFormatter_AsciiCharacter(f, ':');
-    SolidSyslogFormatter_TwoDigit(f, ts->Second);
-    SolidSyslogFormatter_AsciiCharacter(f, '.');
-    SolidSyslogFormatter_SixDigit(f, ts->Microsecond);
-    SolidSyslog_FormatUtcOffset(f, ts->UtcOffsetMinutes);
-}
-
-static inline void SolidSyslog_FormatUtcOffset(struct SolidSyslogFormatter* f, int16_t offsetMinutes)
-{
-    if (offsetMinutes == 0)
-    {
-        SolidSyslogFormatter_AsciiCharacter(f, 'Z');
-    }
-    else
-    {
-        SolidSyslog_FormatNonZeroUtcOffset(f, offsetMinutes);
-    }
-}
-
-static inline void SolidSyslog_FormatNonZeroUtcOffset(struct SolidSyslogFormatter* f, int16_t offsetMinutes)
-{
-    uint32_t absoluteMinutes = (uint32_t) SolidSyslog_AbsoluteInt16(offsetMinutes);
-
-    SolidSyslogFormatter_AsciiCharacter(f, (offsetMinutes > 0) ? '+' : '-');
-    SolidSyslogFormatter_TwoDigit(f, absoluteMinutes / 60U);
-    SolidSyslogFormatter_AsciiCharacter(f, ':');
-    SolidSyslogFormatter_TwoDigit(f, absoluteMinutes % 60U);
-}
-
-static inline int16_t SolidSyslog_AbsoluteInt16(int16_t value)
-{
-    int16_t result = value;
-
-    if (value < 0)
-    {
-        result = (int16_t) (-value);
-    }
-
-    return result;
+    clock(&ts);
+    SolidSyslogTimestampFormatter_Format(f, &ts);
 }
 
 static inline void SolidSyslog_FormatStringField(
@@ -483,7 +392,7 @@ static inline void SolidSyslog_FormatStringField(
     }
     else
     {
-        SolidSyslog_FormatNilvalue(f);
+        SolidSyslogFormatter_NilValue(f);
     }
 }
 
@@ -498,7 +407,7 @@ static inline void SolidSyslog_FormatMsgId(struct SolidSyslogFormatter* f, const
 
     if (SolidSyslogFormatter_Length(f) == lengthBefore)
     {
-        SolidSyslog_FormatNilvalue(f);
+        SolidSyslogFormatter_NilValue(f);
     }
 }
 
@@ -522,7 +431,7 @@ static inline void SolidSyslog_FormatStructuredData(
 
     if (SolidSyslogFormatter_Length(f) == lengthBefore)
     {
-        SolidSyslog_FormatNilvalue(f);
+        SolidSyslogFormatter_NilValue(f);
     }
 }
 
@@ -548,11 +457,6 @@ static inline const char* SolidSyslog_SkipLeadingBom(const char* msg)
         result = &msg[3];
     }
     return result;
-}
-
-static inline void SolidSyslog_FormatNilvalue(struct SolidSyslogFormatter* f)
-{
-    SolidSyslogFormatter_AsciiCharacter(f, '-');
 }
 
 void SolidSyslog_NullClock(struct SolidSyslogTimestamp* ts)
