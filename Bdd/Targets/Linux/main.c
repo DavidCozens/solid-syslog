@@ -27,6 +27,7 @@
 #include "SolidSyslogCrc16Policy.h"
 #include "SolidSyslogNullSecurityPolicy.h"
 #include "SolidSyslogOpenSslHmacSha256Policy.h"
+#include "SolidSyslogOpenSslAesGcmPolicy.h"
 #include "SolidSyslogFileBlockDevice.h"
 #include "SolidSyslogBlockStore.h"
 #include "SolidSyslogMetaSd.h"
@@ -195,6 +196,11 @@ static struct SolidSyslogSecurityPolicy* CreateSecurityPolicy(const struct BddTa
         static const struct SolidSyslogOpenSslHmacSha256PolicyConfig hmacConfig = {BddDemoGetKey, NULL};
         policy = SolidSyslogOpenSslHmacSha256Policy_Create(&hmacConfig);
     }
+    else if (strcmp(options->SecurityPolicy, "aes-256-gcm") == 0)
+    {
+        static const struct SolidSyslogOpenSslAesGcmPolicyConfig aesConfig = {BddDemoGetKey, NULL};
+        policy = SolidSyslogOpenSslAesGcmPolicy_Create(&aesConfig);
+    }
     else if (strcmp(options->SecurityPolicy, "null") == 0)
     {
         policy = SolidSyslogNullSecurityPolicy_Get();
@@ -254,6 +260,10 @@ static void DestroySecurityPolicy(const struct BddTargetOptions* options)
     if (strcmp(options->SecurityPolicy, "hmac-sha256") == 0)
     {
         SolidSyslogOpenSslHmacSha256Policy_Destroy(securityPolicy);
+    }
+    else if (strcmp(options->SecurityPolicy, "aes-256-gcm") == 0)
+    {
+        SolidSyslogOpenSslAesGcmPolicy_Destroy(securityPolicy);
     }
     else if (strcmp(options->SecurityPolicy, "crc16") == 0)
     {

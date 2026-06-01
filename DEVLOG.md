@@ -13601,3 +13601,43 @@ MISRA rule — different category, doesn't set precedent.
 
 - None outstanding. Forum post drafted for David to post under the
   Libraries category at his discretion; in-repo docs land via this PR.
+
+## 2026-06-01 — S17.03 AES-256-GCM at-rest SecurityPolicy (OpenSSL, Linux)
+
+### Decisions
+
+- **Interface reshape: single contiguous region + `headerLength` offset**,
+  not the epic's two-pointer `body`/`aad` sketch. `SolidSyslogSecurityPolicy`
+  goes from `IntegritySize`/`ComputeIntegrity`/`VerifyIntegrity` to
+  `TrailerSize`/`SealRecord`/`OpenRecord`. The offset shape lets MAC/CRC
+  policies keep their one-shot crypto untouched (the two-pointer form would
+  force the just-shipped HMAC siblings to incremental hashing); AEAD reads the
+  split to authenticate the header and encrypt the body. Phase A migrated all
+  four policies + the RecordStore consumer behaviour-preservingly — existing
+  HMAC/CRC tags and on-disk bytes are unchanged, so the existing suite is the
+  regression net.
+- **`SOLIDSYSLOG_MAX_INTEGRITY_SIZE` keeps its name** (David's call); only the
+  vtable field renamed to `TrailerSize`. 32 already fits the 28-byte AEAD
+  trailer.
+- **AES-256-GCM**: 32-byte key on demand via `SolidSyslogKeyFunction`
+  (`OPENSSL_cleanse`d per op), fresh 12-byte `RAND_bytes` nonce per record,
+  `nonce ‖ tag` trailer. A tag mismatch on open returns false silently (the
+  tamper-detected path); only genuine OpenSSL errors are reported. Real-crypto
+  correctness proven in the OpenSslIntegration suite; unit tests drive a new
+  deterministic OpenSslFake GCM + RAND_bytes interposition.
+- **Nonce envelope documented as headroom, not a caveat** — random-nonce GCM's
+  NIST 2³² ceiling is ~136 years at one event/second. No GCM-SIV.
+- **Linux/OpenSSL only**; Windows compiles the source but gets no BDD wiring
+  this story (mbedTLS AES-GCM deferred to a future S17.04). The `@aesgcm`
+  power-cycle BDD scenario is excluded from the Windows and FreeRTOS-plustcp
+  runners (lwip already excluded via `@store`).
+
+### Deferred
+
+- **mbedTLS AES-GCM (S17.04)** — only if embedded demand appears; the keyed
+  policy port is already proven low-risk by S17.02.
+- **Windows BDD wiring** for `aes-256-gcm` — out of scope this story.
+
+### Open questions
+
+- None outstanding.

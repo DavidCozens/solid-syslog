@@ -140,6 +140,16 @@ TEST(BddTargetCommandLine, SecurityPolicyHmacSha256)
     STRCMP_EQUAL("hmac-sha256", options.SecurityPolicy);
 }
 
+TEST(BddTargetCommandLine, SecurityPolicyAes256Gcm)
+{
+    char arg0[] = "test";
+    char arg1[] = "--security-policy";
+    char arg2[] = "aes-256-gcm";
+    char* argv[] = {arg0, arg1, arg2, nullptr};
+    LONGS_EQUAL(0, Parse(3, argv));
+    STRCMP_EQUAL("aes-256-gcm", options.SecurityPolicy);
+}
+
 TEST(BddTargetCommandLine, SecurityPolicyNull)
 {
     char arg0[] = "test";
