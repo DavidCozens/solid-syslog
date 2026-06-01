@@ -17,9 +17,7 @@
 #include "SolidSyslogSender.h"
 #include "SolidSyslogStore.h"
 #include "SolidSyslogStringFunction.h"
-#include "SolidSyslogStructuredData.h"
 #include "SolidSyslogTimestamp.h"
-#include "SolidSyslogTimestampFormatter.h"
 #include "SolidSyslogTunables.h"
 
 struct SolidSyslogBuffer;
