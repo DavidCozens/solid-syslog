@@ -20,6 +20,7 @@
 #include "StoreFake.h"
 #include "SenderFake.h"
 #include "StringFake.h"
+#include "SyslogFieldParser.h"
 #include "SolidSyslogBuffer.h"
 #include "SolidSyslogPrival.h"
 #include "SolidSyslogStore.h"
@@ -81,14 +82,6 @@ static const char * const TEST_PRIVAL    = "<134>";
 static const char * const TEST_MSGID     = "54";
 static const char * const TEST_SDATA     = "-";
 static const char * const TEST_MSG       = "hello world";
-
-static const int SYSLOG_FIELD_HEADER    = 0;
-static const int SYSLOG_FIELD_TIMESTAMP = 1;
-static const int SYSLOG_FIELD_HOSTNAME  = 2;
-static const int SYSLOG_FIELD_APP_NAME  = 3;
-static const int SYSLOG_FIELD_PROCID    = 4;
-static const int SYSLOG_FIELD_MSGID     = 5;
-static const int SYSLOG_FIELD_SDATA     = 6;
 // clang-format on
 
 #define CHECK_PRIVAL(expected) \
@@ -132,107 +125,6 @@ static struct SolidSyslogStructuredData sdFail = {SdFailFormat};
 static void IntegrationGetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
 {
     *timeQuality = {true, true, SOLIDSYSLOG_SYNC_ACCURACY_OMIT};
-}
-
-static std::string::size_type SkipSdata(const std::string& s, std::string::size_type pos)
-{
-    if (pos < s.size() && s[pos] == '[')
-    {
-        while (pos < s.size() && s[pos] == '[')
-        {
-            pos = s.find(']', pos);
-            if (pos == std::string::npos)
-            {
-                return std::string::npos;
-            }
-            pos++;
-        }
-        return pos;
-    }
-    auto end = s.find(' ', pos);
-    return end == std::string::npos ? s.size() : end;
-}
-
-static std::string::size_type FindFieldStart(const std::string& s, int n)
-{
-    std::string::size_type pos = 0;
-    for (int i = 0; i < n; i++)
-    {
-        if (i == SYSLOG_FIELD_SDATA)
-        {
-            pos = SkipSdata(s, pos);
-        }
-        else
-        {
-            pos = s.find(' ', pos);
-        }
-        if (pos == std::string::npos)
-        {
-            return std::string::npos;
-        }
-        if (s[pos] == ' ')
-        {
-            pos++;
-        }
-    }
-    return pos;
-}
-
-static std::string SyslogField(const char* buffer, int n)
-{
-    std::string s(buffer);
-    std::string::size_type pos = FindFieldStart(s, n);
-    if (pos == std::string::npos)
-    {
-        return {};
-    }
-
-    std::string::size_type end = (n == SYSLOG_FIELD_SDATA) ? SkipSdata(s, pos) : s.find(' ', pos);
-    return s.substr(pos, end == std::string::npos ? std::string::npos : end - pos);
-}
-
-static const char UTF8_BOM[] = "\xEF\xBB\xBF";
-static const auto UTF8_BOM_LENGTH = sizeof(UTF8_BOM) - 1;
-
-static std::string::size_type SyslogMsgStart(const std::string& s)
-{
-    std::string::size_type pos = FindFieldStart(s, SYSLOG_FIELD_SDATA);
-    if (pos == std::string::npos)
-    {
-        return std::string::npos;
-    }
-    pos = SkipSdata(s, pos);
-    if (pos == std::string::npos || pos >= s.size())
-    {
-        return std::string::npos;
-    }
-    if (s[pos] == ' ')
-    {
-        pos++;
-    }
-    return pos;
-}
-
-static bool SyslogMsgHasBom(const char* buffer)
-{
-    std::string s(buffer);
-    std::string::size_type pos = SyslogMsgStart(s);
-    return (pos != std::string::npos) && (s.compare(pos, UTF8_BOM_LENGTH, UTF8_BOM) == 0);
-}
-
-static std::string SyslogMsg(const char* buffer)
-{
-    std::string s(buffer);
-    std::string::size_type pos = SyslogMsgStart(s);
-    if (pos == std::string::npos)
-    {
-        return {};
-    }
-    if (s.compare(pos, UTF8_BOM_LENGTH, UTF8_BOM) == 0)
-    {
-        pos += UTF8_BOM_LENGTH;
-    }
-    return s.substr(pos);
 }
 
 // clang-format off

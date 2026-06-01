@@ -55,6 +55,7 @@ set(TEST_SOURCES
     SolidSyslogFormatterTest.cpp
     SolidSyslogTimestampFormatterTest.cpp
     SolidSyslogUdpPayloadTest.cpp
+    Support/SyslogFieldParser.cpp
     BufferFakeTest.cpp
     AddressFake.c
     BufferFake.c
