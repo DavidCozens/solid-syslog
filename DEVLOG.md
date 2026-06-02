@@ -13641,3 +13641,36 @@ MISRA rule — different category, doesn't set precedent.
 ### Open questions
 
 - None outstanding.
+
+## 2026-06-02 — S17.03 review follow-up: AES-GCM fake + per-EVP-call coverage
+
+### Decisions
+
+- **The OpenSslFake AES-GCM half was a working toy cipher** (reversible XOR
+  keystream + FNV tag). The unit tests leaning on it — round-trip, tamper,
+  wrong-key — only proved the *fake* reproduced GCM, duplicating the
+  OpenSslIntegration suite while exercising none of the adapter's own logic.
+  Gutted it to a capture-and-canned-return double: the EVP calls capture their
+  arguments, copy the body through unchanged, and return canned results. The
+  semantic guarantees stay where they mean something — the real-libcrypto
+  integration suite.
+- **Per-step EVP failure injection** (`OpenSslFake_SetGcmStepFails`) replaces
+  the coarse encrypt/decrypt/auth booleans, which only reached the first Init
+  and DecryptFinal. Added one error-path test per fallible OpenSSL call in the
+  seal/open sequence — `CTX_new`, both `Init`s, `SET_IVLEN`, both `Update`s,
+  `Final`, `GET_TAG`/`SET_TAG` — plus the silent `DecryptFinal` tamper-reject
+  path. `SolidSyslogOpenSslAesGcmPolicy.c` is now 100% line / 100% function
+  (verified via the `coverage` preset).
+- **MISRA 11.8 in HMAC `SealRecord`** (the `analyze-cppcheck` CI failure): bound
+  `record->Trailer` to a local `uint8_t*` before passing it as the writable tag
+  destination, mirroring the AES-GCM sibling. Clears the D.006-category
+  const-strip false positive without adding a suppression. Full cppcheck-misra
+  exits clean.
+
+### Deferred
+
+- None.
+
+### Open questions
+
+- None outstanding.
