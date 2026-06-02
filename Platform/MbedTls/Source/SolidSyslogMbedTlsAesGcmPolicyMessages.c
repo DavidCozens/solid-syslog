@@ -13,8 +13,7 @@ static const char* MbedTlsAesGcmPolicyError_AsString(uint8_t code)
         [MBEDTLSAESGCMPOLICY_ERROR_UNKNOWN_DESTROY] =
             "SolidSyslogMbedTlsAesGcmPolicy_Destroy called with a handle not issued by this pool",
         [MBEDTLSAESGCMPOLICY_ERROR_BAD_CONFIG] =
-            "SolidSyslogMbedTlsAesGcmPolicy_Create given a NULL config, NULL GetKey, or NULL Rng; returning fallback "
-            "policy",
+            "SolidSyslogMbedTlsAesGcmPolicy_Create given a NULL config, GetKey, or Rng; returning fallback policy",
         [MBEDTLSAESGCMPOLICY_ERROR_KEY_UNAVAILABLE] =
             "GetKey reported the AES-256 key is unavailable or not 32 bytes; record could not be sealed or opened",
         [MBEDTLSAESGCMPOLICY_ERROR_NONCE_FAILED] =

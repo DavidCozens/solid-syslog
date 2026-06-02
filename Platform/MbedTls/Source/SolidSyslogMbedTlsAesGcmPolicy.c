@@ -35,24 +35,8 @@ static bool MbedTlsAesGcmPolicy_OpenRecord(
     const struct SolidSyslogSecurityRecord* record
 );
 static bool MbedTlsAesGcmPolicy_FetchKey(struct SolidSyslogMbedTlsAesGcmPolicy* policy, uint8_t* keyOut);
-static bool MbedTlsAesGcmPolicy_GcmEncrypt(
-    const uint8_t* key,
-    const uint8_t* nonce,
-    uint8_t* body,
-    uint16_t bodyLength,
-    const uint8_t* aad,
-    uint16_t aadLength,
-    uint8_t* tagOut
-);
-static bool MbedTlsAesGcmPolicy_GcmDecrypt(
-    const uint8_t* key,
-    const uint8_t* nonce,
-    uint8_t* body,
-    uint16_t bodyLength,
-    const uint8_t* aad,
-    uint16_t aadLength,
-    const uint8_t* tagIn
-);
+static bool MbedTlsAesGcmPolicy_GcmEncrypt(const struct SolidSyslogSecurityRecord* record, const uint8_t* key);
+static bool MbedTlsAesGcmPolicy_GcmDecrypt(const struct SolidSyslogSecurityRecord* record, const uint8_t* key);
 
 void MbedTlsAesGcmPolicy_Initialise(
     struct SolidSyslogSecurityPolicy* base,
@@ -82,36 +66,26 @@ static inline struct SolidSyslogMbedTlsAesGcmPolicy* MbedTlsAesGcmPolicy_SelfFro
     return (struct SolidSyslogMbedTlsAesGcmPolicy*) base;
 }
 
-/* Seals in place: the nonce occupies Trailer[0..GCM_NONCE_SIZE) and the tag the
- * remaining bytes. The header (Content[0..HeaderLength)) is authenticated as
- * associated data and left in clear; the body (the rest) is encrypted in place.
- * Fetches the key on demand and wipes it before returning. */
+/* Seals in place: draws a fresh nonce into Trailer[0..GCM_NONCE_SIZE), then
+ * GcmEncrypt encrypts the body (Content past HeaderLength) and writes the tag to
+ * the remaining trailer bytes, authenticating the header (Content[0..HeaderLength))
+ * as associated data. Fetches the key on demand and wipes it before returning. */
 static bool MbedTlsAesGcmPolicy_SealRecord(
     struct SolidSyslogSecurityPolicy* self,
     const struct SolidSyslogSecurityRecord* record
 )
 {
     struct SolidSyslogMbedTlsAesGcmPolicy* policy = MbedTlsAesGcmPolicy_SelfFromBase(self);
-    uint8_t* body = &record->Content[record->HeaderLength];
-    uint16_t bodyLength = (uint16_t) (record->ContentLength - record->HeaderLength);
-    uint8_t* nonce = record->Trailer;
-    uint8_t* tag = &record->Trailer[GCM_NONCE_SIZE];
 
     bool sealed = false;
     uint8_t key[AES_256_KEY_SIZE];
     if (MbedTlsAesGcmPolicy_FetchKey(policy, key))
     {
-        if (mbedtls_ctr_drbg_random(policy->Config.Rng, nonce, GCM_NONCE_SIZE) == 0)
+        /* Draw the per-record nonce straight into the trailer; GcmEncrypt reads
+         * it back from there and writes the tag immediately after it. */
+        if (mbedtls_ctr_drbg_random(policy->Config.Rng, record->Trailer, GCM_NONCE_SIZE) == 0)
         {
-            if (MbedTlsAesGcmPolicy_GcmEncrypt(
-                    key,
-                    nonce,
-                    body,
-                    bodyLength,
-                    record->Content,
-                    record->HeaderLength,
-                    tag
-                ))
+            if (MbedTlsAesGcmPolicy_GcmEncrypt(record, key))
             {
                 sealed = true;
             }
@@ -143,19 +117,17 @@ static bool MbedTlsAesGcmPolicy_FetchKey(struct SolidSyslogMbedTlsAesGcmPolicy* 
     return fetched;
 }
 
-static bool MbedTlsAesGcmPolicy_GcmEncrypt(
-    const uint8_t* key,
-    const uint8_t* nonce,
-    uint8_t* body,
-    uint16_t bodyLength,
-    const uint8_t* aad,
-    uint16_t aadLength,
-    uint8_t* tagOut
-)
+/* Encrypts the record's body in place and writes nonce‖tag into its trailer.
+ * Takes the whole record (not the unpacked buffers) so key and nonce never sit
+ * adjacent as same-typed scalar parameters; the trailer/header layout lives in
+ * one place. The nonce is expected already in Trailer[0..GCM_NONCE_SIZE). One-
+ * shot AEAD — mbedTLS computes the whole tag in a single call (output == input
+ * is permitted for GCM encryption), unlike OpenSSL's incremental EVP chain. */
+static bool MbedTlsAesGcmPolicy_GcmEncrypt(const struct SolidSyslogSecurityRecord* record, const uint8_t* key)
 {
-    /* One-shot AEAD: mbedTLS computes the whole tag in a single call, unlike
-     * OpenSSL's incremental EVP chain. Body is encrypted in place (output ==
-     * input is permitted for GCM encryption). */
+    uint8_t* body = &record->Content[record->HeaderLength];
+    uint16_t bodyLength = (uint16_t) (record->ContentLength - record->HeaderLength);
+
     mbedtls_gcm_context ctx;
     mbedtls_gcm_init(&ctx);
     bool ok = false;
@@ -165,14 +137,14 @@ static bool MbedTlsAesGcmPolicy_GcmEncrypt(
             &ctx,
             MBEDTLS_GCM_ENCRYPT,
             bodyLength,
-            nonce,
+            record->Trailer,
             GCM_NONCE_SIZE,
-            aad,
-            aadLength,
+            record->Content,
+            record->HeaderLength,
             body,
             body,
             GCM_TAG_SIZE,
-            tagOut
+            &record->Trailer[GCM_NONCE_SIZE]
         );
         ok = (rc == 0);
     }
@@ -190,36 +162,28 @@ static bool MbedTlsAesGcmPolicy_OpenRecord(
 )
 {
     struct SolidSyslogMbedTlsAesGcmPolicy* policy = MbedTlsAesGcmPolicy_SelfFromBase(self);
-    uint8_t* body = &record->Content[record->HeaderLength];
-    uint16_t bodyLength = (uint16_t) (record->ContentLength - record->HeaderLength);
-    const uint8_t* nonce = record->Trailer;
-    const uint8_t* tag = &record->Trailer[GCM_NONCE_SIZE];
 
     bool opened = false;
     uint8_t key[AES_256_KEY_SIZE];
     if (MbedTlsAesGcmPolicy_FetchKey(policy, key))
     {
-        opened =
-            MbedTlsAesGcmPolicy_GcmDecrypt(key, nonce, body, bodyLength, record->Content, record->HeaderLength, tag);
+        opened = MbedTlsAesGcmPolicy_GcmDecrypt(record, key);
     }
     mbedtls_platform_zeroize(key, sizeof key);
     return opened;
 }
 
-static bool MbedTlsAesGcmPolicy_GcmDecrypt(
-    const uint8_t* key,
-    const uint8_t* nonce,
-    uint8_t* body,
-    uint16_t bodyLength,
-    const uint8_t* aad,
-    uint16_t aadLength,
-    const uint8_t* tagIn
-)
+/* Decrypts the record's body in place, reading nonce‖tag from its trailer and
+ * authenticating the header. Takes the whole record for the same reasons as
+ * GcmEncrypt. mbedtls_gcm_auth_decrypt verifies the tag itself and signals the
+ * verdict through its return code: 0 = authentic, GCM_AUTH_FAILED = tamper /
+ * wrong key (the expected rejection — return false silently, like the HMAC
+ * verify), anything else = a genuine mbedTLS error worth reporting. */
+static bool MbedTlsAesGcmPolicy_GcmDecrypt(const struct SolidSyslogSecurityRecord* record, const uint8_t* key)
 {
-    /* mbedtls_gcm_auth_decrypt verifies the tag itself and signals the verdict
-     * through its return code: 0 = authentic, GCM_AUTH_FAILED = tamper/wrong key
-     * (the expected rejection — return false silently, like the HMAC verify),
-     * anything else = a genuine mbedTLS error worth reporting. */
+    uint8_t* body = &record->Content[record->HeaderLength];
+    uint16_t bodyLength = (uint16_t) (record->ContentLength - record->HeaderLength);
+
     mbedtls_gcm_context ctx;
     mbedtls_gcm_init(&ctx);
     bool opened = false;
@@ -229,11 +193,11 @@ static bool MbedTlsAesGcmPolicy_GcmDecrypt(
         int verdict = mbedtls_gcm_auth_decrypt(
             &ctx,
             bodyLength,
-            nonce,
+            record->Trailer,
             GCM_NONCE_SIZE,
-            aad,
-            aadLength,
-            tagIn,
+            record->Content,
+            record->HeaderLength,
+            &record->Trailer[GCM_NONCE_SIZE],
             GCM_TAG_SIZE,
             body,
             body
