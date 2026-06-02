@@ -70,6 +70,29 @@ static bool TestGetKey(void* context, uint8_t* keyOut, size_t capacity, size_t* 
 
 #define CHECK_IS_NULL_FALLBACK(handle) POINTERS_EQUAL(SolidSyslogNullSecurityPolicy_Get(), (handle))
 
+/* One macro per direction so each EVP step's failure path reads as a one-line
+ * test: seal/open must fail closed and report once. Used only inside the Seal
+ * fixture (they reference its seal()/open() helpers). */
+// NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
+#define CHECK_SEAL_REPORTS_ENCRYPT_FAILURE_AT(step)                                            \
+    do                                                                                         \
+    {                                                                                          \
+        ErrorHandlerFake_Install(nullptr);                                                     \
+        OpenSslFake_SetGcmStepFails(step);                                                      \
+        CHECK_FALSE(seal());                                                                   \
+        CHECK_REPORTED_ERROR(SOLIDSYSLOG_SEVERITY_ERROR, OPENSSLAESGCMPOLICY_ERROR_ENCRYPT_FAILED); \
+    } while (0)
+
+#define CHECK_OPEN_REPORTS_DECRYPT_FAILURE_AT(step)                                            \
+    do                                                                                         \
+    {                                                                                          \
+        ErrorHandlerFake_Install(nullptr);                                                     \
+        OpenSslFake_SetGcmStepFails(step);                                                      \
+        CHECK_FALSE(open());                                                                   \
+        CHECK_REPORTED_ERROR(SOLIDSYSLOG_SEVERITY_ERROR, OPENSSLAESGCMPOLICY_ERROR_DECRYPT_FAILED); \
+    } while (0)
+// NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
+
 // clang-format off
 TEST_BASE(OpenSslAesGcmPolicyTestBase)
 {
@@ -158,11 +181,6 @@ TEST_GROUP_BASE(SolidSyslogOpenSslAesGcmPolicySeal, OpenSslAesGcmPolicyTestBase)
     {
         struct SolidSyslogSecurityRecord rec = {content, TEST_CONTENT_LEN, TEST_HEADER_LEN, trailer};
         return policy->OpenRecord(policy, &rec);
-    }
-
-    [[nodiscard]] const uint8_t* body() const
-    {
-        return &content[TEST_HEADER_LEN];
     }
 };
 
@@ -284,22 +302,16 @@ TEST(SolidSyslogOpenSslAesGcmPolicySeal, SealRecordGeneratesAFreshNonceIntoTheTr
     MEMCMP_EQUAL(expectedNonce, trailer, GCM_NONCE_SIZE);
 }
 
-TEST(SolidSyslogOpenSslAesGcmPolicySeal, SealRecordEncryptsTheBodyInPlace)
+TEST(SolidSyslogOpenSslAesGcmPolicySeal, SealRecordPassesTheBodyAsPlaintextToEncrypt)
 {
     CHECK_TRUE(seal());
 
-    CHECK_TEXT(memcmp(body(), originalBody, TEST_BODY_LEN) != 0, "body was not encrypted");
+    /* Production hands EVP the body region (Content past HeaderLength), not the
+     * header — that the body region is what gets encrypted is the wiring under
+     * test. Whether the ciphertext genuinely differs is the integration suite's
+     * concern. */
     LONGS_EQUAL(TEST_BODY_LEN, OpenSslFake_LastGcmPlaintextLen());
     MEMCMP_EQUAL(originalBody, OpenSslFake_LastGcmPlaintext(), TEST_BODY_LEN);
-}
-
-TEST(SolidSyslogOpenSslAesGcmPolicySeal, SealRecordLeavesTheHeaderInClear)
-{
-    static const uint8_t header[TEST_HEADER_LEN] = {0xA5, 0x5A, 0x08, 0x00};
-
-    CHECK_TRUE(seal());
-
-    MEMCMP_EQUAL(header, content, TEST_HEADER_LEN);
 }
 
 TEST(SolidSyslogOpenSslAesGcmPolicySeal, SealRecordAuthenticatesTheHeaderAsAssociatedData)
@@ -321,45 +333,36 @@ TEST(SolidSyslogOpenSslAesGcmPolicySeal, SealRecordUsesTheFetchedKey)
     MEMCMP_EQUAL(expectedKey, OpenSslFake_LastGcmKey(), AES_256_KEY_SIZE);
 }
 
-TEST(SolidSyslogOpenSslAesGcmPolicySeal, SealThenOpenRoundTripRestoresTheBody)
+TEST(SolidSyslogOpenSslAesGcmPolicySeal, OpenReadsTheNonceFromTheTrailer)
 {
     CHECK_TRUE(seal());
 
     CHECK_TRUE(open());
 
-    MEMCMP_EQUAL(originalBody, body(), TEST_BODY_LEN);
+    /* Open must decrypt with the nonce the seal wrote into the trailer. */
+    MEMCMP_EQUAL(trailer, OpenSslFake_LastGcmNonce(), GCM_NONCE_SIZE);
 }
 
-TEST(SolidSyslogOpenSslAesGcmPolicySeal, OpenRejectsAFlippedCiphertextByte)
+TEST(SolidSyslogOpenSslAesGcmPolicySeal, OpenReturnsTrueWhenDecryptionSucceeds)
 {
     CHECK_TRUE(seal());
-    content[TEST_HEADER_LEN] ^= 0xFFU;
 
-    CHECK_FALSE(open());
+    CHECK_TRUE(open());
+
+    LONGS_EQUAL(1, OpenSslFake_GcmOpenCount());
 }
 
-TEST(SolidSyslogOpenSslAesGcmPolicySeal, OpenRejectsAFlippedTag)
+/* A tag mismatch (tamper or wrong key) surfaces as EVP_DecryptFinal_ex returning
+ * 0. Production must fail closed but stay silent — that is the expected outcome,
+ * not a library error. Real tamper/wrong-key rejection lives in the integration
+ * suite; here we only prove the adapter's verdict-propagation and silence. */
+TEST(SolidSyslogOpenSslAesGcmPolicySeal, OpenReturnsFalseWithoutReportingWhenAuthenticationFails)
 {
-    CHECK_TRUE(seal());
-    trailer[GCM_NONCE_SIZE] ^= 0xFFU;
+    ErrorHandlerFake_Install(nullptr);
+    OpenSslFake_SetGcmStepFails(OPENSSLFAKE_GCM_STEP_FINAL);
 
     CHECK_FALSE(open());
-}
-
-TEST(SolidSyslogOpenSslAesGcmPolicySeal, OpenRejectsAFlippedHeader)
-{
-    CHECK_TRUE(seal());
-    content[0] ^= 0xFFU;
-
-    CHECK_FALSE(open());
-}
-
-TEST(SolidSyslogOpenSslAesGcmPolicySeal, OpenRejectsAWrongKey)
-{
-    CHECK_TRUE(seal());
-    keyByte = 0x99; /* GetKey now hands back a different key */
-
-    CHECK_FALSE(open());
+    CALLED_FAKE(ErrorHandlerFake_Handle, NEVER);
 }
 
 TEST(SolidSyslogOpenSslAesGcmPolicySeal, SealFailsClosedWhenKeyUnavailable)
@@ -399,23 +402,84 @@ TEST(SolidSyslogOpenSslAesGcmPolicySeal, SealReportsNonceFailure)
     CHECK_REPORTED_ERROR(SOLIDSYSLOG_SEVERITY_ERROR, OPENSSLAESGCMPOLICY_ERROR_NONCE_FAILED);
 }
 
-TEST(SolidSyslogOpenSslAesGcmPolicySeal, SealReportsEncryptFailure)
+/* Seal threads every EVP return through an && chain; any non-1 must fail closed
+ * and report ENCRYPT_FAILED. One test per call pins each step's false branch. */
+TEST(SolidSyslogOpenSslAesGcmPolicySeal, SealReportsErrorWhenContextAllocationFails)
 {
-    ErrorHandlerFake_Install(nullptr);
-    OpenSslFake_SetGcmEncryptFails(true);
-
-    CHECK_FALSE(seal());
-    CHECK_REPORTED_ERROR(SOLIDSYSLOG_SEVERITY_ERROR, OPENSSLAESGCMPOLICY_ERROR_ENCRYPT_FAILED);
+    CHECK_SEAL_REPORTS_ENCRYPT_FAILURE_AT(OPENSSLFAKE_GCM_STEP_CTX_NEW);
 }
 
-TEST(SolidSyslogOpenSslAesGcmPolicySeal, OpenReportsDecryptFailure)
+TEST(SolidSyslogOpenSslAesGcmPolicySeal, SealReportsErrorWhenCipherInitFails)
 {
-    CHECK_TRUE(seal());
-    ErrorHandlerFake_Install(nullptr);
-    OpenSslFake_SetGcmDecryptFails(true);
+    CHECK_SEAL_REPORTS_ENCRYPT_FAILURE_AT(OPENSSLFAKE_GCM_STEP_INIT_CIPHER);
+}
 
-    CHECK_FALSE(open());
-    CHECK_REPORTED_ERROR(SOLIDSYSLOG_SEVERITY_ERROR, OPENSSLAESGCMPOLICY_ERROR_DECRYPT_FAILED);
+TEST(SolidSyslogOpenSslAesGcmPolicySeal, SealReportsErrorWhenSettingNonceLengthFails)
+{
+    CHECK_SEAL_REPORTS_ENCRYPT_FAILURE_AT(OPENSSLFAKE_GCM_STEP_SET_IVLEN);
+}
+
+TEST(SolidSyslogOpenSslAesGcmPolicySeal, SealReportsErrorWhenKeyInitFails)
+{
+    CHECK_SEAL_REPORTS_ENCRYPT_FAILURE_AT(OPENSSLFAKE_GCM_STEP_INIT_KEY);
+}
+
+TEST(SolidSyslogOpenSslAesGcmPolicySeal, SealReportsErrorWhenAuthenticatingHeaderFails)
+{
+    CHECK_SEAL_REPORTS_ENCRYPT_FAILURE_AT(OPENSSLFAKE_GCM_STEP_UPDATE_AAD);
+}
+
+TEST(SolidSyslogOpenSslAesGcmPolicySeal, SealReportsErrorWhenEncryptingBodyFails)
+{
+    CHECK_SEAL_REPORTS_ENCRYPT_FAILURE_AT(OPENSSLFAKE_GCM_STEP_UPDATE_BODY);
+}
+
+TEST(SolidSyslogOpenSslAesGcmPolicySeal, SealReportsErrorWhenFinalisingFails)
+{
+    CHECK_SEAL_REPORTS_ENCRYPT_FAILURE_AT(OPENSSLFAKE_GCM_STEP_FINAL);
+}
+
+TEST(SolidSyslogOpenSslAesGcmPolicySeal, SealReportsErrorWhenReadingTheTagFails)
+{
+    CHECK_SEAL_REPORTS_ENCRYPT_FAILURE_AT(OPENSSLFAKE_GCM_STEP_GET_TAG);
+}
+
+/* Open's setup chain (everything up to and including SET_TAG) reports
+ * DECRYPT_FAILED on any non-1. The DecryptFinal verdict is separate — that
+ * fail-closed-but-silent path is OpenReturnsFalseWithoutReporting... above. */
+TEST(SolidSyslogOpenSslAesGcmPolicySeal, OpenReportsErrorWhenContextAllocationFails)
+{
+    CHECK_OPEN_REPORTS_DECRYPT_FAILURE_AT(OPENSSLFAKE_GCM_STEP_CTX_NEW);
+}
+
+TEST(SolidSyslogOpenSslAesGcmPolicySeal, OpenReportsErrorWhenCipherInitFails)
+{
+    CHECK_OPEN_REPORTS_DECRYPT_FAILURE_AT(OPENSSLFAKE_GCM_STEP_INIT_CIPHER);
+}
+
+TEST(SolidSyslogOpenSslAesGcmPolicySeal, OpenReportsErrorWhenSettingNonceLengthFails)
+{
+    CHECK_OPEN_REPORTS_DECRYPT_FAILURE_AT(OPENSSLFAKE_GCM_STEP_SET_IVLEN);
+}
+
+TEST(SolidSyslogOpenSslAesGcmPolicySeal, OpenReportsErrorWhenKeyInitFails)
+{
+    CHECK_OPEN_REPORTS_DECRYPT_FAILURE_AT(OPENSSLFAKE_GCM_STEP_INIT_KEY);
+}
+
+TEST(SolidSyslogOpenSslAesGcmPolicySeal, OpenReportsErrorWhenAuthenticatingHeaderFails)
+{
+    CHECK_OPEN_REPORTS_DECRYPT_FAILURE_AT(OPENSSLFAKE_GCM_STEP_UPDATE_AAD);
+}
+
+TEST(SolidSyslogOpenSslAesGcmPolicySeal, OpenReportsErrorWhenDecryptingBodyFails)
+{
+    CHECK_OPEN_REPORTS_DECRYPT_FAILURE_AT(OPENSSLFAKE_GCM_STEP_UPDATE_BODY);
+}
+
+TEST(SolidSyslogOpenSslAesGcmPolicySeal, OpenReportsErrorWhenSettingExpectedTagFails)
+{
+    CHECK_OPEN_REPORTS_DECRYPT_FAILURE_AT(OPENSSLFAKE_GCM_STEP_SET_TAG);
 }
 
 TEST(SolidSyslogOpenSslAesGcmPolicySeal, SealWipesTheKeyBufferAfterUse)

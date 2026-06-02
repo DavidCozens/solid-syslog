@@ -192,19 +192,39 @@ EXTERN_C_BEGIN
     size_t OpenSslFake_LastCleanseLen(void);
 
     /* AES-256-GCM EVP cipher + RAND_bytes — drive the at-rest AES-GCM
-     * SecurityPolicy without linking real libcrypto. The fake's cipher is a
-     * reversible XOR keystream with an FNV tag over key‖nonce‖aad‖ciphertext;
-     * round-trip and tamper behaviour hold, but it is NOT real AES-GCM. */
+     * SecurityPolicy without linking real libcrypto. A capture-and-canned-return
+     * double, NOT a cipher: the EVP calls capture their arguments, copy the body
+     * through unchanged, and return canned results. It verifies the adapter's
+     * wiring; genuine AES-256-GCM correctness (round-trip, tamper, wrong-key) is
+     * the OpenSslIntegration suite's job. */
     int OpenSslFake_GcmSealCount(void); /* EVP_CTRL_GCM_GET_TAG calls (seals) */
     int OpenSslFake_GcmOpenCount(void); /* EVP_DecryptFinal_ex calls (opens) */
     const uint8_t* OpenSslFake_LastGcmKey(void); /* 32 bytes */
     const uint8_t* OpenSslFake_LastGcmNonce(void); /* 12 bytes */
     const uint8_t* OpenSslFake_LastGcmAad(void);
     size_t OpenSslFake_LastGcmAadLen(void);
-    const uint8_t* OpenSslFake_LastGcmPlaintext(void); /* body bytes before encryption */
+    const uint8_t* OpenSslFake_LastGcmPlaintext(void); /* body bytes handed to encrypt */
     size_t OpenSslFake_LastGcmPlaintextLen(void);
-    void OpenSslFake_SetGcmEncryptFails(bool fails); /* fail an encrypt EVP step */
-    void OpenSslFake_SetGcmDecryptFails(bool fails); /* fail a decrypt setup EVP step */
+
+    /* Step of the EVP seal/open sequence to fail, so a test can pin the error
+     * path of each OpenSSL crypto call the adapter makes. The names match the
+     * production && chain: CTX_NEW → INIT_CIPHER → SET_IVLEN → INIT_KEY →
+     * UPDATE_AAD → UPDATE_BODY → (encrypt: FINAL → GET_TAG) / (decrypt: SET_TAG →
+     * FINAL). A FINAL failure on open is the tamper/auth-reject verdict. */
+    enum OpenSslFakeGcmStep
+    {
+        OPENSSLFAKE_GCM_STEP_NONE = 0,
+        OPENSSLFAKE_GCM_STEP_CTX_NEW,
+        OPENSSLFAKE_GCM_STEP_INIT_CIPHER,
+        OPENSSLFAKE_GCM_STEP_SET_IVLEN,
+        OPENSSLFAKE_GCM_STEP_INIT_KEY,
+        OPENSSLFAKE_GCM_STEP_UPDATE_AAD,
+        OPENSSLFAKE_GCM_STEP_UPDATE_BODY,
+        OPENSSLFAKE_GCM_STEP_FINAL,
+        OPENSSLFAKE_GCM_STEP_GET_TAG,
+        OPENSSLFAKE_GCM_STEP_SET_TAG
+    };
+    void OpenSslFake_SetGcmStepFails(enum OpenSslFakeGcmStep step);
 
     int OpenSslFake_RandBytesCallCount(void);
     const void* OpenSslFake_LastRandBytesBuf(void);
