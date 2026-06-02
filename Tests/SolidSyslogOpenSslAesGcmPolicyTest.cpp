@@ -74,23 +74,24 @@ static bool TestGetKey(void* context, uint8_t* keyOut, size_t capacity, size_t* 
  * test: seal/open must fail closed and report once. Used only inside the Seal
  * fixture (they reference its seal()/open() helpers). */
 // NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
-#define CHECK_SEAL_REPORTS_ENCRYPT_FAILURE_AT(step)                                            \
-    do                                                                                         \
-    {                                                                                          \
-        ErrorHandlerFake_Install(nullptr);                                                     \
-        OpenSslFake_SetGcmStepFails(step);                                                      \
-        CHECK_FALSE(seal());                                                                   \
+#define CHECK_SEAL_REPORTS_ENCRYPT_FAILURE_AT(step)                                                 \
+    do                                                                                              \
+    {                                                                                               \
+        ErrorHandlerFake_Install(nullptr);                                                          \
+        OpenSslFake_SetGcmStepFails(step);                                                          \
+        CHECK_FALSE(seal());                                                                        \
         CHECK_REPORTED_ERROR(SOLIDSYSLOG_SEVERITY_ERROR, OPENSSLAESGCMPOLICY_ERROR_ENCRYPT_FAILED); \
     } while (0)
 
-#define CHECK_OPEN_REPORTS_DECRYPT_FAILURE_AT(step)                                            \
-    do                                                                                         \
-    {                                                                                          \
-        ErrorHandlerFake_Install(nullptr);                                                     \
-        OpenSslFake_SetGcmStepFails(step);                                                      \
-        CHECK_FALSE(open());                                                                   \
+#define CHECK_OPEN_REPORTS_DECRYPT_FAILURE_AT(step)                                                 \
+    do                                                                                              \
+    {                                                                                               \
+        ErrorHandlerFake_Install(nullptr);                                                          \
+        OpenSslFake_SetGcmStepFails(step);                                                          \
+        CHECK_FALSE(open());                                                                        \
         CHECK_REPORTED_ERROR(SOLIDSYSLOG_SEVERITY_ERROR, OPENSSLAESGCMPOLICY_ERROR_DECRYPT_FAILED); \
     } while (0)
+
 // NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 
 // clang-format off

@@ -224,6 +224,7 @@ EXTERN_C_BEGIN
         OPENSSLFAKE_GCM_STEP_GET_TAG,
         OPENSSLFAKE_GCM_STEP_SET_TAG
     };
+
     void OpenSslFake_SetGcmStepFails(enum OpenSslFakeGcmStep step);
 
     int OpenSslFake_RandBytesCallCount(void);
