@@ -9,6 +9,7 @@
 #include <openssl/crypto.h>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
+#include <openssl/rand.h>
 #include <openssl/types.h>
 
 /* -------------------------------------------------------------------------
@@ -45,6 +46,52 @@ static bool hmacFails;
 static int cleanseCallCount;
 static const void* lastCleanseBuf;
 static size_t lastCleanseLen;
+
+/* AES-256-GCM fake — a capture-and-canned-return test double, NOT a cipher. The
+ * production policy is a thin adapter that shuttles bytes through the EVP_*
+ * sequence; the unit tests verify that wiring (which key, nonce, AAD and
+ * plaintext reach OpenSSL, in what order, and how success/failure propagate).
+ * The EVP calls therefore capture their arguments and return canned results:
+ * Encrypt/DecryptUpdate copy input to output unchanged, GET_TAG writes a fixed
+ * tag, and DecryptFinal returns a settable verdict. Genuine AES-256-GCM
+ * correctness — round-trip, tamper detection, wrong-key rejection — is owned by
+ * the OpenSslIntegration suite against real libcrypto. */
+enum
+{
+    FAKE_GCM_KEY_SIZE = 32,
+    FAKE_GCM_NONCE_SIZE = 12,
+    FAKE_GCM_TAG_SIZE = 16,
+    FAKE_GCM_MAX_AAD = 16,
+    FAKE_GCM_MAX_BODY = 256
+};
+
+/* A single direction flag is all the state the double needs: the production code
+ * allocates one EVP context per seal or open, uses it, and frees it before the
+ * next — never two at once. The flag lets Update capture the plaintext only on
+ * encrypt. The handle is a char sentinel (like the SSL/BIO fakes). */
+static bool fakeGcmEncrypting;
+static char fakeGcmCtxStorage;
+static char fakeAesGcmCipherStorage;
+
+static int gcmSealCount; /* GET_TAG calls */
+static int gcmOpenCount; /* DecryptFinal calls */
+static uint8_t lastGcmKey[FAKE_GCM_KEY_SIZE];
+static uint8_t lastGcmNonce[FAKE_GCM_NONCE_SIZE];
+static uint8_t lastGcmAad[FAKE_GCM_MAX_AAD];
+static size_t lastGcmAadLen;
+static uint8_t lastGcmPlaintext[FAKE_GCM_MAX_BODY];
+static size_t lastGcmPlaintextLen;
+
+/* Which step of the EVP seal/open sequence the double should fail. The adapter
+ * threads every EVP return through an && chain, so failing any one step lets a
+ * test pin that step's error path. Default OPENSSLFAKE_GCM_STEP_NONE = all
+ * succeed. */
+static enum OpenSslFakeGcmStep gcmFailStep;
+
+static int randCallCount;
+static const void* lastRandBuf;
+static int lastRandLen;
+static bool randFails;
 
 /* Pool of fake BIOs. Each slot is independent so callers can exercise
  * multiple BIOs without aliasing. The address of `slot` is the BIO handle
@@ -308,6 +355,20 @@ void OpenSslFake_Reset(void)
     cleanseCallCount = 0;
     lastCleanseBuf = NULL;
     lastCleanseLen = 0;
+    fakeGcmEncrypting = false;
+    gcmSealCount = 0;
+    gcmOpenCount = 0;
+    gcmFailStep = OPENSSLFAKE_GCM_STEP_NONE;
+    lastGcmAadLen = 0;
+    lastGcmPlaintextLen = 0;
+    memset(lastGcmKey, 0, sizeof lastGcmKey);
+    memset(lastGcmNonce, 0, sizeof lastGcmNonce);
+    memset(lastGcmAad, 0, sizeof lastGcmAad);
+    memset(lastGcmPlaintext, 0, sizeof lastGcmPlaintext);
+    randCallCount = 0;
+    lastRandBuf = NULL;
+    lastRandLen = 0;
+    randFails = false;
 }
 
 /* -------------------------------------------------------------------------
@@ -1164,4 +1225,239 @@ const void* OpenSslFake_LastCleanseBuf(void)
 size_t OpenSslFake_LastCleanseLen(void)
 {
     return lastCleanseLen;
+}
+
+/* -------------------------------------------------------------------------
+ * AES-256-GCM — link-interposed EVP cipher + RAND_bytes.
+ * ------------------------------------------------------------------------- */
+
+static int FakeGcm_Init(const EVP_CIPHER* cipher, const unsigned char* key, const unsigned char* iv, bool encrypting)
+{
+    fakeGcmEncrypting = encrypting;
+    /* Production sets the cipher first (cipher != NULL, key/iv NULL), then the
+     * key/iv on a second call (cipher NULL). Each call is a distinct failable
+     * step; capture whichever arrives. */
+    if (key != NULL)
+    {
+        memcpy(lastGcmKey, key, FAKE_GCM_KEY_SIZE);
+    }
+    if (iv != NULL)
+    {
+        memcpy(lastGcmNonce, iv, FAKE_GCM_NONCE_SIZE);
+    }
+    enum OpenSslFakeGcmStep step = (cipher != NULL) ? OPENSSLFAKE_GCM_STEP_INIT_CIPHER : OPENSSLFAKE_GCM_STEP_INIT_KEY;
+    return (gcmFailStep == step) ? 0 : 1;
+}
+
+static int FakeGcm_Update(unsigned char* out, int* outl, const unsigned char* in, int inl)
+{
+    size_t length = (size_t) inl;
+    enum OpenSslFakeGcmStep step = OPENSSLFAKE_GCM_STEP_UPDATE_BODY;
+    if (out == NULL)
+    {
+        /* Associated data — captured, never transformed. */
+        lastGcmAadLen = length;
+        memcpy(lastGcmAad, in, (length < sizeof lastGcmAad) ? length : sizeof lastGcmAad);
+        step = OPENSSLFAKE_GCM_STEP_UPDATE_AAD;
+    }
+    else
+    {
+        /* Body. The double does not encrypt: it copies input to output unchanged
+         * so the in-place buffer stays defined. On encrypt it also captures the
+         * plaintext so a test can assert the body region production handed to
+         * EVP. (memmove, not memcpy: production passes out == in.) */
+        if (fakeGcmEncrypting)
+        {
+            lastGcmPlaintextLen = length;
+            memcpy(lastGcmPlaintext, in, (length < sizeof lastGcmPlaintext) ? length : sizeof lastGcmPlaintext);
+        }
+        memmove(out, in, length);
+    }
+    *outl = inl;
+    return (gcmFailStep == step) ? 0 : 1;
+}
+
+const EVP_CIPHER* EVP_aes_256_gcm(void)
+{
+    return (const EVP_CIPHER*) &fakeAesGcmCipherStorage;
+}
+
+EVP_CIPHER_CTX* EVP_CIPHER_CTX_new(void)
+{
+    fakeGcmEncrypting = false;
+    return (gcmFailStep == OPENSSLFAKE_GCM_STEP_CTX_NEW) ? NULL : (EVP_CIPHER_CTX*) &fakeGcmCtxStorage;
+}
+
+void EVP_CIPHER_CTX_free(EVP_CIPHER_CTX* ctx)
+{
+    (void) ctx;
+}
+
+int EVP_EncryptInit_ex(
+    EVP_CIPHER_CTX* ctx,
+    const EVP_CIPHER* cipher,
+    ENGINE* impl,
+    const unsigned char* key,
+    const unsigned char* iv
+)
+{
+    (void) ctx;
+    (void) impl;
+    return FakeGcm_Init(cipher, key, iv, true);
+}
+
+int EVP_DecryptInit_ex(
+    EVP_CIPHER_CTX* ctx,
+    const EVP_CIPHER* cipher,
+    ENGINE* impl,
+    const unsigned char* key,
+    const unsigned char* iv
+)
+{
+    (void) ctx;
+    (void) impl;
+    return FakeGcm_Init(cipher, key, iv, false);
+}
+
+int EVP_EncryptUpdate(EVP_CIPHER_CTX* ctx, unsigned char* out, int* outl, const unsigned char* in, int inl)
+{
+    (void) ctx;
+    return FakeGcm_Update(out, outl, in, inl);
+}
+
+int EVP_DecryptUpdate(EVP_CIPHER_CTX* ctx, unsigned char* out, int* outl, const unsigned char* in, int inl)
+{
+    (void) ctx;
+    return FakeGcm_Update(out, outl, in, inl);
+}
+
+// NOLINTNEXTLINE(readability-non-const-parameter) -- signature fixed by OpenSSL API
+int EVP_EncryptFinal_ex(EVP_CIPHER_CTX* ctx, unsigned char* out, int* outl)
+{
+    (void) ctx;
+    (void) out;
+    *outl = 0;
+    return (gcmFailStep == OPENSSLFAKE_GCM_STEP_FINAL) ? 0 : 1;
+}
+
+// NOLINTNEXTLINE(readability-non-const-parameter) -- signature fixed by OpenSSL API
+int EVP_DecryptFinal_ex(EVP_CIPHER_CTX* ctx, unsigned char* outm, int* outl)
+{
+    (void) ctx;
+    (void) outm;
+    *outl = 0;
+    gcmOpenCount++;
+    /* Canned authentication verdict — real tag verification is the integration
+     * suite's job. A FINAL-step failure drives the tamper-rejected path
+     * (DecryptFinal returns 0), which the adapter must surface silently. */
+    return (gcmFailStep == OPENSSLFAKE_GCM_STEP_FINAL) ? 0 : 1;
+}
+
+int EVP_CIPHER_CTX_ctrl(EVP_CIPHER_CTX* ctx, int type, int arg, void* ptr)
+{
+    (void) ctx;
+    (void) arg;
+    int result = 1;
+    if (type == EVP_CTRL_GCM_GET_TAG)
+    {
+        gcmSealCount++;
+        /* Canned tag — the adapter only forwards these bytes into the trailer; it
+         * never inspects them and no unit test asserts their value. */
+        memset(ptr, 0, FAKE_GCM_TAG_SIZE);
+        result = (gcmFailStep == OPENSSLFAKE_GCM_STEP_GET_TAG) ? 0 : 1;
+    }
+    else if (type == EVP_CTRL_GCM_SET_TAG)
+    {
+        result = (gcmFailStep == OPENSSLFAKE_GCM_STEP_SET_TAG) ? 0 : 1;
+    }
+    else if (type == EVP_CTRL_GCM_SET_IVLEN)
+    {
+        result = (gcmFailStep == OPENSSLFAKE_GCM_STEP_SET_IVLEN) ? 0 : 1;
+    }
+    else
+    {
+        /* Any other control: accepted, no-op. */
+    }
+    return result;
+}
+
+int RAND_bytes(unsigned char* buf, int num)
+{
+    randCallCount++;
+    lastRandBuf = buf;
+    lastRandLen = num;
+    if (randFails)
+    {
+        return 0;
+    }
+    for (int index = 0; index < num; index++)
+    {
+        buf[index] = (unsigned char) (0xA0 + index);
+    }
+    return 1;
+}
+
+int OpenSslFake_GcmSealCount(void)
+{
+    return gcmSealCount;
+}
+
+int OpenSslFake_GcmOpenCount(void)
+{
+    return gcmOpenCount;
+}
+
+const uint8_t* OpenSslFake_LastGcmKey(void)
+{
+    return lastGcmKey;
+}
+
+const uint8_t* OpenSslFake_LastGcmNonce(void)
+{
+    return lastGcmNonce;
+}
+
+const uint8_t* OpenSslFake_LastGcmAad(void)
+{
+    return lastGcmAad;
+}
+
+size_t OpenSslFake_LastGcmAadLen(void)
+{
+    return lastGcmAadLen;
+}
+
+const uint8_t* OpenSslFake_LastGcmPlaintext(void)
+{
+    return lastGcmPlaintext;
+}
+
+size_t OpenSslFake_LastGcmPlaintextLen(void)
+{
+    return lastGcmPlaintextLen;
+}
+
+void OpenSslFake_SetGcmStepFails(enum OpenSslFakeGcmStep step)
+{
+    gcmFailStep = step;
+}
+
+int OpenSslFake_RandBytesCallCount(void)
+{
+    return randCallCount;
+}
+
+const void* OpenSslFake_LastRandBytesBuf(void)
+{
+    return lastRandBuf;
+}
+
+int OpenSslFake_LastRandBytesLen(void)
+{
+    return lastRandLen;
+}
+
+void OpenSslFake_SetRandBytesFails(bool fails)
+{
+    randFails = fails;
 }

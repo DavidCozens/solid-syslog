@@ -40,7 +40,8 @@ static bool IsValidDiscardPolicy(const char* policy)
 
 static bool IsValidSecurityPolicy(const char* policy)
 {
-    return (strcmp(policy, "crc16") == 0) || (strcmp(policy, "hmac-sha256") == 0) || (strcmp(policy, "null") == 0);
+    return (strcmp(policy, "crc16") == 0) || (strcmp(policy, "hmac-sha256") == 0) ||
+           (strcmp(policy, "aes-256-gcm") == 0) || (strcmp(policy, "null") == 0);
 }
 
 /* Applies one parsed option to `options`. Returns 0 on success, 1 if the

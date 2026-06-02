@@ -576,6 +576,27 @@
 #endif
 
 /*
+ * Role pool: AES-256-GCM SecurityPolicy. Number of keyed AEAD policy instances
+ * the library's internal static pool can simultaneously hold. Each instance
+ * carries the integrator's key-accessor callback (SolidSyslogKeyFunction) and
+ * its context — the policy fetches the 32-byte key on demand and never stores
+ * it.
+ *
+ * Default 1 — a single at-rest store with one confidentiality policy is the
+ * common case. Bump via SOLIDSYSLOG_USER_TUNABLES_FILE if more than one store
+ * with an independent key is genuinely needed.
+ *
+ * Floor: 1. Sub-floor values rejected at compile time.
+ */
+#ifndef SOLIDSYSLOG_AES_GCM_POLICY_POOL_SIZE
+#define SOLIDSYSLOG_AES_GCM_POLICY_POOL_SIZE 1U
+#endif
+
+#if SOLIDSYSLOG_AES_GCM_POLICY_POOL_SIZE < 1
+#error "SOLIDSYSLOG_AES_GCM_POLICY_POOL_SIZE must be >= 1"
+#endif
+
+/*
  * Maximum HMAC key length, in bytes, a keyed SecurityPolicy will fetch from
  * its SolidSyslogKeyFunction into a transient on-stack buffer (wiped after
  * each use). Sized for the SHA-256 HMAC block (64 bytes): RFC 2104 keys up to

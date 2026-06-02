@@ -13601,3 +13601,76 @@ MISRA rule — different category, doesn't set precedent.
 
 - None outstanding. Forum post drafted for David to post under the
   Libraries category at his discretion; in-repo docs land via this PR.
+
+## 2026-06-01 — S17.03 AES-256-GCM at-rest SecurityPolicy (OpenSSL, Linux)
+
+### Decisions
+
+- **Interface reshape: single contiguous region + `headerLength` offset**,
+  not the epic's two-pointer `body`/`aad` sketch. `SolidSyslogSecurityPolicy`
+  goes from `IntegritySize`/`ComputeIntegrity`/`VerifyIntegrity` to
+  `TrailerSize`/`SealRecord`/`OpenRecord`. The offset shape lets MAC/CRC
+  policies keep their one-shot crypto untouched (the two-pointer form would
+  force the just-shipped HMAC siblings to incremental hashing); AEAD reads the
+  split to authenticate the header and encrypt the body. Phase A migrated all
+  four policies + the RecordStore consumer behaviour-preservingly — existing
+  HMAC/CRC tags and on-disk bytes are unchanged, so the existing suite is the
+  regression net.
+- **`SOLIDSYSLOG_MAX_INTEGRITY_SIZE` keeps its name** (David's call); only the
+  vtable field renamed to `TrailerSize`. 32 already fits the 28-byte AEAD
+  trailer.
+- **AES-256-GCM**: 32-byte key on demand via `SolidSyslogKeyFunction`
+  (`OPENSSL_cleanse`d per op), fresh 12-byte `RAND_bytes` nonce per record,
+  `nonce ‖ tag` trailer. A tag mismatch on open returns false silently (the
+  tamper-detected path); only genuine OpenSSL errors are reported. Real-crypto
+  correctness proven in the OpenSslIntegration suite; unit tests drive a new
+  deterministic OpenSslFake GCM + RAND_bytes interposition.
+- **Nonce envelope documented as headroom, not a caveat** — random-nonce GCM's
+  NIST 2³² ceiling is ~136 years at one event/second. No GCM-SIV.
+- **Linux/OpenSSL only**; Windows compiles the source but gets no BDD wiring
+  this story (mbedTLS AES-GCM deferred to a future S17.04). The `@aesgcm`
+  power-cycle BDD scenario is excluded from the Windows and FreeRTOS-plustcp
+  runners (lwip already excluded via `@store`).
+
+### Deferred
+
+- **mbedTLS AES-GCM (S17.04)** — only if embedded demand appears; the keyed
+  policy port is already proven low-risk by S17.02.
+- **Windows BDD wiring** for `aes-256-gcm` — out of scope this story.
+
+### Open questions
+
+- None outstanding.
+
+## 2026-06-02 — S17.03 review follow-up: AES-GCM fake + per-EVP-call coverage
+
+### Decisions
+
+- **The OpenSslFake AES-GCM half was a working toy cipher** (reversible XOR
+  keystream + FNV tag). The unit tests leaning on it — round-trip, tamper,
+  wrong-key — only proved the *fake* reproduced GCM, duplicating the
+  OpenSslIntegration suite while exercising none of the adapter's own logic.
+  Gutted it to a capture-and-canned-return double: the EVP calls capture their
+  arguments, copy the body through unchanged, and return canned results. The
+  semantic guarantees stay where they mean something — the real-libcrypto
+  integration suite.
+- **Per-step EVP failure injection** (`OpenSslFake_SetGcmStepFails`) replaces
+  the coarse encrypt/decrypt/auth booleans, which only reached the first Init
+  and DecryptFinal. Added one error-path test per fallible OpenSSL call in the
+  seal/open sequence — `CTX_new`, both `Init`s, `SET_IVLEN`, both `Update`s,
+  `Final`, `GET_TAG`/`SET_TAG` — plus the silent `DecryptFinal` tamper-reject
+  path. `SolidSyslogOpenSslAesGcmPolicy.c` is now 100% line / 100% function
+  (verified via the `coverage` preset).
+- **MISRA 11.8 in HMAC `SealRecord`** (the `analyze-cppcheck` CI failure): bound
+  `record->Trailer` to a local `uint8_t*` before passing it as the writable tag
+  destination, mirroring the AES-GCM sibling. Clears the D.006-category
+  const-strip false positive without adding a suppression. Full cppcheck-misra
+  exits clean.
+
+### Deferred
+
+- None.
+
+### Open questions
+
+- None outstanding.

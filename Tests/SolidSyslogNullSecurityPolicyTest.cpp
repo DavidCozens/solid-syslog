@@ -20,12 +20,13 @@ TEST(SolidSyslogNullSecurityPolicy, GetReturnsNonNull)
     CHECK_TRUE(policy != nullptr);
 }
 
-TEST(SolidSyslogNullSecurityPolicy, IntegritySizeIsZero)
+TEST(SolidSyslogNullSecurityPolicy, TrailerSizeIsZero)
 {
-    LONGS_EQUAL(0, policy->IntegritySize);
+    LONGS_EQUAL(0, policy->TrailerSize);
 }
 
-TEST(SolidSyslogNullSecurityPolicy, VerifyIntegrityReturnsTrue)
+TEST(SolidSyslogNullSecurityPolicy, OpenRecordReturnsTrue)
 {
-    CHECK_TRUE(policy->VerifyIntegrity(policy, nullptr, 0, nullptr));
+    struct SolidSyslogSecurityRecord record = {nullptr, 0, 0, nullptr};
+    CHECK_TRUE(policy->OpenRecord(policy, &record));
 }

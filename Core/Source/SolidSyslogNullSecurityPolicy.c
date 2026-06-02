@@ -5,32 +5,23 @@
 
 #include "SolidSyslogSecurityPolicyDefinition.h"
 
-static bool NullSecurityPolicy_NullComputeIntegrity(
+static bool NullSecurityPolicy_NullSealRecord(
     struct SolidSyslogSecurityPolicy* self,
-    const uint8_t* data,
-    uint16_t length,
-    // NOLINTNEXTLINE(readability-non-const-parameter) -- integrityOut is non-const to match the vtable signature
-    uint8_t* integrityOut
+    const struct SolidSyslogSecurityRecord* record
 )
 {
     (void) self;
-    (void) data;
-    (void) length;
-    (void) integrityOut;
+    (void) record;
     return true;
 }
 
-static bool NullSecurityPolicy_NullVerifyIntegrity(
+static bool NullSecurityPolicy_NullOpenRecord(
     struct SolidSyslogSecurityPolicy* self,
-    const uint8_t* data,
-    uint16_t length,
-    const uint8_t* integrityIn
+    const struct SolidSyslogSecurityRecord* record
 )
 {
     (void) self;
-    (void) data;
-    (void) length;
-    (void) integrityIn;
+    (void) record;
     return true;
 }
 
@@ -38,8 +29,8 @@ struct SolidSyslogSecurityPolicy* SolidSyslogNullSecurityPolicy_Get(void)
 {
     static struct SolidSyslogSecurityPolicy instance = {
         0,
-        NullSecurityPolicy_NullComputeIntegrity,
-        NullSecurityPolicy_NullVerifyIntegrity,
+        NullSecurityPolicy_NullSealRecord,
+        NullSecurityPolicy_NullOpenRecord,
     };
     return &instance;
 }

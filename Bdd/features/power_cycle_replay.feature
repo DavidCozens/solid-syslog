@@ -45,3 +45,29 @@ Feature: Power cycle replay from block store
     When the client sends a message
     Then the syslog oracle receives 5 messages
     And the last message has sequenceId 1
+
+  # Same flow, but records are sealed at rest with AES-256-GCM (authenticated
+  # encryption) instead of CRC-16. Proves the AEAD policy is transparent to
+  # behaviour and that real AES-GCM round-trips on the target: records encrypted
+  # and tagged on write are decrypted and verified on replay-read after a power
+  # cycle. @aesgcm runs Linux-only (OpenSSL, S17.03); the Windows and
+  # FreeRTOS-plustcp runners exclude it (no AES-GCM policy wired there this
+  # story), FreeRTOS-lwip via @store.
+  @aesgcm
+  Scenario: Stored messages replayed after power cycle with AES-256-GCM at rest
+    Given the syslog oracle is running
+    And the block store is enabled
+    And the security policy is aes-256-gcm
+    And the BDD target is running with transport tcp
+    When the client sends a message
+    Then the syslog oracle receives 1 message
+    When the syslog oracle stops accepting TCP connections
+    And the client sends 3 messages
+    And the client is killed
+    And the syslog oracle resumes accepting TCP connections
+    Given the BDD target is running with transport tcp
+    Then the syslog oracle receives 4 messages
+    And the replayed messages have sequenceIds 2, 3, 4
+    When the client sends a message
+    Then the syslog oracle receives 5 messages
+    And the last message has sequenceId 1

@@ -139,6 +139,7 @@ if(SOLIDSYSLOG_OPENSSL)
         SolidSyslogTlsStreamTest.cpp
         SolidSyslogTlsStreamPoolTest.cpp
         SolidSyslogOpenSslHmacSha256PolicyTest.cpp
+        SolidSyslogOpenSslAesGcmPolicyTest.cpp
         OpenSslFakeTest.cpp
     )
 endif()
