@@ -13674,3 +13674,62 @@ MISRA rule — different category, doesn't set precedent.
 ### Open questions
 
 - None outstanding.
+
+## 2026-06-02 — S17.04 mbedTLS AES-256-GCM at-rest policy (#510)
+
+### Decisions
+
+- **`SolidSyslogMbedTlsAesGcmPolicy` is a pure addition.** The
+  `SealRecord`/`OpenRecord` single-region-plus-`headerLength` vtable reshape
+  already landed in S17.03, so this story adds one E11 six-file policy under
+  `Platform/MbedTls/` and touches no shared interface and no other policy. The
+  body of `SealRecord`/`OpenRecord`/`FetchKey` mirrors the OpenSSL AES-GCM
+  sibling line for line; only the crypto back-end differs.
+- **The nonce source is injected, not self-sourced.** mbedTLS has no
+  context-free `RAND_bytes` equivalent, so the config carries a caller-owned
+  seeded `mbedtls_ctr_drbg_context*` (`Rng`, same DI shape as
+  `SolidSyslogMbedTlsStreamConfig.Rng`); `NULL` `Rng` joins `NULL` config /
+  `NULL` `GetKey` as a bad-config → NullSecurityPolicy fallback. The policy
+  fills each record's 12-byte nonce via `mbedtls_ctr_drbg_random`. Pool tunable
+  is the role-based `SOLIDSYSLOG_AES_GCM_POLICY_POOL_SIZE` (shared with the
+  OpenSSL sibling per the role-not-platform rule), AES-256 key reuses
+  `SOLIDSYSLOG_MAX_HMAC_KEY_SIZE`, `TrailerSize` = 28 (fits the 32-byte
+  `SOLIDSYSLOG_MAX_INTEGRITY_SIZE`).
+- **One-shot mbedTLS GCM, not OpenSSL's incremental EVP chain.**
+  `mbedtls_gcm_crypt_and_tag` seals and `mbedtls_gcm_auth_decrypt` opens in a
+  single call each, so the fallible-call set the adapter threads is just
+  `setkey` → the one-shot op (plus `ctr_drbg_random` for the nonce).
+  `auth_decrypt`'s return code carries the verdict: `0` opens, `GCM_AUTH_FAILED`
+  is the silent tamper/wrong-key rejection, anything else is a genuine error →
+  `DECRYPT_FAILED`. In-place decryption (`output == input`) round-trips
+  correctly on real mbedTLS — the gcm.h "output cannot be the same as input"
+  note is conservative; same-pointer full overlap is the documented-safe case,
+  and the integration round-trip proves it.
+- **The S17.03 toy-cipher trap is avoided up front.** The `MbedTlsFake` GCM
+  additions are a capture-and-canned-return double from inception: each
+  `mbedtls_gcm_*` call captures its arguments (key, key-bits, cipher id, nonce,
+  AAD, plaintext), copies the body through unchanged, and returns canned
+  results — it is **not** a cipher, and deliberately **not** a copy of the
+  HMAC fake's predict-the-tag `ComputeExpectedTag` pattern. The unit suite (28
+  tests) pins the adapter's wiring and one error path per fallible call
+  (`SetGcmStepFails` over `SETKEY` / `CRYPT_AND_TAG` / `AUTH_DECRYPT`, plus
+  `SetGcmAuthFails` for the tamper verdict and `SetCtrDrbgRandomFails` for the
+  nonce). Genuine round-trip / tamper / wrong-key correctness lives only in
+  `Tests/MbedTlsIntegration` against real libmbedcrypto (7 tests).
+- **BDD demo on the FreeRTOS-plustcp QEMU runner.** `--security-policy
+  aes-256-gcm` is wired into `Bdd/Targets/FreeRtos/main.c` and the `@aesgcm`
+  power-cycle-replay scenario now runs there (dropped the `not @aesgcm`
+  exclusion from the `behave-freertos` runner). The AEAD nonce source reuses the
+  TLS module's already-seeded CTR-DRBG via a new `BddTargetTlsSender_GetRng()`
+  accessor rather than standing up a second entropy/DRBG pair on the
+  constrained target — pragmatic for a Tier-3 demo; the TLS sender is created in
+  `InteractiveTask` setup, before any `store file` rebuild, so the DRBG is
+  seeded by the time the policy needs it.
+
+### Deferred
+
+- None.
+
+### Open questions
+
+- None outstanding.

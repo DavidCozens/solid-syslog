@@ -1,6 +1,7 @@
 #ifndef MBEDTLSFAKE_H
 #define MBEDTLSFAKE_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -137,6 +138,47 @@ EXTERN_C_BEGIN
     int MbedTlsFake_PlatformZeroizeCallCount(void);
     const void* MbedTlsFake_LastPlatformZeroizeBuf(void);
     size_t MbedTlsFake_LastPlatformZeroizeLen(void);
+
+    /* AES-256-GCM (mbedtls_gcm_*) + CTR-DRBG nonce source — drive the at-rest
+     * AES-GCM SecurityPolicy without linking real libmbedcrypto. A
+     * capture-and-canned-return double, NOT a cipher: mbedtls_gcm_crypt_and_tag /
+     * mbedtls_gcm_auth_decrypt capture their arguments, copy the body through
+     * unchanged, and return canned results. It verifies the adapter's wiring;
+     * genuine AES-256-GCM correctness (round-trip, tamper, wrong-key) is the
+     * MbedTlsIntegration suite's job. */
+    int MbedTlsFake_GcmSealCount(void); /* mbedtls_gcm_crypt_and_tag calls (seals) */
+    int MbedTlsFake_GcmOpenCount(void); /* mbedtls_gcm_auth_decrypt calls (opens) */
+    const uint8_t* MbedTlsFake_LastGcmKey(void); /* 32 bytes, from setkey */
+    unsigned int MbedTlsFake_LastGcmKeyBits(void); /* keybits arg to setkey */
+    int MbedTlsFake_LastGcmCipher(void); /* mbedtls_cipher_id_t arg to setkey */
+    const uint8_t* MbedTlsFake_LastGcmNonce(void); /* 12 bytes */
+    const uint8_t* MbedTlsFake_LastGcmAad(void);
+    size_t MbedTlsFake_LastGcmAadLen(void);
+    const uint8_t* MbedTlsFake_LastGcmPlaintext(void); /* body bytes handed to encrypt */
+    size_t MbedTlsFake_LastGcmPlaintextLen(void);
+
+    /* Step of the seal/open sequence to fail, so a test can pin the error path of
+     * each fallible mbedTLS GCM call: setkey, crypt_and_tag (seal), auth_decrypt
+     * (open, genuine error — distinct from the tamper verdict below). */
+    enum MbedTlsFakeGcmStep
+    {
+        MBEDTLSFAKE_GCM_STEP_NONE = 0,
+        MBEDTLSFAKE_GCM_STEP_SETKEY,
+        MBEDTLSFAKE_GCM_STEP_CRYPT_AND_TAG,
+        MBEDTLSFAKE_GCM_STEP_AUTH_DECRYPT
+    };
+
+    void MbedTlsFake_SetGcmStepFails(enum MbedTlsFakeGcmStep step);
+    /* Makes mbedtls_gcm_auth_decrypt return MBEDTLS_ERR_GCM_AUTH_FAILED — the
+     * tamper / wrong-key verdict the adapter must surface silently (no report). */
+    void MbedTlsFake_SetGcmAuthFails(bool fails);
+
+    /* mbedtls_ctr_drbg_random — the policy's per-record nonce source. */
+    int MbedTlsFake_CtrDrbgRandomCallCount(void);
+    const void* MbedTlsFake_LastCtrDrbgRandomContext(void);
+    const void* MbedTlsFake_LastCtrDrbgRandomBuf(void);
+    size_t MbedTlsFake_LastCtrDrbgRandomLen(void);
+    void MbedTlsFake_SetCtrDrbgRandomFails(bool fails);
 
 EXTERN_C_END
 

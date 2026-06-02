@@ -420,3 +420,8 @@ void BddTargetTlsSender_Destroy(void)
      * avoid re-seeding on every reconnect. Real teardown only happens at
      * process exit, which the FreeRTOS target never reaches. */
 }
+
+struct mbedtls_ctr_drbg_context* BddTargetTlsSender_GetRng(void)
+{
+    return &drbg;
+}

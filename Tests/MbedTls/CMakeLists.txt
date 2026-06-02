@@ -118,3 +118,42 @@ set_target_properties(SolidSyslogMbedTlsHmacSha256PolicyTest PROPERTIES
 )
 
 add_test(NAME SolidSyslogMbedTlsHmacSha256PolicyTest COMMAND SolidSyslogMbedTlsHmacSha256PolicyTest)
+
+# SolidSyslogMbedTlsAesGcmPolicy — keyed at-rest AEAD (confidentiality +
+# integrity). Driven against the MbedTlsFake GCM capture double + CTR-DRBG nonce
+# source: the unit suite proves the adapter's wiring and every fallible-call
+# error path; genuine AES-GCM round-trip / tamper / wrong-key correctness lives
+# in Tests/MbedTlsIntegration against real libmbedcrypto.
+add_executable(SolidSyslogMbedTlsAesGcmPolicyTest
+    SolidSyslogMbedTlsAesGcmPolicyTest.cpp
+    main.cpp
+    ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsAesGcmPolicy.c
+    ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsAesGcmPolicyMessages.c
+    ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsAesGcmPolicyStatic.c
+)
+
+target_link_libraries(SolidSyslogMbedTlsAesGcmPolicyTest PRIVATE
+    ${PROJECT_NAME}
+    ConfigLockFake
+    ErrorHandlerFake
+    MbedTlsFakes
+    CppUTest
+    CppUTestExt
+)
+
+target_include_directories(SolidSyslogMbedTlsAesGcmPolicyTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Interface
+    ${CMAKE_SOURCE_DIR}/Core/Interface
+    ${CMAKE_SOURCE_DIR}/Core/Source
+    ${CMAKE_SOURCE_DIR}/Tests
+)
+
+# The policy source pulls in <mbedtls/gcm.h>; cppcheck cannot resolve mbedTLS's
+# MBEDTLS_USER_CONFIG_FILE macro indirection. Disable per-target, same as the
+# other mbedTLS test exes.
+set_target_properties(SolidSyslogMbedTlsAesGcmPolicyTest PROPERTIES
+    C_CPPCHECK ""
+    CXX_CPPCHECK ""
+)
+
+add_test(NAME SolidSyslogMbedTlsAesGcmPolicyTest COMMAND SolidSyslogMbedTlsAesGcmPolicyTest)

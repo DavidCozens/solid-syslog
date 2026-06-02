@@ -40,6 +40,7 @@
 #include "SolidSyslogConfig.h"
 #include "SolidSyslogCrc16Policy.h"
 #include "SolidSyslogEndpoint.h"
+#include "SolidSyslogMbedTlsAesGcmPolicy.h"
 #include "SolidSyslogMbedTlsHmacSha256Policy.h"
 #include "SolidSyslogNullSecurityPolicy.h"
 #include "SolidSyslogError.h"
@@ -239,8 +240,9 @@ static const char* pendingDiscardPolicy = "oldest";
 static volatile bool pendingHaltExit = false;
 static size_t pendingCapacityThreshold = 0;
 /* At-rest integrity policy for the file store: "crc16" (default), "hmac-sha256"
- * (mbedTLS), or "null". Set before `store file`; consumed by RebuildWithFileStore.
- * currentPolicy holds the created handle so DestroyCurrentStore can release it. */
+ * (mbedTLS), "aes-256-gcm" (mbedTLS AEAD), or "null". Set before `store file`;
+ * consumed by RebuildWithFileStore. currentPolicy holds the created handle so
+ * DestroyCurrentStore can release it. */
 static const char* pendingSecurityPolicy = "crc16";
 static struct SolidSyslogSecurityPolicy* currentPolicy = NULL;
 /* When true, SolidSyslog gets only the meta SD (sequenceId / sysUpTime /
@@ -620,13 +622,28 @@ static bool OnSet(const char* name, const char* value)
     }
     if (strcmp(name, "security-policy") == 0)
     {
-        if ((strcmp(value, "crc16") != 0) && (strcmp(value, "hmac-sha256") != 0) && (strcmp(value, "null") != 0))
+        if ((strcmp(value, "crc16") != 0) && (strcmp(value, "hmac-sha256") != 0) &&
+            (strcmp(value, "aes-256-gcm") != 0) && (strcmp(value, "null") != 0))
         {
             return false;
         }
         /* String literal storage — see discard-policy above. */
-        pendingSecurityPolicy =
-            (strcmp(value, "hmac-sha256") == 0) ? "hmac-sha256" : ((strcmp(value, "null") == 0) ? "null" : "crc16");
+        if (strcmp(value, "hmac-sha256") == 0)
+        {
+            pendingSecurityPolicy = "hmac-sha256";
+        }
+        else if (strcmp(value, "aes-256-gcm") == 0)
+        {
+            pendingSecurityPolicy = "aes-256-gcm";
+        }
+        else if (strcmp(value, "null") == 0)
+        {
+            pendingSecurityPolicy = "null";
+        }
+        else
+        {
+            pendingSecurityPolicy = "crc16";
+        }
         return true;
     }
     if (strcmp(name, "capacity-threshold") == 0)
@@ -764,6 +781,15 @@ static struct SolidSyslogSecurityPolicy* CreateSecurityPolicy(void)
         static const struct SolidSyslogMbedTlsHmacSha256PolicyConfig hmacConfig = {BddDemoGetKey, NULL};
         policy = SolidSyslogMbedTlsHmacSha256Policy_Create(&hmacConfig);
     }
+    else if (strcmp(pendingSecurityPolicy, "aes-256-gcm") == 0)
+    {
+        /* Reuse the TLS module's already-seeded CTR-DRBG as the AEAD nonce
+         * source — see BddTargetTlsSender_GetRng. Not static const: Rng is a
+         * runtime handle. */
+        const struct SolidSyslogMbedTlsAesGcmPolicyConfig aesConfig =
+            {BddDemoGetKey, NULL, BddTargetTlsSender_GetRng()};
+        policy = SolidSyslogMbedTlsAesGcmPolicy_Create(&aesConfig);
+    }
     else if (strcmp(pendingSecurityPolicy, "null") == 0)
     {
         policy = SolidSyslogNullSecurityPolicy_Get();
@@ -879,6 +905,10 @@ static void DestroySecurityPolicy(void)
     if (strcmp(pendingSecurityPolicy, "hmac-sha256") == 0)
     {
         SolidSyslogMbedTlsHmacSha256Policy_Destroy(currentPolicy);
+    }
+    else if (strcmp(pendingSecurityPolicy, "aes-256-gcm") == 0)
+    {
+        SolidSyslogMbedTlsAesGcmPolicy_Destroy(currentPolicy);
     }
     else if (strcmp(pendingSecurityPolicy, "crc16") == 0)
     {

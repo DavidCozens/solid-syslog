@@ -1,5 +1,7 @@
 #include "MbedTlsFake.h"
 
+#include <mbedtls/cipher.h>
+#include <mbedtls/gcm.h>
 #include <mbedtls/md.h>
 #include <mbedtls/platform_util.h>
 #include <mbedtls/ssl.h>
@@ -17,6 +19,35 @@ enum
     MBEDTLSFAKE_MAX_KEY = 64,
     MBEDTLSFAKE_MAX_INPUT = 256
 };
+
+/* AES-256-GCM capture double — see header. */
+enum
+{
+    MBEDTLSFAKE_GCM_KEY_SIZE = 32,
+    MBEDTLSFAKE_GCM_NONCE_SIZE = 12,
+    MBEDTLSFAKE_GCM_MAX_AAD = 16,
+    MBEDTLSFAKE_GCM_MAX_BODY = 256
+};
+
+static int gcmSealCount;
+static int gcmOpenCount;
+static unsigned int lastGcmKeyBits;
+static int lastGcmCipher;
+static uint8_t lastGcmKey[MBEDTLSFAKE_GCM_KEY_SIZE];
+static uint8_t lastGcmNonce[MBEDTLSFAKE_GCM_NONCE_SIZE];
+static uint8_t lastGcmAad[MBEDTLSFAKE_GCM_MAX_AAD];
+static size_t lastGcmAadLen;
+static uint8_t lastGcmPlaintext[MBEDTLSFAKE_GCM_MAX_BODY];
+static size_t lastGcmPlaintextLen;
+static enum MbedTlsFakeGcmStep gcmFailStep;
+static bool gcmAuthFails;
+
+/* mbedtls_ctr_drbg_random capture */
+static int ctrDrbgRandomCallCount;
+static const void* lastCtrDrbgRandomContext;
+static const void* lastCtrDrbgRandomBuf;
+static size_t lastCtrDrbgRandomLen;
+static bool ctrDrbgRandomFails;
 
 /* mbedtls_md_info_from_type / mbedtls_md_hmac */
 static int mdHmacCallCount;
@@ -212,6 +243,23 @@ void MbedTlsFake_Reset(void)
     platformZeroizeCallCount = 0;
     lastPlatformZeroizeBuf = NULL;
     lastPlatformZeroizeLen = 0;
+    gcmSealCount = 0;
+    gcmOpenCount = 0;
+    lastGcmKeyBits = 0;
+    lastGcmCipher = 0;
+    lastGcmAadLen = 0;
+    lastGcmPlaintextLen = 0;
+    gcmFailStep = MBEDTLSFAKE_GCM_STEP_NONE;
+    gcmAuthFails = false;
+    memset(lastGcmKey, 0, sizeof lastGcmKey);
+    memset(lastGcmNonce, 0, sizeof lastGcmNonce);
+    memset(lastGcmAad, 0, sizeof lastGcmAad);
+    memset(lastGcmPlaintext, 0, sizeof lastGcmPlaintext);
+    ctrDrbgRandomCallCount = 0;
+    lastCtrDrbgRandomContext = NULL;
+    lastCtrDrbgRandomBuf = NULL;
+    lastCtrDrbgRandomLen = 0;
+    ctrDrbgRandomFails = false;
 }
 
 int MbedTlsFake_SslConfigInitCallCount(void)
@@ -651,16 +699,25 @@ void mbedtls_ssl_conf_rng(mbedtls_ssl_config* conf, int (*f_rng)(void*, unsigned
     lastSslConfRngContextArg = p_rng;
 }
 
-/* Stub: the production code takes the address of mbedtls_ctr_drbg_random when
- * wiring conf_rng. The fake never actually invokes the function via the
- * captured pointer, so this body never runs at test time. Defined here so the
- * symbol resolves at link time without pulling in real libmbedcrypto. */
-// NOLINTNEXTLINE(readability-non-const-parameter) -- signature fixed by mbedTLS API; `output` is an out-buffer the contract writes to
+/* Capture double — two callers. The TLS stream wires this by address into
+ * mbedtls_ssl_conf_rng and never invokes it at test time; the AES-GCM policy
+ * calls it directly to fill each record's nonce. Captures its arguments and
+ * fills a deterministic 0xA0, 0xA1, … pattern (mirrors the OpenSslFake
+ * RAND_bytes double) so a seal test can assert the nonce reached the trailer. */
 int mbedtls_ctr_drbg_random(void* p_rng, unsigned char* output, size_t output_len)
 {
-    (void) p_rng;
-    (void) output;
-    (void) output_len;
+    ctrDrbgRandomCallCount++;
+    lastCtrDrbgRandomContext = p_rng;
+    lastCtrDrbgRandomBuf = output;
+    lastCtrDrbgRandomLen = output_len;
+    if (ctrDrbgRandomFails)
+    {
+        return -1;
+    }
+    for (size_t index = 0; index < output_len; index++)
+    {
+        output[index] = (unsigned char) (0xA0U + index);
+    }
     return 0;
 }
 
@@ -783,4 +840,193 @@ void mbedtls_platform_zeroize(void* buf, size_t len)
     lastPlatformZeroizeBuf = buf;
     lastPlatformZeroizeLen = len;
     memset(buf, 0, len);
+}
+
+/* -------------------------------------------------------------------------
+ * AES-256-GCM — link-interposed mbedtls_gcm_* + the CTR-DRBG nonce source.
+ * Capture-and-canned-return, NOT a cipher (see header).
+ * ------------------------------------------------------------------------- */
+
+void mbedtls_gcm_init(mbedtls_gcm_context* ctx)
+{
+    (void) ctx;
+}
+
+void mbedtls_gcm_free(mbedtls_gcm_context* ctx)
+{
+    (void) ctx;
+}
+
+int mbedtls_gcm_setkey(
+    mbedtls_gcm_context* ctx,
+    mbedtls_cipher_id_t cipher,
+    const unsigned char* key,
+    unsigned int keybits
+)
+{
+    (void) ctx;
+    lastGcmCipher = (int) cipher;
+    lastGcmKeyBits = keybits;
+    size_t keyBytes = keybits / 8U;
+    memcpy(lastGcmKey, key, (keyBytes < sizeof lastGcmKey) ? keyBytes : sizeof lastGcmKey);
+    return (gcmFailStep == MBEDTLSFAKE_GCM_STEP_SETKEY) ? -1 : 0;
+}
+
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- signature fixed by the mbedTLS API
+int mbedtls_gcm_crypt_and_tag(
+    mbedtls_gcm_context* ctx,
+    int mode,
+    size_t length,
+    const unsigned char* iv,
+    size_t iv_len,
+    const unsigned char* add,
+    size_t add_len,
+    const unsigned char* input,
+    unsigned char* output,
+    size_t tag_len,
+    unsigned char* tag
+)
+{
+    (void) ctx;
+    (void) mode;
+    gcmSealCount++;
+    memcpy(lastGcmNonce, iv, (iv_len < sizeof lastGcmNonce) ? iv_len : sizeof lastGcmNonce);
+    /* Report only what was actually captured — a reader walking LastGcmAad() /
+     * LastGcmPlaintext() up to the reported length then never runs past the
+     * capture buffer if a test exceeds its capacity. */
+    lastGcmAadLen = (add_len < sizeof lastGcmAad) ? add_len : sizeof lastGcmAad;
+    memcpy(lastGcmAad, add, lastGcmAadLen);
+    lastGcmPlaintextLen = (length < sizeof lastGcmPlaintext) ? length : sizeof lastGcmPlaintext;
+    memcpy(lastGcmPlaintext, input, lastGcmPlaintextLen);
+    /* The double does not encrypt: copy input to output unchanged so the
+     * in-place buffer stays defined (memmove — production passes output == input)
+     * and write a canned all-zero tag the adapter only forwards into the trailer. */
+    memmove(output, input, length);
+    memset(tag, 0, tag_len);
+    return (gcmFailStep == MBEDTLSFAKE_GCM_STEP_CRYPT_AND_TAG) ? -1 : 0;
+}
+
+int mbedtls_gcm_auth_decrypt(
+    mbedtls_gcm_context* ctx,
+    size_t length,
+    const unsigned char* iv,
+    size_t iv_len,
+    const unsigned char* add,
+    size_t add_len,
+    const unsigned char* tag,
+    size_t tag_len,
+    const unsigned char* input,
+    unsigned char* output
+)
+{
+    (void) ctx;
+    (void) tag;
+    (void) tag_len;
+    gcmOpenCount++;
+    memcpy(lastGcmNonce, iv, (iv_len < sizeof lastGcmNonce) ? iv_len : sizeof lastGcmNonce);
+    lastGcmAadLen = (add_len < sizeof lastGcmAad) ? add_len : sizeof lastGcmAad;
+    memcpy(lastGcmAad, add, lastGcmAadLen);
+    memmove(output, input, length);
+    /* Canned verdict — real tag verification is the integration suite's job.
+     * SetGcmAuthFails drives the tamper / wrong-key rejection (silent false);
+     * the AUTH_DECRYPT step drives a genuine error (reported DECRYPT_FAILED). */
+    int result = 0;
+    if (gcmAuthFails)
+    {
+        result = MBEDTLS_ERR_GCM_AUTH_FAILED;
+    }
+    else if (gcmFailStep == MBEDTLSFAKE_GCM_STEP_AUTH_DECRYPT)
+    {
+        result = -1;
+    }
+    else
+    {
+        /* Authentic. */
+    }
+    return result;
+}
+
+int MbedTlsFake_GcmSealCount(void)
+{
+    return gcmSealCount;
+}
+
+int MbedTlsFake_GcmOpenCount(void)
+{
+    return gcmOpenCount;
+}
+
+const uint8_t* MbedTlsFake_LastGcmKey(void)
+{
+    return lastGcmKey;
+}
+
+unsigned int MbedTlsFake_LastGcmKeyBits(void)
+{
+    return lastGcmKeyBits;
+}
+
+int MbedTlsFake_LastGcmCipher(void)
+{
+    return lastGcmCipher;
+}
+
+const uint8_t* MbedTlsFake_LastGcmNonce(void)
+{
+    return lastGcmNonce;
+}
+
+const uint8_t* MbedTlsFake_LastGcmAad(void)
+{
+    return lastGcmAad;
+}
+
+size_t MbedTlsFake_LastGcmAadLen(void)
+{
+    return lastGcmAadLen;
+}
+
+const uint8_t* MbedTlsFake_LastGcmPlaintext(void)
+{
+    return lastGcmPlaintext;
+}
+
+size_t MbedTlsFake_LastGcmPlaintextLen(void)
+{
+    return lastGcmPlaintextLen;
+}
+
+void MbedTlsFake_SetGcmStepFails(enum MbedTlsFakeGcmStep step)
+{
+    gcmFailStep = step;
+}
+
+void MbedTlsFake_SetGcmAuthFails(bool fails)
+{
+    gcmAuthFails = fails;
+}
+
+int MbedTlsFake_CtrDrbgRandomCallCount(void)
+{
+    return ctrDrbgRandomCallCount;
+}
+
+const void* MbedTlsFake_LastCtrDrbgRandomContext(void)
+{
+    return lastCtrDrbgRandomContext;
+}
+
+const void* MbedTlsFake_LastCtrDrbgRandomBuf(void)
+{
+    return lastCtrDrbgRandomBuf;
+}
+
+size_t MbedTlsFake_LastCtrDrbgRandomLen(void)
+{
+    return lastCtrDrbgRandomLen;
+}
+
+void MbedTlsFake_SetCtrDrbgRandomFails(bool fails)
+{
+    ctrDrbgRandomFails = fails;
 }
