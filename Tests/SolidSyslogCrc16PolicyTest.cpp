@@ -36,7 +36,8 @@ TEST(SolidSyslogCrc16Policy, SealRecordWritesCrc16ToTrailer)
 {
     uint8_t content[] = "123456789";
     uint8_t trailer[2] = {};
-    policy->SealRecord(policy, content, 9, 0, trailer);
+    struct SolidSyslogSecurityRecord record = {content, 9, 0, trailer};
+    policy->SealRecord(policy, &record);
     /* CRC-16/CCITT-FALSE of "123456789" is 0x29B1 */
     BYTES_EQUAL(0x29, trailer[0]);
     BYTES_EQUAL(0xB1, trailer[1]);
@@ -46,26 +47,29 @@ TEST(SolidSyslogCrc16Policy, SealThenOpenRoundTrip)
 {
     uint8_t content[] = "hello";
     uint8_t trailer[2] = {};
-    policy->SealRecord(policy, content, 5, 0, trailer);
-    CHECK_TRUE(policy->OpenRecord(policy, content, 5, 0, trailer));
+    struct SolidSyslogSecurityRecord record = {content, 5, 0, trailer};
+    policy->SealRecord(policy, &record);
+    CHECK_TRUE(policy->OpenRecord(policy, &record));
 }
 
 TEST(SolidSyslogCrc16Policy, OpenDetectsTrailerBitFlip)
 {
     uint8_t content[] = "hello";
     uint8_t trailer[2] = {};
-    policy->SealRecord(policy, content, 5, 0, trailer);
+    struct SolidSyslogSecurityRecord record = {content, 5, 0, trailer};
+    policy->SealRecord(policy, &record);
     trailer[0] ^= 0x01;
-    CHECK_FALSE(policy->OpenRecord(policy, content, 5, 0, trailer));
+    CHECK_FALSE(policy->OpenRecord(policy, &record));
 }
 
 TEST(SolidSyslogCrc16Policy, OpenDetectsContentCorruption)
 {
     uint8_t content[] = "hello";
     uint8_t trailer[2] = {};
-    policy->SealRecord(policy, content, 5, 0, trailer);
+    struct SolidSyslogSecurityRecord record = {content, 5, 0, trailer};
+    policy->SealRecord(policy, &record);
     content[0] ^= 0x01;
-    CHECK_FALSE(policy->OpenRecord(policy, content, 5, 0, trailer));
+    CHECK_FALSE(policy->OpenRecord(policy, &record));
 }
 
 TEST(SolidSyslogCrc16Policy, DestroyDoesNotCrash)

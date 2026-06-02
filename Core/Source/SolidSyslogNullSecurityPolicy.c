@@ -5,43 +5,25 @@
 
 #include "SolidSyslogSecurityPolicyDefinition.h"
 
-// NOLINTBEGIN(bugprone-easily-swappable-parameters) -- contentLength / headerLength are fixed by the SolidSyslogSecurityPolicy vtable contract
 static bool NullSecurityPolicy_NullSealRecord(
     struct SolidSyslogSecurityPolicy* self,
-    // NOLINTNEXTLINE(readability-non-const-parameter) -- content is non-const to match the vtable signature
-    uint8_t* content,
-    uint16_t contentLength,
-    uint16_t headerLength,
-    // NOLINTNEXTLINE(readability-non-const-parameter) -- trailerOut is non-const to match the vtable signature
-    uint8_t* trailerOut
+    const struct SolidSyslogSecurityRecord* record
 )
 {
     (void) self;
-    (void) content;
-    (void) contentLength;
-    (void) headerLength;
-    (void) trailerOut;
+    (void) record;
     return true;
 }
 
 static bool NullSecurityPolicy_NullOpenRecord(
     struct SolidSyslogSecurityPolicy* self,
-    // NOLINTNEXTLINE(readability-non-const-parameter) -- content is non-const to match the vtable signature
-    uint8_t* content,
-    uint16_t contentLength,
-    uint16_t headerLength,
-    const uint8_t* trailerIn
+    const struct SolidSyslogSecurityRecord* record
 )
 {
     (void) self;
-    (void) content;
-    (void) contentLength;
-    (void) headerLength;
-    (void) trailerIn;
+    (void) record;
     return true;
 }
-
-// NOLINTEND(bugprone-easily-swappable-parameters)
 
 struct SolidSyslogSecurityPolicy* SolidSyslogNullSecurityPolicy_Get(void)
 {

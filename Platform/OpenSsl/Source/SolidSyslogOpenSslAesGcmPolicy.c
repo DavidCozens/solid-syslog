@@ -27,17 +27,11 @@ static inline struct SolidSyslogOpenSslAesGcmPolicy* OpenSslAesGcmPolicy_SelfFro
 );
 static bool OpenSslAesGcmPolicy_SealRecord(
     struct SolidSyslogSecurityPolicy* self,
-    uint8_t* content,
-    uint16_t contentLength,
-    uint16_t headerLength,
-    uint8_t* trailerOut
+    const struct SolidSyslogSecurityRecord* record
 );
 static bool OpenSslAesGcmPolicy_OpenRecord(
     struct SolidSyslogSecurityPolicy* self,
-    uint8_t* content,
-    uint16_t contentLength,
-    uint16_t headerLength,
-    const uint8_t* trailerIn
+    const struct SolidSyslogSecurityRecord* record
 );
 static bool OpenSslAesGcmPolicy_FetchKey(struct SolidSyslogOpenSslAesGcmPolicy* policy, uint8_t* keyOut);
 static bool OpenSslAesGcmPolicy_GcmEncrypt(
@@ -86,24 +80,20 @@ static inline struct SolidSyslogOpenSslAesGcmPolicy* OpenSslAesGcmPolicy_SelfFro
     return (struct SolidSyslogOpenSslAesGcmPolicy*) base;
 }
 
-/* Seals in place: the nonce occupies trailer[0..GCM_NONCE_SIZE) and the tag the
- * remaining bytes. The header (content[0..headerLength)) is authenticated as
+/* Seals in place: the nonce occupies Trailer[0..GCM_NONCE_SIZE) and the tag the
+ * remaining bytes. The header (Content[0..HeaderLength)) is authenticated as
  * associated data and left in clear; the body (the rest) is encrypted in place.
  * Fetches the key on demand and wipes it before returning. */
-// NOLINTBEGIN(bugprone-easily-swappable-parameters) -- contentLength / headerLength are fixed by the SolidSyslogSecurityPolicy vtable contract
 static bool OpenSslAesGcmPolicy_SealRecord(
     struct SolidSyslogSecurityPolicy* self,
-    uint8_t* content,
-    uint16_t contentLength,
-    uint16_t headerLength,
-    uint8_t* trailerOut
+    const struct SolidSyslogSecurityRecord* record
 )
 {
     struct SolidSyslogOpenSslAesGcmPolicy* policy = OpenSslAesGcmPolicy_SelfFromBase(self);
-    uint8_t* body = &content[headerLength];
-    uint16_t bodyLength = (uint16_t) (contentLength - headerLength);
-    uint8_t* nonce = trailerOut;
-    uint8_t* tag = &trailerOut[GCM_NONCE_SIZE];
+    uint8_t* body = &record->Content[record->HeaderLength];
+    uint16_t bodyLength = (uint16_t) (record->ContentLength - record->HeaderLength);
+    uint8_t* nonce = record->Trailer;
+    uint8_t* tag = &record->Trailer[GCM_NONCE_SIZE];
 
     bool sealed = false;
     uint8_t key[AES_256_KEY_SIZE];
@@ -111,7 +101,15 @@ static bool OpenSslAesGcmPolicy_SealRecord(
     {
         if (RAND_bytes(nonce, GCM_NONCE_SIZE) == 1)
         {
-            if (OpenSslAesGcmPolicy_GcmEncrypt(key, nonce, body, bodyLength, content, headerLength, tag))
+            if (OpenSslAesGcmPolicy_GcmEncrypt(
+                    key,
+                    nonce,
+                    body,
+                    bodyLength,
+                    record->Content,
+                    record->HeaderLength,
+                    tag
+                ))
             {
                 sealed = true;
             }
@@ -128,8 +126,6 @@ static bool OpenSslAesGcmPolicy_SealRecord(
     OPENSSL_cleanse(key, sizeof key);
     return sealed;
 }
-
-// NOLINTEND(bugprone-easily-swappable-parameters)
 
 /* Fetches the AES-256 key on demand. Fails closed (and reports) if the key is
  * unavailable or not exactly 32 bytes — AES-256 admits no other key length. */
@@ -177,32 +173,27 @@ static bool OpenSslAesGcmPolicy_GcmEncrypt(
  * (associated data) and ciphertext. Fetches the key on demand and wipes it. A
  * tag mismatch is the expected tamper-detected outcome and returns false
  * silently; only a genuine OpenSSL error is reported. */
-// NOLINTBEGIN(bugprone-easily-swappable-parameters) -- contentLength / headerLength are fixed by the SolidSyslogSecurityPolicy vtable contract
 static bool OpenSslAesGcmPolicy_OpenRecord(
     struct SolidSyslogSecurityPolicy* self,
-    uint8_t* content,
-    uint16_t contentLength,
-    uint16_t headerLength,
-    const uint8_t* trailerIn
+    const struct SolidSyslogSecurityRecord* record
 )
 {
     struct SolidSyslogOpenSslAesGcmPolicy* policy = OpenSslAesGcmPolicy_SelfFromBase(self);
-    uint8_t* body = &content[headerLength];
-    uint16_t bodyLength = (uint16_t) (contentLength - headerLength);
-    const uint8_t* nonce = trailerIn;
-    const uint8_t* tag = &trailerIn[GCM_NONCE_SIZE];
+    uint8_t* body = &record->Content[record->HeaderLength];
+    uint16_t bodyLength = (uint16_t) (record->ContentLength - record->HeaderLength);
+    const uint8_t* nonce = record->Trailer;
+    const uint8_t* tag = &record->Trailer[GCM_NONCE_SIZE];
 
     bool opened = false;
     uint8_t key[AES_256_KEY_SIZE];
     if (OpenSslAesGcmPolicy_FetchKey(policy, key))
     {
-        opened = OpenSslAesGcmPolicy_GcmDecrypt(key, nonce, body, bodyLength, content, headerLength, tag);
+        opened =
+            OpenSslAesGcmPolicy_GcmDecrypt(key, nonce, body, bodyLength, record->Content, record->HeaderLength, tag);
     }
     OPENSSL_cleanse(key, sizeof key);
     return opened;
 }
-
-// NOLINTEND(bugprone-easily-swappable-parameters)
 
 static bool OpenSslAesGcmPolicy_GcmDecrypt(
     const uint8_t* key,

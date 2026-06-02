@@ -138,14 +138,16 @@ TEST_GROUP_BASE(SolidSyslogMbedTlsHmacSha256PolicySeal, MbedTlsHmacSha256PolicyT
         ConfigLockFake_Uninstall();
     }
 
-    bool seal(uint8_t* record, size_t length, uint8_t* tag) const
+    bool seal(uint8_t* content, size_t length, uint8_t* tag) const
     {
-        return policy->SealRecord(policy, record, (uint16_t) length, 0, tag);
+        struct SolidSyslogSecurityRecord rec = {content, (uint16_t) length, 0, tag};
+        return policy->SealRecord(policy, &rec);
     }
 
-    bool verify(uint8_t* record, size_t length, const uint8_t* tag) const
+    bool verify(uint8_t* content, size_t length, uint8_t* tag) const
     {
-        return policy->OpenRecord(policy, record, (uint16_t) length, 0, tag);
+        struct SolidSyslogSecurityRecord rec = {content, (uint16_t) length, 0, tag};
+        return policy->OpenRecord(policy, &rec);
     }
 
     static void expectedTagFor(const uint8_t* record, size_t length, uint8_t* tagOut)

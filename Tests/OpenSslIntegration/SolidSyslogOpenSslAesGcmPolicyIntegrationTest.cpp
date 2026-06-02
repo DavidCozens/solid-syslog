@@ -74,12 +74,14 @@ TEST_GROUP(SolidSyslogOpenSslAesGcmPolicyIntegration)
 
     bool seal()
     {
-        return policy->SealRecord(policy, content, CONTENT_LEN, HEADER_LEN, trailer);
+        struct SolidSyslogSecurityRecord rec = {content, CONTENT_LEN, HEADER_LEN, trailer};
+        return policy->SealRecord(policy, &rec);
     }
 
     bool open()
     {
-        return policy->OpenRecord(policy, content, CONTENT_LEN, HEADER_LEN, trailer);
+        struct SolidSyslogSecurityRecord rec = {content, CONTENT_LEN, HEADER_LEN, trailer};
+        return policy->OpenRecord(policy, &rec);
     }
 
     uint8_t* body()

@@ -150,12 +150,14 @@ TEST_GROUP_BASE(SolidSyslogOpenSslAesGcmPolicySeal, OpenSslAesGcmPolicyTestBase)
 
     bool seal()
     {
-        return policy->SealRecord(policy, content, TEST_CONTENT_LEN, TEST_HEADER_LEN, trailer);
+        struct SolidSyslogSecurityRecord rec = {content, TEST_CONTENT_LEN, TEST_HEADER_LEN, trailer};
+        return policy->SealRecord(policy, &rec);
     }
 
     bool open()
     {
-        return policy->OpenRecord(policy, content, TEST_CONTENT_LEN, TEST_HEADER_LEN, trailer);
+        struct SolidSyslogSecurityRecord rec = {content, TEST_CONTENT_LEN, TEST_HEADER_LEN, trailer};
+        return policy->OpenRecord(policy, &rec);
     }
 
     [[nodiscard]] const uint8_t* body() const

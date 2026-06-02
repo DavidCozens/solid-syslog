@@ -22,17 +22,11 @@ static inline struct SolidSyslogMbedTlsHmacSha256Policy* MbedTlsHmacSha256Policy
 );
 static bool MbedTlsHmacSha256Policy_SealRecord(
     struct SolidSyslogSecurityPolicy* self,
-    uint8_t* content,
-    uint16_t contentLength,
-    uint16_t headerLength,
-    uint8_t* trailerOut
+    const struct SolidSyslogSecurityRecord* record
 );
 static bool MbedTlsHmacSha256Policy_OpenRecord(
     struct SolidSyslogSecurityPolicy* self,
-    uint8_t* content,
-    uint16_t contentLength,
-    uint16_t headerLength,
-    const uint8_t* trailerIn
+    const struct SolidSyslogSecurityRecord* record
 );
 static bool MbedTlsHmacSha256Policy_ComputeTag(
     struct SolidSyslogMbedTlsHmacSha256Policy* policy,
@@ -70,26 +64,19 @@ static inline struct SolidSyslogMbedTlsHmacSha256Policy* MbedTlsHmacSha256Policy
 }
 
 /* HMAC authenticates the whole content as one buffer — the header/body split
- * only matters to AEAD policies, so headerLength is ignored here. */
-// NOLINTBEGIN(bugprone-easily-swappable-parameters) -- contentLength / headerLength are fixed by the SolidSyslogSecurityPolicy vtable contract
+ * only matters to AEAD policies, so HeaderLength is ignored here. */
 static bool MbedTlsHmacSha256Policy_SealRecord(
     struct SolidSyslogSecurityPolicy* self,
-    uint8_t* content,
-    uint16_t contentLength,
-    uint16_t headerLength,
-    uint8_t* trailerOut
+    const struct SolidSyslogSecurityRecord* record
 )
 {
-    (void) headerLength;
     return MbedTlsHmacSha256Policy_ComputeTag(
         MbedTlsHmacSha256Policy_SelfFromBase(self),
-        content,
-        contentLength,
-        trailerOut
+        record->Content,
+        record->ContentLength,
+        record->Trailer
     );
 }
-
-// NOLINTEND(bugprone-easily-swappable-parameters)
 
 /* Fetches the key on demand into a transient buffer, computes HMAC-SHA256 over
  * `data` into `tagOut`, then wipes the key buffer — the key never lingers
@@ -128,31 +115,24 @@ static bool MbedTlsHmacSha256Policy_ComputeTag(
     return computed;
 }
 
-// NOLINTBEGIN(bugprone-easily-swappable-parameters) -- contentLength / headerLength are fixed by the SolidSyslogSecurityPolicy vtable contract
 static bool MbedTlsHmacSha256Policy_OpenRecord(
     struct SolidSyslogSecurityPolicy* self,
-    uint8_t* content,
-    uint16_t contentLength,
-    uint16_t headerLength,
-    const uint8_t* trailerIn
+    const struct SolidSyslogSecurityRecord* record
 )
 {
-    (void) headerLength;
     uint8_t expected[HMAC_SHA256_TAG_SIZE];
     bool verified = false;
     if (MbedTlsHmacSha256Policy_ComputeTag(
             MbedTlsHmacSha256Policy_SelfFromBase(self),
-            content,
-            contentLength,
+            record->Content,
+            record->ContentLength,
             expected
         ))
     {
-        verified = MbedTlsHmacSha256Policy_ConstantTimeEquals(expected, trailerIn, HMAC_SHA256_TAG_SIZE);
+        verified = MbedTlsHmacSha256Policy_ConstantTimeEquals(expected, record->Trailer, HMAC_SHA256_TAG_SIZE);
     }
     return verified;
 }
-
-// NOLINTEND(bugprone-easily-swappable-parameters)
 
 static inline bool MbedTlsHmacSha256Policy_ConstantTimeEquals(const uint8_t* a, const uint8_t* b, size_t length)
 {

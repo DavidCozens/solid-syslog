@@ -27,5 +27,6 @@ TEST(SolidSyslogNullSecurityPolicy, TrailerSizeIsZero)
 
 TEST(SolidSyslogNullSecurityPolicy, OpenRecordReturnsTrue)
 {
-    CHECK_TRUE(policy->OpenRecord(policy, nullptr, 0, 0, nullptr));
+    struct SolidSyslogSecurityRecord record = {nullptr, 0, 0, nullptr};
+    CHECK_TRUE(policy->OpenRecord(policy, &record));
 }

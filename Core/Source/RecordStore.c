@@ -145,13 +145,13 @@ static inline bool RecordStore_AssembleRecord(struct RecordStore* recordStore, c
     lengthBytes[1] = (uint8_t) ((length >> 8) & 0xFFU);
     (void) memcpy(RecordStore_MessageAddress(recordStore), data, size);
 
-    bool sealed = recordStore->SecurityPolicy->SealRecord(
-        recordStore->SecurityPolicy,
+    struct SolidSyslogSecurityRecord record = {
         RecordStore_ContentAddress(recordStore),
         RecordStore_ContentSize(size),
         CONTENT_HEADER_SIZE,
         RecordStore_TrailerAddress(recordStore, size)
-    );
+    };
+    bool sealed = recordStore->SecurityPolicy->SealRecord(recordStore->SecurityPolicy, &record);
 
     *RecordStore_SentFlagAddress(recordStore, size) = SENT_FLAG_UNSENT;
     return sealed;
@@ -330,13 +330,13 @@ static inline bool RecordStore_ReadTrailer(
 
 static inline bool RecordStore_OpenRecord(struct RecordStore* recordStore, uint16_t length)
 {
-    return recordStore->SecurityPolicy->OpenRecord(
-        recordStore->SecurityPolicy,
+    struct SolidSyslogSecurityRecord record = {
         RecordStore_ContentAddress(recordStore),
         RecordStore_ContentSize(length),
         CONTENT_HEADER_SIZE,
         RecordStore_TrailerAddress(recordStore, length)
-    );
+    };
+    return recordStore->SecurityPolicy->OpenRecord(recordStore->SecurityPolicy, &record);
 }
 
 static inline size_t RecordStore_BoundedSize(uint16_t length, size_t maxSize)

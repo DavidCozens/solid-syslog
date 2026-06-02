@@ -1374,23 +1374,13 @@ static uint8_t sealContentData[CONTENT_REGION_MAX];
 static uint16_t sealContentLength;
 static uint16_t sealHeaderLength;
 
-// NOLINTBEGIN(bugprone-easily-swappable-parameters) -- contentLength / headerLength are fixed by the SolidSyslogSecurityPolicy vtable contract
-static bool SpySealRecord(
-    struct SolidSyslogSecurityPolicy* self,
-    // NOLINTNEXTLINE(readability-non-const-parameter) -- content is non-const to match the vtable signature
-    uint8_t* content,
-    uint16_t contentLength,
-    uint16_t headerLength,
-    // NOLINTNEXTLINE(readability-non-const-parameter) -- trailerOut is non-const to match the vtable signature
-    uint8_t* trailerOut
-)
+static bool SpySealRecord(struct SolidSyslogSecurityPolicy* self, const struct SolidSyslogSecurityRecord* record)
 {
     (void) self;
-    (void) trailerOut;
     SpySealRecordCallCount++;
-    sealContentLength = contentLength;
-    sealHeaderLength = headerLength;
-    memcpy(sealContentData, content, contentLength);
+    sealContentLength = record->ContentLength;
+    sealHeaderLength = record->HeaderLength;
+    memcpy(sealContentData, record->Content, record->ContentLength);
     return true;
 }
 
@@ -1399,24 +1389,15 @@ static uint8_t openContentData[CONTENT_REGION_MAX];
 static uint16_t openContentLength;
 static uint16_t openHeaderLength;
 
-static bool SpyOpenRecord(
-    struct SolidSyslogSecurityPolicy* self,
-    // NOLINTNEXTLINE(readability-non-const-parameter) -- content is non-const to match the vtable signature
-    uint8_t* content,
-    uint16_t contentLength,
-    uint16_t headerLength,
-    const uint8_t* trailerIn
-)
+static bool SpyOpenRecord(struct SolidSyslogSecurityPolicy* self, const struct SolidSyslogSecurityRecord* record)
 {
     (void) self;
-    (void) trailerIn;
     SpyOpenRecordCallCount++;
-    openContentLength = contentLength;
-    openHeaderLength = headerLength;
-    memcpy(openContentData, content, contentLength);
+    openContentLength = record->ContentLength;
+    openHeaderLength = record->HeaderLength;
+    memcpy(openContentData, record->Content, record->ContentLength);
     return true;
 }
-// NOLINTEND(bugprone-easily-swappable-parameters)
 
 static struct SolidSyslogSecurityPolicy spyPolicy = {
     0,
