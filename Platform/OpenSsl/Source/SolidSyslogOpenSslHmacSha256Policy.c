@@ -35,7 +35,8 @@ static bool OpenSslHmacSha256Policy_ComputeTag(
     struct SolidSyslogOpenSslHmacSha256Policy* policy,
     const uint8_t* data,
     uint16_t length,
-    uint8_t* tagOut
+    uint8_t* tagOut,
+    uint16_t failureCategory
 );
 static inline bool OpenSslHmacSha256Policy_ConstantTimeEquals(const uint8_t* a, const uint8_t* b, size_t length);
 
@@ -80,7 +81,8 @@ static bool OpenSslHmacSha256Policy_SealRecord(
         OpenSslHmacSha256Policy_SelfFromBase(self),
         record->Content,
         record->ContentLength,
-        tag
+        tag,
+        SOLIDSYSLOG_CAT_SECURITYPOLICY_SEAL_FAILED
     );
 }
 
@@ -93,7 +95,8 @@ static bool OpenSslHmacSha256Policy_ComputeTag(
     struct SolidSyslogOpenSslHmacSha256Policy* policy,
     const uint8_t* data,
     uint16_t length,
-    uint8_t* tagOut
+    uint8_t* tagOut,
+    uint16_t failureCategory
 )
 {
     uint8_t key[SOLIDSYSLOG_MAX_HMAC_KEY_SIZE];
@@ -109,7 +112,7 @@ static bool OpenSslHmacSha256Policy_ComputeTag(
         {
             OpenSslHmacSha256Policy_Report(
                 SOLIDSYSLOG_SEVERITY_ERROR,
-                SOLIDSYSLOG_CAT_SECURITYPOLICY_SEAL_FAILED,
+                failureCategory,
                 OPENSSLHMACSHA256POLICY_ERROR_HMAC_FAILED
             );
         }
@@ -139,7 +142,8 @@ static bool OpenSslHmacSha256Policy_OpenRecord(
             OpenSslHmacSha256Policy_SelfFromBase(self),
             record->Content,
             record->ContentLength,
-            expected
+            expected,
+            SOLIDSYSLOG_CAT_SECURITYPOLICY_OPEN_FAILED
         ))
     {
         verified = OpenSslHmacSha256Policy_ConstantTimeEquals(expected, record->Trailer, HMAC_SHA256_TAG_SIZE);

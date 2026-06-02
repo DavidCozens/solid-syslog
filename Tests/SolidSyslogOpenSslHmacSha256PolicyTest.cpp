@@ -377,3 +377,23 @@ TEST(SolidSyslogOpenSslHmacSha256PolicySeal, OpenRecordFailsClosedWhenKeyUnavail
 
     CHECK_FALSE(verify(TEST_RECORD, sizeof TEST_RECORD, tag));
 }
+
+// An HMAC computation failure during verify is an OPEN failure, not a SEAL
+// failure — the same ComputeTag helper serves both paths, so the category must
+// be chosen by the caller.
+TEST(SolidSyslogOpenSslHmacSha256PolicySeal, OpenRecordReportsHmacFailureAsOpenFailed)
+{
+    uint8_t tag[HMAC_SHA256_TAG_SIZE] = {};
+    seal(TEST_RECORD, sizeof TEST_RECORD, tag);
+    ErrorHandlerFake_Install(nullptr);
+    OpenSslFake_SetHmacFails(true);
+
+    bool verified = verify(TEST_RECORD, sizeof TEST_RECORD, tag);
+
+    CHECK_FALSE(verified);
+    CHECK_REPORTED_ERROR(
+        SOLIDSYSLOG_SEVERITY_ERROR,
+        SOLIDSYSLOG_CAT_SECURITYPOLICY_OPEN_FAILED,
+        OPENSSLHMACSHA256POLICY_ERROR_HMAC_FAILED
+    );
+}
