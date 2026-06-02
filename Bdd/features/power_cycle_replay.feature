@@ -50,9 +50,9 @@ Feature: Power cycle replay from block store
   # encryption) instead of CRC-16. Proves the AEAD policy is transparent to
   # behaviour and that real AES-GCM round-trips on the target: records encrypted
   # and tagged on write are decrypted and verified on replay-read after a power
-  # cycle. @aesgcm runs Linux-only (OpenSSL, S17.03); the Windows and
-  # FreeRTOS-plustcp runners exclude it (no AES-GCM policy wired there this
-  # story), FreeRTOS-lwip via @store.
+  # cycle. @aesgcm runs on every store-capable runner that wires an AES-GCM
+  # policy — Linux (OpenSSL, S17.03) plus FreeRTOS-plustcp (mbedTLS, S17.04).
+  # Windows excludes it (no AES-GCM policy wired there), FreeRTOS-lwip via @store.
   @aesgcm
   Scenario: Stored messages replayed after power cycle with AES-256-GCM at rest
     Given the syslog oracle is running
