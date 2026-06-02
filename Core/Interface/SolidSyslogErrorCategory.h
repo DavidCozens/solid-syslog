@@ -1,43 +1,30 @@
 #ifndef SOLIDSYSLOGERRORCATEGORY_H
 #define SOLIDSYSLOGERRORCATEGORY_H
 
-#include "ExternC.h"
+#include <stdint.h>
 
-EXTERN_C_BEGIN
+/*
+ * Portable error-category axis. Categories are library-owned constants
+ * organised errno-domain style: a low universal-lifecycle range, then one
+ * base per role family (declared beside that role's *Definition.h, off the
+ * bases below as BASE + n), then a reserved integrator range. 0xC000 and
+ * above is reserved for integrator-defined roles so custom backends never
+ * collide.
+ *
+ * The category constants carry their own (uint16_t) cast so emit sites stay
+ * clean — SolidSyslog_Error's category parameter is uint16_t (not an enum
+ * type), which is what lets integrator classes supply their own categories
+ * in the reserved range without being boxed into a library enum.
+ */
 
-    /*
-     * Portable error-category axis. Values are library-owned enum constants
-     * organised errno-domain style: a low universal-lifecycle range, then one
-     * base per role family (declared beside that role's *Definition.h), then a
-     * reserved integrator range. The wire type is uint16_t (see
-     * SolidSyslogErrorEvent.Category) — not an enum type — so integrator
-     * classes can supply their own categories in the reserved range without
-     * being boxed into a library enum.
-     *
-     * Anonymous enums: the constants are what callers use; no tag is needed,
-     * which keeps MISRA 2.4 (unused tag) quiet. Role categories use explicit
-     * literal values rather than `BASE + n` arithmetic so each initialiser
-     * stays within one essential-type category (MISRA 10.4).
-     */
-    enum
-    {
-        SOLIDSYSLOG_CAT_NONE = 0x0000,
-        SOLIDSYSLOG_CAT_BAD_CONFIG = 0x0001,
-        SOLIDSYSLOG_CAT_POOL_EXHAUSTED = 0x0002,
-        SOLIDSYSLOG_CAT_UNKNOWN_DESTROY = 0x0003
-    };
+/* Universal lifecycle categories. */
+#define SOLIDSYSLOG_CAT_BAD_CONFIG ((uint16_t) 0x0001U)
+#define SOLIDSYSLOG_CAT_POOL_EXHAUSTED ((uint16_t) 0x0002U)
+#define SOLIDSYSLOG_CAT_UNKNOWN_DESTROY ((uint16_t) 0x0003U)
 
-    /*
-     * Per-role base ranges. A role occupies [BASE, BASE + 0xFF]. A base is
-     * listed here only once a role family carries a role-specific category;
-     * roles that emit only the universal categories above need none. 0xC000
-     * and above is reserved for integrator-defined roles.
-     */
-    enum
-    {
-        SOLIDSYSLOG_CAT_SENDER_BASE = 0x0100
-    };
-
-EXTERN_C_END
+/* Per-role base ranges. A role occupies [BASE, BASE + 0xFF]. A base is listed
+ * here only once a role family carries a role-specific category; roles that
+ * emit only the universal categories above need none. */
+#define SOLIDSYSLOG_CAT_SENDER_BASE 0x0100U
 
 #endif /* SOLIDSYSLOGERRORCATEGORY_H */

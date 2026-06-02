@@ -76,7 +76,7 @@ static bool UdpSender_Send(struct SolidSyslogSender* base, const void* buffer, s
         SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &UdpSenderErrorSource,
-            (uint16_t) SOLIDSYSLOG_CAT_SENDER_SEND_NULL_BUFFER,
+            SOLIDSYSLOG_CAT_SENDER_SEND_NULL_BUFFER,
             (int32_t) UDPSENDER_ERROR_SEND_NULL_BUFFER
         );
     }
