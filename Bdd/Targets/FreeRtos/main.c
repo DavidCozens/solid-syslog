@@ -140,24 +140,36 @@ void vApplicationIPNetworkEventHook_Multi(eIPCallbackEvent_t eNetworkEvent, stru
     (void) pxEndPoint;
     if ((eNetworkEvent == eNetworkUp) && (interactiveTaskCreated == pdFALSE))
     {
+        TaskHandle_t interactiveTask = NULL;
         if (xTaskCreate(
                 BddTargetFreeRtosPipeline_InteractiveTask,
                 "interactive",
                 configMINIMAL_STACK_SIZE * BDD_TARGET_INTERACTIVE_STACK_MULTIPLIER,
                 NULL,
                 tskIDLE_PRIORITY + 1,
-                NULL
+                &interactiveTask
             ) == pdPASS)
         {
-            (void) xTaskCreate(
-                BddTargetFreeRtosPipeline_ServiceTask,
-                "service",
-                configMINIMAL_STACK_SIZE * BDD_TARGET_SERVICE_STACK_MULTIPLIER,
-                NULL,
-                tskIDLE_PRIORITY + 1,
-                NULL
-            );
-            interactiveTaskCreated = pdTRUE;
+            if (xTaskCreate(
+                    BddTargetFreeRtosPipeline_ServiceTask,
+                    "service",
+                    configMINIMAL_STACK_SIZE * BDD_TARGET_SERVICE_STACK_MULTIPLIER,
+                    NULL,
+                    tskIDLE_PRIORITY + 1,
+                    NULL
+                ) == pdPASS)
+            {
+                interactiveTaskCreated = pdTRUE;
+            }
+            else
+            {
+                /* Service create failed — undo the interactive task so the next
+                 * eNetworkUp retries both cleanly instead of latching a
+                 * half-started pipeline. Safe to delete: this hook runs on the
+                 * higher-priority IP task, so the idle+1 interactive task has not
+                 * been scheduled yet. */
+                vTaskDelete(interactiveTask);
+            }
         }
     }
 }

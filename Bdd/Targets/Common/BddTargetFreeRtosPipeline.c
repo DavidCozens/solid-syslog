@@ -135,6 +135,10 @@ static size_t pendingCapacityThreshold = 0;
  * DestroyCurrentStore can release it. */
 static const char* pendingSecurityPolicy = "crc16";
 static struct SolidSyslogSecurityPolicy* currentPolicy = NULL;
+/* The policy kind captured when currentPolicy was built — DestroySecurityPolicy
+ * must dispatch on this, NOT pendingSecurityPolicy, which a later `set
+ * security-policy` can change out from under the installed policy. */
+static const char* installedSecurityPolicy = "crc16";
 /* When true, SolidSyslog gets only the meta SD — timeQuality and origin are
  * dropped. Mirrors Linux's --no-sd. */
 static volatile bool pendingNoSd = false;
@@ -507,6 +511,10 @@ static bool BddDemoGetKey(void* context, uint8_t* keyOut, size_t capacity, size_
 
 static struct SolidSyslogSecurityPolicy* CreateSecurityPolicy(void)
 {
+    /* Latch the kind now so teardown destroys against what we actually built,
+     * not whatever `set security-policy` may set afterwards. pendingSecurityPolicy
+     * is always one of the four validated string literals. */
+    installedSecurityPolicy = pendingSecurityPolicy;
     struct SolidSyslogSecurityPolicy* policy = NULL;
     if (strcmp(pendingSecurityPolicy, "hmac-sha256") == 0)
     {
@@ -621,15 +629,15 @@ static bool EnsureFatFsMounted(void)
 
 static void DestroySecurityPolicy(void)
 {
-    if (strcmp(pendingSecurityPolicy, "hmac-sha256") == 0)
+    if (strcmp(installedSecurityPolicy, "hmac-sha256") == 0)
     {
         SolidSyslogMbedTlsHmacSha256Policy_Destroy(currentPolicy);
     }
-    else if (strcmp(pendingSecurityPolicy, "aes-256-gcm") == 0)
+    else if (strcmp(installedSecurityPolicy, "aes-256-gcm") == 0)
     {
         SolidSyslogMbedTlsAesGcmPolicy_Destroy(currentPolicy);
     }
-    else if (strcmp(pendingSecurityPolicy, "crc16") == 0)
+    else if (strcmp(installedSecurityPolicy, "crc16") == 0)
     {
         SolidSyslogCrc16Policy_Destroy();
     }
