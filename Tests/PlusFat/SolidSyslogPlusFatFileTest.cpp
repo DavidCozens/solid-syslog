@@ -161,3 +161,22 @@ TEST(SolidSyslogPlusFatFile, WriteFailsWhenFfflushFails)
 
     CHECK_FALSE(SolidSyslogFile_Write(file, buffer, sizeof(buffer)));
 }
+
+TEST(SolidSyslogPlusFatFile, SeekToCallsFfseekFromStart)
+{
+    SolidSyslogFile_Open(file, TEST_PATH);
+
+    SolidSyslogFile_SeekTo(file, 42);
+
+    CALLED_FAKE(PlusFatFake_Seek, ONCE);
+    LONGS_EQUAL(42, PlusFatFake_LastSeekOffset());
+    LONGS_EQUAL(SEEK_SET, PlusFatFake_LastSeekWhence());
+}
+
+TEST(SolidSyslogPlusFatFile, SizeReturnsFfilelength)
+{
+    SolidSyslogFile_Open(file, TEST_PATH);
+    PlusFatFake_SetFileLength(42);
+
+    LONGS_EQUAL(42, SolidSyslogFile_Size(file));
+}

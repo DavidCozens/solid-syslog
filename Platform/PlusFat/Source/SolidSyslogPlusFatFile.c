@@ -16,6 +16,8 @@ static void PlusFatFile_Close(struct SolidSyslogFile* base);
 static bool PlusFatFile_IsOpen(struct SolidSyslogFile* base);
 static bool PlusFatFile_Read(struct SolidSyslogFile* base, void* buf, size_t count);
 static bool PlusFatFile_Write(struct SolidSyslogFile* base, const void* buf, size_t count);
+static void PlusFatFile_SeekTo(struct SolidSyslogFile* base, size_t offset);
+static size_t PlusFatFile_Size(struct SolidSyslogFile* base);
 
 static inline struct SolidSyslogPlusFatFile* PlusFatFile_SelfFromBase(struct SolidSyslogFile* base);
 
@@ -27,6 +29,8 @@ void PlusFatFile_Initialise(struct SolidSyslogFile* base)
     self->Base.IsOpen = PlusFatFile_IsOpen;
     self->Base.Read = PlusFatFile_Read;
     self->Base.Write = PlusFatFile_Write;
+    self->Base.SeekTo = PlusFatFile_SeekTo;
+    self->Base.Size = PlusFatFile_Size;
     self->Fp = NULL;
 }
 
@@ -86,4 +90,15 @@ static bool PlusFatFile_Write(struct SolidSyslogFile* base, const void* buf, siz
      * the BlockStore was told had been stored. */
     bool wroteAll = ff_fwrite(buf, 1, count, self->Fp) == count;
     return wroteAll && (ff_fflush(self->Fp) == 0);
+}
+
+static void PlusFatFile_SeekTo(struct SolidSyslogFile* base, size_t offset)
+{
+    struct SolidSyslogPlusFatFile* self = PlusFatFile_SelfFromBase(base);
+    ff_fseek(self->Fp, (long) offset, SEEK_SET);
+}
+
+static size_t PlusFatFile_Size(struct SolidSyslogFile* base)
+{
+    return ff_filelength(PlusFatFile_SelfFromBase(base)->Fp);
 }

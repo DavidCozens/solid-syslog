@@ -42,6 +42,14 @@ static bool writeIncomplete;
 static int fflushCallCount;
 static int fflushResult;
 
+/* ff_fseek state */
+static int seekCallCount;
+static long lastSeekOffset;
+static int lastSeekWhence;
+
+/* ff_filelength state */
+static size_t fileLength;
+
 void PlusFatFake_Reset(void)
 {
     openCallCount = 0;
@@ -61,6 +69,10 @@ void PlusFatFake_Reset(void)
     writeIncomplete = false;
     fflushCallCount = 0;
     fflushResult = 0;
+    seekCallCount = 0;
+    lastSeekOffset = 0;
+    lastSeekWhence = 0;
+    fileLength = 0;
 }
 
 void PlusFatFake_SetOpenFailsForMode(const char* mode)
@@ -204,4 +216,39 @@ int ff_fflush(FF_FILE* pxStream)
     (void) pxStream;
     fflushCallCount++;
     return fflushResult;
+}
+
+int PlusFatFake_SeekCallCount(void)
+{
+    return seekCallCount;
+}
+
+long PlusFatFake_LastSeekOffset(void)
+{
+    return lastSeekOffset;
+}
+
+int PlusFatFake_LastSeekWhence(void)
+{
+    return lastSeekWhence;
+}
+
+int ff_fseek(FF_FILE* pxStream, long lOffset, int iWhence)
+{
+    (void) pxStream;
+    seekCallCount++;
+    lastSeekOffset = lOffset;
+    lastSeekWhence = iWhence;
+    return 0;
+}
+
+void PlusFatFake_SetFileLength(unsigned long length)
+{
+    fileLength = (size_t) length;
+}
+
+size_t ff_filelength(FF_FILE* pxStream)
+{
+    (void) pxStream;
+    return fileLength;
 }

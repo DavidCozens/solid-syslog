@@ -33,6 +33,14 @@ EXTERN_C_BEGIN
     void PlusFatFake_SetFflushFails(void);
     int PlusFatFake_FflushCallCount(void);
 
+    /* ff_fseek */
+    int PlusFatFake_SeekCallCount(void);
+    long PlusFatFake_LastSeekOffset(void);
+    int PlusFatFake_LastSeekWhence(void);
+
+    /* ff_filelength */
+    void PlusFatFake_SetFileLength(unsigned long length);
+
 EXTERN_C_END
 
 #endif /* PLUSFATFAKE_H */
