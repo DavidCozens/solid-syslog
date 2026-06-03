@@ -123,3 +123,41 @@ TEST(SolidSyslogPlusFatFile, ReadFailsWhenFewerBytesAvailable)
 
     CHECK_FALSE(SolidSyslogFile_Read(file, buffer, sizeof(buffer)));
 }
+
+TEST(SolidSyslogPlusFatFile, WriteCallsFfwriteWithData)
+{
+    SolidSyslogFile_Open(file, TEST_PATH);
+
+    CHECK_TRUE(SolidSyslogFile_Write(file, buffer, sizeof(buffer)));
+
+    CALLED_FAKE(PlusFatFake_Write, ONCE);
+    MEMCMP_EQUAL(buffer, PlusFatFake_LastWriteBytes(), sizeof(buffer));
+    UNSIGNED_LONGS_EQUAL(sizeof(buffer), PlusFatFake_LastWriteItems());
+}
+
+TEST(SolidSyslogPlusFatFile, WriteCommitsToDiskWithFfflush)
+{
+    SolidSyslogFile_Open(file, TEST_PATH);
+
+    SolidSyslogFile_Write(file, buffer, 1);
+
+    CALLED_FAKE(PlusFatFake_Fflush, ONCE);
+}
+
+TEST(SolidSyslogPlusFatFile, WriteFailsAndSkipsFlushWhenFfwriteIncomplete)
+{
+    SolidSyslogFile_Open(file, TEST_PATH);
+    PlusFatFake_SetWriteIncomplete();
+
+    CHECK_FALSE(SolidSyslogFile_Write(file, buffer, sizeof(buffer)));
+
+    CALLED_FAKE(PlusFatFake_Fflush, NEVER);
+}
+
+TEST(SolidSyslogPlusFatFile, WriteFailsWhenFfflushFails)
+{
+    SolidSyslogFile_Open(file, TEST_PATH);
+    PlusFatFake_SetFflushFails();
+
+    CHECK_FALSE(SolidSyslogFile_Write(file, buffer, sizeof(buffer)));
+}

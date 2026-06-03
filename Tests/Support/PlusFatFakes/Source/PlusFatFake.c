@@ -9,7 +9,8 @@
 enum
 {
     OPEN_MODE_CAPACITY = 8,
-    READ_SOURCE_CAPACITY = 256
+    READ_SOURCE_CAPACITY = 256,
+    WRITE_CAPTURE_CAPACITY = 256
 };
 
 static FF_FILE fakeFile;
@@ -31,6 +32,16 @@ static int readCallCount;
 static size_t lastReadSize;
 static size_t lastReadItems;
 
+/* ff_fwrite state */
+static int writeCallCount;
+static unsigned char lastWriteBytes[WRITE_CAPTURE_CAPACITY];
+static size_t lastWriteItems;
+static bool writeIncomplete;
+
+/* ff_fflush state */
+static int fflushCallCount;
+static int fflushResult;
+
 void PlusFatFake_Reset(void)
 {
     openCallCount = 0;
@@ -44,6 +55,12 @@ void PlusFatFake_Reset(void)
     readCallCount = 0;
     lastReadSize = 0;
     lastReadItems = 0;
+    writeCallCount = 0;
+    memset(lastWriteBytes, 0, sizeof(lastWriteBytes));
+    lastWriteItems = 0;
+    writeIncomplete = false;
+    fflushCallCount = 0;
+    fflushResult = 0;
 }
 
 void PlusFatFake_SetOpenFailsForMode(const char* mode)
@@ -134,4 +151,57 @@ size_t ff_fread(void* pvBuffer, size_t xSize, size_t xItems, FF_FILE* pxStream)
     size_t itemsDelivered = (xItems <= readSourceCount) ? xItems : readSourceCount;
     memcpy(pvBuffer, readSource, itemsDelivered);
     return itemsDelivered;
+}
+
+void PlusFatFake_SetWriteIncomplete(void)
+{
+    writeIncomplete = true;
+}
+
+int PlusFatFake_WriteCallCount(void)
+{
+    return writeCallCount;
+}
+
+const void* PlusFatFake_LastWriteBytes(void)
+{
+    return lastWriteBytes;
+}
+
+unsigned long PlusFatFake_LastWriteItems(void)
+{
+    return (unsigned long) lastWriteItems;
+}
+
+size_t ff_fwrite(const void* pvBuffer, size_t xSize, size_t xItems, FF_FILE* pxStream)
+{
+    (void) xSize;
+    (void) pxStream;
+    writeCallCount++;
+    size_t copyCount = (xItems <= sizeof(lastWriteBytes)) ? xItems : sizeof(lastWriteBytes);
+    memcpy(lastWriteBytes, pvBuffer, copyCount);
+    lastWriteItems = xItems;
+    size_t itemsWritten = xItems;
+    if (writeIncomplete && (xItems > 0))
+    {
+        itemsWritten = xItems - 1;
+    }
+    return itemsWritten;
+}
+
+void PlusFatFake_SetFflushFails(void)
+{
+    fflushResult = -1;
+}
+
+int PlusFatFake_FflushCallCount(void)
+{
+    return fflushCallCount;
+}
+
+int ff_fflush(FF_FILE* pxStream)
+{
+    (void) pxStream;
+    fflushCallCount++;
+    return fflushResult;
 }

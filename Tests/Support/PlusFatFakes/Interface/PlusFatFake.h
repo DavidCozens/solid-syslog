@@ -23,6 +23,16 @@ EXTERN_C_BEGIN
     unsigned long PlusFatFake_LastReadSize(void);
     unsigned long PlusFatFake_LastReadItems(void);
 
+    /* ff_fwrite */
+    void PlusFatFake_SetWriteIncomplete(void);
+    int PlusFatFake_WriteCallCount(void);
+    const void* PlusFatFake_LastWriteBytes(void);
+    unsigned long PlusFatFake_LastWriteItems(void);
+
+    /* ff_fflush */
+    void PlusFatFake_SetFflushFails(void);
+    int PlusFatFake_FflushCallCount(void);
+
 EXTERN_C_END
 
 #endif /* PLUSFATFAKE_H */
