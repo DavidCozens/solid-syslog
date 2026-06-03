@@ -256,7 +256,6 @@ set(BAKED_PEM_HEADERS
 add_executable(SolidSyslogBddTarget
     main.c
     Startup.c
-    diskio.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Common/CmsdkUart.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Common/Syscalls.c
     ${CMAKE_SOURCE_DIR}/Platform/FatFs/Source/SolidSyslogFatFsFile.c
@@ -286,6 +285,7 @@ add_executable(SolidSyslogBddTarget
     ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/BddTargetSwitchConfig.c
     ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/BddTargetTlsConfig.c
     ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/BddTargetTlsSender_MbedTls_PlusTcpTcp.c
+    ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/diskio.c
     ${BAKED_PEM_HEADERS}
     $<TARGET_OBJECTS:solid_syslog_freertos_upstream>
 )
