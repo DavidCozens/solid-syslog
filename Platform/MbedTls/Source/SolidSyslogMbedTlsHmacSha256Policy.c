@@ -6,9 +6,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "SolidSyslogErrorCategory.h"
 #include "SolidSyslogMbedTlsHmacSha256PolicyErrors.h"
 #include "SolidSyslogMbedTlsHmacSha256PolicyPrivate.h"
 #include "SolidSyslogPrival.h"
+#include "SolidSyslogSecurityPolicyCategories.h"
 #include "SolidSyslogSecurityPolicyDefinition.h"
 #include "SolidSyslogTunables.h"
 
@@ -32,7 +34,8 @@ static bool MbedTlsHmacSha256Policy_ComputeTag(
     struct SolidSyslogMbedTlsHmacSha256Policy* policy,
     const uint8_t* data,
     uint16_t length,
-    uint8_t* tagOut
+    uint8_t* tagOut,
+    uint16_t failureCategory
 );
 static inline bool MbedTlsHmacSha256Policy_ConstantTimeEquals(const uint8_t* a, const uint8_t* b, size_t length);
 
@@ -77,7 +80,8 @@ static bool MbedTlsHmacSha256Policy_SealRecord(
         MbedTlsHmacSha256Policy_SelfFromBase(self),
         record->Content,
         record->ContentLength,
-        tag
+        tag,
+        SOLIDSYSLOG_CAT_SECURITYPOLICY_SEAL_FAILED
     );
 }
 
@@ -90,7 +94,8 @@ static bool MbedTlsHmacSha256Policy_ComputeTag(
     struct SolidSyslogMbedTlsHmacSha256Policy* policy,
     const uint8_t* data,
     uint16_t length,
-    uint8_t* tagOut
+    uint8_t* tagOut,
+    uint16_t failureCategory
 )
 {
     uint8_t key[SOLIDSYSLOG_MAX_HMAC_KEY_SIZE];
@@ -105,12 +110,20 @@ static bool MbedTlsHmacSha256Policy_ComputeTag(
         }
         else
         {
-            MbedTlsHmacSha256Policy_Report(SOLIDSYSLOG_SEVERITY_ERROR, MBEDTLSHMACSHA256POLICY_ERROR_HMAC_FAILED);
+            MbedTlsHmacSha256Policy_Report(
+                SOLIDSYSLOG_SEVERITY_ERROR,
+                failureCategory,
+                MBEDTLSHMACSHA256POLICY_ERROR_HMAC_FAILED
+            );
         }
     }
     else
     {
-        MbedTlsHmacSha256Policy_Report(SOLIDSYSLOG_SEVERITY_ERROR, MBEDTLSHMACSHA256POLICY_ERROR_KEY_UNAVAILABLE);
+        MbedTlsHmacSha256Policy_Report(
+            SOLIDSYSLOG_SEVERITY_ERROR,
+            SOLIDSYSLOG_CAT_SECURITYPOLICY_KEY_UNAVAILABLE,
+            MBEDTLSHMACSHA256POLICY_ERROR_KEY_UNAVAILABLE
+        );
     }
     /* Wipe the whole key buffer — the full region GetKey was handed, not just
      * the bytes written — so no key material lingers on the stack. */
@@ -129,7 +142,8 @@ static bool MbedTlsHmacSha256Policy_OpenRecord(
             MbedTlsHmacSha256Policy_SelfFromBase(self),
             record->Content,
             record->ContentLength,
-            expected
+            expected,
+            SOLIDSYSLOG_CAT_SECURITYPOLICY_OPEN_FAILED
         ))
     {
         verified = MbedTlsHmacSha256Policy_ConstantTimeEquals(expected, record->Trailer, HMAC_SHA256_TAG_SIZE);

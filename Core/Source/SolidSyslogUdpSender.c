@@ -8,6 +8,7 @@
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogNullSender.h"
 #include "SolidSyslogPrival.h"
+#include "SolidSyslogErrorCategory.h"
 #include "SolidSyslogResolver.h"
 #include "SolidSyslogSenderDefinition.h"
 #include "SolidSyslogTransport.h"
@@ -75,7 +76,8 @@ static bool UdpSender_Send(struct SolidSyslogSender* base, const void* buffer, s
         SolidSyslog_Error(
             SOLIDSYSLOG_SEVERITY_ERROR,
             &UdpSenderErrorSource,
-            (uint8_t) UDPSENDER_ERROR_SEND_NULL_BUFFER
+            SOLIDSYSLOG_CAT_BAD_ARGUMENT,
+            (int32_t) UDPSENDER_ERROR_SEND_NULL_BUFFER
         );
     }
     else
