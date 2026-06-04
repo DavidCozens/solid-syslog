@@ -23,7 +23,10 @@ struct SolidSyslogStore;
 static inline size_t BlockStore_IndexFromHandle(const struct SolidSyslogStore* base);
 static inline void BlockStore_CleanupAtIndex(size_t index, void* context);
 static struct SolidSyslogSecurityPolicy* BlockStore_ResolveSecurityPolicy(struct SolidSyslogSecurityPolicy* configured);
-static struct BlockSequenceConfig BlockStore_BuildBlockSequenceConfig(const struct SolidSyslogBlockStoreConfig* config);
+static struct BlockSequenceConfig BlockStore_BuildBlockSequenceConfig(
+    const struct SolidSyslogBlockStoreConfig* config,
+    const struct RecordStore* recordStore
+);
 static bool BlockStore_DeviceCanHoldOneRecord(
     const struct SolidSyslogBlockStoreConfig* config,
     const struct RecordStore* recordStore
@@ -36,7 +39,6 @@ static struct SolidSyslogPoolAllocator BlockStore_Allocator = {BlockStore_InUse,
 struct SolidSyslogStore* SolidSyslogBlockStore_Create(const struct SolidSyslogBlockStoreConfig* config)
 {
     struct SolidSyslogStore* result = SolidSyslogNullStore_Get();
-    bool blockTooSmall = false;
     size_t index = SolidSyslogPoolAllocator_AcquireFirstFree(&BlockStore_Allocator);
 
     if (SolidSyslogPoolAllocator_IndexIsValid(&BlockStore_Allocator, index))
@@ -46,25 +48,29 @@ struct SolidSyslogStore* SolidSyslogBlockStore_Create(const struct SolidSyslogBl
 
         if (recordStore != NULL)
         {
-            if (BlockStore_DeviceCanHoldOneRecord(config, recordStore))
+            if (!BlockStore_DeviceCanHoldOneRecord(config, recordStore))
             {
-                struct BlockSequenceConfig blockConfig = BlockStore_BuildBlockSequenceConfig(config);
-                struct BlockSequence* blockSequence = BlockSequence_Create(&blockConfig);
+                /* The device's block is smaller than one worst-case record. The store
+                 * still works — BuildBlockSequenceConfig grows the block to the minimum so
+                 * a record always fits — but the device was configured below a usable size,
+                 * so surface it as a WARNING (delivered, degraded) rather than failing. */
+                BlockStore_Report(
+                    SOLIDSYSLOG_SEVERITY_WARNING,
+                    SOLIDSYSLOG_CAT_BAD_CONFIG,
+                    BLOCKSTORE_ERROR_BLOCK_TOO_SMALL
+                );
+            }
 
-                if (blockSequence != NULL)
-                {
-                    BlockStore_Initialise(&BlockStore_Pool[index].Base, recordStore, blockSequence, config);
-                    result = &BlockStore_Pool[index].Base;
-                }
-                else
-                {
-                    RecordStore_Destroy(recordStore);
-                    (void) SolidSyslogPoolAllocator_FreeIfInUse(&BlockStore_Allocator, index, NULL, NULL);
-                }
+            struct BlockSequenceConfig blockConfig = BlockStore_BuildBlockSequenceConfig(config, recordStore);
+            struct BlockSequence* blockSequence = BlockSequence_Create(&blockConfig);
+
+            if (blockSequence != NULL)
+            {
+                BlockStore_Initialise(&BlockStore_Pool[index].Base, recordStore, blockSequence, config);
+                result = &BlockStore_Pool[index].Base;
             }
             else
             {
-                blockTooSmall = true;
                 RecordStore_Destroy(recordStore);
                 (void) SolidSyslogPoolAllocator_FreeIfInUse(&BlockStore_Allocator, index, NULL, NULL);
             }
@@ -75,17 +81,9 @@ struct SolidSyslogStore* SolidSyslogBlockStore_Create(const struct SolidSyslogBl
         }
     }
 
-    if (blockTooSmall)
-    {
-        BlockStore_Report(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_CAT_BAD_CONFIG, BLOCKSTORE_ERROR_BLOCK_TOO_SMALL);
-    }
-    else if (result == SolidSyslogNullStore_Get())
+    if (result == SolidSyslogNullStore_Get())
     {
         BlockStore_Report(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_CAT_POOL_EXHAUSTED, BLOCKSTORE_ERROR_POOL_EXHAUSTED);
-    }
-    else
-    {
-        /* Store created successfully — no diagnostic to emit. */
     }
 
     return result;
@@ -103,13 +101,21 @@ static struct SolidSyslogSecurityPolicy* BlockStore_ResolveSecurityPolicy(struct
     return resolved;
 }
 
-static struct BlockSequenceConfig BlockStore_BuildBlockSequenceConfig(const struct SolidSyslogBlockStoreConfig* config)
+static struct BlockSequenceConfig BlockStore_BuildBlockSequenceConfig(
+    const struct SolidSyslogBlockStoreConfig* config,
+    const struct RecordStore* recordStore
+)
 {
-    /* The device is the single source of truth for block size; Create has already
-     * rejected a device whose block is too small to hold one record. */
+    /* The device is the single source of truth for block size, but a block smaller than
+     * one worst-case record is grown to that floor so a single record always fits (Create
+     * has already emitted a WARNING for that case). */
+    size_t minBlockSize = RecordStore_RecordSize(recordStore, SOLIDSYSLOG_MAX_MESSAGE_SIZE);
+    size_t deviceBlockSize = SolidSyslogBlockDevice_GetBlockSize(config->BlockDevice);
+    size_t maxBlockSize = (deviceBlockSize < minBlockSize) ? minBlockSize : deviceBlockSize;
+
     struct BlockSequenceConfig blockConfig = {
         .BlockDevice = config->BlockDevice,
-        .MaxBlockSize = SolidSyslogBlockDevice_GetBlockSize(config->BlockDevice),
+        .MaxBlockSize = maxBlockSize,
         .MaxBlocks = config->MaxBlocks,
         .DiscardPolicy = config->DiscardPolicy,
         .OnStoreFull = config->OnStoreFull,
@@ -121,9 +127,9 @@ static struct BlockSequenceConfig BlockStore_BuildBlockSequenceConfig(const stru
     return blockConfig;
 }
 
-/* The device owns its block size; a block too small to hold one worst-case record
- * (max message + the active policy's trailer + record framing) cannot store anything,
- * so Create rejects it rather than silently growing the device's reported size. */
+/* True when the device's block can hold one worst-case record (max message + the active
+ * policy's trailer + record framing). When false the block is grown to that floor and a
+ * WARNING is emitted — the store works, but the device's configured size was degraded. */
 static bool BlockStore_DeviceCanHoldOneRecord(
     const struct SolidSyslogBlockStoreConfig* config,
     const struct RecordStore* recordStore

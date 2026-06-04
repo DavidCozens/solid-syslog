@@ -551,16 +551,18 @@ TEST(SolidSyslogBlockStoreConfig, ZeroBlockSizeUsesDeviceDefault)
     VerifyWriteAndReadBack();
 }
 
-TEST(SolidSyslogBlockStoreConfig, BelowMinimumBlockSizeRejectsToNullStore)
+TEST(SolidSyslogBlockStoreConfig, BelowMinimumBlockSizeIsGrownAndStoreWorks)
 {
     CreateWithMaxBlockSize(1);
-    POINTERS_EQUAL(SolidSyslogNullStore_Get(), store);
+    CHECK(store != SolidSyslogNullStore_Get());
+    VerifyWriteAndReadBack();
 }
 
-TEST(SolidSyslogBlockStoreConfig, BelowMinimumBlockSizeReportsBadConfig)
+TEST(SolidSyslogBlockStoreConfig, BelowMinimumBlockSizeReportsWarning)
 {
     ErrorHandlerFake_Install(nullptr);
     CreateWithMaxBlockSize(1);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
     UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_CAT_BAD_CONFIG, ErrorHandlerFake_LastCategory());
     UNSIGNED_LONGS_EQUAL(BLOCKSTORE_ERROR_BLOCK_TOO_SMALL, ErrorHandlerFake_LastDetail());
 }
