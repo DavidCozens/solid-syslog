@@ -1,5 +1,31 @@
 # Dev Log
 
+## 2026-06-04 — S12.29 Windows atomic counter unsigned wrap (pure refactor)
+
+Closes the High-robustness finding [#530] from the pre-0.1.0 security audit:
+`SolidSyslogWindowsAtomicCounter.c` computed the sequence-id increment on a signed `LONG`
+(`current + 1` and a `(uint32_t)`-cast wrap guard), relying on the guard firing exactly at
+`INT32_MAX` to dodge signed overflow. Rewritten to compute and compare entirely in
+`uint32_t`, casting to `LONG` only at the `InterlockedCompareExchange` boundary — now
+matches the `Std` sibling and no longer depends on guard ordering.
+
+### Decisions
+
+- **Done as a pure refactor, not red/green (David's call).** The overflow path is provably
+  unreachable: `current + 1` is only evaluated when `(uint32_t)current ∈ [0, 0x7FFFFFFE]`,
+  so it never overflows. Old and new code are behaviourally identical for all 2³² inputs, so
+  no failing test is possible — and even UBSan can't fire on a dead path. Dressing it up as a
+  TDD red would have been dishonest.
+- **Boundary characterization test added as the safety net.** `IncrementJustBelowMaxReturnsMax`
+  (`INT32_MAX - 1 → INT32_MAX`) fills the gap next to the existing at-MAX→1 test. Passes on
+  both old and new code; it's a regression guard, not a red.
+
+### Deferred
+
+- **Couldn't exercise the Windows backend locally.** On Linux/WSL (and modern MSVC),
+  `HAVE_STDATOMIC_H` wins, so the `Std` helper compiles and the Windows helper is skipped —
+  the boundary test ran green against `Std` only. CI's Windows lane covers the rest.
+
 ## 2026-06-04 — S12.28 TLS peer-hostname verification surfaced when ServerName is NULL
 
 Closes the High-severity finding from the pre-0.1.0 security audit: both TLS adapters
