@@ -76,6 +76,18 @@ TEST(AtomicCounterContract, IncrementAfterInitReturnsValuePlusOne)
     TestAtomicCounter_Destroy(counter);
 }
 
+TEST(AtomicCounterContract, IncrementJustBelowMaxReturnsMax)
+{
+    struct SolidSyslogAtomicCounter* counter = TestAtomicCounter_Create();
+
+    /* The step before the wrap must not wrap: INT32_MAX - 1 -> INT32_MAX. */
+    TestAtomicCounter_Init(counter, (uint32_t) INT32_MAX - 1U);
+
+    LONGS_EQUAL(INT32_MAX, TestAtomicCounter_Increment(counter));
+
+    TestAtomicCounter_Destroy(counter);
+}
+
 TEST(AtomicCounterContract, IncrementAtMaxWrapsToOne)
 {
     struct SolidSyslogAtomicCounter* counter = TestAtomicCounter_Create();
