@@ -289,6 +289,7 @@ add_executable(SolidSyslogBddTarget
     ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/BddTargetTlsConfig.c
     ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/BddTargetTlsSender_MbedTls_PlusTcpTcp.c
     ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/diskio.c
+    ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/SemihostingDisk.c
     ${BAKED_PEM_HEADERS}
     $<TARGET_OBJECTS:solid_syslog_freertos_upstream>
 )
