@@ -12,6 +12,7 @@
  * Static IPv4 (10.0.2.15) on the QEMU slirp network with the host reachable at
  * the slirp gateway 10.0.2.2. */
 
+#include "BddTargetFatFsMount.h"
 #include "BddTargetFreeRtosPipeline.h"
 #include "BddTargetMtlsConfig.h"
 #include "BddTargetSwitchConfig.h"
@@ -100,6 +101,10 @@ static const struct BddTargetFreeRtosPipelineConfig PIPELINE_CONFIG = {
     .BuildSender = BuildSender,
     .GetHostname = GetHostname,
     .TeardownNetwork = TeardownNetwork,
+    .MountStore = BddTargetFatFsMount_Mount,
+    .UnmountStore = BddTargetFatFsMount_Unmount,
+    .CreateStoreFile = BddTargetFatFsMount_CreateFile,
+    .DestroyStoreFile = BddTargetFatFsMount_DestroyFile,
 };
 
 int main(void)
