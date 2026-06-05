@@ -41,7 +41,7 @@ struct SolidSyslogSecurityPolicy* SolidSyslogMbedTlsAesGcmPolicy_Create(
         else
         {
             MbedTlsAesGcmPolicy_Report(
-                SOLIDSYSLOG_SEVERITY_ERROR,
+                SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
                 SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
                 MBEDTLSAESGCMPOLICY_ERROR_POOL_EXHAUSTED
             );
@@ -50,7 +50,7 @@ struct SolidSyslogSecurityPolicy* SolidSyslogMbedTlsAesGcmPolicy_Create(
     else
     {
         MbedTlsAesGcmPolicy_Report(
-            SOLIDSYSLOG_SEVERITY_ERROR,
+            SOLIDSYSLOG_BAD_CONFIG_FATAL_SEVERITY,
             SOLIDSYSLOG_CAT_BAD_CONFIG,
             MBEDTLSAESGCMPOLICY_ERROR_BAD_CONFIG
         );
@@ -71,7 +71,7 @@ void SolidSyslogMbedTlsAesGcmPolicy_Destroy(struct SolidSyslogSecurityPolicy* ba
     if (!released)
     {
         MbedTlsAesGcmPolicy_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             MBEDTLSAESGCMPOLICY_ERROR_UNKNOWN_DESTROY
         );

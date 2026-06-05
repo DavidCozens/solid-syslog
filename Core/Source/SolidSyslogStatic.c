@@ -38,7 +38,7 @@ struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config)
     if (config == NULL)
     {
         SolidSyslog_Report(
-            SOLIDSYSLOG_SEVERITY_ERROR,
+            SOLIDSYSLOG_BAD_CONFIG_FATAL_SEVERITY,
             SOLIDSYSLOG_CAT_BAD_CONFIG,
             SOLIDSYSLOG_ERROR_CREATE_NULL_CONFIG
         );
@@ -54,7 +54,7 @@ struct SolidSyslog* SolidSyslog_Create(const struct SolidSyslogConfig* config)
         else
         {
             SolidSyslog_Report(
-                SOLIDSYSLOG_SEVERITY_ERROR,
+                SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
                 SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
                 SOLIDSYSLOG_ERROR_POOL_EXHAUSTED
             );
@@ -90,7 +90,7 @@ void SolidSyslog_Destroy(struct SolidSyslog* handle)
     if (!released)
     {
         SolidSyslog_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             SOLIDSYSLOG_ERROR_UNKNOWN_DESTROY
         );

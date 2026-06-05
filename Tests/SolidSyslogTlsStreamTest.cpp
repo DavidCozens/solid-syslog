@@ -22,16 +22,19 @@
 
 using namespace CososoTesting;
 
-#define CHECK_OPEN_UNWOUND_WITH_ERROR(transport, expectedCategory, expectedCode)   \
-    do                                                                             \
-    {                                                                              \
-        LONGS_EQUAL(1, StreamFake_CloseCallCount(transport));                      \
-        CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);                                \
-        POINTERS_EQUAL(&TlsStreamErrorSource, ErrorHandlerFake_LastSource());      \
-        UNSIGNED_LONGS_EQUAL((expectedCategory), ErrorHandlerFake_LastCategory()); \
-        UNSIGNED_LONGS_EQUAL((expectedCode), ErrorHandlerFake_LastDetail());       \
-        LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());  \
+#define CHECK_OPEN_UNWOUND_WITH_SEVERITY(transport, expectedSeverity, expectedCategory, expectedCode) \
+    do                                                                                                \
+    {                                                                                                 \
+        LONGS_EQUAL(1, StreamFake_CloseCallCount(transport));                                         \
+        CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);                                                   \
+        POINTERS_EQUAL(&TlsStreamErrorSource, ErrorHandlerFake_LastSource());                         \
+        UNSIGNED_LONGS_EQUAL((expectedCategory), ErrorHandlerFake_LastCategory());                    \
+        UNSIGNED_LONGS_EQUAL((expectedCode), ErrorHandlerFake_LastDetail());                          \
+        LONGS_EQUAL((expectedSeverity), ErrorHandlerFake_LastSeverity());                             \
     } while (0)
+
+#define CHECK_OPEN_UNWOUND_WITH_ERROR(transport, expectedCategory, expectedCode) \
+    CHECK_OPEN_UNWOUND_WITH_SEVERITY(transport, SOLIDSYSLOG_SEVERITY_ERROR, expectedCategory, expectedCode)
 
 class TEST_SolidSyslogTlsStream_ReadReturnsNegativeOneOnHardErrorAndClosesSsl_Test;
 class TEST_SolidSyslogTlsStream_ReadReturnsNegativeOneOnZeroReturnAndClosesSsl_Test;
@@ -754,7 +757,12 @@ TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenSet1HostFails)
     ReCreateStreamWithUpdatedConfig();
     OpenSslFake_SetSet1HostFails(true);
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
-    CHECK_OPEN_UNWOUND_WITH_ERROR(transport, SOLIDSYSLOG_CAT_BAD_CONFIG, TLSSTREAM_ERROR_SERVER_NAME_NOT_SET);
+    CHECK_OPEN_UNWOUND_WITH_SEVERITY(
+        transport,
+        SOLIDSYSLOG_SEVERITY_CRITICAL,
+        SOLIDSYSLOG_CAT_BAD_CONFIG,
+        TLSSTREAM_ERROR_SERVER_NAME_NOT_SET
+    );
 }
 
 TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenSniHostnameSetupFails)
@@ -763,7 +771,12 @@ TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenSniHostnameSetupFails)
     ReCreateStreamWithUpdatedConfig();
     OpenSslFake_SetSniHostnameFails(true);
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
-    CHECK_OPEN_UNWOUND_WITH_ERROR(transport, SOLIDSYSLOG_CAT_BAD_CONFIG, TLSSTREAM_ERROR_SERVER_NAME_NOT_SET);
+    CHECK_OPEN_UNWOUND_WITH_SEVERITY(
+        transport,
+        SOLIDSYSLOG_SEVERITY_CRITICAL,
+        SOLIDSYSLOG_CAT_BAD_CONFIG,
+        TLSSTREAM_ERROR_SERVER_NAME_NOT_SET
+    );
 }
 
 TEST(SolidSyslogTlsStream, OpenReturnsFalseWhenCtxNewFails)
@@ -1213,8 +1226,9 @@ TEST(SolidSyslogTlsStream, OpenFailsWhenHandshakeNeverCompletes)
     ReCreateStreamWithUpdatedConfig();
     ArrangePersistentHandshakeError(SSL_ERROR_WANT_READ);
     CHECK_FALSE(SolidSyslogStream_Open(stream, addr));
-    CHECK_OPEN_UNWOUND_WITH_ERROR(
+    CHECK_OPEN_UNWOUND_WITH_SEVERITY(
         transport,
+        SOLIDSYSLOG_SEVERITY_WARNING,
         SOLIDSYSLOG_CAT_TLSSTREAM_HANDSHAKE_FAILED,
         TLSSTREAM_ERROR_HANDSHAKE_TIMEOUT
     );

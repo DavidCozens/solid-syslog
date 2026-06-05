@@ -33,7 +33,11 @@ struct SolidSyslogFile* SolidSyslogFatFsFile_Create(void)
     }
     else
     {
-        FatFsFile_Report(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_CAT_POOL_EXHAUSTED, FATFSFILE_ERROR_POOL_EXHAUSTED);
+        FatFsFile_Report(
+            SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
+            SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
+            FATFSFILE_ERROR_POOL_EXHAUSTED
+        );
     }
     return handle;
 }
@@ -46,7 +50,7 @@ void SolidSyslogFatFsFile_Destroy(struct SolidSyslogFile* base)
     if (!released)
     {
         FatFsFile_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             FATFSFILE_ERROR_UNKNOWN_DESTROY
         );

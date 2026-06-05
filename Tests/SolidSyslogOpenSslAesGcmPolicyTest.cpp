@@ -234,7 +234,7 @@ TEST(SolidSyslogOpenSslAesGcmPolicy, ExhaustedCreateReportsError)
     overflow = SolidSyslogOpenSslAesGcmPolicy_Create(&config);
 
     CHECK_REPORTED_ERROR(
-        SOLIDSYSLOG_SEVERITY_ERROR,
+        SOLIDSYSLOG_SEVERITY_CRITICAL,
         SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
         OPENSSLAESGCMPOLICY_ERROR_POOL_EXHAUSTED
     );
@@ -258,7 +258,11 @@ TEST(SolidSyslogOpenSslAesGcmPolicy, BadConfigReportsError)
 
     SolidSyslogOpenSslAesGcmPolicy_Create(nullptr);
 
-    CHECK_REPORTED_ERROR(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_CAT_BAD_CONFIG, OPENSSLAESGCMPOLICY_ERROR_BAD_CONFIG);
+    CHECK_REPORTED_ERROR(
+        SOLIDSYSLOG_SEVERITY_CRITICAL,
+        SOLIDSYSLOG_CAT_BAD_CONFIG,
+        OPENSSLAESGCMPOLICY_ERROR_BAD_CONFIG
+    );
 }
 
 TEST(SolidSyslogOpenSslAesGcmPolicy, CreateAcquiresAndReleasesConfigLockOnFirstFreeSlot)

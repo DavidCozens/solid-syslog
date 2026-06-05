@@ -702,6 +702,20 @@ TEST_GROUP(SolidSyslogStreamSenderPool)
 
 // clang-format on
 
+TEST(SolidSyslogStreamSenderPool, OverflowReportsPoolExhausted)
+{
+    FillPool();
+    ErrorHandlerFake_Install(nullptr);
+
+    overflow = MakeSender();
+
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_CRITICAL, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&StreamSenderErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_CAT_POOL_EXHAUSTED, ErrorHandlerFake_LastCategory());
+    UNSIGNED_LONGS_EQUAL(STREAMSENDER_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastDetail());
+}
+
 TEST(SolidSyslogStreamSenderPool, FillingPoolThenOverflowReturnsDistinctFallback)
 {
     FillPool();
@@ -717,19 +731,20 @@ TEST(SolidSyslogStreamSenderPool, FillingPoolThenOverflowReturnsDistinctFallback
 }
 
 // Bad-setup tests — _Create rejects NULL config / Resolver / Stream / Address
-// by emitting SolidSyslog_Error(SEVERITY_ERROR, ...) and returning the shared
-// SolidSyslogNullSender without consuming a pool slot. Matches the
-// SolidSyslogUdpSenderBadSetup contract from S12.06.
+// by emitting a CRITICAL SolidSyslog_Error (fatal bad-config — the integrator
+// must fix it in code) and returning the shared SolidSyslogNullSender without
+// consuming a pool slot. Matches the SolidSyslogUdpSenderBadSetup contract from
+// S12.06 (severity raised ERROR->CRITICAL in S12.33).
 
 /* Macro (not function) so test failures report the caller's __FILE__/__LINE__. */
-#define CHECK_STREAMSENDER_BAD_SETUP_ERROR(expectedCategory, expectedCode)         \
-    do                                                                             \
-    {                                                                              \
-        CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);                                \
-        LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());  \
-        POINTERS_EQUAL(&StreamSenderErrorSource, ErrorHandlerFake_LastSource());   \
-        UNSIGNED_LONGS_EQUAL((expectedCategory), ErrorHandlerFake_LastCategory()); \
-        UNSIGNED_LONGS_EQUAL((expectedCode), ErrorHandlerFake_LastDetail());       \
+#define CHECK_STREAMSENDER_BAD_SETUP_ERROR(expectedCategory, expectedCode)           \
+    do                                                                               \
+    {                                                                                \
+        CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);                                  \
+        LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_CRITICAL, ErrorHandlerFake_LastSeverity()); \
+        POINTERS_EQUAL(&StreamSenderErrorSource, ErrorHandlerFake_LastSource());     \
+        UNSIGNED_LONGS_EQUAL((expectedCategory), ErrorHandlerFake_LastCategory());   \
+        UNSIGNED_LONGS_EQUAL((expectedCode), ErrorHandlerFake_LastDetail());         \
     } while (0)
 
 // clang-format off

@@ -34,7 +34,7 @@ struct SolidSyslogMutex* SolidSyslogWindowsMutex_Create(void)
     else
     {
         WindowsMutex_Report(
-            SOLIDSYSLOG_SEVERITY_ERROR,
+            SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
             SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
             WINDOWSMUTEX_ERROR_POOL_EXHAUSTED
         );
@@ -51,7 +51,7 @@ void SolidSyslogWindowsMutex_Destroy(struct SolidSyslogMutex* base)
     if (!released)
     {
         WindowsMutex_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             WINDOWSMUTEX_ERROR_UNKNOWN_DESTROY
         );

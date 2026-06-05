@@ -37,7 +37,7 @@ struct SolidSyslogDatagram* SolidSyslogPlusTcpDatagram_Create(void)
     else
     {
         PlusTcpDatagram_Report(
-            SOLIDSYSLOG_SEVERITY_ERROR,
+            SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
             SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
             PLUSTCPDATAGRAM_ERROR_POOL_EXHAUSTED
         );
@@ -54,7 +54,7 @@ void SolidSyslogPlusTcpDatagram_Destroy(struct SolidSyslogDatagram* base)
     if (!released)
     {
         PlusTcpDatagram_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             PLUSTCPDATAGRAM_ERROR_UNKNOWN_DESTROY
         );

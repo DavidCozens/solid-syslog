@@ -34,7 +34,7 @@ struct SolidSyslogFile* SolidSyslogPlusFatFile_Create(void)
     else
     {
         PlusFatFile_Report(
-            SOLIDSYSLOG_SEVERITY_ERROR,
+            SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
             SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
             PLUSFATFILE_ERROR_POOL_EXHAUSTED
         );
@@ -51,7 +51,7 @@ void SolidSyslogPlusFatFile_Destroy(struct SolidSyslogFile* base)
     if (!released)
     {
         PlusFatFile_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             PLUSFATFILE_ERROR_UNKNOWN_DESTROY
         );

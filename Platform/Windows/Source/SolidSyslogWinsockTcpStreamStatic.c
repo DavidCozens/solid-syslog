@@ -37,7 +37,7 @@ struct SolidSyslogStream* SolidSyslogWinsockTcpStream_Create(const struct SolidS
     else
     {
         WinsockTcpStream_Report(
-            SOLIDSYSLOG_SEVERITY_ERROR,
+            SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
             SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
             WINSOCKTCPSTREAM_ERROR_POOL_EXHAUSTED
         );
@@ -54,7 +54,7 @@ void SolidSyslogWinsockTcpStream_Destroy(struct SolidSyslogStream* base)
     if (!released)
     {
         WinsockTcpStream_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             WINSOCKTCPSTREAM_ERROR_UNKNOWN_DESTROY
         );

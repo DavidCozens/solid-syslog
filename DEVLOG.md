@@ -1,5 +1,38 @@
 # Dev Log
 
+## 2026-06-05 — S12.33 review and align error-event severity across Core + Platform
+
+S12.27 exposed that the severity ladder had drifted: the library emitted only ERROR / WARNING /
+NOTICE — no **CRITICAL** — so "pool exhausted / NULL config" (the integrator must change code)
+was indistinguishable from "the cert was rejected" (a human must fix the peer). This story
+ratifies the policy, documents it (`docs/error-severity.md`), and aligns every emit site.
+
+**Policy** (now authoritative): severity is an *urgency* axis, not a *who-fixes-it* axis — the
+latter is already carried by `Category` + `Source` + `Detail`. The crisp discriminator is
+**CRITICAL ⟺ `_Create` fell back to the Null object** (component dead), or a public-API call got
+a NULL handle (caller code bug). Built-but-degraded stays WARNING.
+
+**Changes (all TDD, one test per emit site):**
+- `POOL_EXHAUSTED` ERROR→**CRITICAL** (44 sites). Added complete-tuple exhaustion tests to the
+  8 Core classes whose overflow test only checked fallback distinctness.
+- `BAD_ARGUMENT` ERROR→**CRITICAL** (4). Fatal `BAD_CONFIG` (Null fallback) ERROR→**CRITICAL**
+  (25). Degraded `BAD_CONFIG` (MetaSd null-counter, block-too-small, TLS chain-only) stays
+  **WARNING** — it is still delivering.
+- TLS handshake **timeout** ERROR→**WARNING** (transient); handshake **rejected** stays ERROR.
+  TLS server-name-late ERROR→**CRITICAL**. `INIT_FAILED` unchanged (ERROR).
+- `SECURITYPOLICY_KEY_UNAVAILABLE` stays **ERROR**: CRITICAL is for faults the engineer *building
+  the device* must fix in code; a key is provisioned in the field by the operator / systems
+  integrator, so it is operator-fixable like a rejected cert (David's call).
+
+**Single-source macros** (refactor, no behaviour change): `SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY`,
+`_BAD_CONFIG_FATAL_SEVERITY`, `_BAD_ARGUMENT_SEVERITY`, `_UNKNOWN_DESTROY_SEVERITY` in
+`SolidSyslogError.h` — so a universal-category level lives in one place and cannot drift again.
+`BAD_CONFIG` deliberately has no single macro (fatal vs degraded are different levels); the
+degraded sites keep an explicit WARNING literal. Tests assert the concrete level as a literal,
+never the macro, so a wrong policy value still goes red.
+
+Reserved (never emitted): EMERGENCY, ALERT, INFORMATIONAL, DEBUG.
+
 ## 2026-06-05 — S12.27 follow-up: delivery-failed rated WARNING, not ERROR
 
 CI's `bdd-linux-syslog-ng` / `bdd-windows-otel` lanes failed once the events landed: the BDD

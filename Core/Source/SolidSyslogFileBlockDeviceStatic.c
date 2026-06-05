@@ -43,7 +43,7 @@ struct SolidSyslogBlockDevice* SolidSyslogFileBlockDevice_Create(
     else
     {
         FileBlockDevice_Report(
-            SOLIDSYSLOG_SEVERITY_ERROR,
+            SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
             SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
             FILEBLOCKDEVICE_ERROR_POOL_EXHAUSTED
         );
@@ -60,7 +60,7 @@ void SolidSyslogFileBlockDevice_Destroy(struct SolidSyslogBlockDevice* base)
     if (!released)
     {
         FileBlockDevice_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             FILEBLOCKDEVICE_ERROR_UNKNOWN_DESTROY
         );

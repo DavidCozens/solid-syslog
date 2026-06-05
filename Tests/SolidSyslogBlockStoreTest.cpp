@@ -2245,6 +2245,20 @@ TEST_GROUP_BASE(SolidSyslogBlockStorePool, BlockDeviceTestBase)
 
 // clang-format on
 
+TEST(SolidSyslogBlockStorePool, OverflowReportsPoolExhausted)
+{
+    FillPool();
+    ErrorHandlerFake_Install(nullptr);
+
+    overflow = MakeStore();
+
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_CRITICAL, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&BlockStoreErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_CAT_POOL_EXHAUSTED, ErrorHandlerFake_LastCategory());
+    UNSIGNED_LONGS_EQUAL(BLOCKSTORE_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastDetail());
+}
+
 TEST(SolidSyslogBlockStorePool, FillingPoolThenOverflowResolvesToNullStore)
 {
     FillPool();

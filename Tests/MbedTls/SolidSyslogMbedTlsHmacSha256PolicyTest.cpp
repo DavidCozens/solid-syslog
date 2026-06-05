@@ -204,7 +204,7 @@ TEST(SolidSyslogMbedTlsHmacSha256Policy, ExhaustedCreateReportsError)
     overflow = SolidSyslogMbedTlsHmacSha256Policy_Create(&config);
 
     CHECK_REPORTED_ERROR(
-        SOLIDSYSLOG_SEVERITY_ERROR,
+        SOLIDSYSLOG_SEVERITY_CRITICAL,
         SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
         MBEDTLSHMACSHA256POLICY_ERROR_POOL_EXHAUSTED
     );
@@ -229,7 +229,7 @@ TEST(SolidSyslogMbedTlsHmacSha256Policy, BadConfigReportsError)
     SolidSyslogMbedTlsHmacSha256Policy_Create(nullptr);
 
     CHECK_REPORTED_ERROR(
-        SOLIDSYSLOG_SEVERITY_ERROR,
+        SOLIDSYSLOG_SEVERITY_CRITICAL,
         SOLIDSYSLOG_CAT_BAD_CONFIG,
         MBEDTLSHMACSHA256POLICY_ERROR_BAD_CONFIG
     );

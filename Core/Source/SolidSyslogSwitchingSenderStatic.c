@@ -40,7 +40,7 @@ struct SolidSyslogSender* SolidSyslogSwitchingSender_Create(const struct SolidSy
         else
         {
             SwitchingSender_Report(
-                SOLIDSYSLOG_SEVERITY_ERROR,
+                SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
                 SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
                 SWITCHINGSENDER_ERROR_POOL_EXHAUSTED
             );
@@ -55,7 +55,7 @@ static bool SwitchingSender_IsValidConfig(const struct SolidSyslogSwitchingSende
     if (config == NULL)
     {
         SwitchingSender_Report(
-            SOLIDSYSLOG_SEVERITY_ERROR,
+            SOLIDSYSLOG_BAD_CONFIG_FATAL_SEVERITY,
             SOLIDSYSLOG_CAT_BAD_CONFIG,
             SWITCHINGSENDER_ERROR_NULL_CONFIG
         );
@@ -63,7 +63,7 @@ static bool SwitchingSender_IsValidConfig(const struct SolidSyslogSwitchingSende
     else if (config->Senders == NULL)
     {
         SwitchingSender_Report(
-            SOLIDSYSLOG_SEVERITY_ERROR,
+            SOLIDSYSLOG_BAD_CONFIG_FATAL_SEVERITY,
             SOLIDSYSLOG_CAT_BAD_CONFIG,
             SWITCHINGSENDER_ERROR_NULL_SENDERS
         );
@@ -71,7 +71,7 @@ static bool SwitchingSender_IsValidConfig(const struct SolidSyslogSwitchingSende
     else if (config->Selector == NULL)
     {
         SwitchingSender_Report(
-            SOLIDSYSLOG_SEVERITY_ERROR,
+            SOLIDSYSLOG_BAD_CONFIG_FATAL_SEVERITY,
             SOLIDSYSLOG_CAT_BAD_CONFIG,
             SWITCHINGSENDER_ERROR_NULL_SELECTOR
         );
@@ -92,7 +92,7 @@ void SolidSyslogSwitchingSender_Destroy(struct SolidSyslogSender* base)
     if (!released)
     {
         SwitchingSender_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             SWITCHINGSENDER_ERROR_UNKNOWN_DESTROY
         );

@@ -37,7 +37,7 @@ struct SolidSyslogStream* SolidSyslogPlusTcpTcpStream_Create(const struct SolidS
     else
     {
         PlusTcpTcpStream_Report(
-            SOLIDSYSLOG_SEVERITY_ERROR,
+            SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
             SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
             PLUSTCPTCPSTREAM_ERROR_POOL_EXHAUSTED
         );
@@ -54,7 +54,7 @@ void SolidSyslogPlusTcpTcpStream_Destroy(struct SolidSyslogStream* base)
     if (!released)
     {
         PlusTcpTcpStream_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             PLUSTCPTCPSTREAM_ERROR_UNKNOWN_DESTROY
         );

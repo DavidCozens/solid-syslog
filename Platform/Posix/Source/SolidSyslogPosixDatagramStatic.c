@@ -34,7 +34,7 @@ struct SolidSyslogDatagram* SolidSyslogPosixDatagram_Create(void)
     else
     {
         PosixDatagram_Report(
-            SOLIDSYSLOG_SEVERITY_ERROR,
+            SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
             SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
             POSIXDATAGRAM_ERROR_POOL_EXHAUSTED
         );
@@ -51,7 +51,7 @@ void SolidSyslogPosixDatagram_Destroy(struct SolidSyslogDatagram* base)
     if (!released)
     {
         PosixDatagram_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             POSIXDATAGRAM_ERROR_UNKNOWN_DESTROY
         );

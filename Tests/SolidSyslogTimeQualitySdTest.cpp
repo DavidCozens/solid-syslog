@@ -200,6 +200,20 @@ TEST_GROUP(SolidSyslogTimeQualitySdPool)
 
 // clang-format on
 
+TEST(SolidSyslogTimeQualitySdPool, OverflowReportsPoolExhausted)
+{
+    FillPool();
+    ErrorHandlerFake_Install(nullptr);
+
+    overflow = MakeSd();
+
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_CRITICAL, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&TimeQualitySdErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_CAT_POOL_EXHAUSTED, ErrorHandlerFake_LastCategory());
+    UNSIGNED_LONGS_EQUAL(TIMEQUALITYSD_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastDetail());
+}
+
 TEST(SolidSyslogTimeQualitySdPool, FillingPoolThenOverflowReturnsDistinctFallback)
 {
     FillPool();
@@ -237,7 +251,7 @@ TEST(SolidSyslogTimeQualitySdBadSetup, CreateWithNullCallbackReportsError)
 {
     SolidSyslogTimeQualitySd_Create(nullptr);
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_CRITICAL, ErrorHandlerFake_LastSeverity());
     POINTERS_EQUAL(&TimeQualitySdErrorSource, ErrorHandlerFake_LastSource());
     UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_CAT_BAD_CONFIG, ErrorHandlerFake_LastCategory());
     UNSIGNED_LONGS_EQUAL(TIMEQUALITYSD_ERROR_NULL_CALLBACK, ErrorHandlerFake_LastDetail());

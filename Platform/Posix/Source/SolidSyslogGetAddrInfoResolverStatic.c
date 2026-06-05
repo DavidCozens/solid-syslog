@@ -37,7 +37,7 @@ struct SolidSyslogResolver* SolidSyslogGetAddrInfoResolver_Create(void)
     else
     {
         GetAddrInfoResolver_Report(
-            SOLIDSYSLOG_SEVERITY_ERROR,
+            SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
             SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
             GETADDRINFORESOLVER_ERROR_POOL_EXHAUSTED
         );
@@ -58,7 +58,7 @@ void SolidSyslogGetAddrInfoResolver_Destroy(struct SolidSyslogResolver* base)
     if (!released)
     {
         GetAddrInfoResolver_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             GETADDRINFORESOLVER_ERROR_UNKNOWN_DESTROY
         );

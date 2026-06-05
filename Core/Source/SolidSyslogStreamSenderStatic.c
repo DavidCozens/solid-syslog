@@ -40,7 +40,7 @@ struct SolidSyslogSender* SolidSyslogStreamSender_Create(const struct SolidSyslo
         else
         {
             StreamSender_Report(
-                SOLIDSYSLOG_SEVERITY_ERROR,
+                SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
                 SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
                 STREAMSENDER_ERROR_POOL_EXHAUSTED
             );
@@ -54,19 +54,35 @@ static bool StreamSender_IsValidConfig(const struct SolidSyslogStreamSenderConfi
     bool valid = false;
     if (config == NULL)
     {
-        StreamSender_Report(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_CAT_BAD_CONFIG, STREAMSENDER_ERROR_NULL_CONFIG);
+        StreamSender_Report(
+            SOLIDSYSLOG_BAD_CONFIG_FATAL_SEVERITY,
+            SOLIDSYSLOG_CAT_BAD_CONFIG,
+            STREAMSENDER_ERROR_NULL_CONFIG
+        );
     }
     else if (config->Resolver == NULL)
     {
-        StreamSender_Report(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_CAT_BAD_CONFIG, STREAMSENDER_ERROR_NULL_RESOLVER);
+        StreamSender_Report(
+            SOLIDSYSLOG_BAD_CONFIG_FATAL_SEVERITY,
+            SOLIDSYSLOG_CAT_BAD_CONFIG,
+            STREAMSENDER_ERROR_NULL_RESOLVER
+        );
     }
     else if (config->Stream == NULL)
     {
-        StreamSender_Report(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_CAT_BAD_CONFIG, STREAMSENDER_ERROR_NULL_STREAM);
+        StreamSender_Report(
+            SOLIDSYSLOG_BAD_CONFIG_FATAL_SEVERITY,
+            SOLIDSYSLOG_CAT_BAD_CONFIG,
+            STREAMSENDER_ERROR_NULL_STREAM
+        );
     }
     else if (config->Address == NULL)
     {
-        StreamSender_Report(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_CAT_BAD_CONFIG, STREAMSENDER_ERROR_NULL_ADDRESS);
+        StreamSender_Report(
+            SOLIDSYSLOG_BAD_CONFIG_FATAL_SEVERITY,
+            SOLIDSYSLOG_CAT_BAD_CONFIG,
+            STREAMSENDER_ERROR_NULL_ADDRESS
+        );
     }
     else
     {
@@ -84,7 +100,7 @@ void SolidSyslogStreamSender_Destroy(struct SolidSyslogSender* base)
     if (!released)
     {
         StreamSender_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             STREAMSENDER_ERROR_UNKNOWN_DESTROY
         );

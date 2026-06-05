@@ -41,7 +41,7 @@ struct SolidSyslogAddress* SolidSyslogPosixAddress_Create(void)
     else
     {
         PosixAddress_Report(
-            SOLIDSYSLOG_SEVERITY_ERROR,
+            SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
             SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
             POSIXADDRESS_ERROR_POOL_EXHAUSTED
         );
@@ -64,7 +64,7 @@ void SolidSyslogPosixAddress_Destroy(struct SolidSyslogAddress* base)
     if (!released)
     {
         PosixAddress_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             POSIXADDRESS_ERROR_UNKNOWN_DESTROY
         );

@@ -3,11 +3,18 @@
 #include <initializer_list>
 #include <string>
 
+#include "ErrorHandlerFake.h"
+#include "SolidSyslogErrorCategory.h"
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogOriginSd.h"
+#include "SolidSyslogOriginSdErrors.h"
+#include "SolidSyslogPrival.h"
 #include "SolidSyslogStructuredData.h"
 #include "SolidSyslogTunables.h"
+#include "TestUtils.h"
 #include "CppUTest/TestHarness.h"
+
+using namespace CososoTesting;
 
 class TEST_SolidSyslogOriginSd_EnterpriseIdContainingSpecialsIsEscaped_Test;
 class TEST_SolidSyslogOriginSd_FormatIncludesDifferentEnterpriseIdFromConfig_Test;
@@ -546,6 +553,20 @@ TEST_GROUP(SolidSyslogOriginSdPool)
 };
 
 // clang-format on
+
+TEST(SolidSyslogOriginSdPool, OverflowReportsPoolExhausted)
+{
+    FillPool();
+    ErrorHandlerFake_Install(nullptr);
+
+    overflow = MakeSd();
+
+    CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_CRITICAL, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&OriginSdErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_CAT_POOL_EXHAUSTED, ErrorHandlerFake_LastCategory());
+    UNSIGNED_LONGS_EQUAL(ORIGINSD_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastDetail());
+}
 
 TEST(SolidSyslogOriginSdPool, FillingPoolThenOverflowReturnsDistinctFallback)
 {

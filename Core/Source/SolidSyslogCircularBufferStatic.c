@@ -42,7 +42,7 @@ struct SolidSyslogBuffer* SolidSyslogCircularBuffer_Create(
     else
     {
         CircularBuffer_Report(
-            SOLIDSYSLOG_SEVERITY_ERROR,
+            SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
             SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
             CIRCULARBUFFER_ERROR_POOL_EXHAUSTED
         );
@@ -59,7 +59,7 @@ void SolidSyslogCircularBuffer_Destroy(struct SolidSyslogBuffer* base)
     if (!released)
     {
         CircularBuffer_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             CIRCULARBUFFER_ERROR_UNKNOWN_DESTROY
         );

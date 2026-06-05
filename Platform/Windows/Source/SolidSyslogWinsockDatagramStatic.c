@@ -37,7 +37,7 @@ struct SolidSyslogDatagram* SolidSyslogWinsockDatagram_Create(void)
     else
     {
         WinsockDatagram_Report(
-            SOLIDSYSLOG_SEVERITY_ERROR,
+            SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
             SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
             WINSOCKDATAGRAM_ERROR_POOL_EXHAUSTED
         );
@@ -54,7 +54,7 @@ void SolidSyslogWinsockDatagram_Destroy(struct SolidSyslogDatagram* base)
     if (!released)
     {
         WinsockDatagram_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             WINSOCKDATAGRAM_ERROR_UNKNOWN_DESTROY
         );

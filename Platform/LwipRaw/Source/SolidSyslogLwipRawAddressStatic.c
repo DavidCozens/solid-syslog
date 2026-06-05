@@ -41,7 +41,7 @@ struct SolidSyslogAddress* SolidSyslogLwipRawAddress_Create(void)
     else
     {
         LwipRawAddress_Report(
-            SOLIDSYSLOG_SEVERITY_ERROR,
+            SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
             SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
             LWIPRAWADDRESS_ERROR_POOL_EXHAUSTED
         );
@@ -64,7 +64,7 @@ void SolidSyslogLwipRawAddress_Destroy(struct SolidSyslogAddress* base)
     if (!released)
     {
         LwipRawAddress_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             LWIPRAWADDRESS_ERROR_UNKNOWN_DESTROY
         );

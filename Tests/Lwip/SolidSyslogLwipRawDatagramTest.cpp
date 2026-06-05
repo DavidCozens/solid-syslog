@@ -389,7 +389,7 @@ TEST(SolidSyslogLwipRawDatagramPool, ExhaustedCreateReportsError)
     overflow = SolidSyslogLwipRawDatagram_Create();
 
     CHECK_REPORTED(
-        SOLIDSYSLOG_SEVERITY_ERROR,
+        SOLIDSYSLOG_SEVERITY_CRITICAL,
         LwipRawDatagramErrorSource,
         SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
         LWIPRAWDATAGRAM_ERROR_POOL_EXHAUSTED
