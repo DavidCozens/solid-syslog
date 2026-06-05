@@ -88,3 +88,34 @@ TEST(SolidSyslogSdElement, SecondParamClosesThePreviousValueQuote)
 
     CHECK_FRAMED("[timeQuality tzKnown=\"1\" isSynced=\"0\"]");
 }
+
+TEST(SolidSyslogSdElement, BeginWithNullNameSuppressesTheWholeElement)
+{
+    /* A NULL SD-ID can never form a well-formed element, so the whole element
+     * is skipped — params and close emit nothing, writes are absorbed safely. */
+    SolidSyslogSdElement_Begin(&element, nullptr, 0);
+    SolidSyslogSdValue_String(SolidSyslogSdElement_Param(&element, "p"), "v");
+    SolidSyslogSdElement_End(&element);
+
+    CHECK_FRAMED("");
+}
+
+TEST(SolidSyslogSdElement, ParamWithNullNameIsSkippedButElementStands)
+{
+    SolidSyslogSdElement_Begin(&element, "meta", 0);
+    SolidSyslogSdValue_String(SolidSyslogSdElement_Param(&element, nullptr), "v");
+    SolidSyslogSdElement_End(&element);
+
+    CHECK_FRAMED("[meta]");
+}
+
+TEST(SolidSyslogSdElement, SkippedParamDoesNotDisturbSurroundingParams)
+{
+    SolidSyslogSdElement_Begin(&element, "meta", 0);
+    SolidSyslogSdValue_String(SolidSyslogSdElement_Param(&element, "a"), "1");
+    SolidSyslogSdValue_String(SolidSyslogSdElement_Param(&element, nullptr), "x");
+    SolidSyslogSdValue_String(SolidSyslogSdElement_Param(&element, "b"), "2");
+    SolidSyslogSdElement_End(&element);
+
+    CHECK_FRAMED("[meta a=\"1\" b=\"2\"]");
+}
