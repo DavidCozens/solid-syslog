@@ -70,3 +70,11 @@ TEST(SolidSyslogSdElement, EndClosesValueQuoteAndElement)
 
     CHECK_FRAMED("[meta tzKnown=\"1\"]");
 }
+
+TEST(SolidSyslogSdElement, EndWithNoParamClosesElementOnly)
+{
+    SolidSyslogSdElement_Begin(&element, "meta", 0);
+    SolidSyslogSdElement_End(&element);
+
+    CHECK_FRAMED("[meta]");
+}

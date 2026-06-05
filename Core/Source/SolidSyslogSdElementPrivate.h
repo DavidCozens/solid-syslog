@@ -3,6 +3,8 @@
 
 #include "ExternC.h"
 
+#include <stdbool.h>
+
 #include "SolidSyslogSdElement.h"
 #include "SolidSyslogSdValuePrivate.h"
 
@@ -18,6 +20,7 @@ EXTERN_C_BEGIN
     {
         struct SolidSyslogFormatter* Formatter;
         struct SolidSyslogSdValue Value;
+        bool ValueOpen;
     };
 
     /* Internal constructor — wraps a message-buffer formatter. MessageFormatter

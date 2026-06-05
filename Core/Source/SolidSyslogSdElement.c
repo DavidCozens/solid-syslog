@@ -10,6 +10,7 @@ enum
 void SolidSyslogSdElement_FromFormatter(struct SolidSyslogSdElement* element, struct SolidSyslogFormatter* formatter)
 {
     element->Formatter = formatter;
+    element->ValueOpen = false;
 }
 
 void SolidSyslogSdElement_Begin(struct SolidSyslogSdElement* element, const char* name, uint32_t enterpriseNumber)
@@ -30,12 +31,17 @@ struct SolidSyslogSdValue* SolidSyslogSdElement_Param(struct SolidSyslogSdElemen
     SolidSyslogFormatter_AsciiCharacter(element->Formatter, '=');
     SolidSyslogFormatter_AsciiCharacter(element->Formatter, '"');
     SolidSyslogSdValue_FromFormatter(&element->Value, element->Formatter);
+    element->ValueOpen = true;
     return &element->Value;
 }
 
 void SolidSyslogSdElement_End(struct SolidSyslogSdElement* element)
 {
-    SolidSyslogSdValue_Close(&element->Value);
-    SolidSyslogFormatter_AsciiCharacter(element->Formatter, '"');
+    if (element->ValueOpen)
+    {
+        SolidSyslogSdValue_Close(&element->Value);
+        SolidSyslogFormatter_AsciiCharacter(element->Formatter, '"');
+        element->ValueOpen = false;
+    }
     SolidSyslogFormatter_AsciiCharacter(element->Formatter, ']');
 }
