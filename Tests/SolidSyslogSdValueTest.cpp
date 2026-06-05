@@ -36,11 +36,32 @@ TEST_GROUP(SolidSyslogSdValue)
 
 // clang-format on
 
+TEST(SolidSyslogSdValue, StringWithEmptySourceWritesNothing)
+{
+    writeString("");
+
+    CHECK_VALUE("");
+}
+
 TEST(SolidSyslogSdValue, StringPassesPlainAsciiThrough)
 {
     writeString("hello");
 
     CHECK_VALUE("hello");
+}
+
+TEST(SolidSyslogSdValue, StringCannotOverflowTheFormatterBuffer)
+{
+    /* A value longer than the message buffer is truncated at the buffer edge,
+     * never overflows. A four-byte formatter holds three chars + terminator. */
+    SolidSyslogFormatterStorage tinyStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(4)];
+    struct SolidSyslogFormatter* tiny = SolidSyslogFormatter_Create(tinyStorage, 4);
+    struct SolidSyslogSdValue tinyValue;
+    SolidSyslogSdValue_FromFormatter(&tinyValue, tiny);
+
+    SolidSyslogSdValue_String(&tinyValue, "hello");
+
+    STRCMP_EQUAL("hel", SolidSyslogFormatter_AsFormattedBuffer(tiny));
 }
 
 TEST(SolidSyslogSdValue, StringEscapesDoubleQuote)
