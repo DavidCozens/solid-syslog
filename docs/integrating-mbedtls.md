@@ -50,6 +50,13 @@ the per-context mbedTLS handles passed through
 The full struct shape lives in
 [`Platform/MbedTls/Interface/SolidSyslogMbedTlsStream.h`](../Platform/MbedTls/Interface/SolidSyslogMbedTlsStream.h).
 
+The adapter pins the **minimum protocol version to TLS 1.2** on its own
+`ssl_config` rather than inheriting `MBEDTLS_SSL_PRESET_DEFAULT` — which, on a
+permissive mbedTLS build (2.x, or 3.x with `MBEDTLS_SSL_PROTO_TLS1_0/1_1`
+enabled), can otherwise negotiate down to TLS 1.0/1.1. This matches the OpenSSL
+reference adapter's explicit floor, so the two are equivalent in downgrade
+resistance; it is not something you configure.
+
 ---
 
 ## Scenario A: you already have Mbed TLS in your image

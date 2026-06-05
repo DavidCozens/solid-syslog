@@ -1,5 +1,28 @@
 # Dev Log
 
+## 2026-06-05 — S12.31 pin mbedTLS minimum TLS version to 1.2
+
+Closes the Medium finding [#532] from the pre-0.1.0 security audit: the mbedTLS adapter
+configured its `ssl_config` with `MBEDTLS_SSL_PRESET_DEFAULT` and never set a minimum
+protocol version, so on a permissive integrator build (mbedTLS 2.x, or 3.x with
+`MBEDTLS_SSL_PROTO_TLS1_0/1_1`) it could negotiate down to TLS 1.0/1.1. The OpenSSL adapter
+already pins TLS 1.2 explicitly (`SSL_CTX_set_min_proto_version`), so the two were not
+equivalent in downgrade resistance. `MbedTlsStream_ApplyTlsPolicy` now calls
+`mbedtls_ssl_conf_min_tls_version(&SslConfig, MBEDTLS_SSL_VERSION_TLS1_2)`.
+
+### Decisions
+
+- **mbedTLS 3.x API only.** The reference image is 3.6.2 and the whole adapter already uses
+  3.x idioms; the deprecated 2.x `mbedtls_ssl_conf_min_version` path was not added. If 2.x
+  parity is ever needed it's a separate, version-guarded change.
+- **Test seam: the setter is `static inline`, so it can't be link-intercepted** like the
+  other `conf_*` doubles — it writes `conf->min_tls_version` directly. Added a
+  `MbedTlsFake_ConfMinTlsVersion(conf)` reader to the fake that exposes the field the
+  production inline call set; the test reads it off the captured `ssl_config` pointer
+  (`MbedTlsFake_LastSslConfigInitArg()`). Red showed `0` (UNKNOWN), green shows `0x0303`.
+- **Docs:** noted the enforced TLS 1.2 floor in `docs/integrating-mbedtls.md` (it's a library
+  default, not integrator-configurable).
+
 ## 2026-06-05 — S12.30 enforce HMAC-SHA256 minimum key length (fail closed)
 
 Closes the Medium finding [#531] from the pre-0.1.0 security audit: both HMAC-SHA256
