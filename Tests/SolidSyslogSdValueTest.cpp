@@ -36,3 +36,47 @@ TEST(SolidSyslogSdValue, StringPassesPlainAsciiThrough)
 
     CHECK_VALUE("hello");
 }
+
+TEST(SolidSyslogSdValue, StringEscapesDoubleQuote)
+{
+    writeString("a\"b");
+
+    CHECK_VALUE("a\\\"b");
+}
+
+TEST(SolidSyslogSdValue, StringEscapesBackslash)
+{
+    writeString("a\\b");
+
+    CHECK_VALUE("a\\\\b");
+}
+
+TEST(SolidSyslogSdValue, StringEscapesCloseBracket)
+{
+    writeString("a]b");
+
+    CHECK_VALUE("a\\]b");
+}
+
+TEST(SolidSyslogSdValue, StringEscapesAllThreeSpecialsInOneValue)
+{
+    writeString("\"\\]");
+
+    CHECK_VALUE("\\\"\\\\\\]");
+}
+
+TEST(SolidSyslogSdValue, StringPassesValidUtf8CodepointThrough)
+{
+    /* U+00A9 COPYRIGHT SIGN, a valid two-byte sequence — passes byte-for-byte. */
+    writeString("\xC2\xA9");
+
+    CHECK_VALUE("\xC2\xA9");
+}
+
+TEST(SolidSyslogSdValue, StringSubstitutesIllFormedByteWithReplacementCharacter)
+{
+    /* A lone continuation byte is ill-formed UTF-8 — substituted with U+FFFD. */
+    writeString("\x80");
+
+    CHECK_VALUE("\xEF\xBF\xBD");
+}
