@@ -32,6 +32,7 @@ TEST_GROUP(SolidSyslogSdValue)
         SolidSyslogSdValue_BoundedString(&value, source, maxDecodedLength);
     }
     void writeUint32(uint32_t number) { SolidSyslogSdValue_Uint32(&value, number); }
+    void closeValue() { SolidSyslogSdValue_Close(&value); }
 };
 
 // clang-format on
@@ -124,6 +125,72 @@ TEST(SolidSyslogSdValue, ReassemblesTwoByteCodepointSplitAcrossStringCalls)
     writeString("\xA9");
 
     CHECK_VALUE("\xC2\xA9");
+}
+
+TEST(SolidSyslogSdValue, ReassemblesFourByteCodepointSplitAcrossStringCalls)
+{
+    /* U+1F600 GRINNING FACE (F0 9F 98 80) split lead+1 / +2 continuations. */
+    writeString("\xF0\x9F");
+    writeString("\x98\x80");
+
+    CHECK_VALUE("\xF0\x9F\x98\x80");
+}
+
+TEST(SolidSyslogSdValue, ReassemblesFourByteCodepointSplitOneByteAtATime)
+{
+    /* The same codepoint dribbled a byte at a time keeps the partial sequence
+     * held across calls that add no completing byte. */
+    writeString("\xF0");
+    writeString("\x9F");
+    writeString("\x98");
+    writeString("\x80");
+
+    CHECK_VALUE("\xF0\x9F\x98\x80");
+}
+
+TEST(SolidSyslogSdValue, EmitsCompletePrefixAndHoldsTrailingIncompleteSequence)
+{
+    /* Plain text then a dangling lead byte in one chunk: the prefix is emitted
+     * immediately, the lead byte waits for the next chunk to complete it. */
+    writeString("hi\xC2");
+    writeString("\xA9");
+
+    CHECK_VALUE("hi\xC2\xA9");
+}
+
+TEST(SolidSyslogSdValue, SubstitutesInChunkLeadByteInterruptedByAscii)
+{
+    /* A lead byte followed immediately by ASCII within one chunk is ill-formed
+     * and substituted per-byte; the ASCII passes through. */
+    writeString("\xC2Z");
+
+    CHECK_VALUE("\xEF\xBF\xBDZ");
+}
+
+TEST(SolidSyslogSdValue, SubstitutesHeldSequenceInterruptedByNextChunk)
+{
+    /* A held lead byte that the next chunk fails to continue is replaced with a
+     * single U+FFFD, then the interrupting byte is processed normally. */
+    writeString("\xE0");
+    writeString("Z");
+
+    CHECK_VALUE("\xEF\xBF\xBDZ");
+}
+
+TEST(SolidSyslogSdValue, CloseSubstitutesStillIncompleteTailWithReplacementCharacter)
+{
+    writeString("\xC2");
+    closeValue();
+
+    CHECK_VALUE("\xEF\xBF\xBD");
+}
+
+TEST(SolidSyslogSdValue, CloseWithNoHeldTailWritesNothing)
+{
+    writeString("hi");
+    closeValue();
+
+    CHECK_VALUE("hi");
 }
 
 TEST(SolidSyslogSdValue, BoundedStringPassesValueShorterThanCapThrough)
