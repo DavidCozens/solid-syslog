@@ -957,7 +957,7 @@ TEST(SolidSyslogUdpSenderDeliveryHealth, FirstFailingSendReportsDeliveryFailed)
     sendNumberFails(0);
     Send();
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_WARNING, ErrorHandlerFake_LastSeverity());
     POINTERS_EQUAL(&UdpSenderErrorSource, ErrorHandlerFake_LastSource());
     UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_CAT_SENDER_DELIVERY_FAILED, ErrorHandlerFake_LastCategory());
     UNSIGNED_LONGS_EQUAL(UDPSENDER_ERROR_DELIVERY_FAILED, ErrorHandlerFake_LastDetail());
