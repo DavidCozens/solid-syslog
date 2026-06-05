@@ -1,5 +1,40 @@
 # Dev Log
 
+## 2026-06-05 — S14.01 SolidSyslogSdValue: escaped streaming value sink
+
+First foundation story of E14's safe SD-authoring API. Built `SolidSyslogSdValue` standalone
+(opaque, stack-transient, no pool — deviation D.002), the per-param value sink that makes SD
+param-value escaping un-bypassable. Public header + impl + private header + test, all TDD.
+
+**Value menu:** `_String` (unbounded, buffer-bounded only), `_BoundedString` (decoded-length
+capped), `_Uint32`. Internal `_FromFormatter` constructor (reused by SdElement in S14.02) and
+`_Close`.
+
+### Decisions
+- **Reuse, don't duplicate.** Escaping (`"` `\` `]`) and per-byte maximal-subpart UTF-8 stay the
+  sole responsibility of `SolidSyslogFormatter_EscapedString` — SdValue carries no second decoder.
+  It only adds streaming-continuation bookkeeping using the byte-structure classifiers in
+  `SolidSyslogUtf8.h` (the same ones `Formatter_TrimTruncatedMultiByteTail` uses), never validation.
+- **`maxDecodedLength` is load-bearing, kept.** It bounds the decoded value width for receivers
+  parsing into fixed fields — *not* dropped. Surfaced as the two-method split (David's call):
+  `_String` unbounded + `_BoundedString(maxDecodedLength)`. This corrected an earlier wrong turn
+  where I'd proposed evolving `EscapedString` to drop the decoded cap.
+- **No Formatter change.** Streaming (Option B) is implemented entirely inside SdValue by walking
+  each chunk as UTF-8 units, emitting each complete unit through `EscapedString`, and holding a
+  trailing incomplete unit (≤4 bytes) in the `SdValue` to complete from the next call's leading
+  continuation bytes. A still-incomplete tail at `_Close` → one U+FFFD (emitted by feeding a lone
+  continuation byte through `EscapedString`, so no replacement constant is duplicated). This
+  dissolved the Tier-1 Formatter-refactor question we'd started down.
+
+### Deferred
+- CLAUDE.md public-header table entry for `SolidSyslogSdValue.h` — API is provisional until S14.03
+  confirms it against a real consumer, and S14.08 revises that table wholesale. Land it then.
+
+### Open questions
+- Cross-primitive flush: a held `_String` tail is currently flushed only by the next `_String` or
+  `_Close`, not by an intervening `_Uint32` / `_BoundedString`. Not exercised by any S14.01 AC;
+  revisit if SdElement's usage in S14.02 needs it.
+
 ## 2026-06-05 — S12.33 review and align error-event severity across Core + Platform
 
 S12.27 exposed that the severity ladder had drifted: the library emitted only ERROR / WARNING /
