@@ -13,3 +13,8 @@ void SolidSyslogSdValue_String(struct SolidSyslogSdValue* value, const char* sou
 {
     SolidSyslogFormatter_EscapedString(value->Formatter, source, SIZE_MAX);
 }
+
+void SolidSyslogSdValue_Uint32(struct SolidSyslogSdValue* value, uint32_t number)
+{
+    SolidSyslogFormatter_Uint32(value->Formatter, number);
+}

@@ -1,4 +1,5 @@
 #include <cstring>
+#include <stdint.h>
 
 #include "CppUTest/TestHarness.h"
 #include "SolidSyslogFormatter.h"
@@ -26,6 +27,7 @@ TEST_GROUP(SolidSyslogSdValue)
     }
 
     void writeString(const char* source) { SolidSyslogSdValue_String(&value, source); }
+    void writeUint32(uint32_t number) { SolidSyslogSdValue_Uint32(&value, number); }
 };
 
 // clang-format on
@@ -79,4 +81,11 @@ TEST(SolidSyslogSdValue, StringSubstitutesIllFormedByteWithReplacementCharacter)
     writeString("\x80");
 
     CHECK_VALUE("\xEF\xBF\xBD");
+}
+
+TEST(SolidSyslogSdValue, Uint32EmitsDecimalDigits)
+{
+    writeUint32(42);
+
+    CHECK_VALUE("42");
 }

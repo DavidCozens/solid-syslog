@@ -3,6 +3,8 @@
 
 #include "ExternC.h"
 
+#include <stdint.h>
+
 EXTERN_C_BEGIN
 
     /* The per-param value sink of the SD authoring API. A value producer is
@@ -16,6 +18,10 @@ EXTERN_C_BEGIN
      * May be called repeatedly; a multi-byte codepoint split across two calls
      * is reassembled. Output is bounded by the message buffer. */
     void SolidSyslogSdValue_String(struct SolidSyslogSdValue * value, const char* source);
+
+    /* Emits the decimal digits of number. Digits are never escapable, so no
+     * escaping is applied. Output is bounded by the message buffer. */
+    void SolidSyslogSdValue_Uint32(struct SolidSyslogSdValue * value, uint32_t number);
 
 EXTERN_C_END
 
