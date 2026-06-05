@@ -46,7 +46,7 @@ void SolidSyslogPosixMutex_Destroy(struct SolidSyslogMutex* base)
     if (!released)
     {
         PosixMutex_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             POSIXMUTEX_ERROR_UNKNOWN_DESTROY
         );

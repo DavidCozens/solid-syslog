@@ -60,7 +60,7 @@ void SolidSyslogFileBlockDevice_Destroy(struct SolidSyslogBlockDevice* base)
     if (!released)
     {
         FileBlockDevice_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             FILEBLOCKDEVICE_ERROR_UNKNOWN_DESTROY
         );

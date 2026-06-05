@@ -54,7 +54,7 @@ void SolidSyslogLwipRawResolver_Destroy(struct SolidSyslogResolver* base)
     if (!released)
     {
         LwipRawResolver_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             LWIPRAWRESOLVER_ERROR_UNKNOWN_DESTROY
         );

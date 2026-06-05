@@ -46,7 +46,7 @@ void SolidSyslogPosixFile_Destroy(struct SolidSyslogFile* base)
     if (!released)
     {
         PosixFile_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             POSIXFILE_ERROR_UNKNOWN_DESTROY
         );

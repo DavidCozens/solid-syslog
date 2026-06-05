@@ -51,7 +51,7 @@ void SolidSyslogPosixDatagram_Destroy(struct SolidSyslogDatagram* base)
     if (!released)
     {
         PosixDatagram_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             POSIXDATAGRAM_ERROR_UNKNOWN_DESTROY
         );

@@ -71,7 +71,7 @@ void SolidSyslogOpenSslAesGcmPolicy_Destroy(struct SolidSyslogSecurityPolicy* ba
     if (!released)
     {
         OpenSslAesGcmPolicy_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             OPENSSLAESGCMPOLICY_ERROR_UNKNOWN_DESTROY
         );

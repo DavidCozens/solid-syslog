@@ -62,7 +62,7 @@ void SolidSyslogTimeQualitySd_Destroy(struct SolidSyslogStructuredData* base)
     if (!released)
     {
         TimeQualitySd_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             TIMEQUALITYSD_ERROR_UNKNOWN_DESTROY
         );

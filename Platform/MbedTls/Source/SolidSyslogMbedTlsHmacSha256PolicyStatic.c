@@ -71,7 +71,7 @@ void SolidSyslogMbedTlsHmacSha256Policy_Destroy(struct SolidSyslogSecurityPolicy
     if (!released)
     {
         MbedTlsHmacSha256Policy_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             MBEDTLSHMACSHA256POLICY_ERROR_UNKNOWN_DESTROY
         );

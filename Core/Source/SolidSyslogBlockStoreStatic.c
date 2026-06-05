@@ -167,7 +167,7 @@ void SolidSyslogBlockStore_Destroy(struct SolidSyslogStore* base)
     if (!released)
     {
         BlockStore_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             BLOCKSTORE_ERROR_UNKNOWN_DESTROY
         );

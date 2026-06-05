@@ -92,7 +92,7 @@ void SolidSyslogSwitchingSender_Destroy(struct SolidSyslogSender* base)
     if (!released)
     {
         SwitchingSender_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             SWITCHINGSENDER_ERROR_UNKNOWN_DESTROY
         );

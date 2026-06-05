@@ -45,7 +45,7 @@ void SolidSyslogOriginSd_Destroy(struct SolidSyslogStructuredData* base)
                     SolidSyslogPoolAllocator_FreeIfInUse(&OriginSd_Allocator, index, OriginSd_CleanupAtIndex, NULL);
     if (!released)
     {
-        OriginSd_Report(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_CAT_UNKNOWN_DESTROY, ORIGINSD_ERROR_UNKNOWN_DESTROY);
+        OriginSd_Report(SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY, SOLIDSYSLOG_CAT_UNKNOWN_DESTROY, ORIGINSD_ERROR_UNKNOWN_DESTROY);
     }
 }
 

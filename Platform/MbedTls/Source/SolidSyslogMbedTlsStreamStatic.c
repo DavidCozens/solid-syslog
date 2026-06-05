@@ -54,7 +54,7 @@ void SolidSyslogMbedTlsStream_Destroy(struct SolidSyslogStream* base)
     if (!released)
     {
         MbedTlsStream_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             MBEDTLSSTREAM_ERROR_UNKNOWN_DESTROY
         );

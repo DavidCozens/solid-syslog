@@ -214,7 +214,7 @@ static inline bool MbedTlsStream_ConfigureExpectedHostname(struct SolidSyslogMbe
         if (!ok)
         {
             MbedTlsStream_Report(
-                SOLIDSYSLOG_SEVERITY_ERROR,
+                SOLIDSYSLOG_BAD_CONFIG_FATAL_SEVERITY,
                 SOLIDSYSLOG_CAT_BAD_CONFIG,
                 MBEDTLSSTREAM_ERROR_SERVER_NAME_NOT_SET
             );
@@ -268,7 +268,7 @@ static inline bool MbedTlsStream_PerformHandshake(struct SolidSyslogMbedTlsStrea
         else if (MbedTlsStream_IsHandshakeBudgetExhausted(totalSleptMs, budgetMs))
         {
             MbedTlsStream_Report(
-                SOLIDSYSLOG_SEVERITY_ERROR,
+                SOLIDSYSLOG_SEVERITY_WARNING,
                 SOLIDSYSLOG_CAT_TLSSTREAM_HANDSHAKE_FAILED,
                 MBEDTLSSTREAM_ERROR_HANDSHAKE_TIMEOUT
             );

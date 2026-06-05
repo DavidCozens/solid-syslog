@@ -84,7 +84,7 @@ void SolidSyslogUdpSender_Destroy(struct SolidSyslogSender* base)
     if (!released)
     {
         UdpSender_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             UDPSENDER_ERROR_UNKNOWN_DESTROY
         );

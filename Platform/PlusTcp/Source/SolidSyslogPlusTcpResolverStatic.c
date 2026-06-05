@@ -54,7 +54,7 @@ void SolidSyslogPlusTcpResolver_Destroy(struct SolidSyslogResolver* base)
     if (!released)
     {
         PlusTcpResolver_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             PLUSTCPRESOLVER_ERROR_UNKNOWN_DESTROY
         );

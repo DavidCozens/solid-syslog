@@ -71,7 +71,7 @@ void SolidSyslogMbedTlsAesGcmPolicy_Destroy(struct SolidSyslogSecurityPolicy* ba
     if (!released)
     {
         MbedTlsAesGcmPolicy_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             MBEDTLSAESGCMPOLICY_ERROR_UNKNOWN_DESTROY
         );

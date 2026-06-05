@@ -51,7 +51,7 @@ void SolidSyslogWindowsFile_Destroy(struct SolidSyslogFile* base)
     if (!released)
     {
         WindowsFile_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             WINDOWSFILE_ERROR_UNKNOWN_DESTROY
         );

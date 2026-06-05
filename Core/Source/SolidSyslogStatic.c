@@ -90,7 +90,7 @@ void SolidSyslog_Destroy(struct SolidSyslog* handle)
     if (!released)
     {
         SolidSyslog_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             SOLIDSYSLOG_ERROR_UNKNOWN_DESTROY
         );

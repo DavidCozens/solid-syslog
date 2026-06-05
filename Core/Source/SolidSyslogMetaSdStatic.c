@@ -67,7 +67,7 @@ void SolidSyslogMetaSd_Destroy(struct SolidSyslogStructuredData* base)
                     SolidSyslogPoolAllocator_FreeIfInUse(&MetaSd_Allocator, index, MetaSd_CleanupAtIndex, NULL);
     if (!released)
     {
-        MetaSd_Report(SOLIDSYSLOG_SEVERITY_WARNING, SOLIDSYSLOG_CAT_UNKNOWN_DESTROY, METASD_ERROR_UNKNOWN_DESTROY);
+        MetaSd_Report(SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY, SOLIDSYSLOG_CAT_UNKNOWN_DESTROY, METASD_ERROR_UNKNOWN_DESTROY);
     }
 }
 

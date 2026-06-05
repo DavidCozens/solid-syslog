@@ -46,7 +46,7 @@ void SolidSyslogTlsStream_Destroy(struct SolidSyslogStream* base)
     if (!released)
     {
         TlsStream_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             TLSSTREAM_ERROR_UNKNOWN_DESTROY
         );

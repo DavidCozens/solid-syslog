@@ -88,7 +88,7 @@ void SolidSyslogPosixMessageQueueBuffer_Destroy(struct SolidSyslogBuffer* base)
     if (!released)
     {
         PosixMessageQueueBuffer_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             POSIXMESSAGEQUEUEBUFFER_ERROR_UNKNOWN_DESTROY
         );

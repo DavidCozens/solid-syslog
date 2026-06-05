@@ -54,7 +54,7 @@ void SolidSyslogStdAtomicCounter_Destroy(struct SolidSyslogAtomicCounter* base)
     if (!released)
     {
         StdAtomicCounter_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             STDATOMICCOUNTER_ERROR_UNKNOWN_DESTROY
         );

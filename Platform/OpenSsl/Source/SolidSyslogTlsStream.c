@@ -402,7 +402,7 @@ static inline bool TlsStream_ConfigureExpectedHostname(struct SolidSyslogTlsStre
         if (!ok)
         {
             TlsStream_Report(
-                SOLIDSYSLOG_SEVERITY_ERROR,
+                SOLIDSYSLOG_BAD_CONFIG_FATAL_SEVERITY,
                 SOLIDSYSLOG_CAT_BAD_CONFIG,
                 TLSSTREAM_ERROR_SERVER_NAME_NOT_SET
             );
@@ -485,7 +485,7 @@ static inline bool TlsStream_PerformHandshake(struct SolidSyslogTlsStream* self)
             else if (TlsStream_IsHandshakeBudgetExhausted(totalSleptMs, budgetMs))
             {
                 TlsStream_Report(
-                    SOLIDSYSLOG_SEVERITY_ERROR,
+                    SOLIDSYSLOG_SEVERITY_WARNING,
                     SOLIDSYSLOG_CAT_TLSSTREAM_HANDSHAKE_FAILED,
                     TLSSTREAM_ERROR_HANDSHAKE_TIMEOUT
                 );

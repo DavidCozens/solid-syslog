@@ -64,7 +64,7 @@ void SolidSyslogLwipRawDnsResolver_Destroy(struct SolidSyslogResolver* base)
     if (!released)
     {
         LwipRawDnsResolver_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             LWIPRAWDNSRESOLVER_ERROR_UNKNOWN_DESTROY
         );

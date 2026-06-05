@@ -25,18 +25,23 @@ extern "C"
 
 using namespace CososoTesting;
 
-#define CHECK_OPEN_UNWOUND_WITH_ERROR(transport, expectedCategory, expectedCode)   \
-    do                                                                             \
-    {                                                                              \
-        LONGS_EQUAL(1, StreamFake_CloseCallCount(transport));                      \
-        LONGS_EQUAL(1, MbedTlsFake_SslFreeCallCount());                            \
-        LONGS_EQUAL(1, MbedTlsFake_SslConfigFreeCallCount());                      \
-        CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);                                \
-        POINTERS_EQUAL(&MbedTlsStreamErrorSource, ErrorHandlerFake_LastSource());  \
-        UNSIGNED_LONGS_EQUAL((expectedCategory), ErrorHandlerFake_LastCategory()); \
-        UNSIGNED_LONGS_EQUAL((expectedCode), ErrorHandlerFake_LastDetail());       \
-        LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());  \
+#define CHECK_OPEN_UNWOUND_WITH_SEVERITY(transport, expectedSeverity, expectedCategory, expectedCode) \
+    do                                                                                                \
+    {                                                                                                 \
+        LONGS_EQUAL(1, StreamFake_CloseCallCount(transport));                                         \
+        LONGS_EQUAL(1, MbedTlsFake_SslFreeCallCount());                                               \
+        LONGS_EQUAL(1, MbedTlsFake_SslConfigFreeCallCount());                                         \
+        CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);                                                   \
+        POINTERS_EQUAL(&MbedTlsStreamErrorSource, ErrorHandlerFake_LastSource());                     \
+        UNSIGNED_LONGS_EQUAL((expectedCategory), ErrorHandlerFake_LastCategory());                    \
+        UNSIGNED_LONGS_EQUAL((expectedCode), ErrorHandlerFake_LastDetail());                          \
+        LONGS_EQUAL((expectedSeverity), ErrorHandlerFake_LastSeverity());                             \
     } while (0)
+
+#define CHECK_OPEN_UNWOUND_WITH_ERROR(transport, expectedCategory, expectedCode) \
+    CHECK_OPEN_UNWOUND_WITH_SEVERITY(                                            \
+        transport, SOLIDSYSLOG_SEVERITY_ERROR, expectedCategory, expectedCode    \
+    )
 
 static int NoOpSleepCallCount;
 static int g_lastSleepMs;
@@ -283,8 +288,9 @@ TEST(SolidSyslogMbedTlsStream, OpenClosesTransportAndFreesSslStateWhenHandshakeB
     ArrangePersistentHandshakeError(MBEDTLS_ERR_SSL_WANT_READ);
 
     CHECK_FALSE(SolidSyslogStream_Open(handle, addr));
-    CHECK_OPEN_UNWOUND_WITH_ERROR(
+    CHECK_OPEN_UNWOUND_WITH_SEVERITY(
         transport,
+        SOLIDSYSLOG_SEVERITY_WARNING,
         SOLIDSYSLOG_CAT_TLSSTREAM_HANDSHAKE_FAILED,
         MBEDTLSSTREAM_ERROR_HANDSHAKE_TIMEOUT
     );
@@ -403,7 +409,9 @@ TEST(SolidSyslogMbedTlsStream, OpenClosesTransportAndFreesSslStateWhenSetHostnam
     MbedTlsFake_SetSslSetHostnameReturn(-1);
 
     CHECK_FALSE(SolidSyslogStream_Open(handle, addr));
-    CHECK_OPEN_UNWOUND_WITH_ERROR(transport, SOLIDSYSLOG_CAT_BAD_CONFIG, MBEDTLSSTREAM_ERROR_SERVER_NAME_NOT_SET);
+    CHECK_OPEN_UNWOUND_WITH_SEVERITY(
+        transport, SOLIDSYSLOG_SEVERITY_CRITICAL, SOLIDSYSLOG_CAT_BAD_CONFIG, MBEDTLSSTREAM_ERROR_SERVER_NAME_NOT_SET
+    );
 }
 
 TEST(SolidSyslogMbedTlsStream, SendForwardsBufferToSslWrite)

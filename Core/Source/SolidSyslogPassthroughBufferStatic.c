@@ -70,7 +70,7 @@ void SolidSyslogPassthroughBuffer_Destroy(struct SolidSyslogBuffer* base)
     if (!released)
     {
         PassthroughBuffer_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             PASSTHROUGHBUFFER_ERROR_UNKNOWN_DESTROY
         );

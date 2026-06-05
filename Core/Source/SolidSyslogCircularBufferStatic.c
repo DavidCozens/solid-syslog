@@ -59,7 +59,7 @@ void SolidSyslogCircularBuffer_Destroy(struct SolidSyslogBuffer* base)
     if (!released)
     {
         CircularBuffer_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             CIRCULARBUFFER_ERROR_UNKNOWN_DESTROY
         );

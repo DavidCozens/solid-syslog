@@ -51,7 +51,7 @@ void SolidSyslogFreeRtosMutex_Destroy(struct SolidSyslogMutex* base)
     if (!released)
     {
         FreeRtosMutex_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             FREERTOSMUTEX_ERROR_UNKNOWN_DESTROY
         );

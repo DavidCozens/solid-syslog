@@ -64,7 +64,7 @@ void SolidSyslogPlusTcpAddress_Destroy(struct SolidSyslogAddress* base)
     if (!released)
     {
         PlusTcpAddress_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             PLUSTCPADDRESS_ERROR_UNKNOWN_DESTROY
         );

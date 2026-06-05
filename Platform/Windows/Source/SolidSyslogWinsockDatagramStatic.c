@@ -54,7 +54,7 @@ void SolidSyslogWinsockDatagram_Destroy(struct SolidSyslogDatagram* base)
     if (!released)
     {
         WinsockDatagram_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             WINSOCKDATAGRAM_ERROR_UNKNOWN_DESTROY
         );

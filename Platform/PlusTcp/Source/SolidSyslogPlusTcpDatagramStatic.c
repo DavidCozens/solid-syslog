@@ -54,7 +54,7 @@ void SolidSyslogPlusTcpDatagram_Destroy(struct SolidSyslogDatagram* base)
     if (!released)
     {
         PlusTcpDatagram_Report(
-            SOLIDSYSLOG_SEVERITY_WARNING,
+            SOLIDSYSLOG_UNKNOWN_DESTROY_SEVERITY,
             SOLIDSYSLOG_CAT_UNKNOWN_DESTROY,
             PLUSTCPDATAGRAM_ERROR_UNKNOWN_DESTROY
         );
