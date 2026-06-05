@@ -673,6 +673,16 @@ TEST(SolidSyslogMbedTlsStream, OpenSetsAuthmodeRequired)
     LONGS_EQUAL(MBEDTLS_SSL_VERIFY_REQUIRED, MbedTlsFake_LastSslConfAuthmodeArg());
 }
 
+// Parity with the OpenSSL adapter's explicit TLS 1.2 floor — the mbedTLS default
+// preset can otherwise negotiate down to TLS 1.0/1.1 on permissive builds.
+TEST(SolidSyslogMbedTlsStream, OpenPinsMinimumTlsVersionToTls12)
+
+{
+    SolidSyslogStream_Open(handle, addr);
+
+    LONGS_EQUAL(MBEDTLS_SSL_VERSION_TLS1_2, MbedTlsFake_ConfMinTlsVersion(MbedTlsFake_LastSslConfigInitArg()));
+}
+
 TEST(SolidSyslogMbedTlsStream, OpenWiresCaChainFromConfigAndNullCrl)
 
 {

@@ -483,6 +483,11 @@ int MbedTlsFake_LastSslConfAuthmodeArg(void)
     return lastSslConfAuthmodeArg;
 }
 
+int MbedTlsFake_ConfMinTlsVersion(const mbedtls_ssl_config* conf)
+{
+    return (int) conf->MBEDTLS_PRIVATE(min_tls_version);
+}
+
 int MbedTlsFake_SslConfCaChainCallCount(void)
 {
     return sslConfCaChainCallCount;

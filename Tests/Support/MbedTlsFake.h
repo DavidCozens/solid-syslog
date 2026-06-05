@@ -90,6 +90,12 @@ EXTERN_C_BEGIN
     struct mbedtls_ssl_config* MbedTlsFake_LastSslConfAuthmodeConfigArg(void);
     int MbedTlsFake_LastSslConfAuthmodeArg(void);
 
+    /* mbedtls_ssl_conf_min_tls_version is a static-inline setter in <mbedtls/ssl.h>
+     * (it writes conf->min_tls_version directly), so it cannot be intercepted at
+     * link time like the other conf_* doubles. This reader exposes the field the
+     * production inline call set, so a test can assert the negotiated floor. */
+    int MbedTlsFake_ConfMinTlsVersion(const struct mbedtls_ssl_config* conf);
+
     /* mbedtls_ssl_conf_ca_chain */
     int MbedTlsFake_SslConfCaChainCallCount(void);
     struct mbedtls_ssl_config* MbedTlsFake_LastSslConfCaChainConfigArg(void);

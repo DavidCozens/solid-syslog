@@ -166,6 +166,10 @@ static inline bool MbedTlsStream_ApplySslConfigDefaults(struct SolidSyslogMbedTl
 static inline void MbedTlsStream_ApplyTlsPolicy(struct SolidSyslogMbedTlsStream* self)
 {
     mbedtls_ssl_conf_authmode(&self->SslConfig, MBEDTLS_SSL_VERIFY_REQUIRED);
+    /* Pin the floor at TLS 1.2 rather than inheriting MBEDTLS_SSL_PRESET_DEFAULT,
+     * which can negotiate down to TLS 1.0/1.1 on permissive integrator builds.
+     * Matches the OpenSSL adapter's explicit floor (downgrade-resistance parity). */
+    mbedtls_ssl_conf_min_tls_version(&self->SslConfig, MBEDTLS_SSL_VERSION_TLS1_2);
     mbedtls_ssl_conf_ca_chain(&self->SslConfig, self->Config.CaChain, NULL);
     mbedtls_ssl_conf_rng(&self->SslConfig, mbedtls_ctr_drbg_random, self->Config.Rng);
     if ((self->Config.ClientCertChain != NULL) && (self->Config.ClientKey != NULL))
