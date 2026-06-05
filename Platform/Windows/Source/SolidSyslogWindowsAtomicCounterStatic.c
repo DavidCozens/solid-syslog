@@ -37,7 +37,7 @@ struct SolidSyslogAtomicCounter* SolidSyslogWindowsAtomicCounter_Create(void)
     else
     {
         WindowsAtomicCounter_Report(
-            SOLIDSYSLOG_SEVERITY_ERROR,
+            SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
             SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
             WINDOWSATOMICCOUNTER_ERROR_POOL_EXHAUSTED
         );

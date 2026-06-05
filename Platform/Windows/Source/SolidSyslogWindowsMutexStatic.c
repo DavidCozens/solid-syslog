@@ -34,7 +34,7 @@ struct SolidSyslogMutex* SolidSyslogWindowsMutex_Create(void)
     else
     {
         WindowsMutex_Report(
-            SOLIDSYSLOG_SEVERITY_ERROR,
+            SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
             SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
             WINDOWSMUTEX_ERROR_POOL_EXHAUSTED
         );

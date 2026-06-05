@@ -341,6 +341,19 @@ TEST_GROUP(SolidSyslogSwitchingSenderPool)
 
 // clang-format on
 
+TEST(SolidSyslogSwitchingSenderPool, OverflowReportsPoolExhausted)
+{
+    FillPool();
+    ErrorHandlerFake_Install(nullptr);
+
+    overflow = MakeSender();
+
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_CRITICAL, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&SwitchingSenderErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_CAT_POOL_EXHAUSTED, ErrorHandlerFake_LastCategory());
+    UNSIGNED_LONGS_EQUAL(SWITCHINGSENDER_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastDetail());
+}
+
 TEST(SolidSyslogSwitchingSenderPool, FillingPoolThenOverflowReturnsDistinctFallback)
 {
     FillPool();

@@ -343,6 +343,19 @@ TEST_GROUP(SolidSyslogMetaSdPool)
 
 // clang-format on
 
+TEST(SolidSyslogMetaSdPool, OverflowReportsPoolExhausted)
+{
+    FillPool();
+    ErrorHandlerFake_Install(nullptr);
+
+    overflow = MakeSd();
+
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_CRITICAL, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&MetaSdErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_CAT_POOL_EXHAUSTED, ErrorHandlerFake_LastCategory());
+    UNSIGNED_LONGS_EQUAL(METASD_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastDetail());
+}
+
 TEST(SolidSyslogMetaSdPool, FillingPoolThenOverflowReturnsDistinctFallback)
 {
     FillPool();

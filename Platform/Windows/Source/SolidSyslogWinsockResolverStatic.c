@@ -37,7 +37,7 @@ struct SolidSyslogResolver* SolidSyslogWinsockResolver_Create(void)
     else
     {
         WinsockResolver_Report(
-            SOLIDSYSLOG_SEVERITY_ERROR,
+            SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
             SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
             WINSOCKRESOLVER_ERROR_POOL_EXHAUSTED
         );

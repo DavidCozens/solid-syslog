@@ -36,7 +36,7 @@ struct SolidSyslogStructuredData* SolidSyslogMetaSd_Create(const struct SolidSys
         }
         else
         {
-            MetaSd_Report(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_CAT_POOL_EXHAUSTED, METASD_ERROR_POOL_EXHAUSTED);
+            MetaSd_Report(SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY, SOLIDSYSLOG_CAT_POOL_EXHAUSTED, METASD_ERROR_POOL_EXHAUSTED);
         }
     }
     return result;

@@ -37,7 +37,7 @@ struct SolidSyslogResolver* SolidSyslogPlusTcpResolver_Create(void)
     else
     {
         PlusTcpResolver_Report(
-            SOLIDSYSLOG_SEVERITY_ERROR,
+            SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
             SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
             PLUSTCPRESOLVER_ERROR_POOL_EXHAUSTED
         );

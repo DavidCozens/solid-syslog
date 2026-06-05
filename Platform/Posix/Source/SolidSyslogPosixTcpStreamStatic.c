@@ -37,7 +37,7 @@ struct SolidSyslogStream* SolidSyslogPosixTcpStream_Create(const struct SolidSys
     else
     {
         PosixTcpStream_Report(
-            SOLIDSYSLOG_SEVERITY_ERROR,
+            SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
             SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
             POSIXTCPSTREAM_ERROR_POOL_EXHAUSTED
         );

@@ -163,6 +163,19 @@ TEST_GROUP(SolidSyslogPassthroughBufferPool)
 
 // clang-format on
 
+TEST(SolidSyslogPassthroughBufferPool, OverflowReportsPoolExhausted)
+{
+    FillPool();
+    ErrorHandlerFake_Install(nullptr);
+
+    overflow = MakeBuffer();
+
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_CRITICAL, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&PassthroughBufferErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_CAT_POOL_EXHAUSTED, ErrorHandlerFake_LastCategory());
+    UNSIGNED_LONGS_EQUAL(PASSTHROUGHBUFFER_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastDetail());
+}
+
 TEST(SolidSyslogPassthroughBufferPool, FillingPoolThenOverflowReturnsDistinctFallback)
 {
     FillPool();

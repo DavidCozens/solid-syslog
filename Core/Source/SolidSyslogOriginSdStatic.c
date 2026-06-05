@@ -33,7 +33,7 @@ struct SolidSyslogStructuredData* SolidSyslogOriginSd_Create(const struct SolidS
     }
     else
     {
-        OriginSd_Report(SOLIDSYSLOG_SEVERITY_ERROR, SOLIDSYSLOG_CAT_POOL_EXHAUSTED, ORIGINSD_ERROR_POOL_EXHAUSTED);
+        OriginSd_Report(SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY, SOLIDSYSLOG_CAT_POOL_EXHAUSTED, ORIGINSD_ERROR_POOL_EXHAUSTED);
     }
     return handle;
 }

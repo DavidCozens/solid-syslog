@@ -34,7 +34,7 @@ struct SolidSyslogFile* SolidSyslogWindowsFile_Create(void)
     else
     {
         WindowsFile_Report(
-            SOLIDSYSLOG_SEVERITY_ERROR,
+            SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
             SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
             WINDOWSFILE_ERROR_POOL_EXHAUSTED
         );

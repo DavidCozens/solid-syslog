@@ -3,8 +3,11 @@
 #include <initializer_list>
 #include <string>
 
+#include "ErrorHandlerFake.h"
+#include "SolidSyslogErrorCategory.h"
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogOriginSd.h"
+#include "SolidSyslogOriginSdErrors.h"
 #include "SolidSyslogStructuredData.h"
 #include "SolidSyslogTunables.h"
 #include "CppUTest/TestHarness.h"
@@ -546,6 +549,19 @@ TEST_GROUP(SolidSyslogOriginSdPool)
 };
 
 // clang-format on
+
+TEST(SolidSyslogOriginSdPool, OverflowReportsPoolExhausted)
+{
+    FillPool();
+    ErrorHandlerFake_Install(nullptr);
+
+    overflow = MakeSd();
+
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_CRITICAL, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&OriginSdErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_CAT_POOL_EXHAUSTED, ErrorHandlerFake_LastCategory());
+    UNSIGNED_LONGS_EQUAL(ORIGINSD_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastDetail());
+}
 
 TEST(SolidSyslogOriginSdPool, FillingPoolThenOverflowReturnsDistinctFallback)
 {

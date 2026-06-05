@@ -462,7 +462,7 @@ TEST(SolidSyslogLwipRawDnsResolverPool, ExhaustedCreateReportsError)
     overflow = SolidSyslogLwipRawDnsResolver_Create(&config);
 
     CHECK_REPORTED(
-        SOLIDSYSLOG_SEVERITY_ERROR,
+        SOLIDSYSLOG_SEVERITY_CRITICAL,
         LwipRawDnsResolverErrorSource,
         SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
         LWIPRAWDNSRESOLVER_ERROR_POOL_EXHAUSTED

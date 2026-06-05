@@ -240,7 +240,7 @@ TEST(SolidSyslogMbedTlsAesGcmPolicy, ExhaustedCreateReportsError)
     overflow = SolidSyslogMbedTlsAesGcmPolicy_Create(&config);
 
     CHECK_REPORTED_ERROR(
-        SOLIDSYSLOG_SEVERITY_ERROR,
+        SOLIDSYSLOG_SEVERITY_CRITICAL,
         SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
         MBEDTLSAESGCMPOLICY_ERROR_POOL_EXHAUSTED
     );

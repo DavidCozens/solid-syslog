@@ -786,7 +786,7 @@ TEST(SolidSyslogLwipRawTcpStreamPool, ExhaustedCreateReportsError)
     overflow = SolidSyslogLwipRawTcpStream_Create(&validConfig);
 
     CHECK_REPORTED(
-        SOLIDSYSLOG_SEVERITY_ERROR,
+        SOLIDSYSLOG_SEVERITY_CRITICAL,
         LwipRawTcpStreamErrorSource,
         SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
         LWIPRAWTCPSTREAM_ERROR_POOL_EXHAUSTED

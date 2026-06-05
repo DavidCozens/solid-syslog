@@ -204,7 +204,7 @@ TEST(SolidSyslogOpenSslHmacSha256Policy, ExhaustedCreateReportsError)
     overflow = SolidSyslogOpenSslHmacSha256Policy_Create(&config);
 
     CHECK_REPORTED_ERROR(
-        SOLIDSYSLOG_SEVERITY_ERROR,
+        SOLIDSYSLOG_SEVERITY_CRITICAL,
         SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
         OPENSSLHMACSHA256POLICY_ERROR_POOL_EXHAUSTED
     );

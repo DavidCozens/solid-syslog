@@ -67,7 +67,7 @@ struct SolidSyslogBuffer* SolidSyslogPosixMessageQueueBuffer_Create(size_t maxMe
     else
     {
         PosixMessageQueueBuffer_Report(
-            SOLIDSYSLOG_SEVERITY_ERROR,
+            SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
             SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
             POSIXMESSAGEQUEUEBUFFER_ERROR_POOL_EXHAUSTED
         );

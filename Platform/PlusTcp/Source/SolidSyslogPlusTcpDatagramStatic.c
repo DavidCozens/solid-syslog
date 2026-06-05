@@ -37,7 +37,7 @@ struct SolidSyslogDatagram* SolidSyslogPlusTcpDatagram_Create(void)
     else
     {
         PlusTcpDatagram_Report(
-            SOLIDSYSLOG_SEVERITY_ERROR,
+            SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
             SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
             PLUSTCPDATAGRAM_ERROR_POOL_EXHAUSTED
         );

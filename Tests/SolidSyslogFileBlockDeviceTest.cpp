@@ -1,6 +1,9 @@
+#include "ErrorHandlerFake.h"
 #include "FileFake.h"
 #include "SolidSyslogBlockDevice.h"
+#include "SolidSyslogErrorCategory.h"
 #include "SolidSyslogFileBlockDevice.h"
+#include "SolidSyslogFileBlockDeviceErrors.h"
 #include "SolidSyslogFile.h"
 #include "SolidSyslogTunables.h"
 #include "CppUTest/TestHarness.h"
@@ -333,6 +336,19 @@ TEST_GROUP(SolidSyslogFileBlockDevicePool)
 };
 
 // clang-format on
+
+TEST(SolidSyslogFileBlockDevicePool, OverflowReportsPoolExhausted)
+{
+    FillPool();
+    ErrorHandlerFake_Install(nullptr);
+
+    overflow = MakeDevice();
+
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_CRITICAL, ErrorHandlerFake_LastSeverity());
+    POINTERS_EQUAL(&FileBlockDeviceErrorSource, ErrorHandlerFake_LastSource());
+    UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_CAT_POOL_EXHAUSTED, ErrorHandlerFake_LastCategory());
+    UNSIGNED_LONGS_EQUAL(FILEBLOCKDEVICE_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastDetail());
+}
 
 TEST(SolidSyslogFileBlockDevicePool, FillingPoolThenOverflowReturnsDistinctFallback)
 {

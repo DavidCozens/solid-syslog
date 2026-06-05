@@ -179,7 +179,7 @@ TEST(SolidSyslogLwipRawResolverPool, ExhaustedCreateReportsError)
     overflow = SolidSyslogLwipRawResolver_Create();
 
     CHECK_REPORTED(
-        SOLIDSYSLOG_SEVERITY_ERROR,
+        SOLIDSYSLOG_SEVERITY_CRITICAL,
         LwipRawResolverErrorSource,
         SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
         LWIPRAWRESOLVER_ERROR_POOL_EXHAUSTED

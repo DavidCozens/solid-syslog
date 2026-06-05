@@ -41,7 +41,7 @@ struct SolidSyslogSecurityPolicy* SolidSyslogOpenSslHmacSha256Policy_Create(
         else
         {
             OpenSslHmacSha256Policy_Report(
-                SOLIDSYSLOG_SEVERITY_ERROR,
+                SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
                 SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
                 OPENSSLHMACSHA256POLICY_ERROR_POOL_EXHAUSTED
             );

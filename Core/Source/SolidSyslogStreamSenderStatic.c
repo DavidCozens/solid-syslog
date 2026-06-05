@@ -40,7 +40,7 @@ struct SolidSyslogSender* SolidSyslogStreamSender_Create(const struct SolidSyslo
         else
         {
             StreamSender_Report(
-                SOLIDSYSLOG_SEVERITY_ERROR,
+                SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
                 SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
                 STREAMSENDER_ERROR_POOL_EXHAUSTED
             );

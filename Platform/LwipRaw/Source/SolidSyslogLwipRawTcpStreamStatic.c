@@ -40,7 +40,7 @@ struct SolidSyslogStream* SolidSyslogLwipRawTcpStream_Create(const struct SolidS
         else
         {
             LwipRawTcpStream_Report(
-                SOLIDSYSLOG_SEVERITY_ERROR,
+                SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
                 SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
                 LWIPRAWTCPSTREAM_ERROR_POOL_EXHAUSTED
             );

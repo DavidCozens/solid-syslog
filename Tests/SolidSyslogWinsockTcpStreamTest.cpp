@@ -580,7 +580,7 @@ TEST(SolidSyslogWinsockTcpStreamPool, ExhaustedCreateReportsError)
     overflow = SolidSyslogWinsockTcpStream_Create(nullptr);
 
     CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);
-    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_ERROR, ErrorHandlerFake_LastSeverity());
+    LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_CRITICAL, ErrorHandlerFake_LastSeverity());
     POINTERS_EQUAL(&WinsockTcpStreamErrorSource, ErrorHandlerFake_LastSource());
     UNSIGNED_LONGS_EQUAL(SOLIDSYSLOG_CAT_POOL_EXHAUSTED, ErrorHandlerFake_LastCategory());
     UNSIGNED_LONGS_EQUAL(WINSOCKTCPSTREAM_ERROR_POOL_EXHAUSTED, ErrorHandlerFake_LastDetail());

@@ -41,7 +41,7 @@ struct SolidSyslogSecurityPolicy* SolidSyslogOpenSslAesGcmPolicy_Create(
         else
         {
             OpenSslAesGcmPolicy_Report(
-                SOLIDSYSLOG_SEVERITY_ERROR,
+                SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
                 SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
                 OPENSSLAESGCMPOLICY_ERROR_POOL_EXHAUSTED
             );

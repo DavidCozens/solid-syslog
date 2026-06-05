@@ -34,7 +34,7 @@ struct SolidSyslogMutex* SolidSyslogFreeRtosMutex_Create(void)
     else
     {
         FreeRtosMutex_Report(
-            SOLIDSYSLOG_SEVERITY_ERROR,
+            SOLIDSYSLOG_POOL_EXHAUSTED_SEVERITY,
             SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
             FREERTOSMUTEX_ERROR_POOL_EXHAUSTED
         );

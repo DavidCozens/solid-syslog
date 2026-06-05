@@ -151,7 +151,7 @@ TEST(SolidSyslogLwipRawAddressPool, ExhaustedCreateReportsError)
     overflow = SolidSyslogLwipRawAddress_Create();
 
     CHECK_REPORTED(
-        SOLIDSYSLOG_SEVERITY_ERROR,
+        SOLIDSYSLOG_SEVERITY_CRITICAL,
         LwipRawAddressErrorSource,
         SOLIDSYSLOG_CAT_POOL_EXHAUSTED,
         LWIPRAWADDRESS_ERROR_POOL_EXHAUSTED
