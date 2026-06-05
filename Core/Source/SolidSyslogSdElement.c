@@ -14,7 +14,11 @@ void SolidSyslogSdElement_FromFormatter(struct SolidSyslogSdElement* element, st
 
 void SolidSyslogSdElement_Begin(struct SolidSyslogSdElement* element, const char* name, uint32_t enterpriseNumber)
 {
-    (void) enterpriseNumber;
     SolidSyslogFormatter_AsciiCharacter(element->Formatter, '[');
     SolidSyslogFormatter_PrintUsAsciiString(element->Formatter, name, SDELEMENT_NAME_MAX);
+    if (enterpriseNumber != 0U)
+    {
+        SolidSyslogFormatter_AsciiCharacter(element->Formatter, '@');
+        SolidSyslogFormatter_Uint32(element->Formatter, enterpriseNumber);
+    }
 }

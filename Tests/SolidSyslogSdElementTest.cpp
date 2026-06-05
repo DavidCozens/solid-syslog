@@ -35,3 +35,10 @@ TEST(SolidSyslogSdElement, BeginEmitsOpenBracketAndIanaName)
 
     CHECK_FRAMED("[meta");
 }
+
+TEST(SolidSyslogSdElement, BeginEmitsNameWithEnterpriseNumber)
+{
+    SolidSyslogSdElement_Begin(&element, "ex", 32473);
+
+    CHECK_FRAMED("[ex@32473");
+}
