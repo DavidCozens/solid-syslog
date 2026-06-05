@@ -30,10 +30,12 @@ capped), `_Uint32`. Internal `_FromFormatter` constructor (reused by SdElement i
 - CLAUDE.md public-header table entry for `SolidSyslogSdValue.h` — API is provisional until S14.03
   confirms it against a real consumer, and S14.08 revises that table wholesale. Land it then.
 
-### Open questions
-- Cross-primitive flush: a held `_String` tail is currently flushed only by the next `_String` or
-  `_Close`, not by an intervening `_Uint32` / `_BoundedString`. Not exercised by any S14.01 AC;
-  revisit if SdElement's usage in S14.02 needs it.
+### Resolved in review
+- Cross-primitive flush (CodeRabbit, PR #550): a held `_String` tail was flushed only by the next
+  `_String` / `_Close`, so an intervening `_Uint32` / `_BoundedString` reordered its output before
+  the U+FFFD. Fixed: every non-`_String` write (and `_Close`) flushes a held tail to one U+FFFD
+  first via a shared `SdValue_FlushPendingIfHeld` guard. Continuation stays a `_String`-only
+  feature (flush, not continue) — uniform and matches the epic's "split across `_String` calls".
 
 ## 2026-06-05 — S12.33 review and align error-event severity across Core + Platform
 
