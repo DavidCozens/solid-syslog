@@ -18,7 +18,7 @@ TEST_GROUP(SolidSyslogSdValue)
 {
     SolidSyslogFormatterStorage storage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(TEST_BUFFER_SIZE)];
     struct SolidSyslogFormatter* formatter = nullptr;
-    struct SolidSyslogSdValue value;
+    struct SolidSyslogSdValue value{};
 
     void setup() override
     {
@@ -57,7 +57,7 @@ TEST(SolidSyslogSdValue, StringCannotOverflowTheFormatterBuffer)
      * never overflows. A four-byte formatter holds three chars + terminator. */
     SolidSyslogFormatterStorage tinyStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(4)];
     struct SolidSyslogFormatter* tiny = SolidSyslogFormatter_Create(tinyStorage, 4);
-    struct SolidSyslogSdValue tinyValue;
+    struct SolidSyslogSdValue tinyValue{};
     SolidSyslogSdValue_FromFormatter(&tinyValue, tiny);
 
     SolidSyslogSdValue_String(&tinyValue, "hello");
@@ -191,6 +191,25 @@ TEST(SolidSyslogSdValue, CloseWithNoHeldTailWritesNothing)
     closeValue();
 
     CHECK_VALUE("hi");
+}
+
+TEST(SolidSyslogSdValue, Uint32FlushesHeldTailBeforeDigits)
+{
+    /* A held incomplete _String tail must resolve to U+FFFD before the digits,
+     * not be silently reordered after them (or dropped). */
+    writeString("\xC2");
+    writeUint32(5);
+
+    CHECK_VALUE("\xEF\xBF\xBD"
+                "5");
+}
+
+TEST(SolidSyslogSdValue, BoundedStringFlushesHeldTailBeforeValue)
+{
+    writeString("\xC2");
+    writeBoundedString("hi", 8);
+
+    CHECK_VALUE("\xEF\xBF\xBDhi");
 }
 
 TEST(SolidSyslogSdValue, BoundedStringPassesValueShorterThanCapThrough)

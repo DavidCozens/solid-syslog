@@ -12,6 +12,7 @@ static inline size_t SdValue_ExpectedLength(char lead);
 static inline void SdValue_EmitUnit(struct SolidSyslogSdValue* value, const char* bytes, size_t count);
 static inline void SdValue_Hold(struct SolidSyslogSdValue* value, const char* bytes, size_t count);
 static inline void SdValue_FlushPendingAsReplacement(struct SolidSyslogSdValue* value);
+static inline void SdValue_FlushPendingIfHeld(struct SolidSyslogSdValue* value);
 
 void SolidSyslogSdValue_FromFormatter(struct SolidSyslogSdValue* value, struct SolidSyslogFormatter* formatter)
 {
@@ -137,22 +138,33 @@ static inline void SdValue_Hold(struct SolidSyslogSdValue* value, const char* by
  * without SdValue duplicating the replacement character. */
 static inline void SdValue_FlushPendingAsReplacement(struct SolidSyslogSdValue* value)
 {
-    static const char LONE_CONTINUATION[] = {(char) 0x80, '\0'};
+    static const char LONE_CONTINUATION[] = {'\x80', '\0'};
     SolidSyslogFormatter_EscapedString(value->Formatter, LONE_CONTINUATION, SIZE_MAX);
     value->PendingCount = 0;
 }
 
 void SolidSyslogSdValue_BoundedString(struct SolidSyslogSdValue* value, const char* source, size_t maxDecodedLength)
 {
+    SdValue_FlushPendingIfHeld(value);
     SolidSyslogFormatter_EscapedString(value->Formatter, source, maxDecodedLength);
 }
 
 void SolidSyslogSdValue_Uint32(struct SolidSyslogSdValue* value, uint32_t number)
 {
+    SdValue_FlushPendingIfHeld(value);
     SolidSyslogFormatter_Uint32(value->Formatter, number);
 }
 
 void SolidSyslogSdValue_Close(struct SolidSyslogSdValue* value)
+{
+    SdValue_FlushPendingIfHeld(value);
+}
+
+/* A held incomplete UTF-8 tail is the dangling state of a prior _String call.
+ * Any non-_String write (or close) terminates it with one U+FFFD before its own
+ * output, so the tail is never reordered after, or merged into, that output.
+ * Only consecutive _String calls continue a tail (streaming continuation). */
+static inline void SdValue_FlushPendingIfHeld(struct SolidSyslogSdValue* value)
 {
     if (value->PendingCount > 0U)
     {
