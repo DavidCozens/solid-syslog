@@ -30,7 +30,6 @@ static const uint16_t TEST_PORT = 514;
 
 // Asserts handle is non-null and not one of the slots in pool.
 #define CHECK_IS_FALLBACK(handle, pool)                                                \
-    do                                                                                 \
     {                                                                                  \
         CHECK_TEXT((handle) != nullptr, "Fallback handle was nullptr");                \
         for (auto* slot : (pool))                                                      \
@@ -38,19 +37,18 @@ static const uint16_t TEST_PORT = 514;
             CHECK_TEXT(slot != nullptr, "pool slot was nullptr (FillPool failed?)");   \
             CHECK_TEXT((handle) != slot, "Fallback handle collided with a pool slot"); \
         }                                                                              \
-    } while (0)
+    }
 
 // Asserts the most recent ErrorHandlerFake call matched (severity, source, code).
 // Use after the act-phase of a test that expects exactly one SolidSyslog_Error call.
 #define CHECK_REPORTED(severity, source, expectedCategory, code)                   \
-    do                                                                             \
     {                                                                              \
         CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);                                \
         LONGS_EQUAL((severity), ErrorHandlerFake_LastSeverity());                  \
         POINTERS_EQUAL(&(source), ErrorHandlerFake_LastSource());                  \
         UNSIGNED_LONGS_EQUAL((expectedCategory), ErrorHandlerFake_LastCategory()); \
         UNSIGNED_LONGS_EQUAL((code), ErrorHandlerFake_LastDetail());               \
-    } while (0)
+    }
 
 /* Shared fixture: every Datagram lifecycle test needs the fake reset, a fresh
  * datagram + address handle pair, teardown of both, and the leak invariant

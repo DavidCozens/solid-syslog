@@ -36,11 +36,18 @@
 #   (FreeRTOSConfig.h, lwipopts.h, …) which the test harness includes:
 #   the upstream symbols must remain macros.
 #
-# -cppcoreguidelines-avoid-do-while
-#   Paired with the macro-usage relaxation above: do { ... } while (0)
-#   is the standard idiom for wrapping a multi-statement macro body so
-#   it remains a single statement at the call site. Without the wrapper,
-#   the macros lose composability inside if/else.
+# cppcoreguidelines-avoid-do-while is intentionally NOT disabled (S24.18).
+#   Multi-statement test assertion/helper macros use a plain compound
+#   `{ ... }` body, not the `do { ... } while (0)` wrapper. The wrapper's
+#   only job — keeping a multi-statement macro a single statement so its
+#   tail cannot escape an unbraced if/else — cannot bite us: `.clang-format`
+#   sets `InsertBraces: true` (our MISRA 15.6 enforcement), so every
+#   conditional body is already brace-delimited before any macro expands.
+#   Leaving the check on keeps the wrapper from creeping back in. The
+#   upstream-convention `do/while(0)` macro *definitions* in the FreeRTOS /
+#   lwIP fake config headers (configASSERT, LWIP_PLATFORM_*) are exempt by
+#   construction: a definition is not a statement, so the check never fires
+#   on it, and those macros are not expanded in any file this config governs.
 #
 # -cppcoreguidelines-pro-type-reinterpret-cast
 #   Test fixtures legitimately reinterpret-cast for two patterns:
@@ -58,5 +65,4 @@ Checks: >
   -bugprone-easily-swappable-parameters,
   -google-build-using-namespace,
   -cppcoreguidelines-macro-usage,
-  -cppcoreguidelines-avoid-do-while,
   -cppcoreguidelines-pro-type-reinterpret-cast

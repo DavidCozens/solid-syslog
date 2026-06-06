@@ -1,5 +1,46 @@
 # Dev Log
 
+## 2026-06-06 — S24.18 drop do/while(0) from test CHECK_* macros
+
+Mechanical tree-wide sweep: removed the `do { ... } while (0)` wrapper (and the
+paired `NOLINTBEGIN/END(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)`
+brackets) from every test assertion/helper macro — 42 files, ~60 macros. The
+wrapper's only purpose is to stop a multi-statement macro's tail escaping an
+unbraced `if`/`else`, and `.clang-format`'s `InsertBraces: true` (our MISRA 15.6
+enforcement) already braces every conditional body before a macro expands, so the
+wrapper was dead weight.
+
+### Decisions
+- **Conversion shape.** Multi-statement bodies → plain compound `{ ... }`
+  (preserves block scope, which matters for macros that declare a local, e.g.
+  `CHECK_BLOCK_CONTAINS`'s `checkBuf`, `CHECK_IS_FALLBACK`'s `for` loop var).
+  Single-statement macros were already bare expressions — untouched.
+- **Re-enabled `cppcoreguidelines-avoid-do-while` in `Tests/.clang-tidy`**
+  (removed it from the tier disable). The check now actively *bans* do/while in
+  test code, so the wrapper can't creep back via a CodeRabbit-style suggestion.
+  `cppcoreguidelines-macro-usage` stays disabled — CppUTest needs macros for
+  caller `__FILE__`/`__LINE__`, so no per-site NOLINT is needed.
+- **Upstream-convention macros left as-is.** `configASSERT` (FreeRTOS) and
+  `LWIP_PLATFORM_DIAG`/`LWIP_PLATFORM_ASSERT` (lwIP) in the fake config headers
+  keep their `do/while(0)` — they are consumed by un-formatted upstream code
+  where InsertBraces gives no protection. Safe under the re-enabled check:
+  `configASSERT` has zero use sites in linted code, and `LWIP_ASSERT` expands
+  only in `Bdd/Targets/FreeRtosLwip/netif/EthernetIf.c` (governed by
+  `Bdd/.clang-tidy`, not `Tests/.clang-tidy`). A definition is not a statement,
+  so the check never fires on the macro body itself.
+- Updated the CLAUDE.md "Test code" design-pattern entry to record the new rule
+  and the InsertBraces rationale; fixed a stale `CHECK_PRIVAL` path reference
+  (now `SolidSyslogMessageFormatterTest.cpp`).
+
+### Verification
+- Builds run via docker compose (`.devcontainer/docker-compose.yml`, gcc image).
+  debug: **1482 tests green**, no behaviour change. `tidy` preset green with
+  `avoid-do-while` enforced (no do/while warnings). `cppcheck` clean rebuild
+  green. clang-format dry-run clean tree-wide. freertos-host debug build green
+  (covers the FreeRtos/Lwip/MbedTls/FatFs/PlusFat test trees).
+- Windows/Winsock and the freertos/lwip clang-tidy lanes are CI's job; the
+  conversions there are identical and mechanical.
+
 ## 2026-06-06 — S14.03 migrate TimeQualitySd onto the SD writer (walking skeleton)
 
 First real consumer of the E14 SD writer. `TimeQualitySd_Format` now emits via

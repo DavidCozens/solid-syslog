@@ -549,10 +549,18 @@ code should follow them; reviewers should call out drift.
 - **`CHECK_*` macros for repeated assertion shapes.** When the same buf+memcmp
   or several-line assertion repeats across tests, wrap it in a macro that
   *names* the intent. The macro must be a macro (not a function) so test
-  failures report the caller's `__FILE__`/`__LINE__`. Wrap with
-  `// NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)`
-  and use `do { ... } while (0)` for safe single-statement use. Examples:
-  `CHECK_PRIVAL` in `SolidSyslogTest.cpp`, `CHECK_BLOCK_CONTAINS` in
+  failures report the caller's `__FILE__`/`__LINE__`. A multi-statement body
+  is a plain compound `{ ... }`; a single-statement body is just the bare
+  expression. Do **not** use the `do { ... } while (0)` wrapper: its only job
+  is to stop a multi-statement macro's tail escaping an unbraced `if`/`else`,
+  and `.clang-format`'s `InsertBraces: true` (our MISRA 15.6 enforcement)
+  already braces every conditional body before the macro expands, so the
+  wrapper is dead weight — and `cppcoreguidelines-avoid-do-while` (kept on for
+  the `Tests/` tier) now rejects it. No `NOLINT` is needed: `Tests/.clang-tidy`
+  disables `cppcoreguidelines-macro-usage` tier-wide, so a `CHECK_*` macro
+  needs no per-site suppression. Examples: `CHECK_PRIVAL` (single-statement,
+  bare expression) in `SolidSyslogMessageFormatterTest.cpp`,
+  `CHECK_BLOCK_CONTAINS` (declares a local, so keeps its `{ ... }` block) in
   `SolidSyslogFileBlockDeviceTest.cpp`.
 - **DRY the setup, DRY the asserts, keep the test body small.** Each `TEST(...)`
   body should read as a sentence: arrange → act → assert. If three lines of

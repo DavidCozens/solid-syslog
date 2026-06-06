@@ -129,7 +129,6 @@ TEST(SolidSyslogGetAddrInfoResolver, FreesAddrInfoOnSuccess)
 }
 
 #define CHECK_IS_FALLBACK(handle, pool)                                                \
-    do                                                                                 \
     {                                                                                  \
         CHECK_TEXT((handle) != nullptr, "Fallback handle was nullptr");                \
         for (auto* slot : (pool))                                                      \
@@ -137,7 +136,7 @@ TEST(SolidSyslogGetAddrInfoResolver, FreesAddrInfoOnSuccess)
             CHECK_TEXT(slot != nullptr, "pool slot was nullptr (FillPool failed?)");   \
             CHECK_TEXT((handle) != slot, "Fallback handle collided with a pool slot"); \
         }                                                                              \
-    } while (0)
+    }
 
 // clang-format off
 TEST_GROUP(SolidSyslogGetAddrInfoResolverPool)

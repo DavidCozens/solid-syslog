@@ -24,17 +24,15 @@ using namespace CososoTesting;
 // Asserts the last record read equals `expected` bytes of length `size`.
 // Depends on `readData` and `readSize` from CircularBufferFixture being in scope.
 #define CHECK_LAST_READ_RECORD(expected, size)      \
-    do                                              \
     {                                               \
         LONGS_EQUAL((size), readSize);              \
         MEMCMP_EQUAL((expected), readData, (size)); \
-    } while (0)
+    }
 
 // Asserts buf is a non-null handle that is not one of the slots in pool.
 // Used to pin the pool-exhaustion Fallback contract: every legitimate
 // _Create returns either a pool slot or the Fallback singleton, never NULL.
 #define CHECK_IS_FALLBACK(buf, pool)                                                 \
-    do                                                                               \
     {                                                                                \
         CHECK_TEXT((buf) != nullptr, "Fallback handle was nullptr");                 \
         for (auto* slot : (pool))                                                    \
@@ -42,7 +40,7 @@ using namespace CososoTesting;
             CHECK_TEXT(slot != nullptr, "pool slot was nullptr (FillPool failed?)"); \
             CHECK_TEXT((buf) != slot, "Fallback handle collided with a pool slot");  \
         }                                                                            \
-    } while (0)
+    }
 
 enum
 {

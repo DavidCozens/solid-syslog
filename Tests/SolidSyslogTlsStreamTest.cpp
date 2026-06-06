@@ -23,7 +23,6 @@
 using namespace CososoTesting;
 
 #define CHECK_OPEN_UNWOUND_WITH_SEVERITY(transport, expectedSeverity, expectedCategory, expectedCode) \
-    do                                                                                                \
     {                                                                                                 \
         LONGS_EQUAL(1, StreamFake_CloseCallCount(transport));                                         \
         CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);                                                   \
@@ -31,7 +30,7 @@ using namespace CososoTesting;
         UNSIGNED_LONGS_EQUAL((expectedCategory), ErrorHandlerFake_LastCategory());                    \
         UNSIGNED_LONGS_EQUAL((expectedCode), ErrorHandlerFake_LastDetail());                          \
         LONGS_EQUAL((expectedSeverity), ErrorHandlerFake_LastSeverity());                             \
-    } while (0)
+    }
 
 #define CHECK_OPEN_UNWOUND_WITH_ERROR(transport, expectedCategory, expectedCode) \
     CHECK_OPEN_UNWOUND_WITH_SEVERITY(transport, SOLIDSYSLOG_SEVERITY_ERROR, expectedCategory, expectedCode)
@@ -196,31 +195,26 @@ TEST_GROUP(SolidSyslogTlsStream)
 // clang-format on
 
 #define CHECK_BIO_READ_RETRY_SIGNALLED()            \
-    do                                              \
     {                                               \
         CALLED_FAKE(OpenSslFake_BioSetFlags, ONCE); \
-    } while (0)
+    }
 #define CHECK_BIO_READ_RETRY_NOT_SIGNALLED()         \
-    do                                               \
     {                                                \
         CALLED_FAKE(OpenSslFake_BioSetFlags, NEVER); \
-    } while (0)
+    }
 #define CHECK_BIO_RETRY_FLAGS_CLEARED()               \
-    do                                                \
     {                                                 \
         CALLED_FAKE(OpenSslFake_BioClearFlags, ONCE); \
-    } while (0)
+    }
 #define CHECK_SSL_SESSION_CLOSED()               \
-    do                                           \
     {                                            \
         CALLED_FAKE(OpenSslFake_Shutdown, ONCE); \
         CALLED_FAKE(OpenSslFake_Free, ONCE);     \
-    } while (0)
+    }
 #define CHECK_TRANSPORT_CLOSED_ONCE()                      \
-    do                                                     \
     {                                                      \
         CALLED_FAKE_ON(StreamFake_Close, transport, ONCE); \
-    } while (0)
+    }
 
 TEST(SolidSyslogTlsStream, CreateSucceeds)
 {

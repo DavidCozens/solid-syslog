@@ -26,7 +26,6 @@ extern "C"
 using namespace CososoTesting;
 
 #define CHECK_OPEN_UNWOUND_WITH_SEVERITY(transport, expectedSeverity, expectedCategory, expectedCode) \
-    do                                                                                                \
     {                                                                                                 \
         LONGS_EQUAL(1, StreamFake_CloseCallCount(transport));                                         \
         LONGS_EQUAL(1, MbedTlsFake_SslFreeCallCount());                                               \
@@ -36,7 +35,7 @@ using namespace CososoTesting;
         UNSIGNED_LONGS_EQUAL((expectedCategory), ErrorHandlerFake_LastCategory());                    \
         UNSIGNED_LONGS_EQUAL((expectedCode), ErrorHandlerFake_LastDetail());                          \
         LONGS_EQUAL((expectedSeverity), ErrorHandlerFake_LastSeverity());                             \
-    } while (0)
+    }
 
 #define CHECK_OPEN_UNWOUND_WITH_ERROR(transport, expectedCategory, expectedCode) \
     CHECK_OPEN_UNWOUND_WITH_SEVERITY(transport, SOLIDSYSLOG_SEVERITY_ERROR, expectedCategory, expectedCode)
