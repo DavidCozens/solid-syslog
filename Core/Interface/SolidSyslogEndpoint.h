@@ -12,9 +12,11 @@ EXTERN_C_BEGIN
         SOLIDSYSLOG_MAX_HOST_SIZE = 256
     };
 
+    struct SolidSyslogEndpointHost;
+
     struct SolidSyslogEndpoint
     {
-        struct SolidSyslogFormatter* Host; /* library-provided; user writes destination host into it */
+        struct SolidSyslogEndpointHost* Host; /* library-provided sink; user writes destination host into it */
         uint16_t Port; /* user assigns destination port */
     };
 

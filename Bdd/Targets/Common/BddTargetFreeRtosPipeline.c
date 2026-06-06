@@ -24,9 +24,9 @@
 #include "SolidSyslogConfig.h"
 #include "SolidSyslogCrc16Policy.h"
 #include "SolidSyslogEndpoint.h"
+#include "SolidSyslogEndpointHost.h"
 #include "SolidSyslogError.h"
 #include "SolidSyslogFileBlockDevice.h"
-#include "SolidSyslogFormatter.h"
 #include "SolidSyslogHeaderField.h"
 #include "SolidSyslogFreeRtosMutex.h"
 #include "SolidSyslogFreeRtosSysUpTime.h"
@@ -240,7 +240,7 @@ static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality)
 
 void BddTargetFreeRtosPipeline_GetEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
-    SolidSyslogFormatter_BoundedString(endpoint->Host, host, strlen(host));
+    SolidSyslogEndpointHost_String(endpoint->Host, host, strlen(host));
     endpoint->Port = port;
 }
 

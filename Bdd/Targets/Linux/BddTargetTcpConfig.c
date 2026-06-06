@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "SolidSyslogFormatter.h"
+#include "SolidSyslogEndpointHost.h"
 #include "SolidSyslogEndpoint.h"
 
 /* Unprivileged port used by the BDD syslog-ng container — library default is
@@ -24,7 +24,7 @@ uint16_t BddTargetTcpConfig_GetPort(void)
 
 void BddTargetTcpConfig_GetEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
-    SolidSyslogFormatter_BoundedString(endpoint->Host, BddTargetTcpConfig_GetHost(), SOLIDSYSLOG_MAX_HOST_SIZE);
+    SolidSyslogEndpointHost_String(endpoint->Host, BddTargetTcpConfig_GetHost(), SOLIDSYSLOG_MAX_HOST_SIZE);
     endpoint->Port = BddTargetTcpConfig_GetPort();
 }
 

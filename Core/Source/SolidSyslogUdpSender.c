@@ -4,6 +4,7 @@
 
 #include "SolidSyslogDatagram.h"
 #include "SolidSyslogEndpoint.h"
+#include "SolidSyslogEndpointHostPrivate.h"
 #include "SolidSyslogError.h"
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogNullSender.h"
@@ -170,7 +171,9 @@ static inline uint16_t UdpSender_QueryEndpointPort(
     struct SolidSyslogFormatter* hostFormatter
 )
 {
-    struct SolidSyslogEndpoint endpoint = {.Host = hostFormatter, .Port = 0};
+    struct SolidSyslogEndpointHost hostSink;
+    SolidSyslogEndpointHost_FromFormatter(&hostSink, hostFormatter);
+    struct SolidSyslogEndpoint endpoint = {.Host = &hostSink, .Port = 0};
     self->Config.Endpoint(&endpoint);
     return endpoint.Port;
 }

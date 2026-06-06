@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "SolidSyslogFormatter.h"
+#include "SolidSyslogEndpointHost.h"
 #include "SolidSyslogEndpoint.h"
 
 /* Unprivileged mirror of SOLIDSYSLOG_UDP_DEFAULT_PORT (514) for BDD containers */
@@ -23,7 +23,7 @@ uint16_t BddTargetUdpConfig_GetPort(void)
 
 void BddTargetUdpConfig_GetEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
-    SolidSyslogFormatter_BoundedString(endpoint->Host, BddTargetUdpConfig_GetHost(), SOLIDSYSLOG_MAX_HOST_SIZE);
+    SolidSyslogEndpointHost_String(endpoint->Host, BddTargetUdpConfig_GetHost(), SOLIDSYSLOG_MAX_HOST_SIZE);
     endpoint->Port = BddTargetUdpConfig_GetPort();
 }
 

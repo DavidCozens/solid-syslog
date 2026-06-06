@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "SolidSyslogFormatter.h"
+#include "SolidSyslogEndpointHost.h"
 #include "SolidSyslogTransport.h"
 #include "SolidSyslogEndpoint.h"
 
@@ -52,7 +52,7 @@ const char* BddTargetTlsConfig_GetServerName(void)
 
 void BddTargetTlsConfig_GetEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
-    SolidSyslogFormatter_BoundedString(endpoint->Host, BddTargetTlsConfig_GetHost(), SOLIDSYSLOG_MAX_HOST_SIZE);
+    SolidSyslogEndpointHost_String(endpoint->Host, BddTargetTlsConfig_GetHost(), SOLIDSYSLOG_MAX_HOST_SIZE);
     endpoint->Port = BddTargetTlsConfig_GetPort();
 }
 

@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "SolidSyslogFormatter.h"
+#include "SolidSyslogEndpointHost.h"
 #include "SolidSyslogEndpoint.h"
 
 enum
@@ -69,7 +69,7 @@ const char* BddTargetMtlsConfig_GetClientKeyPath(void)
 
 void BddTargetMtlsConfig_GetEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
-    SolidSyslogFormatter_BoundedString(endpoint->Host, BddTargetMtlsConfig_GetHost(), SOLIDSYSLOG_MAX_HOST_SIZE);
+    SolidSyslogEndpointHost_String(endpoint->Host, BddTargetMtlsConfig_GetHost(), SOLIDSYSLOG_MAX_HOST_SIZE);
     endpoint->Port = BddTargetMtlsConfig_GetPort();
 }
 
