@@ -14520,3 +14520,34 @@ MISRA rule — different category, doesn't set precedent.
 
 ### Open questions
 - None outstanding.
+
+## 2026-06-06 — S14.06: flip the SD vtable to SolidSyslogSdElement
+
+### Decisions
+- **Flipped the SD extension point.** `struct SolidSyslogStructuredData.Format` and the
+  `SolidSyslogStructuredData_Format` dispatch wrapper now take a
+  `struct SolidSyslogSdElement*` instead of a raw `struct SolidSyslogFormatter*`. A
+  custom-SD author's `Format` can no longer reach a formatter — the footgun is closed at
+  the vtable itself, the payoff of the S14.03–05 migrations.
+- **One element per message.** Moved the `SolidSyslogSdElement_FromFormatter` wrap up into
+  `MessageFormatter_FormatStructuredData`: build the element once, pass it to each SD in
+  the existing order. `SolidSyslogSdElement_Begin` resets the element's per-SD state, so a
+  single instance hosts every configured SD sequentially (`[meta…][origin…]`).
+- **SDs slimmed.** MetaSd / OriginSd / TimeQualitySd drop their local `element` +
+  `_FromFormatter` and emit straight onto the handed element; they now include the public
+  `SolidSyslogSdElement.h` rather than the private header. NullSd's no-op signature
+  follows. Byte-for-byte identical output (existing tests stand). SD test doubles' `Format`
+  signatures updated; the `[spy]`/`[spy2]` spies now emit via `_Begin`/`_End`; each SD
+  unit test's `format()` helper and `SolidSyslogNullSdTest` build the element from the
+  formatter via the private `_FromFormatter`.
+- Checks: debug green (1459 tests), BddTargetTests 66/66; clang-format applied;
+  cppcheck-MISRA exit 0 (anchors moved: MetaSd 11.3 64→60, OriginSd 11.3 61→57,
+  TimeQualitySd 11.3 58→54, MessageFormatter 11.8 ×5 +1 and 5.7 19→20).
+
+### Deferred
+- Header-field callbacks still take a formatter until S14.07; moving
+  `SolidSyslogFormatter.h` out of the public interface is S14.08 (along with the CLAUDE.md
+  header-table revision).
+
+### Open questions
+- None outstanding.
