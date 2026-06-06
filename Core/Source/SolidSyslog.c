@@ -283,6 +283,16 @@ static inline void SolidSyslog_SendOneFromStore(struct SolidSyslog* self)
 
 void SolidSyslog_Log(struct SolidSyslog* handle, const struct SolidSyslogMessage* message)
 {
+    SolidSyslog_LogWithSd(handle, message, NULL, 0);
+}
+
+void SolidSyslog_LogWithSd(
+    struct SolidSyslog* handle,
+    const struct SolidSyslogMessage* message,
+    struct SolidSyslogStructuredData** sd,
+    size_t sdCount
+)
+{
     if (handle == NULL)
     {
         SolidSyslog_Report(
@@ -301,10 +311,25 @@ void SolidSyslog_Log(struct SolidSyslog* handle, const struct SolidSyslogMessage
     }
     else
     {
+        /* Inconsistent pairing — the formatter would dereference sd[i] for
+           i < sdCount against a NULL array. Report and drop to no per-message
+           SD so the message still logs (degrade safely), mirroring the
+           Create-time guard in SolidSyslog_InstallStructuredData. */
+        size_t safeSdCount = sdCount;
+        if ((sd == NULL) && (sdCount > 0U))
+        {
+            SolidSyslog_Report(
+                SOLIDSYSLOG_BAD_ARGUMENT_SEVERITY,
+                SOLIDSYSLOG_CAT_BAD_ARGUMENT,
+                SOLIDSYSLOG_ERROR_LOG_INCONSISTENT_SD
+            );
+            safeSdCount = 0U;
+        }
+
         SolidSyslogFormatterStorage storage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(SOLIDSYSLOG_MAX_MESSAGE_SIZE)];
         struct SolidSyslogFormatter* f = SolidSyslogFormatter_Create(storage, SOLIDSYSLOG_MAX_MESSAGE_SIZE);
 
-        SolidSyslogMessageFormatter_Format(f, message, &handle->Format);
+        SolidSyslogMessageFormatter_Format(f, message, &handle->Format, sd, safeSdCount);
         SolidSyslogBuffer_Write(
             handle->Buffer,
             SolidSyslogFormatter_AsFormattedBuffer(f),
