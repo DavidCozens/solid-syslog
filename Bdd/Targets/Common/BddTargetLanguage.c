@@ -1,9 +1,10 @@
 #include "BddTargetLanguage.h"
-#include "SolidSyslogFormatter.h"
+#include "SolidSyslogSdValue.h"
 
 static const char LANGUAGE_TAG[] = "en-GB";
 
-void BddTargetLanguage_Get(struct SolidSyslogFormatter* formatter)
+void BddTargetLanguage_Get(struct SolidSyslogSdValue* value, void* context)
 {
-    SolidSyslogFormatter_EscapedString(formatter, LANGUAGE_TAG, sizeof(LANGUAGE_TAG) - 1);
+    (void) context;
+    SolidSyslogSdValue_String(value, LANGUAGE_TAG);
 }
