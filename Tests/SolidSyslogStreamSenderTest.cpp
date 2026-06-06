@@ -8,6 +8,7 @@
 #include "ErrorHandlerFake.h"
 #include "SocketFake.h"
 #include "SolidSyslogEndpoint.h"
+#include "SolidSyslogEndpointHost.h"
 #include "SolidSyslogErrorCategory.h"
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogGetAddrInfoResolver.h"
@@ -80,7 +81,7 @@ static uint32_t endpointVersion = 0;
 
 static void TestEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
-    SolidSyslogFormatter_BoundedString(endpoint->Host, endpointGetHost(), SOLIDSYSLOG_MAX_HOST_SIZE);
+    SolidSyslogEndpointHost_String(endpoint->Host, endpointGetHost(), SOLIDSYSLOG_MAX_HOST_SIZE);
     endpoint->Port = (uint16_t) endpointGetPort();
 }
 

@@ -5,7 +5,7 @@
 #include "SolidSyslog.h"
 #include "SolidSyslogConfig.h"
 #include "SolidSyslogEndpoint.h"
-#include "SolidSyslogFormatter.h"
+#include "SolidSyslogEndpointHost.h"
 #include "SolidSyslogPosixMessageQueueBuffer.h"
 #include "SolidSyslogGetAddrInfoResolver.h"
 #include "SolidSyslogPosixAddress.h"
@@ -37,7 +37,7 @@ static void SleepFake(int milliseconds)
 
 static void BddTargetEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
-    SolidSyslogFormatter_BoundedString(endpoint->Host, BddTargetUdpConfig_GetHost(), SOLIDSYSLOG_MAX_HOST_SIZE);
+    SolidSyslogEndpointHost_String(endpoint->Host, BddTargetUdpConfig_GetHost(), SOLIDSYSLOG_MAX_HOST_SIZE);
     endpoint->Port = BddTargetUdpConfig_GetPort();
 }
 

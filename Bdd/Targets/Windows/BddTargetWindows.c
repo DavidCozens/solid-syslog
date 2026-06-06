@@ -21,7 +21,7 @@
 #include "SolidSyslogFileBlockDevice.h"
 #include "SolidSyslogNullSecurityPolicy.h"
 #include "SolidSyslogOpenSslHmacSha256Policy.h"
-#include "SolidSyslogFormatter.h"
+#include "SolidSyslogEndpointHost.h"
 #include "SolidSyslogMetaSd.h"
 #include "SolidSyslogNullStore.h"
 #include "SolidSyslogOriginSd.h"
@@ -109,7 +109,7 @@ static int GetPort(void)
 
 static void GetEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
-    SolidSyslogFormatter_BoundedString(endpoint->Host, GetHost(), SOLIDSYSLOG_MAX_HOST_SIZE);
+    SolidSyslogEndpointHost_String(endpoint->Host, GetHost(), SOLIDSYSLOG_MAX_HOST_SIZE);
     endpoint->Port = (uint16_t) GetPort();
 }
 

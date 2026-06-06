@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "SolidSyslogEndpoint.h"
+#include "SolidSyslogEndpointHostPrivate.h"
 #include "SolidSyslogError.h"
 #include "SolidSyslogFormatter.h"
 #include "SolidSyslogNullSender.h"
@@ -138,7 +139,9 @@ static bool StreamSender_ResolveDestination(struct SolidSyslogStreamSender* self
 {
     SolidSyslogFormatterStorage hostStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(SOLIDSYSLOG_MAX_HOST_SIZE)];
     struct SolidSyslogFormatter* hostFormatter = SolidSyslogFormatter_Create(hostStorage, SOLIDSYSLOG_MAX_HOST_SIZE);
-    struct SolidSyslogEndpoint endpoint = {.Host = hostFormatter, .Port = 0};
+    struct SolidSyslogEndpointHost hostSink;
+    SolidSyslogEndpointHost_FromFormatter(&hostSink, hostFormatter);
+    struct SolidSyslogEndpoint endpoint = {.Host = &hostSink, .Port = 0};
 
     self->Config.Endpoint(&endpoint);
 
@@ -210,7 +213,7 @@ static bool StreamSender_SendBytes(struct SolidSyslogStreamSender* self, const v
 
 static void StreamSender_NilEndpoint(struct SolidSyslogEndpoint* endpoint)
 {
-    SolidSyslogFormatter_BoundedString(endpoint->Host, "", 0);
+    SolidSyslogEndpointHost_String(endpoint->Host, "", 0);
     endpoint->Port = 0;
 }
 
