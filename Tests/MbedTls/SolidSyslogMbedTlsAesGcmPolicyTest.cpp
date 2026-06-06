@@ -63,26 +63,21 @@ static bool TestGetKey(void* context, uint8_t* keyOut, size_t capacity, size_t* 
     return true;
 }
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 #define CHECK_REPORTED_ERROR(severity, expectedCategory, code)                          \
-    do                                                                                  \
     {                                                                                   \
         CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);                                     \
         LONGS_EQUAL((severity), ErrorHandlerFake_LastSeverity());                       \
         POINTERS_EQUAL(&MbedTlsAesGcmPolicyErrorSource, ErrorHandlerFake_LastSource()); \
         UNSIGNED_LONGS_EQUAL((expectedCategory), ErrorHandlerFake_LastCategory());      \
         UNSIGNED_LONGS_EQUAL((code), ErrorHandlerFake_LastDetail());                    \
-    } while (0)
-// NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
+    }
 
 #define CHECK_IS_NULL_FALLBACK(handle) POINTERS_EQUAL(SolidSyslogNullSecurityPolicy_Get(), (handle))
 
 /* One macro per direction so each fallible mbedTLS GCM call's failure path reads
  * as a one-line test: seal/open must fail closed and report once. Used only
  * inside the Seal fixture (they reference its seal()/open() helpers). */
-// NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 #define CHECK_SEAL_REPORTS_ENCRYPT_FAILURE_AT(step)     \
-    do                                                  \
     {                                                   \
         ErrorHandlerFake_Install(nullptr);              \
         MbedTlsFake_SetGcmStepFails(step);              \
@@ -92,10 +87,9 @@ static bool TestGetKey(void* context, uint8_t* keyOut, size_t capacity, size_t* 
             SOLIDSYSLOG_CAT_SECURITYPOLICY_SEAL_FAILED, \
             MBEDTLSAESGCMPOLICY_ERROR_ENCRYPT_FAILED    \
         );                                              \
-    } while (0)
+    }
 
 #define CHECK_OPEN_REPORTS_DECRYPT_FAILURE_AT(step)     \
-    do                                                  \
     {                                                   \
         ErrorHandlerFake_Install(nullptr);              \
         MbedTlsFake_SetGcmStepFails(step);              \
@@ -105,9 +99,7 @@ static bool TestGetKey(void* context, uint8_t* keyOut, size_t capacity, size_t* 
             SOLIDSYSLOG_CAT_SECURITYPOLICY_OPEN_FAILED, \
             MBEDTLSAESGCMPOLICY_ERROR_DECRYPT_FAILED    \
         );                                              \
-    } while (0)
-
-// NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
+    }
 
 // clang-format off
 TEST_BASE(MbedTlsAesGcmPolicyTestBase)

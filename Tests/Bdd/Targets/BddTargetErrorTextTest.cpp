@@ -8,14 +8,10 @@
 
 TEST_GROUP(BddTargetErrorText){};
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 #define CHECK_CATEGORY_TEXT(category, expectedText)                            \
-    do                                                                         \
     {                                                                          \
         STRCMP_EQUAL((expectedText), BddTargetErrorText_Category((category))); \
-    } while (0)
-
-// NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
+    }
 
 TEST(BddTargetErrorText, BadConfigCategoryMapsToText)
 {

@@ -32,10 +32,8 @@ using namespace CososoTesting;
 
 static const uint16_t TEST_PORT = 514;
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 // Asserts handle is non-null and not one of the slots in pool.
 #define CHECK_IS_FALLBACK(handle, pool)                                                \
-    do                                                                                 \
     {                                                                                  \
         CHECK_TEXT((handle) != nullptr, "Fallback handle was nullptr");                \
         for (auto* slot : (pool))                                                      \
@@ -43,18 +41,17 @@ static const uint16_t TEST_PORT = 514;
             CHECK_TEXT(slot != nullptr, "pool slot was nullptr (FillPool failed?)");   \
             CHECK_TEXT((handle) != slot, "Fallback handle collided with a pool slot"); \
         }                                                                              \
-    } while (0)
+    }
 
 // Asserts the most recent ErrorHandlerFake call matched (severity, source, code).
 #define CHECK_REPORTED(severity, source, expectedCategory, code)                   \
-    do                                                                             \
     {                                                                              \
         CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);                                \
         LONGS_EQUAL((severity), ErrorHandlerFake_LastSeverity());                  \
         POINTERS_EQUAL(&(source), ErrorHandlerFake_LastSource());                  \
         UNSIGNED_LONGS_EQUAL((expectedCategory), ErrorHandlerFake_LastCategory()); \
         UNSIGNED_LONGS_EQUAL((code), ErrorHandlerFake_LastDetail());               \
-    } while (0)
+    }
 
 // Asserts the lwIP API call recorded the pcb the wrapper got back from
 // tcp_new — proves the wrapper forwarded the right handle. `getter` is
@@ -62,8 +59,6 @@ static const uint16_t TEST_PORT = 514;
 // clang-format off
 #define CHECK_FORWARDED_PCB(getter) POINTERS_EQUAL(LwipTcpFake_LastTcpNewReturned(), getter())
 // clang-format on
-
-// NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 
 namespace
 {

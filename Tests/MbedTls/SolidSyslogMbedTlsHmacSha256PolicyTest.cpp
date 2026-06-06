@@ -64,17 +64,14 @@ static bool TestGetKey(void* context, uint8_t* keyOut, size_t capacity, size_t* 
 }
 
 /* Asserts exactly one error of (severity, code) was reported from this policy's source. */
-// NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 #define CHECK_REPORTED_ERROR(severity, expectedCategory, code)                              \
-    do                                                                                      \
     {                                                                                       \
         CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);                                         \
         LONGS_EQUAL((severity), ErrorHandlerFake_LastSeverity());                           \
         POINTERS_EQUAL(&MbedTlsHmacSha256PolicyErrorSource, ErrorHandlerFake_LastSource()); \
         UNSIGNED_LONGS_EQUAL((expectedCategory), ErrorHandlerFake_LastCategory());          \
         UNSIGNED_LONGS_EQUAL((code), ErrorHandlerFake_LastDetail());                        \
-    } while (0)
-// NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
+    }
 
 #define CHECK_IS_NULL_FALLBACK(handle) POINTERS_EQUAL(SolidSyslogNullSecurityPolicy_Get(), (handle))
 

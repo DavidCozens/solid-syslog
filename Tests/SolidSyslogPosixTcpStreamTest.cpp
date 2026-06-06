@@ -99,11 +99,10 @@ TEST_GROUP(SolidSyslogPosixTcpStream)
 // clang-format on
 
 #define CHECK_SOCKET_CLOSED_ONCE()                                     \
-    do                                                                 \
     {                                                                  \
         CALLED_FAKE(SocketFake_Close, ONCE);                           \
         LONGS_EQUAL(SocketFake_SocketFd(), SocketFake_LastClosedFd()); \
-    } while (0)
+    }
 
 TEST(SolidSyslogPosixTcpStream, CreateDestroyWorksWithoutCrashing)
 {
@@ -565,7 +564,6 @@ TEST(SolidSyslogPosixTcpStream, ReadReturnsNegativeOneOnErrorAndClosesSocket)
 }
 
 #define CHECK_IS_FALLBACK(handle, pool)                                                \
-    do                                                                                 \
     {                                                                                  \
         CHECK_TEXT((handle) != nullptr, "Fallback handle was nullptr");                \
         for (auto* slot : (pool))                                                      \
@@ -573,7 +571,7 @@ TEST(SolidSyslogPosixTcpStream, ReadReturnsNegativeOneOnErrorAndClosesSocket)
             CHECK_TEXT(slot != nullptr, "pool slot was nullptr (FillPool failed?)");   \
             CHECK_TEXT((handle) != slot, "Fallback handle collided with a pool slot"); \
         }                                                                              \
-    } while (0)
+    }
 
 // clang-format off
 TEST_GROUP(SolidSyslogPosixTcpStreamPool)

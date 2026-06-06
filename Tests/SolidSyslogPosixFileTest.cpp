@@ -18,7 +18,6 @@ using namespace CososoTesting;
 static const char* const TEST_PATH = "/tmp/test_posix_file.dat";
 
 #define CHECK_IS_FALLBACK(handle, pool)                                                \
-    do                                                                                 \
     {                                                                                  \
         CHECK_TEXT((handle) != nullptr, "Fallback handle was nullptr");                \
         for (auto* slot : (pool))                                                      \
@@ -26,7 +25,7 @@ static const char* const TEST_PATH = "/tmp/test_posix_file.dat";
             CHECK_TEXT(slot != nullptr, "pool slot was nullptr (FillPool failed?)");   \
             CHECK_TEXT((handle) != slot, "Fallback handle collided with a pool slot"); \
         }                                                                              \
-    } while (0)
+    }
 
 // clang-format off
 TEST_GROUP(SolidSyslogPosixFile)

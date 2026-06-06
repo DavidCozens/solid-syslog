@@ -739,14 +739,13 @@ TEST(SolidSyslogStreamSenderPool, FillingPoolThenOverflowReturnsDistinctFallback
 
 /* Macro (not function) so test failures report the caller's __FILE__/__LINE__. */
 #define CHECK_STREAMSENDER_BAD_SETUP_ERROR(expectedCategory, expectedCode)           \
-    do                                                                               \
     {                                                                                \
         CALLED_FAKE(ErrorHandlerFake_Handle, ONCE);                                  \
         LONGS_EQUAL(SOLIDSYSLOG_SEVERITY_CRITICAL, ErrorHandlerFake_LastSeverity()); \
         POINTERS_EQUAL(&StreamSenderErrorSource, ErrorHandlerFake_LastSource());     \
         UNSIGNED_LONGS_EQUAL((expectedCategory), ErrorHandlerFake_LastCategory());   \
         UNSIGNED_LONGS_EQUAL((expectedCode), ErrorHandlerFake_LastDetail());         \
-    } while (0)
+    }
 
 // clang-format off
 TEST_GROUP(SolidSyslogStreamSenderBadSetup)
