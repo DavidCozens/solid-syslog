@@ -12,7 +12,14 @@ enum
     TEST_BUFFER_SIZE = 128
 };
 
-#define CHECK_FRAMED(expected) STRCMP_EQUAL(expected, SolidSyslogFormatter_AsFormattedBuffer(formatter))
+// NOLINTBEGIN(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
+#define CHECK_FRAMED(expected)                                                     \
+    do                                                                             \
+    {                                                                              \
+        STRCMP_EQUAL(expected, SolidSyslogFormatter_AsFormattedBuffer(formatter)); \
+    } while (0)
+
+// NOLINTEND(cppcoreguidelines-macro-usage,cppcoreguidelines-avoid-do-while)
 
 // clang-format off
 TEST_GROUP(SolidSyslogSdElement)
