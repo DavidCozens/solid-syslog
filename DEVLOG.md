@@ -14486,3 +14486,37 @@ MISRA rule — different category, doesn't set precedent.
 
 ### Open questions
 - None outstanding.
+
+## 2026-06-06 — S14.05: OriginSd onto the SD writer + #346 scratch removal
+
+### Decisions
+- **OriginSd migrated onto the E14 SD writer**, byte-identical (existing OriginSd tests
+  are the net), same shape as S14.03/S14.04: `SdElement_FromFormatter` +
+  `_Begin("origin",0U)` / `_Param` → `SolidSyslogSdValue_*` / `_End`. Static fields use
+  `SolidSyslogSdValue_BoundedString` with the existing `ORIGIN_*_MAX` decoded caps.
+- **`GetIpAt` signature changed** to `void(struct SolidSyslogSdValue*, void* context,
+  size_t index)` with a paired `OriginSdConfig.IpContext`. It keeps its own typedef name
+  `SolidSyslogOriginIpAtFunction` (not the shared `SolidSyslogSdValueFunction` — it
+  carries the extra `index`). Routing `ip` through the param sink closes the `ip`
+  injection vector; with `language` (S14.04) that completes **#533**. New behaviour
+  (`void* context`) driven RED-first by `FormatPassesIpContextThrough`.
+- **Took the #346 eliminate-the-scratch path.** The static fields emit straight into the
+  element at Format time; the `OriginSd` struct now **borrows** the three config strings
+  directly. `FormattedStorage` and the `ORIGIN_{LITERAL_BYTES,CONTENT_MAX,FORMATTED_MAX}`
+  sizing enums are deleted. No shared SD scratch buffer remains → concurrent-`Log`
+  reentrancy holds by construction. Behaviour change: the config strings are borrowed for
+  the SD's lifetime (were copied at `Create`) — fine for the literal/long-lived config
+  integrators pass.
+- The shared `BddTargetIps_At` moved to `SolidSyslogSdValue_BoundedString`; renamed the
+  now-misnamed `WorstCaseFullyEscapedInputFitsPreFormattedStorage` test.
+- Checks: debug green (1459 tests), OriginSd 38/38, BddTargetIps 2/2, BddTargetTests
+  66/66; clang-format applied; cppcheck-MISRA exit 0 (anchors moved: OriginSd.c 11.3
+  73→61, OriginSdPrivate.h 5.7 14→13). PR #555.
+
+### Deferred
+- SD vtable flip (S14.06), config header fields (S14.07). CLAUDE.md OriginSd
+  header-table row (still describes the removed pre-formatted storage) left for the
+  S14.08 wholesale table revision.
+
+### Open questions
+- None outstanding.
