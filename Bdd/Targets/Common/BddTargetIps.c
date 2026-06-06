@@ -1,5 +1,5 @@
 #include "BddTargetIps.h"
-#include "SolidSyslogFormatter.h"
+#include "SolidSyslogSdValue.h"
 
 enum
 {
@@ -23,7 +23,8 @@ size_t BddTargetIps_Count(void)
     return sizeof(BDD_TARGET_IPS) / sizeof(BDD_TARGET_IPS[0]);
 }
 
-void BddTargetIps_At(struct SolidSyslogFormatter* formatter, size_t index)
+void BddTargetIps_At(struct SolidSyslogSdValue* value, void* context, size_t index)
 {
-    SolidSyslogFormatter_EscapedString(formatter, BDD_TARGET_IPS[index], BDD_TARGET_IP_MAX);
+    (void) context;
+    SolidSyslogSdValue_BoundedString(value, BDD_TARGET_IPS[index], BDD_TARGET_IP_MAX);
 }

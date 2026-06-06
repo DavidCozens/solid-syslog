@@ -7,11 +7,11 @@
 
 EXTERN_C_BEGIN
 
-    struct SolidSyslogFormatter;
+    struct SolidSyslogSdValue;
     struct SolidSyslogStructuredData;
 
     typedef size_t (*SolidSyslogOriginIpCountFunction)(void);
-    typedef void (*SolidSyslogOriginIpAtFunction)(struct SolidSyslogFormatter* formatter, size_t index);
+    typedef void (*SolidSyslogOriginIpAtFunction)(struct SolidSyslogSdValue* value, void* context, size_t index);
 
     struct SolidSyslogOriginSdConfig
     {
@@ -20,6 +20,7 @@ EXTERN_C_BEGIN
         const char* EnterpriseId;
         SolidSyslogOriginIpCountFunction GetIpCount;
         SolidSyslogOriginIpAtFunction GetIpAt;
+        void* IpContext;
     };
 
     struct SolidSyslogStructuredData* SolidSyslogOriginSd_Create(const struct SolidSyslogOriginSdConfig* config);
