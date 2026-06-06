@@ -27,10 +27,19 @@ void SolidSyslogHeaderField_PrintUsAscii(struct SolidSyslogHeaderField* field, c
 
 void SolidSyslogHeaderField_Uint32(struct SolidSyslogHeaderField* field, uint32_t value)
 {
-    size_t before = SolidSyslogFormatter_Length(field->Formatter);
+    /* Unlike _PrintUsAscii, _Uint32 cannot pre-clamp its output to the field
+     * budget (the formatter writes the whole number), so guard the budget
+     * directly: skip once the field is full, and clamp to zero rather than
+     * letting the size_t subtraction underflow when this number alone overruns
+     * the remainder. A header-field callback may mix any number of appends. */
+    if (field->Remaining > 0U)
+    {
+        size_t before = SolidSyslogFormatter_Length(field->Formatter);
 
-    SolidSyslogFormatter_Uint32(field->Formatter, value);
-    field->Remaining -= HeaderField_Consumed(field, before);
+        SolidSyslogFormatter_Uint32(field->Formatter, value);
+        size_t consumed = HeaderField_Consumed(field, before);
+        field->Remaining = (consumed >= field->Remaining) ? 0U : (field->Remaining - consumed);
+    }
 }
 
 static inline size_t HeaderField_Consumed(const struct SolidSyslogHeaderField* field, size_t before)

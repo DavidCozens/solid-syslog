@@ -102,3 +102,19 @@ TEST(SolidSyslogHeaderField, Uint32OfZeroAppendsZero)
     SolidSyslogHeaderField_Uint32(&field, 0);
     CHECK_FIELD("0");
 }
+
+TEST(SolidSyslogHeaderField, Uint32IsDroppedOnceFieldWidthIsExhausted)
+{
+    fromFormatter(2);
+    SolidSyslogHeaderField_PrintUsAscii(&field, "ab", 32);
+    SolidSyslogHeaderField_Uint32(&field, 9);
+    CHECK_FIELD("ab");
+}
+
+TEST(SolidSyslogHeaderField, Uint32ExhaustsBudgetSoLaterAppendsAreDropped)
+{
+    fromFormatter(3);
+    SolidSyslogHeaderField_Uint32(&field, 123);
+    SolidSyslogHeaderField_PrintUsAscii(&field, "x", 32);
+    CHECK_FIELD("123");
+}

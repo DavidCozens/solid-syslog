@@ -14593,3 +14593,14 @@ MISRA rule — different category, doesn't set precedent.
 
 ### Open questions
 - None outstanding.
+
+### S14.07 follow-up (CodeRabbit review)
+- `SolidSyslogHeaderField_Uint32` could underflow `Remaining` (size_t) if a number
+  overran the field budget. Initially looked unreachable (PROCID = a single ≤10-digit
+  uint32 ≤ 128 cap), but the header-field callbacks are arbitrary user code that may make
+  any number of mixed `_PrintUsAscii` / `_Uint32` appends on one field — so the budget must
+  hold across calls and `_Uint32` must respect it. Added the guard (skip when the field is
+  full; clamp to zero instead of underflowing) + two tests for the mixed-append cap. RFC
+  5424 §6 ABNF is the source of the per-field caps (HOSTNAME 255 / APP-NAME 48 / PROCID 128
+  / MSGID 32), and streaming straight to the message buffer is exactly why the writer must
+  carry the cap explicitly now (the old scratch formatter enforced it via its capacity).
