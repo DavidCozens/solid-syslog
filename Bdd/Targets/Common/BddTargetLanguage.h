@@ -5,9 +5,9 @@
 
 EXTERN_C_BEGIN
 
-    struct SolidSyslogFormatter;
+    struct SolidSyslogSdValue;
 
-    void BddTargetLanguage_Get(struct SolidSyslogFormatter * formatter);
+    void BddTargetLanguage_Get(struct SolidSyslogSdValue * value, void* context);
 
 EXTERN_C_END
 

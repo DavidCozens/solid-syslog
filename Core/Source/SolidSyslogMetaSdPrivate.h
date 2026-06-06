@@ -7,7 +7,7 @@
 #include "SolidSyslogMetaSd.h"
 #include "SolidSyslogMetaSdErrors.h"
 #include "SolidSyslogPrival.h"
-#include "SolidSyslogStringFunction.h"
+#include "SolidSyslogSdValueFunction.h"
 #include "SolidSyslogStructuredDataDefinition.h"
 
 struct SolidSyslogAtomicCounter;
@@ -17,7 +17,8 @@ struct SolidSyslogMetaSd
     struct SolidSyslogStructuredData Base;
     struct SolidSyslogAtomicCounter* Counter;
     SolidSyslogSysUpTimeFunction GetSysUpTime;
-    SolidSyslogStringFunction GetLanguage;
+    SolidSyslogSdValueFunction GetLanguage;
+    void* LanguageContext;
 };
 
 void MetaSd_Initialise(struct SolidSyslogStructuredData* base, const struct SolidSyslogMetaSdConfig* config);

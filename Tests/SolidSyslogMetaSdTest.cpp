@@ -9,6 +9,7 @@
 #include "SolidSyslogMetaSd.h"
 #include "SolidSyslogMetaSdErrors.h"
 #include "SolidSyslogPrival.h"
+#include "SolidSyslogSdValue.h"
 #include "SolidSyslogStructuredData.h"
 #include "SolidSyslogTunables.h"
 #include "TestUtils.h"
@@ -22,6 +23,7 @@ class TEST_SolidSyslogMetaSd_FormatEscapesQuoteInLanguage_Test;
 class TEST_SolidSyslogMetaSd_FormatIncludesDifferentLanguageFromCallback_Test;
 class TEST_SolidSyslogMetaSd_FormatIncludesDifferentSysUpTimeFromCallback_Test;
 class TEST_SolidSyslogMetaSd_FormatIncludesLanguageFromCallback_Test;
+class TEST_SolidSyslogMetaSd_FormatPassesLanguageContextThrough_Test;
 class TEST_SolidSyslogMetaSd_FormatIncludesSysUpTimeAtMaxUint32_Test;
 class TEST_SolidSyslogMetaSd_FormatIncludesSysUpTimeAtZero_Test;
 class TEST_SolidSyslogMetaSd_FormatIncludesSysUpTimeFromCallback_Test;
@@ -44,11 +46,12 @@ static uint32_t FakeSysUpTime_Get()
 }
 
 static const char* fakeLanguageContent;
-static size_t fakeLanguageMaxLength;
+static void* fakeLanguageContext;
 
-static void FakeLanguage_Get(struct SolidSyslogFormatter* formatter)
+static void FakeLanguage_Get(struct SolidSyslogSdValue* value, void* context)
 {
-    SolidSyslogFormatter_EscapedString(formatter, fakeLanguageContent, fakeLanguageMaxLength);
+    fakeLanguageContext = context;
+    SolidSyslogSdValue_String(value, fakeLanguageContent);
 }
 
 #define CHECK_SEQUENCEID(expected) \
@@ -78,7 +81,7 @@ TEST_GROUP(SolidSyslogMetaSd)
         counter = TestAtomicCounter_Create();
         fakeSysUpTimeValue = 0;
         fakeLanguageContent = nullptr;
-        fakeLanguageMaxLength = 0;
+        fakeLanguageContext = nullptr;
         config = {};
         config.Counter = counter;
         sd = SolidSyslogMetaSd_Create(&config);
@@ -111,7 +114,6 @@ TEST_GROUP(SolidSyslogMetaSd)
     void useLanguage(const char* tag)
     {
         fakeLanguageContent = tag;
-        fakeLanguageMaxLength = strlen(tag);
         config.GetLanguage = FakeLanguage_Get;
         recreate();
     }
@@ -221,6 +223,17 @@ TEST(SolidSyslogMetaSd, FormatIncludesDifferentLanguageFromCallback)
     useLanguage("fr");
     format();
     CHECK_LANGUAGE("fr");
+}
+
+TEST(SolidSyslogMetaSd, FormatPassesLanguageContextThrough)
+{
+    int languageContext = 0;
+    fakeLanguageContent = "en-GB";
+    config.GetLanguage = FakeLanguage_Get;
+    config.LanguageContext = &languageContext;
+    recreate();
+    format();
+    POINTERS_EQUAL(&languageContext, fakeLanguageContext);
 }
 
 TEST(SolidSyslogMetaSd, FormatEscapesQuoteInLanguage)

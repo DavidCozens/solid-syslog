@@ -2,7 +2,7 @@
 #define SOLIDSYSLOGMETASD_H
 
 #include "ExternC.h"
-#include "SolidSyslogStringFunction.h"
+#include "SolidSyslogSdValueFunction.h"
 
 #include <stdint.h>
 
@@ -17,7 +17,8 @@ EXTERN_C_BEGIN
     {
         struct SolidSyslogAtomicCounter* Counter;
         SolidSyslogSysUpTimeFunction GetSysUpTime;
-        SolidSyslogStringFunction GetLanguage;
+        SolidSyslogSdValueFunction GetLanguage;
+        void* LanguageContext;
     };
 
     struct SolidSyslogStructuredData* SolidSyslogMetaSd_Create(const struct SolidSyslogMetaSdConfig* config);

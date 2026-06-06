@@ -28,7 +28,7 @@ misra-c2012-11.3:Core/Source/SolidSyslogBlockStore.c:73
 misra-c2012-11.3:Core/Source/SolidSyslogCircularBuffer.c:91
 misra-c2012-11.3:Core/Source/SolidSyslogFileBlockDevice.c:106
 misra-c2012-11.3:Core/Source/SolidSyslogFormatter.c:79
-misra-c2012-11.3:Core/Source/SolidSyslogMetaSd.c:55
+misra-c2012-11.3:Core/Source/SolidSyslogMetaSd.c:64
 misra-c2012-11.3:Core/Source/SolidSyslogOriginSd.c:73
 misra-c2012-11.3:Core/Source/SolidSyslogPassthroughBuffer.c:53
 misra-c2012-11.3:Core/Source/SolidSyslogStreamSender.c:166
