@@ -32,8 +32,8 @@ TEST_GROUP(BddTargetCustomSd)
 
 // clang-format on
 
-TEST(BddTargetCustomSd, EmitsExampleElementWithLibraryEscapedValue)
+TEST(BddTargetCustomSd, EmitsTheExampleElement)
 {
     SolidSyslogStructuredData_Format(BddTargetCustomSd_Get(), &element);
-    STRCMP_EQUAL("[example@32473 detail=\"a\\\"b\\\\c\\]d\"]", formatted());
+    STRCMP_EQUAL("[example@32473 detail=\"Hello World\"]", formatted());
 }

@@ -15,7 +15,7 @@ static void CustomSd_Format(struct SolidSyslogStructuredData* base, struct Solid
     (void) base; /* Stateless: this example emits a fixed element. */
 
     SolidSyslogSdElement_Begin(element, "example", EXAMPLE_ENTERPRISE_NUMBER);
-    SolidSyslogSdValue_String(SolidSyslogSdElement_Param(element, "detail"), "a\"b\\c]d");
+    SolidSyslogSdValue_String(SolidSyslogSdElement_Param(element, "detail"), "Hello World");
     SolidSyslogSdElement_End(element);
 }
 
