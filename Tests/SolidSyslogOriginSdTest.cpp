@@ -9,6 +9,7 @@
 #include "SolidSyslogOriginSd.h"
 #include "SolidSyslogOriginSdErrors.h"
 #include "SolidSyslogPrival.h"
+#include "SolidSyslogSdValue.h"
 #include "SolidSyslogStructuredData.h"
 #include "SolidSyslogTunables.h"
 #include "TestUtils.h"
@@ -21,30 +22,34 @@ class TEST_SolidSyslogOriginSd_FormatIncludesDifferentEnterpriseIdFromConfig_Tes
 class TEST_SolidSyslogOriginSd_FormatIncludesDifferentIpFromCallback_Test;
 class TEST_SolidSyslogOriginSd_FormatIncludesEnterpriseIdFromConfig_Test;
 class TEST_SolidSyslogOriginSd_FormatIncludesOneIpFromCallback_Test;
+class TEST_SolidSyslogOriginSd_FormatPassesIpContextThrough_Test;
 class TEST_SolidSyslogOriginSd_IpContainingSpecialsIsEscaped_Test;
 struct SolidSyslogFormatter;
+struct SolidSyslogSdValue;
 struct SolidSyslogStructuredData;
 
 enum
 {
     /* Worst-case fully-escaped output is 337 bytes — see
-       WorstCaseFullyEscapedInputFitsPreFormattedStorage. Pre-message dispatch
-       widens this further once IP params are spliced in. 512 leaves headroom. */
+       WorstCaseFullyEscapedInputFormatsCorrectly. IP params widen this further
+       once they are appended. 512 leaves headroom. */
     TEST_BUFFER_SIZE = 512,
     MAX_FAKE_IPS = 8
 };
 
 static std::array<const char*, MAX_FAKE_IPS> fakeIps;
 static size_t fakeIpCount;
+static void* fakeIpContext;
 
 static size_t FakeIpCount()
 {
     return fakeIpCount;
 }
 
-static void FakeIpAt(struct SolidSyslogFormatter* f, size_t index)
+static void FakeIpAt(struct SolidSyslogSdValue* value, void* context, size_t index)
 {
-    SolidSyslogFormatter_EscapedString(f, fakeIps.at(index), 64); // ORIGIN_IP_MAX
+    fakeIpContext = context;
+    SolidSyslogSdValue_BoundedString(value, fakeIps.at(index), 64); // ORIGIN_IP_MAX
 }
 
 #define CHECK_ENTERPRISE_ID(expected)                                                           \
@@ -93,6 +98,7 @@ TEST_GROUP(SolidSyslogOriginSd)
         config.Software = "TestSoftware";
         config.SwVersion = "9.8.7";
         fakeIpCount = 0;
+        fakeIpContext = nullptr;
         sd = SolidSyslogOriginSd_Create(&config);
     }
 
@@ -361,7 +367,7 @@ TEST(SolidSyslogOriginSd, EnterpriseIdContainingSpecialsIsEscaped)
     CHECK_ENTERPRISE_ID("a\\\"b\\\\c\\]d");
 }
 
-TEST(SolidSyslogOriginSd, WorstCaseFullyEscapedInputFitsPreFormattedStorage)
+TEST(SolidSyslogOriginSd, WorstCaseFullyEscapedInputFormatsCorrectly)
 {
     const std::string software = repeated(']', 48); /* ORIGIN_SOFTWARE_MAX */
     const std::string swVersion = repeated('"', 32); /* ORIGIN_SWVERSION_MAX */
@@ -412,6 +418,16 @@ TEST(SolidSyslogOriginSd, FormatIncludesMultipleIpsFromCallback)
         "[origin software=\"TestSoftware\" swVersion=\"9.8.7\" ip=\"192.0.2.1\" ip=\"192.0.2.2\" ip=\"10.0.0.1\"]",
         SolidSyslogFormatter_AsFormattedBuffer(formatter)
     );
+}
+
+TEST(SolidSyslogOriginSd, FormatPassesIpContextThrough)
+{
+    int ipContext = 0;
+    config.IpContext = &ipContext;
+    useIps({"192.0.2.1"});
+    resetFormatter();
+    format();
+    POINTERS_EQUAL(&ipContext, fakeIpContext);
 }
 
 TEST(SolidSyslogOriginSd, IpAtMaxLength)

@@ -29,7 +29,7 @@ misra-c2012-11.3:Core/Source/SolidSyslogCircularBuffer.c:91
 misra-c2012-11.3:Core/Source/SolidSyslogFileBlockDevice.c:106
 misra-c2012-11.3:Core/Source/SolidSyslogFormatter.c:79
 misra-c2012-11.3:Core/Source/SolidSyslogMetaSd.c:64
-misra-c2012-11.3:Core/Source/SolidSyslogOriginSd.c:73
+misra-c2012-11.3:Core/Source/SolidSyslogOriginSd.c:61
 misra-c2012-11.3:Core/Source/SolidSyslogPassthroughBuffer.c:53
 misra-c2012-11.3:Core/Source/SolidSyslogStreamSender.c:166
 misra-c2012-11.3:Core/Source/SolidSyslogSwitchingSender.c:63
@@ -175,7 +175,7 @@ misra-c2012-5.7:Core/Source/SolidSyslogMessageFormatter.c:19
 misra-c2012-5.7:Core/Source/SolidSyslogCircularBuffer.c:19
 misra-c2012-5.7:Core/Source/SolidSyslogCrc16.c:12
 misra-c2012-5.7:Core/Source/SolidSyslogCrc16Policy.c:10
-misra-c2012-5.7:Core/Source/SolidSyslogOriginSdPrivate.h:14
+misra-c2012-5.7:Core/Source/SolidSyslogOriginSdPrivate.h:13
 misra-c2012-5.7:Platform/FreeRtos/Source/SolidSyslogFreeRtosSysUpTime.c:7
 misra-c2012-5.7:Platform/Posix/Source/SolidSyslogPosixHostname.c:10
 misra-c2012-5.7:Platform/Posix/Source/SolidSyslogPosixMessageQueueBuffer.c:25

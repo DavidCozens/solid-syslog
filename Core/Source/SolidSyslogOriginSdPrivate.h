@@ -4,7 +4,6 @@
 #include <stdint.h>
 
 #include "SolidSyslogError.h"
-#include "SolidSyslogFormatter.h"
 #include "SolidSyslogOriginSd.h"
 #include "SolidSyslogOriginSdErrors.h"
 #include "SolidSyslogPrival.h"
@@ -15,21 +14,18 @@ enum
     ORIGIN_SOFTWARE_MAX = 48,
     ORIGIN_SWVERSION_MAX = 32,
     ORIGIN_ENTERPRISE_ID_MAX = 64,
-    ORIGIN_IP_MAX = 64,
-    ORIGIN_LITERAL_BYTES =
-        48, /* [origin software="" swVersion="" enterpriseId="" — closing ']' deferred to per-message OriginSd_Format */
-    ORIGIN_CONTENT_MAX = ORIGIN_LITERAL_BYTES + SOLIDSYSLOG_ESCAPED_MAX_SIZE(ORIGIN_SOFTWARE_MAX) +
-                         SOLIDSYSLOG_ESCAPED_MAX_SIZE(ORIGIN_SWVERSION_MAX) +
-                         SOLIDSYSLOG_ESCAPED_MAX_SIZE(ORIGIN_ENTERPRISE_ID_MAX),
-    ORIGIN_FORMATTED_MAX = ORIGIN_CONTENT_MAX + 1 /* null terminator */
+    ORIGIN_IP_MAX = 64
 };
 
 struct SolidSyslogOriginSd
 {
     struct SolidSyslogStructuredData Base;
+    const char* Software;
+    const char* SwVersion;
+    const char* EnterpriseId;
     SolidSyslogOriginIpCountFunction GetIpCount;
     SolidSyslogOriginIpAtFunction GetIpAt;
-    SolidSyslogFormatterStorage FormattedStorage[SOLIDSYSLOG_FORMATTER_STORAGE_SIZE(ORIGIN_FORMATTED_MAX)];
+    void* IpContext;
 };
 
 void OriginSd_Initialise(struct SolidSyslogStructuredData* base, const struct SolidSyslogOriginSdConfig* config);
