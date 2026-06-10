@@ -13,16 +13,31 @@
 # Posix / Windows / OpenSSL keep the existing PRIVATE-into-${PROJECT_NAME}
 # pattern; their ABIs are OS-level, not header-configured. Don't retrofit
 # INTERFACE across the tree.
+#
+# The pack CARRIES its sources via target_sources(INTERFACE) (S30.02): a
+# consumer that links SolidSyslog::FreeRtos compiles the kernel-primitive
+# adapters into its own target, seeing its own FreeRTOSConfig.h — no per-file
+# listing. The consumer still points at its own FreeRTOS-Kernel tree.
 
 add_library(SolidSyslogFreeRtos INTERFACE)
 
-# No adapter sources at S08.01 — first content (SolidSyslogFreeRtosMutex.c)
-# lands at S08.04. The INTERFACE target exists so the directory and CMake
-# wiring are in place from day one.
+# Kernel primitives, independent of the chosen networking backend: the
+# static-allocation Mutex and the kernel-tick SysUpTime source.
+target_sources(SolidSyslogFreeRtos INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/SolidSyslogFreeRtosMutex.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/SolidSyslogFreeRtosMutexStatic.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/SolidSyslogFreeRtosSysUpTime.c
+)
 
 target_include_directories(SolidSyslogFreeRtos INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}/Interface
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source          # SolidSyslogFreeRtosMutexPrivate.h
+    ${CMAKE_SOURCE_DIR}/Core/Source             # SolidSyslogPoolAllocator.h
 )
+
+target_link_libraries(SolidSyslogFreeRtos INTERFACE SolidSyslogTunables)
+
+add_library(SolidSyslog::FreeRtos ALIAS SolidSyslogFreeRtos)
 
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Interface/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}

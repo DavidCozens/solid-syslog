@@ -10,16 +10,28 @@
 # Tests/FatFs/*Test, downstream integrator apps) recompiles the adapter
 # sources with its own ffconf.h on the include path. Mirrors the
 # Platform/FreeRtos/ pack — see project_header_configured_platforms memory.
+#
+# The pack CARRIES its sources via target_sources(INTERFACE) (S30.02): a
+# consumer that links SolidSyslog::FatFs compiles the adapter into its own
+# target, seeing its own ffconf.h — no per-file listing. The consumer still
+# points at its own FatFs tree and supplies its own diskio.c.
 
 add_library(SolidSyslogFatFs INTERFACE)
 
-# No adapter sources at S08.05 slice 1 — first content
-# (SolidSyslogFatFsFile.c) lands at slice 2. The INTERFACE target exists
-# so the directory and CMake wiring are in place from the plumbing slice.
+target_sources(SolidSyslogFatFs INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/SolidSyslogFatFsFile.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/SolidSyslogFatFsFileStatic.c
+)
 
 target_include_directories(SolidSyslogFatFs INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}/Interface
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source          # SolidSyslogFatFsFilePrivate.h
+    ${CMAKE_SOURCE_DIR}/Core/Source             # SolidSyslogPoolAllocator.h
 )
+
+target_link_libraries(SolidSyslogFatFs INTERFACE SolidSyslogTunables)
+
+add_library(SolidSyslog::FatFs ALIAS SolidSyslogFatFs)
 
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Interface/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}

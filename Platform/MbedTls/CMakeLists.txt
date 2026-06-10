@@ -11,17 +11,36 @@
 # sources from Source/ with its own mbedtls_config.h on the include path.
 # Mirrors Platform/FreeRtos/ and Platform/FatFs/ — see
 # project_header_configured_platforms memory.
+#
+# The pack CARRIES its umbrella sources via target_sources(INTERFACE) (S30.02):
+# a consumer that links SolidSyslog::MbedTls compiles the adapter .c files into
+# its own target, seeing its own mbedtls_config.h — no per-file listing. The
+# consumer still points at its own mbedTLS tree (mbedtls/*.h are consumer-located)
+# and sets MBEDTLS_USER_CONFIG_FILE on its target.
 
 add_library(SolidSyslogMbedTls INTERFACE)
 
-# No adapter sources at S08.07 slice 1 — first content
-# (SolidSyslogMbedTlsStream.h plus the three-TU split) lands in the
-# slice-1 green step. The INTERFACE target exists so the directory and
-# CMake wiring are in place from the plumbing slice.
+# Umbrella = all mbedTLS adapters (they all compile against the consumer's
+# mbedtls_config.h): the TLS Stream plus the two at-rest SecurityPolicies.
+# Unused TUs dead-strip at link time (-Wl,--gc-sections).
+target_sources(SolidSyslogMbedTls INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/SolidSyslogMbedTlsStream.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/SolidSyslogMbedTlsStreamStatic.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/SolidSyslogMbedTlsHmacSha256Policy.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/SolidSyslogMbedTlsHmacSha256PolicyStatic.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/SolidSyslogMbedTlsAesGcmPolicy.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/SolidSyslogMbedTlsAesGcmPolicyStatic.c
+)
 
 target_include_directories(SolidSyslogMbedTls INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}/Interface
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source          # SolidSyslogMbedTls*Private.h
+    ${CMAKE_SOURCE_DIR}/Core/Source             # SolidSyslogPoolAllocator.h, SolidSyslogMacros.h
 )
+
+target_link_libraries(SolidSyslogMbedTls INTERFACE SolidSyslogTunables)
+
+add_library(SolidSyslog::MbedTls ALIAS SolidSyslogMbedTls)
 
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Interface/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
