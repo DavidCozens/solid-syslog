@@ -47,9 +47,19 @@ scenarios driven through QEMU's UART
 - Comprehensive error guards still rolling out
   ([E12 #31](https://github.com/DavidCozens/solid-syslog/issues/31)).
 
+## Getting started
+
+New to SolidSyslog? Start at [Getting started](docs/getting-started.md) — the
+integrator front door. It covers picking your stack from the capability matrix,
+both consumption paths (CMake and non-CMake / IAR / Keil source integration), a
+copy-pasteable manifest for an embedded stack, the tunables, and a minimal "your
+first log" walkthrough.
+
 ## Building and testing
 
-See [Building and testing](docs/builds.md).
+Developing the library itself? See [Building and testing](docs/builds.md) — the
+contributor/maintainer preset catalogue. (Consuming the library in your product
+is the [Getting started](docs/getting-started.md) path above.)
 
 ## Architecture
 
