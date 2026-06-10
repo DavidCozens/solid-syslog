@@ -225,29 +225,12 @@ add_executable(SolidSyslogBddTargetLwip
     ${FREERTOS_COMMON_DIR}/CmsdkUart.c
     ${FREERTOS_COMMON_DIR}/Syscalls.c
     netif/EthernetIf.c
-    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawAddress.c
-    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawAddressStatic.c
-    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawDnsResolver.c
-    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawDnsResolverStatic.c
-    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawDatagram.c
-    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawDatagramStatic.c
-    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawTcpStream.c
-    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawTcpStreamStatic.c
-    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source/SolidSyslogLwipRawMarshal.c
-    ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosMutex.c
-    ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosMutexStatic.c
-    ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosSysUpTime.c
-    ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsStream.c
-    ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsStreamStatic.c
-    # At-rest store: FatFs file adapter + the mbedTLS HMAC / AES-GCM security
-    # policies (Crc16Policy lives in Core, already linked). diskio.c is the
-    # shared semihosting media driver (Bdd/Targets/Common, 8 MiB FAT16).
-    ${CMAKE_SOURCE_DIR}/Platform/FatFs/Source/SolidSyslogFatFsFile.c
-    ${CMAKE_SOURCE_DIR}/Platform/FatFs/Source/SolidSyslogFatFsFileStatic.c
-    ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsHmacSha256Policy.c
-    ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsHmacSha256PolicyStatic.c
-    ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsAesGcmPolicy.c
-    ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsAesGcmPolicyStatic.c
+    # SolidSyslog platform adapters arrive via the SolidSyslog::* pack umbrellas
+    # linked below (S30.02 dogfood): LwipRawDnsResolver (the opt-in DNS component
+    # — pulls the LwipRaw umbrella's Address/Datagram/TcpStream/numeric-Resolver/
+    # Marshal too; the unused numeric resolver dead-strips), FreeRtos (Mutex +
+    # SysUpTime), MbedTls (TLS Stream + HMAC/AES-GCM policies), FatFs (file
+    # adapter). diskio.c is the shared semihosting media driver (8 MiB FAT16).
     ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/diskio.c
     ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/SemihostingDisk.c
     ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/BddTargetErrorText.c
@@ -282,13 +265,8 @@ target_include_directories(SolidSyslogBddTargetLwip PRIVATE
     ${FREERTOS_COMMON_DIR}                            # CmsdkUart.h
     ${CMAKE_SOURCE_DIR}/Core/Interface                # SolidSyslog*.h
     ${CMAKE_SOURCE_DIR}/Core/Source                   # internal headers consumed by adapters
-    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Interface    # SolidSyslogLwipRaw{Address,DnsResolver,Datagram,TcpStream,Marshal}.h
-    ${CMAKE_SOURCE_DIR}/Platform/LwipRaw/Source        # SolidSyslogLwipRaw*Private.h
-    ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Interface   # SolidSyslogFreeRtos{Mutex,SysUpTime}.h
-    ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source      # SolidSyslogFreeRtosMutexPrivate.h
-    ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Interface    # SolidSyslogMbedTlsStream.h, *Policy.h
-    ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source       # SolidSyslogMbedTlsStreamPrivate.h
-    ${CMAKE_SOURCE_DIR}/Platform/FatFs/Interface      # SolidSyslogFatFsFile.h
+    # Platform/{LwipRaw,FreeRtos,MbedTls,FatFs}/{Interface,Source} include dirs
+    # now arrive transitively from the SolidSyslog::* pack umbrellas linked below.
     ${FATFS_STAGE_DIR}                                # ff.h, diskio.h + integrator ffconf.h colocated
     ${BAKED_PEMS_DIR}                                 # BddBaked*.h (xxd -i output)
     ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common            # BddTargetInteractive.h, BddTargetSwitchConfig.h, …
@@ -300,6 +278,10 @@ target_include_directories(SolidSyslogBddTargetLwip PRIVATE
 
 target_link_libraries(SolidSyslogBddTargetLwip PRIVATE
     ${PROJECT_NAME}                                   # libSolidSyslog.a (cross-compiled)
+    SolidSyslog::LwipRawDnsResolver                   # DNS resolver (opt-in, needs LWIP_DNS=1) + LwipRaw umbrella
+    SolidSyslog::FreeRtos                             # Mutex + SysUpTime adapters (sources)
+    SolidSyslog::MbedTls                              # TLS Stream + HMAC/AES-GCM policy adapters (sources)
+    SolidSyslog::FatFs                                # FatFs file adapter (sources)
     mbedtls mbedx509 mbedcrypto                       # mbedTLS upstream (subproject, cross-compiled)
 )
 

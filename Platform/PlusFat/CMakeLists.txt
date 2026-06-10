@@ -12,12 +12,28 @@
 # sources with its own FreeRTOSFATConfig.h on the include path. Mirrors the
 # Platform/FatFs/ and Platform/FreeRtos/ packs — see
 # project_header_configured_platforms memory.
+#
+# The pack CARRIES its sources via target_sources(INTERFACE) (S30.02): a
+# consumer that links SolidSyslog::PlusFat compiles the adapter into its own
+# target, seeing its own FreeRTOSFATConfig.h — no per-file listing. The consumer
+# still points at its own FreeRTOS-Plus-FAT tree and supplies its FF_Disk_t driver.
 
 add_library(SolidSyslogPlusFat INTERFACE)
 
+target_sources(SolidSyslogPlusFat INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/SolidSyslogPlusFatFile.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/SolidSyslogPlusFatFileStatic.c
+)
+
 target_include_directories(SolidSyslogPlusFat INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}/Interface
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source          # SolidSyslogPlusFatFilePrivate.h
+    ${CMAKE_SOURCE_DIR}/Core/Source             # SolidSyslogPoolAllocator.h
 )
+
+target_link_libraries(SolidSyslogPlusFat INTERFACE SolidSyslogTunables)
+
+add_library(SolidSyslog::PlusFat ALIAS SolidSyslogPlusFat)
 
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Interface/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}

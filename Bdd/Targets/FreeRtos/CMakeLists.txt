@@ -266,25 +266,9 @@ add_executable(SolidSyslogBddTarget
     Startup.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Common/CmsdkUart.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Common/Syscalls.c
-    ${CMAKE_SOURCE_DIR}/Platform/PlusFat/Source/SolidSyslogPlusFatFile.c
-    ${CMAKE_SOURCE_DIR}/Platform/PlusFat/Source/SolidSyslogPlusFatFileStatic.c
-    ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogPlusTcpAddress.c
-    ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogPlusTcpAddressStatic.c
-    ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogPlusTcpDatagram.c
-    ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogPlusTcpDatagramStatic.c
-    ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosMutex.c
-    ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosMutexStatic.c
-    ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogPlusTcpResolver.c
-    ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogPlusTcpResolverStatic.c
-    ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source/SolidSyslogFreeRtosSysUpTime.c
-    ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogPlusTcpTcpStream.c
-    ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source/SolidSyslogPlusTcpTcpStreamStatic.c
-    ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsStream.c
-    ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsStreamStatic.c
-    ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsHmacSha256Policy.c
-    ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsHmacSha256PolicyStatic.c
-    ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsAesGcmPolicy.c
-    ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source/SolidSyslogMbedTlsAesGcmPolicyStatic.c
+    # SolidSyslog platform adapters arrive via the SolidSyslog::{PlusTcp,FreeRtos,
+    # MbedTls,PlusFat} pack umbrellas linked below (S30.02 dogfood) — their
+    # target_sources(INTERFACE) compile here against this target's config.
     ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/BddTargetErrorText.c
     ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/BddTargetFreeRtosPipeline.c
     ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common/BddTargetCustomSd.c
@@ -317,13 +301,8 @@ target_include_directories(SolidSyslogBddTarget PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/Common                # CmsdkUart.h
     ${CMAKE_SOURCE_DIR}/Core/Interface                # SolidSyslog*.h
     ${CMAKE_SOURCE_DIR}/Core/Source                   # internal headers consumed by adapters
-    ${CMAKE_SOURCE_DIR}/Platform/PlusFat/Interface    # SolidSyslogPlusFatFile.h
-    ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Interface   # SolidSyslogFreeRtos{Mutex,SysUpTime}.h
-    ${CMAKE_SOURCE_DIR}/Platform/FreeRtos/Source      # SolidSyslogFreeRtosMutexPrivate.h
-    ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Interface    # SolidSyslogFreeRtos{Address,Datagram,Resolver,TcpStream}.h
-    ${CMAKE_SOURCE_DIR}/Platform/PlusTcp/Source       # SolidSyslogPlusTcpAddressPrivate.h
-    ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Interface    # SolidSyslogMbedTlsStream.h
-    ${CMAKE_SOURCE_DIR}/Platform/MbedTls/Source       # SolidSyslogMbedTlsStreamPrivate.h
+    # Platform/{PlusFat,FreeRtos,PlusTcp,MbedTls}/{Interface,Source} include dirs
+    # now arrive transitively from the SolidSyslog::* pack umbrellas linked below.
     ${CMAKE_SOURCE_DIR}/Bdd/Targets/Common            # BddTargetInteractive.h
     ${BAKED_PEMS_DIR}                                 # BddBaked*.h (xxd -i output)
     ${FREERTOS_KERNEL_PATH}/include
@@ -352,6 +331,10 @@ set_source_files_properties(
 
 target_link_libraries(SolidSyslogBddTarget PRIVATE
     ${PROJECT_NAME}                                   # libSolidSyslog.a (cross-compiled)
+    SolidSyslog::PlusTcp                              # Address/Datagram/Resolver/TcpStream adapters (sources)
+    SolidSyslog::FreeRtos                             # Mutex + SysUpTime adapters (sources)
+    SolidSyslog::MbedTls                              # TLS Stream + HMAC/AES-GCM policy adapters (sources)
+    SolidSyslog::PlusFat                              # Plus-FAT file adapter (sources)
     mbedtls mbedx509 mbedcrypto                       # mbedTLS upstream (subproject, cross-compiled)
 )
 
