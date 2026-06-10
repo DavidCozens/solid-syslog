@@ -1,5 +1,47 @@
 # Dev Log
 
+## 2026-06-10 — S30.01 getting-started doc + integration manifest
+
+First story of E30 (#566, frictionless integration). Docs-only, authored against
+the current tree, zero build change → zero CI risk. The driving goal is the
+non-CMake beta (FreeRTOS + lwIP + Mbed TLS + FatFs, IAR) being able to integrate
+from docs alone.
+
+### Decisions
+- **New `docs/getting-started.md` is the integrator front door**, distinct from
+  `builds.md` (now explicitly the contributor/maintainer preset catalogue). The
+  capability matrix from #566 is reproduced trimmed to integrator-facing columns
+  (provider / files / upstream dep / config / pool tunable), split into
+  Networking / TLS+at-rest / OS+storage+SD / BYO-callback tables.
+- **Two consumption paths documented.** Path A (CMake) is the placeholder
+  env-var/auto-detect path today, with a note that S30.02 makes it one-line via
+  `SolidSyslog::` umbrella targets. Path B (non-CMake) is the file/include/`-D`
+  manifest: everything-is-source, with the `Core/Interface` + `Core/Source` +
+  per-adapter `Interface`+`Source` include-path rule made explicit (adapter `.c`
+  files include their own `*Private.h` from `Source/`).
+- **Worked beta manifest is copy-pasteable** — exact Core + lwIP (numeric, DNS
+  omitted so no `LWIP_DNS`) + Mbed TLS + FreeRTOS + FatFs `.c` lists, include
+  dirs, the single required `-D` (user tunables file), the five config headers the
+  integrator owns, and the BYO callbacks (Sleep/Clock/Hostname/ProcessId).
+- **IWYU is advisory, not dropped.** The epic/handoff note called the IWYU
+  references "stale (IWYU dropped)", but `builds.md` had *zero* IWYU references and
+  the `analyze-iwyu*` lanes still run (advisory, S24.13). Documented `iwyu`
+  accurately as an advisory preset rather than claiming it was removed. Also added
+  the previously-missing `c99` and `freertos-cross-lwip` preset sections to
+  `builds.md`.
+- **README cross-links getting-started** as the front door above the (reframed)
+  Building-and-testing pointer.
+
+### Deferred
+- Manifest generation from CMake (S30.03 #569) replaces the hand-authored lists.
+- Consumer-friendly umbrella targets + dogfooded CI (S30.02 #568).
+- BYO-callback provider authoring (later epic) — recorded in the matrix so it's
+  discoverable, not implemented.
+
+### Open questions
+- None blocking. If the team does decide to fully retire IWYU later, the `iwyu`
+  sections in `builds.md`/`local-checks.md`/`ci.md` come out together.
+
 ## 2026-06-09 — S12.34 drain full lwIP RX pbuf chain
 
 `LwipRawTcpStream_DrainHeadBytes` read only the head link (`head->len`) then

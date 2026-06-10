@@ -1,5 +1,10 @@
 # Building and Testing
 
+> **This is the contributor / maintainer build doc** — the CMake preset catalogue
+> for developing the library and reproducing CI lanes locally. If you are
+> *consuming* SolidSyslog in your own product (CMake or non-CMake), start at
+> [Getting started](getting-started.md) instead.
+
 All builds use CMake presets. Output goes to `build/<preset>/`.
 
 ## TDD loop — `debug` / `clang-debug`
@@ -27,6 +32,17 @@ docker compose -f .devcontainer/docker-compose.yml run --rm clang cmake --build 
 
 When using the `clang` devcontainer, Ctrl+Shift+B builds with `clang-debug` directly.
 See [Container images](containers.md) for how to switch.
+
+## C99 portability — `c99`
+
+Compiles the library with `CMAKE_C_STANDARD=99` (and `HAVE_STDATOMIC_H=OFF`,
+`BUILD_TESTING=OFF`) to enforce the C99 baseline — catches accidental use of
+later-standard features in production source. Library only; tests are not built.
+
+```bash
+cmake --preset c99
+cmake --build --preset c99
+```
 
 ## Sanitizers — `sanitize`
 
@@ -67,6 +83,25 @@ Runs cppcheck static analysis on all source files.
 cmake --preset cppcheck
 cmake --build --preset cppcheck
 ```
+
+## Include-what-you-use — `iwyu` (advisory)
+
+Runs include-what-you-use over the source set to flag missing or unused
+`#include` directives. It inherits `clang-debug`, so use the `clang` (or
+`cpputest-freertos`) image — not the `gcc` image.
+
+```bash
+cmake --preset iwyu
+cmake --build --preset iwyu --target iwyu
+```
+
+Note the `--target iwyu` — building the bare preset does not run the tool.
+
+**IWYU is advisory, not a gate** (S24.13 / E24). The CI lanes (`analyze-iwyu`,
+`analyze-iwyu-freertos-plustcp`, `analyze-iwyu-freertos-lwip`) run on every PR but
+do not block the build; their findings land in the `iwyu-report*` artifacts. Sweep
+those at release cleanup. See [local-checks.md](local-checks.md) for the FreeRTOS
+variants and the full pre-PR check budget.
 
 ## Windows build — `msvc-debug`
 
@@ -111,6 +146,21 @@ The ELF lands at
 See [`Bdd/Targets/FreeRtos/README.md`](../Bdd/Targets/FreeRtos/README.md) for run /
 GDB-attach instructions and [`Bdd/README.md`](../Bdd/README.md) for driving
 it under Behave + the syslog-ng oracle.
+
+## FreeRTOS + lwIP cross — `freertos-cross-lwip`
+
+The lwIP-networking twin of `freertos-cross`: same ARM Cortex-M3 / mps2-an385
+cross-build, but with `SOLIDSYSLOG_FREERTOS_NET=LWIP` (instead of the default
+FreeRTOS-Plus-TCP) and the `Bdd/Targets/FreeRtosLwip/` tunables. Drives the
+`bdd-freertos-qemu-lwip` CI lane.
+
+```bash
+cmake --preset freertos-cross-lwip
+cmake --build --preset freertos-cross-lwip --target SolidSyslogBddTargetLwip
+```
+
+The ELF lands at
+`build/freertos-cross-lwip/Bdd/Targets/FreeRtosLwip/SolidSyslogBddTargetLwip.elf`.
 
 ## Installing the library
 
