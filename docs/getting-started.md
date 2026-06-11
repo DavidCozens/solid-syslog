@@ -212,15 +212,20 @@ conveniences and are intentionally omitted from the (embedded) manifest.
 
 ### 2. Defines
 
+The generated manifest's *Required defines* section is authoritative. For this
+stack:
+
 ```text
 -DSOLIDSYSLOG_USER_TUNABLES_FILE="my_tunables.h"   # your tunable overrides
+-DLWIP_DNS=1                                        # required by SolidSyslog::LwipRawDnsResolver
 ```
 
-> No `LWIP_DNS` is required for this stack (numeric resolver). The header-configured
-> upstreams take their settings from your config headers, not from `-D`s:
-> `lwipopts.h` (incl. `NO_SYS`, `LWIP_RAW`/`UDP`/`TCP`), `mbedtls_config.h`,
-> `FreeRTOSConfig.h` (with `configSUPPORT_STATIC_ALLOCATION=1` for the mutex),
-> `ffconf.h`.
+> `LWIP_DNS=1` is required because this stack includes the lwIP DNS resolver; a
+> numeric-only build (omit `SolidSyslog::LwipRawDnsResolver`) does not need it.
+> The header-configured upstreams take their other settings from your config
+> headers, not from `-D`s: `lwipopts.h` (incl. `NO_SYS`, `LWIP_RAW`/`UDP`/`TCP`),
+> `mbedtls_config.h`, `FreeRTOSConfig.h` (with
+> `configSUPPORT_STATIC_ALLOCATION=1` for the mutex), `ffconf.h`.
 
 ### 3. Config headers you own
 
