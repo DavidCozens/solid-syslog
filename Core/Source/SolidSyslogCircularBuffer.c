@@ -109,7 +109,6 @@ static inline void CircularBuffer_ConsumeWrapMarker(struct SolidSyslogCircularBu
 
 static inline size_t CircularBuffer_PeekRecordSize(const struct SolidSyslogCircularBuffer* self)
 {
-    /* Little-endian read of the 2-byte length header out of the uint8_t ring. */
     return ((size_t) self->Ring[self->Head]) | (((size_t) self->Ring[self->Head + 1U]) << 8U);
 }
 
@@ -185,7 +184,6 @@ static inline void CircularBuffer_WrapTail(struct SolidSyslogCircularBuffer* sel
 
 static inline void CircularBuffer_StoreRecord(struct SolidSyslogCircularBuffer* self, const void* data, size_t size)
 {
-    /* Little-endian write of the 2-byte length header into the uint8_t ring. */
     self->Ring[self->Tail] = (uint8_t) (size & 0xFFU);
     self->Ring[self->Tail + 1U] = (uint8_t) ((size >> 8U) & 0xFFU);
     (void) memcpy(&self->Ring[self->Tail + HEADER_BYTES], data, size);
