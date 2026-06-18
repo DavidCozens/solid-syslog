@@ -225,7 +225,6 @@ def _dump_target_log(process, attr, channel, prefix):
 
 
 def after_scenario(context, scenario):
-    # Clean up any long-lived interactive process
     if hasattr(context, "interactive_process"):
         process = context.interactive_process
         if process.poll() is None:

@@ -105,10 +105,6 @@ static void BlockStore_ResumeFromExistingBlock(struct SolidSyslogBlockStore* sel
     }
 }
 
-/* ------------------------------------------------------------------
- * BlockStore_Write
- * ----------------------------------------------------------------*/
-
 static bool BlockStore_StoreRecord(struct SolidSyslogBlockStore* self, const void* data, size_t size);
 
 static bool BlockStore_Write(struct SolidSyslogStore* base, const void* data, size_t size)
@@ -145,10 +141,6 @@ static bool BlockStore_StoreRecord(struct SolidSyslogBlockStore* self, const voi
     return written;
 }
 
-/* ------------------------------------------------------------------
- * BlockStore_HasUnsent / BlockStore_IsHalted / BlockStore_GetTotalBytes / BlockStore_GetUsedBytes
- * ----------------------------------------------------------------*/
-
 static bool BlockStore_HasUnsent(struct SolidSyslogStore* base)
 {
     return BlockSequence_HasUnsent(BlockStore_SelfFromBase(base)->BlockSequence);
@@ -177,10 +169,6 @@ static bool BlockStore_IsTransient(struct SolidSyslogStore* base)
     (void) base;
     return false;
 }
-
-/* ------------------------------------------------------------------
- * BlockStore_ReadNextUnsent
- * ----------------------------------------------------------------*/
 
 static bool BlockStore_ReadCurrent(struct SolidSyslogBlockStore* self, void* data, size_t maxSize, size_t* bytesRead);
 
@@ -217,10 +205,6 @@ static bool BlockStore_ReadCurrent(struct SolidSyslogBlockStore* self, void* dat
         bytesRead
     );
 }
-
-/* ------------------------------------------------------------------
- * BlockStore_MarkSent
- * ----------------------------------------------------------------*/
 
 static void BlockStore_MarkSent(struct SolidSyslogStore* base)
 {

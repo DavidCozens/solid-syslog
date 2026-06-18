@@ -1039,7 +1039,6 @@ def step_check_msg(context, msg):
 @then("the syslog oracle receives {count:d} message")
 @then("the syslog oracle receives {count:d} messages")
 def step_check_message_count(context, count):
-    # For interactive processes, refresh the line count
     if hasattr(context, "interactive_process"):
         wait_for_messages(context, count)
     assert context.message_count == count, (
@@ -1277,7 +1276,6 @@ def step_check_contiguous_sequence_ids(context):
             f"No sequenceId in structured data: {sd}"
         )
         ids.append(int(match.group(1)))
-    # Check that IDs form a contiguous ascending sequence
     for i in range(1, len(ids)):
         assert ids[i] == ids[i - 1] + 1, (
             f"Non-contiguous sequenceIds: {ids[i - 1]} followed by {ids[i]}"
