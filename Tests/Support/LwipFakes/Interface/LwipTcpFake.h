@@ -30,7 +30,6 @@ EXTERN_C_BEGIN
     unsigned LwipTcpFake_TcpSentCallCount(void);
     tcp_sent_fn LwipTcpFake_LastSentFn(void);
 
-
     /* Immediate err returned by tcp_connect itself. Default ERR_OK. */
     void LwipTcpFake_SetTcpConnectError(int8_t err);
 

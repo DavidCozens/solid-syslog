@@ -180,8 +180,6 @@ static void GetAppName(struct SolidSyslogHeaderField* field, void* context);
 static void GetTimeQuality(struct SolidSyslogTimeQuality* timeQuality);
 static void ErrorHandlerEx(void* context, const struct SolidSyslogErrorEvent* event);
 
-/* ---- console glue ---------------------------------------------------------- */
-
 static uint32_t MmioRead32(uintptr_t address)
 {
     // NOLINTNEXTLINE(performance-no-int-to-ptr) -- mapping the CMSDK UART MMIO address into a 32-bit volatile pointer.
@@ -218,8 +216,6 @@ void BddTargetFreeRtosPipeline_SetConfig(const struct BddTargetFreeRtosPipelineC
 {
     g_config = config;
 }
-
-/* ---- SolidSyslog config callbacks ------------------------------------------ */
 
 static void GetAppName(struct SolidSyslogHeaderField* field, void* context)
 {
@@ -268,8 +264,6 @@ static void ErrorHandlerEx(void* context, const struct SolidSyslogErrorEvent* ev
         message
     );
 }
-
-/* ---- interactive `set` handler --------------------------------------------- */
 
 static bool OnSet(const char* name, const char* value)
 {
@@ -484,8 +478,6 @@ static bool TryParseUInt(const char* value, unsigned long* out)
     return true;
 }
 
-/* ---- store + security policy lifecycle ------------------------------------- */
-
 /* DEMO KEY ONLY. A real integrator supplies key material from a secure element,
  * a KDF, or encrypted NVM via their own SolidSyslogKeyFunction — never a
  * hard-coded constant. This exists so the BDD scenario can exercise the mbedTLS
@@ -661,8 +653,6 @@ static void OnThresholdCrossed(void* context)
     (void) printf("[THRESHOLD-CROSSED]\r\n");
 }
 
-/* ---- teardown -------------------------------------------------------------- */
-
 /* Full teardown of every shared resource. Two entry points — `quit` (falls
  * through after BddTargetInteractive_Run returns) and `set shutdown 1` — both
  * route through here. The platform UnmountStore hook fires regardless so the
@@ -724,8 +714,6 @@ void BddTargetFreeRtosPipeline_Exit(int status)
     {
     }
 }
-
-/* ---- tasks ----------------------------------------------------------------- */
 
 void BddTargetFreeRtosPipeline_InteractiveTask(void* argument)
 {
