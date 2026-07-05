@@ -115,10 +115,6 @@ static inline void FileBlockDevice_CloseIfOpen(struct OpenHandle* handle)
     }
 }
 
-/* ------------------------------------------------------------------
- * FileBlockDevice_Acquire
- * ----------------------------------------------------------------*/
-
 static bool FileBlockDevice_EnsureHandleOpenOnBlock(
     struct OpenHandle* handle,
     const struct SolidSyslogFileBlockDevice* self,
@@ -220,10 +216,6 @@ static inline const char* FileBlockDevice_FormatBlockFilename(
     return SolidSyslogFormatter_AsFormattedBuffer(formatter);
 }
 
-/* ------------------------------------------------------------------
- * FileBlockDevice_Dispose
- * ----------------------------------------------------------------*/
-
 static inline void FileBlockDevice_CloseIfHoldingBlock(struct OpenHandle* handle, size_t blockIndex);
 
 static bool FileBlockDevice_Dispose(struct SolidSyslogBlockDevice* base, size_t blockIndex)
@@ -253,10 +245,6 @@ static inline void FileBlockDevice_CloseIfHoldingBlock(struct OpenHandle* handle
     }
 }
 
-/* ------------------------------------------------------------------
- * FileBlockDevice_Exists
- * ----------------------------------------------------------------*/
-
 static bool FileBlockDevice_Exists(struct SolidSyslogBlockDevice* base, size_t blockIndex)
 {
     bool exists = false;
@@ -271,10 +259,6 @@ static bool FileBlockDevice_Exists(struct SolidSyslogBlockDevice* base, size_t b
 
     return exists;
 }
-
-/* ------------------------------------------------------------------
- * FileBlockDevice_Read / FileBlockDevice_Append / FileBlockDevice_WriteAt / FileBlockDevice_Size
- * ----------------------------------------------------------------*/
 
 // NOLINTBEGIN(bugprone-easily-swappable-parameters) -- vtable signature: blockIndex / offset are positional, distinct semantics
 static bool FileBlockDevice_Read(
