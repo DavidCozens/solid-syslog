@@ -48,7 +48,8 @@ acknowledged and acted on as soon as is practicable.
 
 We follow coordinated disclosure with a **90-day** window from the date of
 report, plus a **14-day grace period** if a fix is imminent at day 90. We
-will credit reporters who wish to be named, by consent captured at intake.
+will credit reporters who wish to be named — just tell us your preference in
+your report.
 
 Advisories are published as **GitHub Security Advisories**. For
 vulnerabilities in **Core** (see *Scope*), a **CVE** is requested via
@@ -90,5 +91,5 @@ users are not stranded.
 ## Commercial support
 
 For commercial licensing, guaranteed response times, or back-port support,
-contact us via the form at
-[cososo.co.uk](https://www.cososo.co.uk/#contact).
+enquire via the form at
+[cososo.co.uk](https://www.cososo.co.uk/?service=solidsyslog#contact).
