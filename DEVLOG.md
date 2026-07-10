@@ -15172,3 +15172,28 @@ repo's markdownlint config) stops flagging them at the source.
 
 ### Open questions
 - None.
+
+## 2026-07-10 — S19.05: vulnerability triage runbook
+
+Third of E19's security docs: `docs/security/triage-runbook.md` — the maintainer's
+operational counterpart to SECURITY.md (what we promise) and the threat model
+(what we defend). This one is *how we respond*.
+
+### Decisions
+- Six-stage executable checklist (receipt → triage → fix → release coordination →
+  post-release → retrospective), consistent with SECURITY.md's tiers / SLAs /
+  90+14 disclosure / continuity clause rather than restating them.
+- **The draft GHSA is the single tracking record** — no separate issue or tracker.
+- High/Critical → private-fork fix + coordinated advisory; Low/Medium → fix in the
+  open. CVE via GitHub's CNA for `Core/` only.
+- Retrospective captured **on the advisory, not DEVLOG** (David's steer — DEVLOG is
+  being retired around go-public, so the runbook must not depend on it).
+- Evidence retention = GitHub's indefinite retention of GHSAs / releases / SBOMs /
+  signatures / history; no separate archive (meets the CRA 10-year expectation).
+- Forward-links `release-process.md` (S19.06, next).
+
+### Deferred
+- None.
+
+### Open questions
+- None.
