@@ -190,5 +190,5 @@ against this model is in [`SECURITY.md`](../../SECURITY.md).
 
 This is a living document. It is reviewed on any architectural change that alters a
 trust boundary or the division of responsibility — a new transport, a new field
-type, a new platform backend, or a new extension point. Reviews are recorded in
-`DEVLOG.md`.
+type, a new platform backend, or a new extension point. The review lands in the
+pull request that makes the change.

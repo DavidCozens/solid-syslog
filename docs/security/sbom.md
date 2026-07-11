@@ -27,7 +27,7 @@ Out of scope:
 - `ci/`, `docs/`, `.devcontainer/`, `.github/`, `.vscode/` — dev/CI infrastructure.
 - `sbom/` — the SBOM template itself (meta; including it would be self-referential).
 - `scripts/` — utility scripts not consumed by the integrator.
-- Other root-level meta files (`CLAUDE.md`, `SKILL.md`, `DEVLOG.md`,
+- Other root-level meta files (`CLAUDE.md`, `SKILL.md`,
   `README.md`, `CHANGELOG.md`, `.clang-format`, `.clang-tidy`,
   `.gitattributes`, `.gitignore`, `.release-please-manifest.json`).
   Informational / agent-facing / git configuration, not library source.
