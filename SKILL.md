@@ -10,30 +10,10 @@ series by Cozens Software Solutions Limited.
 
 - **Claude.ai** — planning, backlog decomposition, blog drafting, architecture decisions.
   Produces briefings for Claude Code to execute.
-- **Claude Code** — implementation, commits, GitHub operations, DEVLOG.md maintenance.
+- **Claude Code** — implementation, commits, GitHub operations.
   Receives briefings from the developer and executes them.
 
 When in doubt about intent or architecture, ask the developer rather than assuming.
-
-## DEVLOG.md convention
-
-Append an entry to DEVLOG.md after every meaningful session. Format:
-
-```text
-## YYYY-MM-DD — <short session title>
-
-### Decisions
-- <decision and rationale>
-
-### Deferred
-- <item deferred and why>
-
-### Open questions
-- <question> — <context>
-```
-
-Never rewrite history. Always append. Commit DEVLOG.md changes with:
-`docs: update DEVLOG for <session topic>`
 
 ## TDD pairing contract
 
@@ -94,7 +74,7 @@ Test progression follows ZOMBIES order.
 
 ## Key references
 
-- Epics tracked as GitHub Issues, Project board "SolidSyslog" (project #1); active and future epics are labelled `epic` and numbered beyond the original #2–#12 range (e.g. E12 #31, E14 #64, E17 #105, E18 #112)
+- Epics tracked as GitHub Issues, Project board "SolidSyslog" (project #1); active and future epics are labelled `epic`
 - RFC 5424 — structured syslog message format
 - RFC 5426 — syslog over UDP
 - RFC 6587 — syslog over TCP (octet counting)

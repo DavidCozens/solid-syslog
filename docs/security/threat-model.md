@@ -149,8 +149,7 @@ These are properties of the shipped code, not aspirations:
 - **End-to-end integrity through log relays** — **not provided.** TLS protects each
   hop only; once a relay terminates the connection, SolidSyslog offers no
   cryptographic guarantee that downstream records are unaltered. RFC 5848 message
-  signing is the standard answer and is **not implemented** — tracked under
-  [E22 (#232)](../../issues/232), which may be revisited given demand.
+  signing is the standard answer and is **not implemented**.
 - **Replay of captured records** — TLS prevents replay within a live session, but
   SolidSyslog adds no cryptographic anti-replay of its own. Anyone able to
   re-inject records downstream of a terminated TLS hop (a malicious or compromised
@@ -190,5 +189,5 @@ against this model is in [`SECURITY.md`](../../SECURITY.md).
 
 This is a living document. It is reviewed on any architectural change that alters a
 trust boundary or the division of responsibility — a new transport, a new field
-type, a new platform backend, or a new extension point. Reviews are recorded in
-`DEVLOG.md`.
+type, a new platform backend, or a new extension point. The review lands in the
+pull request that makes the change.
