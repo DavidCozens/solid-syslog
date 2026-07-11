@@ -1,5 +1,10 @@
 # SolidSyslog
 
+> [!WARNING]
+> **The documentation is under active development and may be incomplete or
+> inaccurate.** Do not rely on it — for integration, security, or compliance
+> decisions — until the 0.1.0 release.
+
 A structured syslog client library for embedded and industrial systems, implementing
 RFC 5424 (structured syslog) with RFC 5426 (UDP) and RFC 6587 (TCP) transports.
 TLS per RFC 5425 is available via a pluggable Stream abstraction — the repo ships
