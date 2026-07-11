@@ -25,7 +25,7 @@ usually makes the choice for you.
 | **Transport & channel** | `UdpSender` / TCP `StreamSender` → server-auth **TLS** → **mutual TLS** (per-device cert, hardware-held key) | Does the log path cross a network you don't fully trust? Must the receiver be able to prove *which device* sent a record? |
 | **Delivery seam** (buffer) | `PassthroughBuffer` → `CircularBuffer` + mutex | Do you log from one task with time to send inline, or from many tasks needing a non-blocking `Log()` and a separate service thread? |
 | **Survival** (store) | `NullStore` → `BlockStore` (over a `BlockDevice` + `File`) | What is your audit-loss budget? Must records survive a network outage or a reboot? |
-| **At-rest protection** (policy) | `NullSecurityPolicy` → `Crc16Policy` → keyed **HMAC / AES-GCM** | Is the storage medium physically reachable (removable card, stolen device)? Do you need to *detect tampering*, or also *prevent reading*? |
+| **At-rest protection** (policy) | `NullSecurityPolicy` → `Crc16Policy` *(accidental corruption)* → keyed **HMAC** *(tamper-evident)* → **AES-GCM** *(also confidential)* | Can stored records be corrupted by hardware or power loss (a reliability concern)? Is the medium physically reachable by an *attacker* — do you need to detect tampering, or also prevent reading? |
 | **Evidence** (structured data) | none → `TimeQualitySd` → +`MetaSd` sequenceId → +`OriginSd` / sysUpTime | Must the collector trust your timestamps? Detect missing records? Attribute a record to a specific device, software, or version? |
 
 Every role also has a **Null** implementation, so a choice you don't need costs
@@ -42,12 +42,14 @@ on*. This is our reading of the standard's direction of travel — see the
   timestamped RFC 5424 record and keep it readable.
 - **SL2 — trusted time, gap-visible delivery, a protected & authenticated
   channel.** The standard brings in timestamp *quality*, continuous monitoring,
-  device authentication, and confidentiality over untrusted networks — so the
-  transport, evidence, and survival drivers start to bite.
-- **SL3 — non-repudiation, at-rest protection, per-device identity.** It adds
+  device authentication, protection of stored audit records (access control),
+  and confidentiality over untrusted networks — so the transport, evidence, and
+  survival drivers start to bite.
+- **SL3 — non-repudiation, tamper-evident at rest, per-device identity.** It adds
   non-repudiation, unique per-device identity with hardware-protected keys,
-  storage-threshold warnings, and central SIEM correlation — the identity,
-  at-rest, and evidence drivers push harder.
+  *tamper-evident* (cryptographic) at-rest integrity, storage-threshold warnings,
+  and central, correlated audit trails — the identity, at-rest, and evidence
+  drivers push harder.
 - **SL4 — the same data, hardened.** Write-once / immutable storage, a protected
   time source, non-repudiation for *all* principals, and keys held in hardware.
 
@@ -81,9 +83,11 @@ the collector needs both timestamp trust and gap visibility.
 
 ![A device needing non-repudiation](assets/postit/sl3.svg)
 
-Adds mutual TLS with a per-device certificate, an at-rest integrity policy
-(`Crc16Policy`, or a keyed HMAC where the medium is physically exposed),
-`OriginSd` + sysUpTime, and a discard policy with an `OnStoreFull` callback.
+Adds mutual TLS with a per-device certificate, a **keyed** at-rest integrity
+policy (HMAC — tamper-evident; CRC-16 catches only accidental corruption, not an
+attacker), `OriginSd` + sysUpTime, and a discard policy with the matching
+store-full response (`OnStoreFull` under the halt policy, or the threshold
+callback for a pre-full warning).
 *Why:* the receiver must be able to prove the origin of each record, stored
 records may be physically reachable, and storage exhaustion needs a defined,
 caller-chosen response.
