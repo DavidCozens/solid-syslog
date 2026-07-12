@@ -191,7 +191,7 @@ misra-c2012-20.10:Core/Source/SolidSyslogMacros.h:15
 
 # D.011 — Rule 2.5: public API macros consumed outside cppcheck-misra scope
 # See docs/misra-deviations.md#d011
-misra-c2012-2.5:Core/Interface/SolidSyslogCircularBuffer.h:21
+misra-c2012-2.5:Core/Interface/SolidSyslogCircularBuffer.h:25
 
 # D.012 — Rule 8.9: file-scope static const referenced from a file-scope enum + one function
 # See docs/misra-deviations.md#d012

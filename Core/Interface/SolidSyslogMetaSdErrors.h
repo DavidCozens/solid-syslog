@@ -7,15 +7,21 @@ EXTERN_C_BEGIN
 
     struct SolidSyslogErrorSource;
 
+    /** Detail codes for events whose Source is MetaSdErrorSource. A handler
+     *  reads these off event->Detail after matching event->Source; the members
+     *  name their own fault. */
     enum SolidSyslogMetaSdErrors
     {
         METASD_ERROR_NULL_CONFIG,
         METASD_ERROR_NULL_COUNTER,
         METASD_ERROR_POOL_EXHAUSTED,
         METASD_ERROR_UNKNOWN_DESTROY,
-        METASD_ERROR_MAX
+        METASD_ERROR_MAX /**< One past the last code; never emitted. Bounds the range for iteration. */
     };
 
+    /** The identity for events raised by a MetaSd. A handler matches by address
+     *  (event->Source == &MetaSdErrorSource), then reads event->Detail as an
+     *  enum SolidSyslogMetaSdErrors. */
     extern const struct SolidSyslogErrorSource MetaSdErrorSource;
 
 EXTERN_C_END

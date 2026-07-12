@@ -7,6 +7,8 @@ EXTERN_C_BEGIN
 
     struct SolidSyslogBuffer;
 
+    /** Write swallows the record. Read returns false (nothing to deliver), so the
+     *  Service algorithm sees an empty buffer and stops draining. */
     struct SolidSyslogBuffer* SolidSyslogNullBuffer_Get(void);
 
 EXTERN_C_END

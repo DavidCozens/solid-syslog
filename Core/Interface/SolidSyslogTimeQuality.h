@@ -19,8 +19,8 @@ EXTERN_C_BEGIN
     {
         bool TzKnown; /**< Emitted as tzKnown=1/0: is the local timezone known. */
         bool IsSynced; /**< Emitted as isSynced=1/0: is the clock synced to a reliable source. */
-        uint32_t
-            SyncAccuracyMicroseconds; /**< syncAccuracy in microseconds; SOLIDSYSLOG_SYNC_ACCURACY_OMIT omits the field. */
+        /** syncAccuracy in microseconds; SOLIDSYSLOG_SYNC_ACCURACY_OMIT omits the field. */
+        uint32_t SyncAccuracyMicroseconds;
     };
 
     /** Fills @p timeQuality for the current clock state. Installed as the

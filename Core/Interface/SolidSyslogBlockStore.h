@@ -12,6 +12,10 @@ EXTERN_C_BEGIN
     struct SolidSyslogBlockDevice;
     struct SolidSyslogSecurityPolicy;
 
+    /** What happens once MaxBlocks are full. Oldest keeps accepting writes,
+     *  evicting the oldest block to make room; Newest refuses the incoming record;
+     *  Halt refuses it, latches (IsHalted, Service stops), and fires OnStoreFull
+     *  once on entry. */
     enum SolidSyslogDiscardPolicy
     {
         SOLIDSYSLOG_DISCARD_POLICY_OLDEST,
@@ -19,33 +23,43 @@ EXTERN_C_BEGIN
         SOLIDSYSLOG_DISCARD_POLICY_HALT
     };
 
+    /** Fired once when a Halt-policy store first fills. */
     typedef void (*SolidSyslogStoreFullCallback)(void* context);
 
-    /* Returns the capacity-threshold in bytes; 0 disables. Queried on every Write. */
+    /** Returns the capacity threshold in bytes; 0 disables. Queried on every Write. */
     typedef size_t (*SolidSyslogStoreThresholdFunction)(void* context);
 
-    /* Edge-triggered: fires once when used-bytes transitions from below threshold to at-or-above.
-     * PassthroughBuffer note: SolidSyslog_Log is synchronous under SolidSyslogPassthroughBuffer, so calling
-     * SolidSyslog_Log from this callback will recurse into Store_Write. Either gate the Log,
-     * or use SolidSyslogPosixMessageQueueBuffer (which returns immediately). */
+    /** Edge-triggered: fires once when used-bytes rises from below the threshold to
+     *  at-or-above (re-armed when it drops back below). Gotcha under
+     *  SolidSyslogPassthroughBuffer, where SolidSyslog_Log sends inline: logging from
+     *  this callback recurses into the store's Write. Gate the Log, or drive the
+     *  logger from a returning Buffer (e.g. SolidSyslogPosixMessageQueueBuffer). */
     typedef void (*SolidSyslogStoreThresholdCallback)(void* context);
 
+    /** Wiring for SolidSyslogBlockStore_Create. The threshold function and callback
+     *  are only active when both are set; each callback's context is passed back
+     *  unchanged. Every injected object is caller-owned and must outlive the store;
+     *  Destroy releases only the store's own slot. */
     struct SolidSyslogBlockStoreConfig
     {
-        /* Required. Caller-owned: must outlive the BlockStore. SolidSyslogBlockStore_Destroy
-         * does NOT destroy the block device — that is the integrator's responsibility. */
-        struct SolidSyslogBlockDevice* BlockDevice;
-        size_t MaxBlocks;
+        struct SolidSyslogBlockDevice* BlockDevice; /**< Required; block store is the sole writer. */
+        size_t MaxBlocks; /**< Retention ceiling in blocks; DiscardPolicy governs the overflow. */
         enum SolidSyslogDiscardPolicy DiscardPolicy;
-        struct SolidSyslogSecurityPolicy* SecurityPolicy;
+        struct SolidSyslogSecurityPolicy* SecurityPolicy; /**< NULL means no per-record integrity trailer. */
         SolidSyslogStoreFullCallback OnStoreFull;
         void* StoreFullContext;
         SolidSyslogStoreThresholdFunction GetCapacityThreshold;
         SolidSyslogStoreThresholdCallback OnThresholdCrossed;
-        void* ThresholdContext;
+        void* ThresholdContext; /**< Shared by GetCapacityThreshold and OnThresholdCrossed. */
     };
 
+    /** Create a store from @p config, resuming from any records already on the
+     *  device. A NULL config, an exhausted pool, or a failed inner allocation
+     *  falls back to the shared NullStore. A block too small for one worst-case
+     *  record is grown to fit and reported as a WARNING, not a failure. */
     struct SolidSyslogStore* SolidSyslogBlockStore_Create(const struct SolidSyslogBlockStoreConfig* config);
+    /** Release the pool slot; does not destroy the injected BlockDevice or
+     *  SecurityPolicy. */
     void SolidSyslogBlockStore_Destroy(struct SolidSyslogStore * base);
 
 EXTERN_C_END

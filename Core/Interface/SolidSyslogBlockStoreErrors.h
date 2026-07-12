@@ -7,14 +7,20 @@ EXTERN_C_BEGIN
 
     struct SolidSyslogErrorSource;
 
+    /** Detail codes for events whose Source is BlockStoreErrorSource. A handler
+     *  reads these off event->Detail after matching event->Source; the members
+     *  name their own fault. */
     enum SolidSyslogBlockStoreErrors
     {
         BLOCKSTORE_ERROR_POOL_EXHAUSTED,
         BLOCKSTORE_ERROR_UNKNOWN_DESTROY,
         BLOCKSTORE_ERROR_BLOCK_TOO_SMALL,
-        BLOCKSTORE_ERROR_MAX
+        BLOCKSTORE_ERROR_MAX /**< One past the last code; never emitted. Bounds the range for iteration. */
     };
 
+    /** The identity for events raised by a BlockStore. A handler matches by
+     *  address (event->Source == &BlockStoreErrorSource), then reads
+     *  event->Detail as an enum SolidSyslogBlockStoreErrors. */
     extern const struct SolidSyslogErrorSource BlockStoreErrorSource;
 
 EXTERN_C_END
