@@ -695,8 +695,16 @@ jobs:
         with:
           persist-credentials: false
 
-      # --strict fails the build on broken nav or config. Out-of-docs source
-      # links (../Core/…, ../SECURITY.md) are info-level by mkdocs.yml design;
+      # Guard the source-link rewrite hook's Markdown parsing against regression.
+      - name: Test source-link hook
+        run: |
+          docker run --rm -v "$PWD:/docs" \
+            ghcr.io/cososo-ltd/mkdocs-mkdoxy:sha-34173c0 \
+            python3 /docs/hooks/test_source_links.py
+
+      # --strict fails the build on broken nav, config, or links. Out-of-docs
+      # source links (../Core/…, ../SECURITY.md) are rewritten to canonical
+      # GitHub URLs by hooks/source_links.py, so not_found validation is fatal;
       # the api/ reference is generated from Core/Interface/*.h by mkdoxy.
       - name: Build docs site
         run: |

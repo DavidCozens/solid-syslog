@@ -63,19 +63,25 @@ markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
 
-# TEMPORARY, tracked trade-off (docs overhaul Phase 6 follow-up):
-#   not_found  — many docs link to repo source (../Core/…, ../Platform/…,
-#                ../SECURITY.md), valid on GitHub but outside the site's docs
-#                tree. Downgraded until those links are converted to canonical
-#                GitHub URLs, after which this returns to `warn` (fatal).
-#   anchors    — the mkdoxy-generated API pages emit a few internal anchors
-#                (e.g. #enum-@0) that fail anchor validation; kept at info so
-#                mkdoxy output does not fail the strict build.
+# Build-time hook: repo-source links (../Core/…, ../Platform/…, ../SECURITY.md)
+# stay relative in the Markdown so they resolve on GitHub, in a clone, in a
+# fork, and in the IDE. hooks/source_links.py rewrites any link that resolves
+# outside docs/ to a canonical {repo_url}/blob|tree/{ref}/… URL at build time,
+# before MkDocs validates links. Pin the ref per build with SOLIDSYSLOG_DOCS_REF
+# (a release tag or commit SHA); it defaults to main.
+hooks:
+  - hooks/source_links.py
+
+# not_found — enforced (fatal under --strict): the hook above resolves every
+#             in-repo source link, so a genuinely broken link fails the build.
+# anchors   — the mkdoxy-generated API pages emit a few internal anchors
+#             (e.g. #enum-@0) that fail anchor validation; kept at info so
+#             mkdoxy output does not fail the strict build.
 # Everything else keeps its default: nav typos (validation.nav.*) and
 # unrecognized links still fail a strict build.
 validation:
   links:
-    not_found: info
+    not_found: warn
     anchors: info
 
 plugins:
