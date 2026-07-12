@@ -120,9 +120,12 @@ adapters **report and carry on**, they never crash the caller.
 
 ### Synchronising the slot walk
 
-`_Create` / `_Destroy` wrap the slot probe in the
-`SolidSyslog_LockConfig()` / `SolidSyslog_UnlockConfig()` pair. Single-task setup
-gets the no-op default and pays nothing. On a multi-task or multi-core target
+The pool allocator wraps each slot claim and release in the
+`SolidSyslog_LockConfig()` / `SolidSyslog_UnlockConfig()` pair *internally* —
+`AcquireFirstFree` locks per-slot around the claim, `FreeIfInUse` locks around the
+release, so an adapter's `_Create` / `_Destroy` inherit the synchronisation for
+free and never lock themselves (which is why the example above has no lock call).
+Single-task setup gets the no-op default and pays nothing. On a multi-task or multi-core target
 where setup races, install the pair once with `SolidSyslog_SetConfigLock(...)` —
 `taskENTER_CRITICAL` / `taskEXIT_CRITICAL` (FreeRTOS), a static `pthread_mutex_t`
 (POSIX), `EnterCriticalSection` / `LeaveCriticalSection` (Windows), or a spinlock.
@@ -142,8 +145,11 @@ This is the *only* synchronisation primitive the pools use for their own walks.
   contract below), it must let Core's algorithm proceed sanely — drop-on-the-floor
   where a drop is harmless, `false` where the caller has an error path to run.
 - **Bounded blocking.** Anything that can wedge (a `connect`, a handshake) is
-  bounded by a timeout tunable or a caller-supplied `SolidSyslogSleepFunction`;
-  steady-state `Send` / `Read` are non-blocking.
+  bounded by an explicit timeout or deadline — a timeout tunable (e.g.
+  `SOLIDSYSLOG_TCP_CONNECT_TIMEOUT_MS`) or a caller-supplied deadline. A
+  `SolidSyslogSleepFunction`, where one is used, only paces the poll loop between
+  checks; it does not bound the total wait. Steady-state `Send` / `Read` are
+  non-blocking.
 - **Production-C discipline.** Tier 1/2 code is single-return, fully braced, and
   MISRA-leaning — see [MISRA deviations](misra-deviations.md) and
   [Naming conventions](NAMING.md).
@@ -221,9 +227,11 @@ A `StructuredData.Format` writes through the opaque `SolidSyslogSdElement` sink 
 it owns the brackets, the `@`-enterprise SD-ID suffix, and the escaping, so a
 producer cannot break the RFC 5424 framing. A `SecurityPolicy` is handed a
 `SolidSyslogSecurityRecord` split into a cleartext header (associated data) and a
-body: MAC and checksum policies authenticate the whole span; an AEAD policy
-encrypts the body in place and writes its `TrailerSize`-byte trailer. The
-vendor-free `Crc16Policy` is the reference to read first.
+body. A keyed MAC policy authenticates the whole span (tamper-evident); a
+checksum policy such as the vendor-free `Crc16Policy` covers the same span but
+only detects *accidental* corruption, not an attacker; an AEAD policy encrypts the
+body in place and writes its `TrailerSize`-byte trailer. `Crc16Policy` is the
+reference to read first.
 
 ## Where to go next
 

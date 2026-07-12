@@ -44,7 +44,8 @@ Core's Null object stands in.
 - **[Porting guide](porting.md)** — the role model, the anatomy of an adapter
   (instance shape, the no-`malloc` static pool, the error convention), the
   invariants every adapter must honour, and the twelve vtable role contracts each
-  with its Null fallback and POSIX reference implementation.
+  with its Null fallback and shipped reference implementation (POSIX where
+  available, otherwise a Core composition).
 - **The contracts themselves** — the `SolidSyslog*Definition.h` vtables under
   [`Core/Interface/`](../Core/Interface/); [`Platform/Posix/`](../Platform/Posix/)
   is the reference implementation to read alongside them.
