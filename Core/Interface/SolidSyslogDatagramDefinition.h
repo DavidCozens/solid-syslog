@@ -11,6 +11,10 @@ struct SolidSyslogAddress;
 
 EXTERN_C_BEGIN
 
+    /** Vtable an unconnected-datagram (UDP) transport implements. Each method
+     *  receives the same struct as its first argument, so an implementation
+     *  embeds this as its first member and downcasts. Per-method contract is on
+     *  the SolidSyslogDatagram_* wrappers in SolidSyslogDatagram.h. */
     struct SolidSyslogDatagram
     {
         bool (*Open)(struct SolidSyslogDatagram* base);

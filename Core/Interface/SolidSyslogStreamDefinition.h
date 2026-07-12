@@ -11,6 +11,12 @@ struct SolidSyslogAddress;
 
 EXTERN_C_BEGIN
 
+    /** The contract a byte-stream transport (TCP, TLS over TCP) fills in; the
+     *  library drives it from the servicing pass, so it need not be reentrant.
+     *  Each slot's semantics are the corresponding SolidSyslogStream_* function
+     *  in SolidSyslogStream.h; an implementer must honour them, notably the
+     *  non-blocking bounded behaviour and the close-on-failure lifecycle that
+     *  lets the caller reconnect with a bare Open. */
     struct SolidSyslogStream
     {
         bool (*Open)(struct SolidSyslogStream* base, const struct SolidSyslogAddress* addr);

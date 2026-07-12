@@ -8,6 +8,11 @@
 
 EXTERN_C_BEGIN
 
+    /** The block-device extension point: an implementor fills this vtable and embeds it as
+     *  the first member of its own struct, so @p base downcasts back to that struct. Each
+     *  method's contract is the matching SolidSyslogBlockDevice_* wrapper in
+     *  SolidSyslogBlockDevice.h. SolidSyslogNullBlockDevice is the "no disk" implementation:
+     *  every method returns false / 0. */
     struct SolidSyslogBlockDevice
     {
         bool (*Acquire)(struct SolidSyslogBlockDevice* base, size_t blockIndex);
@@ -23,6 +28,7 @@ EXTERN_C_BEGIN
             size_t count
         );
         size_t (*Size)(struct SolidSyslogBlockDevice* base, size_t blockIndex);
+        /** Fixed per-block capacity; read once at BlockStore construction. */
         size_t (*GetBlockSize)(struct SolidSyslogBlockDevice* base);
     };
 

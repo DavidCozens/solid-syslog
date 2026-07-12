@@ -11,31 +11,43 @@ struct SolidSyslogAddress;
 
 EXTERN_C_BEGIN
 
-    /* Signed byte count. Models POSIX ssize_t using a standard-C type for portability
-       to targets that lack <sys/types.h>'s ssize_t (notably MSVC). */
+    /** Signed byte count, the return type of Read. Models POSIX ssize_t using a
+     *  standard-C type for portability to targets that lack <sys/types.h>'s
+     *  ssize_t (notably MSVC). */
     typedef intptr_t SolidSyslogSsize;
 
     struct SolidSyslogStream;
 
-    /* Open a connection to addr. Returns true on success. On failure the underlying
-       socket has already been closed internally; the caller can call Open again to retry. */
+    /** Connect to @p addr, bounded (a stream implementation caps the connect,
+     *  and any TLS handshake, so the servicing thread cannot hang on an
+     *  unresponsive peer). On failure the underlying socket is already closed
+     *  internally, so a bare Open retries cleanly.
+     *
+     *  @retval true  connected and ready for Send / Read.
+     *  @retval false not connected; call Open again to retry. */
     bool SolidSyslogStream_Open(struct SolidSyslogStream * stream, const struct SolidSyslogAddress* addr);
 
-    /* Non-blocking send. Returns true only when the kernel accepts the entire frame in
-       a single call. Anything else — short write, EAGAIN/EWOULDBLOCK, EPIPE/ECONNRESET,
-       any other error — closes the underlying socket internally and returns false; the
-       caller must call Open before the next Send. Bounded so the service-thread drain
-       rate stays insensitive to peer wedges or kernel send-buffer fill. */
+    /** Non-blocking, all-or-nothing send of @p buffer[0..size). A short write or
+     *  any error (would-block, reset, broken pipe) is treated as a lost
+     *  connection: the socket is closed internally and false returned, so the
+     *  caller must Open before the next Send or Read. Bounded this way, the
+     *  servicing thread's drain rate stays insensitive to a wedged peer or a full
+     *  kernel send buffer. @p buffer is read during the call and need not outlive
+     *  it. */
     bool SolidSyslogStream_Send(struct SolidSyslogStream * stream, const void* buffer, size_t size);
 
-    /* Non-blocking read.
-         > 0  bytes transferred into buffer
-         = 0  nothing available right now (would-block)
-         < 0  EOF or error — the underlying socket has been closed internally; the
-              caller must call Open before the next Send or Read. */
+    /** Non-blocking read of up to @p size bytes into @p buffer. The zero return is
+     *  distinct from the negative one: 0 keeps the connection, negative tears it
+     *  down.
+     *
+     *  @retval >0  bytes transferred into @p buffer.
+     *  @retval 0   nothing available right now (would-block); connection intact.
+     *  @retval <0  EOF or error; the socket is closed internally, so the caller
+     *              must Open before the next Send or Read. */
     SolidSyslogSsize SolidSyslogStream_Read(struct SolidSyslogStream * stream, void* buffer, size_t size);
 
-    /* Close the underlying socket. Idempotent. */
+    /** Close the underlying socket. Idempotent, and the stream is reusable:
+     *  a later Open reconnects. */
     void SolidSyslogStream_Close(struct SolidSyslogStream * stream);
 
 EXTERN_C_END

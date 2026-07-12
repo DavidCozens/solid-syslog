@@ -7,8 +7,13 @@ EXTERN_C_BEGIN
 
     struct SolidSyslogSdElement;
 
+    /** A structured-data source. Implementors embed this as the first member of
+     *  their struct so Format can downcast @c base back to the instance. */
     struct SolidSyslogStructuredData
     {
+        /** Write this source's SD-ELEMENT(s) into @p element. @p base is this
+         *  same object, carrying any per-instance state. The library never
+         *  allocates the object, so it lives in the implementor's storage. */
         void (*Format)(struct SolidSyslogStructuredData* base, struct SolidSyslogSdElement* element);
     };
 
