@@ -815,7 +815,7 @@ scanned scope.
 
 ### Rationale
 
-The macros *are* used, by integrators in `Tests/` and `Bdd/Targets/`.
+The macros *are* used by integrators in `Tests/` and `Bdd/Targets/`.
 Verified by `grep` over the tree:
 
 ```text

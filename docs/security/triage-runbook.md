@@ -63,7 +63,8 @@ security-specific steps are:
 
 - [ ] Merge the fix to `main` (from the private fork for High/Critical).
 - [ ] Merge release-please's release PR to cut the tagged release.
-- [ ] Confirm the `release.published` workflow attached the SBOM + signatures.
+- [ ] Confirm the `sbom.yml` workflow, triggered by the `release.published`
+      event, attached the SBOM and signatures.
 - [ ] Record and verify the affected and fixed version ranges in the advisory;
       never publish without a safe version for users to move to.
 - [ ] Publish the GHSA coordinated with the release going live.

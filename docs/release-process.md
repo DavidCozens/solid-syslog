@@ -25,10 +25,12 @@ attached so integrators can verify provenance (per
 4. The `release: published` event triggers `sbom.yml`: it renders and validates
    the CycloneDX SBOM, writes the content-tree SHA-256 (scope: `Core/` +
    `Platform/` + `CMakeLists.txt`, `CMakePresets.json`, `LICENSE.md`), cosign
-   keyless-signs both (GitHub OIDC), and attaches all four assets to the
-   Release.
-5. Signing is advisory (`continue-on-error`) on initial rollout, so it can't
-   block a release.
+   keyless-signs both (GitHub OIDC), and attempts to attach the four assets to
+   the Release.
+5. Signing and attachment are advisory (`continue-on-error`) on initial
+   rollout, so a failure in either can't block a release; confirm all four
+   assets are present on the Release before relying on them (see
+   [release verification](security/release-verification.md)).
 
 > Status: release-please is parked (manual `workflow_dispatch` only) until the
 > 0.1.0 baseline; trigger a release from the Actions tab meanwhile. See

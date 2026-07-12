@@ -246,4 +246,4 @@ If the file is not created, check that:
 
 1. The syslog-ng container is running: `docker compose -f .devcontainer/docker-compose.yml ps`
 2. The config is mounted correctly: `docker compose -f .devcontainer/docker-compose.yml exec syslog-ng cat /etc/syslog-ng/syslog-ng.conf`
-3. After editing `syslog-ng.conf`, reload the config, either via the control socket (see above) or by recreating the container: `docker compose rm -sf syslog-ng && docker compose up -d syslog-ng`
+3. After editing `syslog-ng.conf`, reload the config, either via the control socket (see above) or by recreating the container: `docker compose -f .devcontainer/docker-compose.yml rm -sf syslog-ng && docker compose -f .devcontainer/docker-compose.yml up -d syslog-ng`

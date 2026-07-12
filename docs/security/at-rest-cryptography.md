@@ -31,7 +31,9 @@ trailer is `nonce (12) ‖ tag (16)`.
   operation. The key is never stored on the policy instance.
 - Nonce: a fresh 12-byte random nonce per record via OpenSSL `RAND_bytes`,
   written into the trailer. Random (not counter-based) nonces carry no
-  cross-power-cycle state, so a reboot can never reuse one.
+  cross-power-cycle counter state to lose, so a reboot cannot force the
+  systematic reuse a reset counter would; uniqueness stays probabilistic,
+  bounded by the 2³² per-key envelope below.
 - Failure: `OpenRecord` returns a single `bool`. A tag mismatch (the
   expected tamper-detected outcome) returns `false` silently and the record is
   discarded on read; only a genuine library/OpenSSL error is routed to the
@@ -41,9 +43,9 @@ trailer is `nonce (12) ‖ tag (16)`.
 
 GCM with random nonces is bounded by NIST SP 800-38D §8.3 to 2³² invocations per
 key (the birthday-collision ceiling). For at-rest security-event logging
-this is a non-issue: at a sustained one event per second that envelope is roughly
-136 years under a single key, orders of magnitude beyond any realistic
-volume. The figure is recorded here as headroom, not as a caveat. An integrator
+this is a non-issue: at a sustained one event per second, counting every source
+that shares the key, that envelope is roughly 136 years, orders of magnitude
+beyond any realistic volume. The figure is recorded here as headroom, not as a caveat. An integrator
 whose volumes or key-rotation discipline could approach it should plug a
 nonce-misuse-resistant mode (e.g. AES-256-GCM-SIV) into the same policy slot.
 
