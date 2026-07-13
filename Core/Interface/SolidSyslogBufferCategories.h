@@ -1,6 +1,6 @@
 /** @file
  *  Portable category constants (uint16_t macros) for the Buffer role:
- *  _BUFFER_BACKEND_FAILED. */
+ *  SOLIDSYSLOG_CAT_BUFFER_BACKEND_FAILED. */
 #ifndef SOLIDSYSLOGBUFFERCATEGORIES_H
 #define SOLIDSYSLOGBUFFERCATEGORIES_H
 

@@ -5,7 +5,7 @@
  *  (bit-rot, a truncated write) but is not tamper-evidence: anyone who edits a
  *  record can recompute a matching CRC. For tamper-evidence or confidentiality
  *  use a keyed policy. Being a checksum (not an AEAD), it ignores the record's
- *  header/body split and authenticates the content as one span. The instance is
+ *  header/body split and checks the whole content as one span. The instance is
  *  a shared stateless singleton, so it holds no pool slot and Destroy is a
  *  no-op. */
 #ifndef SOLIDSYSLOGCRC16POLICY_H

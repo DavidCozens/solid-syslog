@@ -1,5 +1,5 @@
 /** @file
- *  Singleton error codes and Source identity for the SolidSyslog instance. */
+ *  Error codes and Source identity for the SolidSyslog instance. */
 #ifndef SOLIDSYSLOGERRORS_H
 #define SOLIDSYSLOGERRORS_H
 
