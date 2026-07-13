@@ -18,8 +18,9 @@
  *
  *  TCP_NODELAY is on, and kernel keepalive (idle ~45s, then 4 x 10s probes via
  *  TCP_KEEPIDLE / TCP_KEEPINTVL / TCP_KEEPCNT) surfaces a wedged peer as a failed
- *  Send/Read. Windows has no TCP_USER_TIMEOUT analogue, so a pending unacked
- *  write relies on the OS-default retransmit timeout.
+ *  Send/Read. This adapter leaves the per-connection pending-write cap (TCP_MAXRT
+ *  and the initial-RTO knobs) at the OS default, so an unacked write relies on the
+ *  OS-default retransmit behaviour.
  *
  *  The caller must invoke WSAStartup before use and WSACleanup on shutdown; the
  *  library does not manage the Winsock lifecycle. */

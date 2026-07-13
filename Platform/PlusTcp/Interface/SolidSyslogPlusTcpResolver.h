@@ -1,7 +1,7 @@
 /** @file
  *  A DNS resolver over FreeRTOS-Plus-TCP's FreeRTOS_getaddrinfo.
  *
- *  Resolve looks up the endpoint host as an IPv4 address (AF_INET4) through
+ *  Resolve looks up the endpoint host as an IPv4 address through
  *  FreeRTOS_getaddrinfo and writes it, with the per-call port, into the
  *  destination SolidSyslogAddress; the requested transport selects the socktype
  *  hint (stream for TCP, datagram otherwise). A failed lookup returns false, so

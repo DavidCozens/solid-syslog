@@ -4,7 +4,7 @@
  *  Resolve delegates to lwIP's ipaddr_aton to parse the endpoint host as a
  *  numeric IP literal, writing it into the destination SolidSyslogAddress;
  *  whatever ipaddr_aton accepts is accepted, whatever it rejects (DNS names,
- *  alphabetic input, empty string) fails the Resolve, so the caller's
+ *  the empty string, and other non-address text) fails the Resolve, so the caller's
  *  unresolved-host error path runs. The transport is ignored. The parse touches
  *  no lwIP core state, so unlike the DNS sibling it takes no marshal hop. */
 #ifndef SOLIDSYSLOGLWIPRAWRESOLVER_H

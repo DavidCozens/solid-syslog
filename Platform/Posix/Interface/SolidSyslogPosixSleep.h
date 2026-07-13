@@ -7,8 +7,9 @@
 
 EXTERN_C_BEGIN
 
-    /** Wraps nanosleep so a bounded retry loop (e.g. the TLS handshake) yields to
-     *  the kernel between attempts. */
+    /** Sleeps for @p milliseconds via nanosleep. It neither performs nor bounds
+     *  retries; callers such as the TLS handshake use it to yield between their own
+     *  bounded attempts. */
     void SolidSyslogPosixSleep(int milliseconds);
 
 EXTERN_C_END

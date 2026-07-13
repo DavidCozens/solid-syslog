@@ -10,7 +10,8 @@
 EXTERN_C_BEGIN
 
     /** Hundredths of a second since boot from CLOCK_BOOTTIME, as RFC 3418
-     *  sysUpTime; wraps modulo 2^32 per the TimeTicks contract. */
+     *  sysUpTime; wraps modulo 2^32 per the TimeTicks contract. Returns 0 if the
+     *  clock read fails. */
     uint32_t SolidSyslogPosixSysUpTime_Get(void);
 
 EXTERN_C_END

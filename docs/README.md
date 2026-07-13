@@ -66,9 +66,8 @@ headers are split by audience (Interface Segregation) under
 [project README](../README.md#architecture) lists the headers by audience.
 
 The generated reference is under **API reference** in the site navigation:
-[Headers](api/files.md) browses every public header grouped by directory —
-`Core/Interface` first, then one folder per platform (`Platform/Posix`,
-`Platform/Windows`, `Platform/LwipRaw`, …); [Data structures](api/annotated.md)
+[Headers](api/files.md) browses every public header grouped by directory
+(`Core/Interface`, then one folder per platform); [Data structures](api/annotated.md)
 lists the config and vtable structs.
 
 ## Maintaining

@@ -48,7 +48,10 @@ EXTERN_C_BEGIN
 
     struct SolidSyslogMbedTlsStreamConfig
     {
-        struct SolidSyslogStream* Transport; /**< Underlying byte stream the TLS records ride on; caller owns it. */
+        /** Underlying byte stream the TLS records ride on. Borrowed — this stream
+         *  may Close it but never destroys it; the caller owns it and must keep it
+         *  valid until SolidSyslogMbedTlsStream_Destroy. */
+        struct SolidSyslogStream* Transport;
         SolidSyslogSleepFunction Sleep; /**< Bridges the WANT_READ/WANT_WRITE polls of the bounded handshake
                                              retry; required — there is no fallback. */
         SolidSyslogTlsHandshakeTimeoutFunction GetHandshakeTimeoutMs; /**< Per-attempt handshake deadline in ms;
@@ -56,10 +59,12 @@ EXTERN_C_BEGIN
         void* HandshakeTimeoutContext; /**< Passed back to GetHandshakeTimeoutMs unchanged; NULL is fine. */
         struct mbedtls_ctr_drbg_context* Rng; /**< Seeded CTR-DRBG for the handshake; caller-built and caller-owned. */
         struct mbedtls_x509_crt* CaChain; /**< Trust anchors the peer cert must chain to; caller-built and owned. */
-        const char* ServerName; /**< SNI + peer-identity check. A non-empty name is verified against the peer
-                                     cert (SAN/CN). NULL connects chain-only but emits a WARNING — the peer is
-                                     unverified (MITM-class). "" is the deliberate opt-out (IP-pinning / private
-                                     CA): connect chain-only, no diagnostic. */
+        /** SNI + peer-identity check. A non-empty name is verified against the peer
+         *  cert (SAN/CN). NULL connects chain-only but emits a WARNING — the peer is
+         *  unverified (MITM-class). "" is the no-name-check opt-out (closed network /
+         *  private CA): the cert must still chain to CaChain, but the endpoint
+         *  identity is not checked; no diagnostic. */
+        const char* ServerName;
         struct mbedtls_x509_crt* ClientCertChain; /**< mTLS leaf (+ intermediates); caller-owned. NULL (or a NULL
                                      ClientKey) disables mTLS — both must be set to present a client cert. */
         struct mbedtls_pk_context* ClientKey; /**< Private key matching ClientCertChain; caller-owned. NULL disables

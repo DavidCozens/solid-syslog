@@ -36,7 +36,10 @@ EXTERN_C_BEGIN
     /** Wires SolidSyslogTlsStream to its transport, trust anchors, and identity. */
     struct SolidSyslogTlsStreamConfig
     {
-        struct SolidSyslogStream* Transport; /**< Underlying byte stream carrying the ciphertext; caller owns it. */
+        /** Underlying byte stream carrying the ciphertext. Borrowed — this stream
+         *  may Close it but never destroys it; the caller owns it and must keep it
+         *  valid until SolidSyslogTlsStream_Destroy. */
+        struct SolidSyslogStream* Transport;
         SolidSyslogSleepFunction Sleep; /**< Drives the bounded handshake retry between WANT_READ/WANT_WRITE
                                          *  polls; required. */
         SolidSyslogTlsHandshakeTimeoutFunction GetHandshakeTimeoutMs; /**< Per-attempt handshake deadline in ms;
@@ -45,10 +48,12 @@ EXTERN_C_BEGIN
                                                                        *  tunable. */
         void* HandshakeTimeoutContext; /**< Passed back to GetHandshakeTimeoutMs unchanged; NULL is fine. */
         const char* CaBundlePath; /**< PEM file of trust anchors the peer cert must chain to. */
-        const char* ServerName; /**< SNI plus the expected peer identity. A non-empty name is verified against the
-                                 *  cert (SAN/CN). NULL connects chain-only but emits a WARNING — the peer is
-                                 *  unverified (MITM-class). "" is the deliberate opt-out (IP-pinning / private
-                                 *  CA): chain-only, no diagnostic. */
+        /** SNI plus the expected peer identity. A non-empty name is verified against
+         *  the cert (SAN/CN). NULL connects chain-only but emits a WARNING — the peer
+         *  is unverified (MITM-class). "" is the no-name-check opt-out (closed network
+         *  / private CA): still chain-verified against CaBundlePath, endpoint identity
+         *  unchecked; no diagnostic. */
+        const char* ServerName;
         const char* CipherList; /**< TLS 1.2 cipher list; NULL uses the OpenSSL default. */
         const char* ClientCertChainPath; /**< PEM leaf cert (+ intermediates) for mTLS; NULL = no mTLS. Cert and
                                           *  key are all-or-nothing — supplying one without the other is a setup

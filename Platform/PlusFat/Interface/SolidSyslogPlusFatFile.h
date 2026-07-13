@@ -1,8 +1,9 @@
 /** @file
  *  FreeRTOS-Plus-FAT file I/O behind the SolidSyslogFile vtable, for a
- *  file-backed BlockDevice or Store on FreeRTOS targets. Open is open-or-create
- *  without truncation (ff_fopen "r+", falling back to "w+" only when the file
- *  is absent), so an existing record file is never emptied on reopen. Every
+ *  file-backed BlockDevice or Store on FreeRTOS targets. Open uses ff_fopen
+ *  "r+" (opens an existing file without truncating), falling back to "w+" if
+ *  that fails — open-or-create for the normal absent-file path. Caveat: "w+"
+ *  truncates, so an "r+" failure from another cause would empty the file. Every
  *  complete Write flushes the IO-manager cache to the media before returning,
  *  so a power loss never loses a record the BlockStore was told had been
  *  stored. Open-state is carried by the FF_FILE* sentinel — no separate flag.
