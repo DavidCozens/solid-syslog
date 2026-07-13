@@ -1,3 +1,6 @@
+/** @file
+ *  The advisory servicing-hint enum SolidSyslog_Service returns to drive a
+ *  host loop (idle / ready / blocked / halted). */
 #ifndef SOLIDSYSLOGSERVICESTATUS_H
 #define SOLIDSYSLOGSERVICESTATUS_H
 

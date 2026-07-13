@@ -1,3 +1,5 @@
+/** @file
+ *  Error codes and Source identity for the MetaSd. */
 #ifndef SOLIDSYSLOGMETASDERRORS_H
 #define SOLIDSYSLOGMETASDERRORS_H
 

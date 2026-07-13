@@ -1,3 +1,6 @@
+/** @file
+ *  The transport selector enum (UDP / TCP) and the IANA default-port
+ *  convenience constants. */
 #ifndef SOLIDSYSLOGTRANSPORT_H
 #define SOLIDSYSLOGTRANSPORT_H
 

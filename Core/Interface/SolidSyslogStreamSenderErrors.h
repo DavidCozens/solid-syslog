@@ -1,3 +1,5 @@
+/** @file
+ *  Error codes and Source identity for the StreamSender. */
 #ifndef SOLIDSYSLOGSTREAMSENDERERRORS_H
 #define SOLIDSYSLOGSTREAMSENDERERRORS_H
 

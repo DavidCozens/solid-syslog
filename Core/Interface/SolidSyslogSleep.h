@@ -1,3 +1,6 @@
+/** @file
+ *  The millisecond-sleep callback typedef the integrator injects to drive the
+ *  bounded wait-and-retry loops without busy-spinning. */
 #ifndef SOLIDSYSLOGSLEEP_H
 #define SOLIDSYSLOGSLEEP_H
 

@@ -1,3 +1,8 @@
+/** @file
+ *  The block-device role: block-indexed storage (Acquire / Dispose / Exists /
+ *  Read / Append / WriteAt / Size / GetBlockSize) beneath a BlockStore. These
+ *  calls dispatch to the injected device's vtable, so behaviour is that
+ *  device's. */
 #ifndef SOLIDSYSLOGBLOCKDEVICE_H
 #define SOLIDSYSLOGBLOCKDEVICE_H
 

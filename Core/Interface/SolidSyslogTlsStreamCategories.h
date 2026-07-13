@@ -1,3 +1,6 @@
+/** @file
+ *  Portable category constants (uint16_t macros) for the TLS-stream role:
+ *  SOLIDSYSLOG_CAT_TLSSTREAM_INIT_FAILED / _HANDSHAKE_FAILED. */
 #ifndef SOLIDSYSLOGTLSSTREAMCATEGORIES_H
 #define SOLIDSYSLOGTLSSTREAMCATEGORIES_H
 

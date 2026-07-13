@@ -1,3 +1,5 @@
+/** @file
+ *  Error codes and Source identity for the BlockStore. */
 #ifndef SOLIDSYSLOGBLOCKSTOREERRORS_H
 #define SOLIDSYSLOGBLOCKSTOREERRORS_H
 

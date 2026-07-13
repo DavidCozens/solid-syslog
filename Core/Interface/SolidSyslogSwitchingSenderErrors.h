@@ -1,3 +1,5 @@
+/** @file
+ *  Error codes and Source identity for the SwitchingSender. */
 #ifndef SOLIDSYSLOGSWITCHINGSENDERERRORS_H
 #define SOLIDSYSLOGSWITCHINGSENDERERRORS_H
 

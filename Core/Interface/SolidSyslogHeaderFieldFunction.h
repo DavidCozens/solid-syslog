@@ -1,3 +1,6 @@
+/** @file
+ *  The header-field callback typedef the integrator supplies to
+ *  SolidSyslogConfig for HOSTNAME / APP-NAME / PROCID. */
 #ifndef SOLIDSYSLOGHEADERFIELDFUNCTION_H
 #define SOLIDSYSLOGHEADERFIELDFUNCTION_H
 

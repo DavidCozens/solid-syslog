@@ -1,3 +1,5 @@
+/** @file
+ *  The RFC 5424 facility and severity enums that compose a message's PRIVAL. */
 #ifndef SOLIDSYSLOGPRIVAL_H
 #define SOLIDSYSLOGPRIVAL_H
 

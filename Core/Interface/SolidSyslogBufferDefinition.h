@@ -1,3 +1,6 @@
+/** @file
+ *  The Buffer vtable (Write / Read) — the contract an implementor fills in (the
+ *  Buffer extension point). */
 #ifndef SOLIDSYSLOGBUFFERDEFINITION_H
 #define SOLIDSYSLOGBUFFERDEFINITION_H
 

@@ -1,3 +1,5 @@
+/** @file
+ *  Error codes and Source identity for the UdpSender. */
 #ifndef SOLIDSYSLOGUDPSENDERERRORS_H
 #define SOLIDSYSLOGUDPSENDERERRORS_H
 

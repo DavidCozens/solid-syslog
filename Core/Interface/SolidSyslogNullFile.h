@@ -1,3 +1,7 @@
+/** @file
+ *  The no-op File Null object: Open, IsOpen, Read and Exists return false (consumers take
+ *  their error path), Write and Delete return true (success reported vacuously), SeekTo,
+ *  Truncate and Close are no-ops, Size returns 0. */
 #ifndef SOLIDSYSLOGNULLFILE_H
 #define SOLIDSYSLOGNULLFILE_H
 

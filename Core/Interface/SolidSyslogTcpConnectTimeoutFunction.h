@@ -1,3 +1,6 @@
+/** @file
+ *  The callback typedef the integrator installs on a TCP stream config to
+ *  supply the bounded-connect deadline per attempt (runtime-tunable). */
 #ifndef SOLIDSYSLOGTCPCONNECTTIMEOUTFUNCTION_H
 #define SOLIDSYSLOGTCPCONNECTTIMEOUTFUNCTION_H
 

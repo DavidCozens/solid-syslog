@@ -1,3 +1,7 @@
+/** @file
+ *  The file role: byte-file I/O (Open / Close / IsOpen / Read / Write / SeekTo /
+ *  Size / Truncate / Exists / Delete) backing the store. These calls dispatch to
+ *  the injected file's vtable, so behaviour is that file's. */
 #ifndef SOLIDSYSLOGFILE_H
 #define SOLIDSYSLOGFILE_H
 

@@ -1,3 +1,7 @@
+/** @file
+ *  UDP payload sizing helpers: the usable payload for a given MTU and the
+ *  UTF-8-safe trim used to fit a message into a datagram without splitting a
+ *  codepoint. */
 #ifndef SOLIDSYSLOGUDPPAYLOAD_H
 #define SOLIDSYSLOGUDPPAYLOAD_H
 

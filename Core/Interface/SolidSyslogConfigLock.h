@@ -1,3 +1,6 @@
+/** @file
+ *  The config-time critical-section injection pair guarding every pool
+ *  Create/Destroy slot-walk; the no-op default suits single-task setup. */
 #ifndef SOLIDSYSLOGCONFIGLOCK_H
 #define SOLIDSYSLOGCONFIGLOCK_H
 

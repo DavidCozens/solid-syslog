@@ -1,3 +1,6 @@
+/** @file
+ *  Portable category constants (uint16_t macros) for the Resolver role:
+ *  SOLIDSYSLOG_CAT_RESOLVER_RESOLVE_FAILED. */
 #ifndef SOLIDSYSLOGRESOLVERCATEGORIES_H
 #define SOLIDSYSLOGRESOLVERCATEGORIES_H
 

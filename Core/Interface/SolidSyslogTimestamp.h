@@ -1,3 +1,6 @@
+/** @file
+ *  The broken-down timestamp struct and the SolidSyslogClockFunction that fills
+ *  it, supplying the RFC 5424 TIMESTAMP field. */
 #ifndef SOLIDSYSLOGTIMESTAMP_H
 #define SOLIDSYSLOGTIMESTAMP_H
 

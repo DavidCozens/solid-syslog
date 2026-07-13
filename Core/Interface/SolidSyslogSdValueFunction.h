@@ -1,3 +1,6 @@
+/** @file
+ *  The SD-value callback typedef the integrator supplies for dynamic PARAM
+ *  values (e.g. MetaSd language, OriginSd fields). */
 #ifndef SOLIDSYSLOGSDVALUEFUNCTION_H
 #define SOLIDSYSLOGSDVALUEFUNCTION_H
 

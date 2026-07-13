@@ -1,3 +1,6 @@
+/** @file
+ *  The StructuredData vtable (Format) — the SD-source contract an implementor
+ *  fills in (the StructuredData extension point). */
 #ifndef SOLIDSYSLOGSTRUCTUREDDATADEFINITION_H
 #define SOLIDSYSLOGSTRUCTUREDDATADEFINITION_H
 

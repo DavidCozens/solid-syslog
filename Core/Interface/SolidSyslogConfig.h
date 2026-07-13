@@ -1,3 +1,6 @@
+/** @file
+ *  The setup-time wiring: the SolidSyslogConfig struct and SolidSyslog_Create /
+ *  _Destroy that build and release a logger from it. */
 #ifndef SOLIDSYSLOGCONFIG_H
 #define SOLIDSYSLOGCONFIG_H
 

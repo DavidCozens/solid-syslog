@@ -1,3 +1,7 @@
+/** @file
+ *  The BlockDevice vtable (Acquire / Dispose / Exists / Read / Append / WriteAt /
+ *  Size / GetBlockSize) — the contract an implementor fills in (the BlockDevice
+ *  extension point). */
 #ifndef SOLIDSYSLOGBLOCKDEVICEDEFINITION_H
 #define SOLIDSYSLOGBLOCKDEVICEDEFINITION_H
 

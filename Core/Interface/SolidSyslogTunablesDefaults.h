@@ -1,3 +1,7 @@
+/** @file
+ *  The default values for every compile-time tunable — pool sizes, message /
+ *  path / integrity limits, and timeouts — each #ifndef-guarded so a user
+ *  override wins. Reached through the SolidSyslogTunables.h umbrella. */
 #ifndef SOLIDSYSLOG_TUNABLES_DEFAULTS_H
 #define SOLIDSYSLOG_TUNABLES_DEFAULTS_H
 

@@ -1,3 +1,6 @@
+/** @file
+ *  The no-op AtomicCounter Null object: Increment returns 1U unconditionally, the safest
+ *  value when a real counter is unavailable (RFC 5424 §7.3.1 forbids a sequenceId of 0). */
 #ifndef SOLIDSYSLOGNULLATOMICCOUNTER_H
 #define SOLIDSYSLOGNULLATOMICCOUNTER_H
 

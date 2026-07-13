@@ -1,3 +1,6 @@
+/** @file
+ *  The no-op Buffer Null object: Write swallows the record, Read returns false (nothing to
+ *  deliver) so the Service algorithm sees an empty buffer and stops draining. */
 #ifndef SOLIDSYSLOGNULLBUFFER_H
 #define SOLIDSYSLOGNULLBUFFER_H
 

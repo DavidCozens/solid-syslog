@@ -1,3 +1,6 @@
+/** @file
+ *  The value sink an endpoint callback writes the destination host into —
+ *  copied verbatim so a DNS name or IP literal reaches the resolver intact. */
 #ifndef SOLIDSYSLOGENDPOINTHOST_H
 #define SOLIDSYSLOGENDPOINTHOST_H
 

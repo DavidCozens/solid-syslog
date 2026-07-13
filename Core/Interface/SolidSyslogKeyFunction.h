@@ -1,3 +1,6 @@
+/** @file
+ *  The on-demand secret-key callback typedef the integrator supplies to a keyed
+ *  SecurityPolicy, so the key never lives on the policy instance. */
 #ifndef SOLIDSYSLOGKEYFUNCTION_H
 #define SOLIDSYSLOGKEYFUNCTION_H
 

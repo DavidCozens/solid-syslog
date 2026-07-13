@@ -1,3 +1,7 @@
+/** @file
+ *  The no-op Store Null object (no store-and-forward): Write returns false and IsTransient
+ *  returns true, so the Service algorithm falls through to a direct send instead of
+ *  buffering. ReadNextUnsent and HasUnsent report empty, IsHalted reports false. */
 #ifndef SOLIDSYSLOGNULLSTORE_H
 #define SOLIDSYSLOGNULLSTORE_H
 

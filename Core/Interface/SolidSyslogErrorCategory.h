@@ -1,3 +1,6 @@
+/** @file
+ *  The portable error-category axis: the universal lifecycle category macros
+ *  and the per-role base ranges a handler switches on or an emit site picks. */
 #ifndef SOLIDSYSLOGERRORCATEGORY_H
 #define SOLIDSYSLOGERRORCATEGORY_H
 
