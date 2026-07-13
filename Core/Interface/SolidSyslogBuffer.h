@@ -1,3 +1,8 @@
+/** @file
+ *  The buffer role: producer Write / consumer Read that decouples
+ *  SolidSyslog_Log from Service. These calls dispatch to the injected buffer's
+ *  vtable, so behaviour — notably whether Write blocks or returns at once — is
+ *  that buffer's. */
 #ifndef SOLIDSYSLOGBUFFER_H
 #define SOLIDSYSLOGBUFFER_H
 

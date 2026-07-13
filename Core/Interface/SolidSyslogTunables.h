@@ -1,3 +1,6 @@
+/** @file
+ *  The compile-time tunables umbrella: pulls the optional user override first,
+ *  then SolidSyslogTunablesDefaults.h so unset knobs fall back to defaults. */
 #ifndef SOLIDSYSLOG_TUNABLES_H
 #define SOLIDSYSLOG_TUNABLES_H
 

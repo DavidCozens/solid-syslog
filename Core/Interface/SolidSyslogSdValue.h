@@ -1,3 +1,7 @@
+/** @file
+ *  The per-param value sink of the SD authoring API: streams a PARAM value with
+ *  RFC 5424 escaping applied by the library, so an author cannot break SD
+ *  framing. */
 #ifndef SOLIDSYSLOGSDVALUE_H
 #define SOLIDSYSLOGSDVALUE_H
 

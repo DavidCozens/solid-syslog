@@ -1,3 +1,7 @@
+/** @file
+ *  The error-reporting API: SolidSyslog_SetErrorHandler to install a handler,
+ *  SolidSyslog_Error to emit, and the event's Severity / Source / Category /
+ *  Detail axes a handler reads. */
 #ifndef SOLIDSYSLOGERROR_H
 #define SOLIDSYSLOGERROR_H
 

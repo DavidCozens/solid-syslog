@@ -1,3 +1,6 @@
+/** @file
+ *  The opaque resolved-destination handle a Resolver writes and a Datagram or
+ *  Stream reads; the concrete layout is private to each platform's sources. */
 #ifndef SOLIDSYSLOGADDRESS_H
 #define SOLIDSYSLOGADDRESS_H
 

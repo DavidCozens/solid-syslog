@@ -1,3 +1,7 @@
+/** @file
+ *  The atomic-counter role: hand out the next sequenceId (Increment), wrap-aware
+ *  over [1, 2^31 - 1] and never 0 per RFC 5424 §7.3.1. This call dispatches to
+ *  the injected counter's vtable, so behaviour is that counter's. */
 #ifndef SOLIDSYSLOGATOMICCOUNTER_H
 #define SOLIDSYSLOGATOMICCOUNTER_H
 

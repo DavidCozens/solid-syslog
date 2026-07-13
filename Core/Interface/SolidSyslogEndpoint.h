@@ -1,3 +1,6 @@
+/** @file
+ *  The destination a sender is directed at (host sink + port) and the callbacks
+ *  a sender uses to pull it and to detect when it changes. */
 #ifndef SOLIDSYSLOGENDPOINT_H
 #define SOLIDSYSLOGENDPOINT_H
 

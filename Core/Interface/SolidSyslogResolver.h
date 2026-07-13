@@ -1,3 +1,8 @@
+/** @file
+ *  The resolver role: turn a host/port into a destination address (Resolve) for
+ *  a later Datagram or Stream to read. This call dispatches to the injected
+ *  resolver's vtable, so behaviour — DNS lookup, numeric parse, or a pinned
+ *  fixed destination, and whether it blocks — is that resolver's. */
 #ifndef SOLIDSYSLOGRESOLVER_H
 #define SOLIDSYSLOGRESOLVER_H
 

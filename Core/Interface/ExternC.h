@@ -1,3 +1,6 @@
+/** @file
+ *  The C-linkage guard macros (EXTERN_C_BEGIN / EXTERN_C_END) that wrap every
+ *  public header so a C++ consumer links the declarations with C linkage. */
 #ifndef EXTERNC_H
 #define EXTERNC_H
 

@@ -1,3 +1,6 @@
+/** @file
+ *  The clock-quality data (tzKnown / isSynced / syncAccuracy) and the callback
+ *  that supplies it, feeding the RFC 5424 "timeQuality" SD-ELEMENT. */
 #ifndef SOLIDSYSLOGTIMEQUALITY_H
 #define SOLIDSYSLOGTIMEQUALITY_H
 

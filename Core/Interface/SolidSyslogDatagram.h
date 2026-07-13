@@ -1,3 +1,7 @@
+/** @file
+ *  The datagram role: connectionless send of one message to an address (Open /
+ *  SendTo / Close), with a path-MTU hint (MaxPayload). These calls dispatch to
+ *  the injected datagram's vtable, so behaviour is that datagram's. */
 #ifndef SOLIDSYSLOGDATAGRAM_H
 #define SOLIDSYSLOGDATAGRAM_H
 

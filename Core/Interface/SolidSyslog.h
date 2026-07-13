@@ -1,3 +1,6 @@
+/** @file
+ *  The application logging API: SolidSyslog_Log / _LogWithSd to emit an event,
+ *  SolidSyslog_Service to drive delivery, and the SolidSyslogMessage struct. */
 #ifndef SOLIDSYSLOG_H
 #define SOLIDSYSLOG_H
 

@@ -1,3 +1,7 @@
+/** @file
+ *  The SD authoring API for one [SD-ID PARAM="value"...] element: _Begin /
+ *  _Param / _End, which own the brackets and SD-NAME charset so the author
+ *  writes only names and values. */
 #ifndef SOLIDSYSLOGSDELEMENT_H
 #define SOLIDSYSLOGSDELEMENT_H
 

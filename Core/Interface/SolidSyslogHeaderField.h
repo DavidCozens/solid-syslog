@@ -1,3 +1,6 @@
+/** @file
+ *  The value sink a callback writes an RFC 5424 header field (HOSTNAME /
+ *  APP-NAME / PROCID) into; the sink owns the charset and the field width. */
 #ifndef SOLIDSYSLOGHEADERFIELD_H
 #define SOLIDSYSLOGHEADERFIELD_H
 

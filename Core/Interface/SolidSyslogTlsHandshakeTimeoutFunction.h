@@ -1,3 +1,6 @@
+/** @file
+ *  The callback typedef the integrator installs on a TLS stream config to
+ *  supply the bounded-handshake deadline per attempt (runtime-tunable). */
 #ifndef SOLIDSYSLOGTLSHANDSHAKETIMEOUTFUNCTION_H
 #define SOLIDSYSLOGTLSHANDSHAKETIMEOUTFUNCTION_H
 
