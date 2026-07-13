@@ -65,7 +65,11 @@ headers are split by audience (Interface Segregation) under
 [`Core/Interface/`](../Core/Interface/) and each `Platform/*/Interface/`. The
 [project README](../README.md#architecture) lists the headers by audience.
 
-A generated API reference (Doxygen, on the doc site) is planned.
+The generated reference is under **API reference** in the site navigation:
+[Headers](api/files.md) browses every public header grouped by directory —
+`Core/Interface` first, then one folder per platform (`Platform/Posix`,
+`Platform/Windows`, `Platform/LwipRaw`, …); [Data structures](api/annotated.md)
+lists the config and vtable structs.
 
 ## Maintaining
 

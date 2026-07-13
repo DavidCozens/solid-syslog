@@ -92,7 +92,7 @@ plugins:
   - mkdoxy:
       projects:
         api:
-          src-dirs: Core/Interface
+          src-dirs: "Core/Interface Platform/Atomics/Interface Platform/FatFs/Interface Platform/FreeRtos/Interface Platform/LwipRaw/Interface Platform/MbedTls/Interface Platform/OpenSsl/Interface Platform/PlusFat/Interface Platform/PlusTcp/Interface Platform/Posix/Interface Platform/Windows/Interface"
           full-doc: true
           doxy-cfg:
             FILE_PATTERNS: "*.h"
@@ -125,9 +125,10 @@ nav:
       - Vulnerability triage: security/triage-runbook.md
       - Release verification: security/release-verification.md
   - API reference:
-      - Overview: api/links.md
       - Headers: api/files.md
       - Data structures: api/annotated.md
+      - Functions: api/functions.md
+      - Macros: api/macros.md
   - Maintaining:
       - Building & testing: builds.md
       - Local checks: local-checks.md
