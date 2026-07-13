@@ -1,3 +1,6 @@
+/** @file
+ *  The no-op Sender Null object: Send returns true (drops the record on the floor so the
+ *  Store does not fill with undeliverables), Disconnect is a no-op. */
 #ifndef SOLIDSYSLOGNULLSENDER_H
 #define SOLIDSYSLOGNULLSENDER_H
 

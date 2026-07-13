@@ -1,3 +1,5 @@
+/** @file
+ *  Error codes and Source identity for the TimeQualitySd. */
 #ifndef SOLIDSYSLOGTIMEQUALITYSDERRORS_H
 #define SOLIDSYSLOGTIMEQUALITYSDERRORS_H
 

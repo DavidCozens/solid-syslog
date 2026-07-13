@@ -1,3 +1,6 @@
+/** @file
+ *  Portable category constants (uint16_t macros) for the SecurityPolicy role:
+ *  _SECURITYPOLICY_KEY_UNAVAILABLE / _SEAL_FAILED / _OPEN_FAILED. */
 #ifndef SOLIDSYSLOGSECURITYPOLICYCATEGORIES_H
 #define SOLIDSYSLOGSECURITYPOLICYCATEGORIES_H
 

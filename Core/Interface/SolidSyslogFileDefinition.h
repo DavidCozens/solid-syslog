@@ -1,3 +1,7 @@
+/** @file
+ *  The File vtable (Open / Close / IsOpen / Read / Write / SeekTo / Size /
+ *  Truncate / Exists / Delete) — the contract a porter fills in (the File
+ *  extension point). */
 #ifndef SOLIDSYSLOGFILEDEFINITION_H
 #define SOLIDSYSLOGFILEDEFINITION_H
 

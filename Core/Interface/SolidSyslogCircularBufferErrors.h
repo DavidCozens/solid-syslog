@@ -1,3 +1,5 @@
+/** @file
+ *  Error codes and Source identity for the CircularBuffer. */
 #ifndef SOLIDSYSLOGCIRCULARBUFFERERRORS_H
 #define SOLIDSYSLOGCIRCULARBUFFERERRORS_H
 

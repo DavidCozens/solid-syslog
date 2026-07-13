@@ -1,3 +1,6 @@
+/** @file
+ *  Portable category constants (uint16_t macros) for the Sender role:
+ *  _SENDER_DELIVERY_FAILED / _SENDER_DELIVERY_RESTORED. */
 #ifndef SOLIDSYSLOGSENDERCATEGORIES_H
 #define SOLIDSYSLOGSENDERCATEGORIES_H
 

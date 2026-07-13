@@ -1,3 +1,7 @@
+/** @file
+ *  The no-op Stream Null object: Send returns true (drops the bytes on the floor so the
+ *  Store does not fill with undeliverables), Read returns 0 (would-block, so the caller
+ *  does not tear the connection down), Open and Close are no-ops. */
 #ifndef SOLIDSYSLOGNULLSTREAM_H
 #define SOLIDSYSLOGNULLSTREAM_H
 

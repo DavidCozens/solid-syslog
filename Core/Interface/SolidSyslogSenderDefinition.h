@@ -1,3 +1,6 @@
+/** @file
+ *  The Sender vtable (Send / Disconnect) — the contract an implementor fills in
+ *  (the Sender extension point). */
 #ifndef SOLIDSYSLOGSENDERDEFINITION_H
 #define SOLIDSYSLOGSENDERDEFINITION_H
 

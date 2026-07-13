@@ -1,3 +1,5 @@
+/** @file
+ *  Error codes and Source identity for the PassthroughBuffer. */
 #ifndef SOLIDSYSLOGPASSTHROUGHBUFFERERRORS_H
 #define SOLIDSYSLOGPASSTHROUGHBUFFERERRORS_H
 

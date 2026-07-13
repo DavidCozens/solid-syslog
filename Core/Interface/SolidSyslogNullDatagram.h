@@ -1,3 +1,7 @@
+/** @file
+ *  The no-op Datagram Null object: SendTo returns SENT (drops the datagram on the floor so
+ *  the Store does not fill with undeliverables), MaxPayload returns the IPv6-safe default,
+ *  Open and Close are no-ops. */
 #ifndef SOLIDSYSLOGNULLDATAGRAM_H
 #define SOLIDSYSLOGNULLDATAGRAM_H
 

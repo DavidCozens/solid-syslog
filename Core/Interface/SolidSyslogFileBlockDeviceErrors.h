@@ -1,3 +1,5 @@
+/** @file
+ *  Error codes and Source identity for the FileBlockDevice. */
 #ifndef SOLIDSYSLOGFILEBLOCKDEVICEERRORS_H
 #define SOLIDSYSLOGFILEBLOCKDEVICEERRORS_H
 

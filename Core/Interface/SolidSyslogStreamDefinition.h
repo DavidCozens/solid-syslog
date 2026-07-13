@@ -1,3 +1,7 @@
+/** @file
+ *  The Stream vtable (Open / Send / Read / Close) — the byte-stream (TCP, TLS
+ *  over TCP) transport contract an implementor fills in (the Stream extension
+ *  point). */
 #ifndef SOLIDSYSLOGSTREAMDEFINITION_H
 #define SOLIDSYSLOGSTREAMDEFINITION_H
 

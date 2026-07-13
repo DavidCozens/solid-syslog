@@ -1,3 +1,5 @@
+/** @file
+ *  Error codes and Source identity for the OriginSd. */
 #ifndef SOLIDSYSLOGORIGINSDERRORS_H
 #define SOLIDSYSLOGORIGINSDERRORS_H
 

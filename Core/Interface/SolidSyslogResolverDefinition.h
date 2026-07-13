@@ -1,3 +1,6 @@
+/** @file
+ *  The Resolver vtable (Resolve) — the host-to-address contract an implementor
+ *  fills in (the Resolver extension point). */
 #ifndef SOLIDSYSLOGRESOLVERDEFINITION_H
 #define SOLIDSYSLOGRESOLVERDEFINITION_H
 

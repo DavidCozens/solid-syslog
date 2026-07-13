@@ -1,3 +1,6 @@
+/** @file
+ *  The no-op Structured Data Null object: Format writes nothing, so this SD slot
+ *  contributes no SD-ELEMENT to the message. */
 #ifndef SOLIDSYSLOGNULLSD_H
 #define SOLIDSYSLOGNULLSD_H
 

@@ -1,3 +1,6 @@
+/** @file
+ *  The no-op Mutex Null object: Lock and Unlock are no-ops, giving unsynchronised access
+ *  for single-task targets that need no mutual exclusion. */
 #ifndef SOLIDSYSLOGNULLMUTEX_H
 #define SOLIDSYSLOGNULLMUTEX_H
 
