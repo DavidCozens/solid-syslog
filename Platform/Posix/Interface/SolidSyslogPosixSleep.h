@@ -1,3 +1,5 @@
+/** @file
+ *  The POSIX SolidSyslogSleepFunction. */
 #ifndef SOLIDSYSLOGPOSIXSLEEP_H
 #define SOLIDSYSLOGPOSIXSLEEP_H
 
@@ -5,8 +7,9 @@
 
 EXTERN_C_BEGIN
 
-    /* POSIX implementation of SolidSyslogSleepFunction. Wraps nanosleep so
-       the TLS handshake retry loop yields to the kernel between attempts. */
+    /** Sleeps for @p milliseconds via nanosleep. It neither performs nor bounds
+     *  retries; callers such as the TLS handshake use it to yield between their own
+     *  bounded attempts. */
     void SolidSyslogPosixSleep(int milliseconds);
 
 EXTERN_C_END
