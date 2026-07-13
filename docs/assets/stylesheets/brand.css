@@ -9,10 +9,18 @@
 
 :root {
   --md-typeset-a-color: #3e2199;
-  --md-accent-fg-color:  #5a3fc0;
+  --md-accent-fg-color:  #3e2199;
   /* Footer in the website's charcoal (.site-footer #363a43, bottom-bar #2f333b). */
   --md-footer-bg-color:       #363a43;
   --md-footer-bg-color--dark: #2f333b;
+}
+
+/* Body text in cososo.co.uk's body tone (#626262) and its airier line-height
+   (~1.73), rather than Material's darker/tighter defaults — matches the
+   marketing site. */
+.md-typeset {
+  color: #626262;
+  line-height: 1.73;
 }
 
 /* Small SolidSyslog wordmark (white variant) above the footer copyright. */
