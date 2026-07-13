@@ -1,3 +1,6 @@
+/** @file
+ *  The POSIX SolidSyslogHeaderFieldFunction for RFC 5424 HOSTNAME, for
+ *  SolidSyslogConfig.GetHostname. */
 #ifndef SOLIDSYSLOGPOSIXHOSTNAME_H
 #define SOLIDSYSLOGPOSIXHOSTNAME_H
 
@@ -7,6 +10,7 @@ struct SolidSyslogHeaderField;
 
 EXTERN_C_BEGIN
 
+    /** Writes the host's name (gethostname) into @p field. @p context is unused. */
     void SolidSyslogPosixHostname_Get(struct SolidSyslogHeaderField * field, void* context);
 
 EXTERN_C_END
