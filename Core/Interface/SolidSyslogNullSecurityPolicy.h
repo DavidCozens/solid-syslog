@@ -5,6 +5,8 @@
 
 EXTERN_C_BEGIN
 
+    /** Pass-through: Seal and Open both return true without touching the record, adding
+     *  no integrity data and accepting every record as valid. */
     struct SolidSyslogSecurityPolicy* SolidSyslogNullSecurityPolicy_Get(void);
 
 EXTERN_C_END

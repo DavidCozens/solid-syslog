@@ -5,6 +5,10 @@
 
 EXTERN_C_BEGIN
 
+    /** Never retains a record. Write returns false (not held by this store), so the
+     *  Service algorithm falls through to a direct send instead of buffering, giving the
+     *  constrained-system "one attempt per message, no store-and-forward" configuration.
+     *  ReadNextUnsent and HasUnsent report empty; IsHalted reports false. */
     struct SolidSyslogStore* SolidSyslogNullStore_Get(void);
 
 EXTERN_C_END

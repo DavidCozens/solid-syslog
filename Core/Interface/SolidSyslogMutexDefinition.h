@@ -5,6 +5,12 @@
 
 EXTERN_C_BEGIN
 
+    /** The one synchronisation seam a CircularBuffer needs: it guards the ring's
+     *  producer (Log/Write) against its consumer (Service/Read). Core takes the
+     *  lock only around each buffer operation and never nests it, so a plain
+     *  non-recursive mutex suffices; Lock may block until the holder releases.
+     *  Single-task builds inject SolidSyslogNullMutex, whose Lock/Unlock are
+     *  no-ops. */
     struct SolidSyslogMutex
     {
         void (*Lock)(struct SolidSyslogMutex* base);

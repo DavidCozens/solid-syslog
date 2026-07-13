@@ -5,6 +5,7 @@
 
 EXTERN_C_BEGIN
 
+    /** RFC 5424 facility codes; the numeric values are the RFC's own. */
     enum SolidSyslogFacility
     {
         SOLIDSYSLOG_FACILITY_KERN = 0,
@@ -33,12 +34,11 @@ EXTERN_C_BEGIN
         SOLIDSYSLOG_FACILITY_LOCAL7 = 23
     };
 
-    /*
-     * RFC 5424 severities. When emitted on a SolidSyslog error event the level is an
-     * urgency axis (how bad is this now), not a who-fixes-it axis — see
-     * docs/error-severity.md for the policy each emit site follows. EMERGENCY, ALERT,
-     * INFORMATIONAL and DEBUG are reserved (not emitted by the library today).
-     */
+    /** RFC 5424 severities. When emitted on a SolidSyslog error event the level
+     *  is an urgency axis (how bad is this now), not a who-fixes-it axis; see
+     *  docs/error-severity.md for the policy each emit site follows. EMERGENCY,
+     *  ALERT, INFORMATIONAL and DEBUG are reserved (not emitted by the library
+     *  today). */
     enum SolidSyslogSeverity
     {
         SOLIDSYSLOG_SEVERITY_EMERGENCY = 0,

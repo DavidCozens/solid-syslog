@@ -5,13 +5,18 @@
 
 #include "SolidSyslogErrorCategory.h"
 
-/*
+/**
  * Portable TLS-stream error categories, shared by every TLS backend (OpenSSL,
  * Mbed TLS, or an integrator's own). A portable handler switch on
  * event->Category reacts to a TLS init or handshake failure identically
  * regardless of which TLS library produced it.
  */
+
+/** TLS context / library setup failed before any handshake (bad CA bundle,
+ *  cert or key load failure, ...). */
 #define SOLIDSYSLOG_CAT_TLSSTREAM_INIT_FAILED ((uint16_t) (SOLIDSYSLOG_CAT_TLSSTREAM_BASE + 1U))
+/** The TLS handshake with the server did not complete (peer verification,
+ *  protocol, or transport failure). */
 #define SOLIDSYSLOG_CAT_TLSSTREAM_HANDSHAKE_FAILED ((uint16_t) (SOLIDSYSLOG_CAT_TLSSTREAM_BASE + 2U))
 
 #endif /* SOLIDSYSLOGTLSSTREAMCATEGORIES_H */

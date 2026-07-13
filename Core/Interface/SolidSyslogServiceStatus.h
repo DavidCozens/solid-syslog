@@ -1,6 +1,8 @@
 #ifndef SOLIDSYSLOGSERVICESTATUS_H
 #define SOLIDSYSLOGSERVICESTATUS_H
 
+/** Advisory servicing hint returned by SolidSyslog_Service, which documents
+ *  each state and the host action it suggests. */
 enum SolidSyslogServiceStatus
 {
     SOLIDSYSLOG_SERVICE_IDLE,

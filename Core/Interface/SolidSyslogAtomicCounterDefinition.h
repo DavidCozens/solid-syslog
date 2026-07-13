@@ -7,9 +7,14 @@
 
 EXTERN_C_BEGIN
 
+    /** Extension point for supplying the sequenceId counter (see
+     *  SolidSyslogAtomicCounter_Increment for the caller-facing contract). An
+     *  implementor is responsible for the wrap-aware [1, SOLIDSYSLOG_SEQUENCE_ID_MAX]
+     *  range, for never yielding 0, and for making Increment safe under the
+     *  concurrency its target platform allows. */
     struct SolidSyslogAtomicCounter
     {
-        uint32_t (*Increment)(struct SolidSyslogAtomicCounter* base);
+        uint32_t (*Increment)(struct SolidSyslogAtomicCounter* base); /**< Advance and return the new value. */
     };
 
 EXTERN_C_END

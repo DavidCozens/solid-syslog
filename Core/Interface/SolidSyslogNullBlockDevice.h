@@ -7,6 +7,8 @@ EXTERN_C_BEGIN
 
     struct SolidSyslogBlockDevice;
 
+    /** Every method reports a device that does not exist: Acquire, Dispose, Exists,
+     *  Read, Append and WriteAt all return false, and Size and GetBlockSize return 0. */
     struct SolidSyslogBlockDevice* SolidSyslogNullBlockDevice_Get(void);
 
 EXTERN_C_END

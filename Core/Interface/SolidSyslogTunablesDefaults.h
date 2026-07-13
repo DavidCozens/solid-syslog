@@ -21,7 +21,7 @@
  * to the SUM of the concurrent instances.
  */
 
-/*
+/**
  * Maximum bytes the library will format for a single syslog message.
  *
  * Caps the per-Log Formatter buffer (stack-allocated inside SolidSyslog_Log),
@@ -36,14 +36,14 @@
  * Sub-floor values rejected at compile time.
  */
 #ifndef SOLIDSYSLOG_MAX_MESSAGE_SIZE
-#define SOLIDSYSLOG_MAX_MESSAGE_SIZE 2048U /* RFC 5424 section 6.1 SHOULD value */
+#define SOLIDSYSLOG_MAX_MESSAGE_SIZE 2048U /**< RFC 5424 section 6.1 SHOULD value */
 #endif
 
 #if SOLIDSYSLOG_MAX_MESSAGE_SIZE < 64
 #error "SOLIDSYSLOG_MAX_MESSAGE_SIZE must be >= 64"
 #endif
 
-/*
+/**
  * Maximum bytes the library will format for a single on-disk path
  * produced by SolidSyslogFileBlockDevice (path prefix + two-digit
  * sequence number + ".log" + null terminator). Caps both the per-call
@@ -62,7 +62,7 @@
 #error "SOLIDSYSLOG_MAX_PATH_SIZE must be >= 32"
 #endif
 
-/*
+/**
  * Maximum bytes of integrity-tag the library will reserve per record.
  * Drives the RecordStore per-record buffer width — every record carries
  * a tag this wide regardless of the active SolidSyslogSecurityPolicy.
@@ -81,7 +81,7 @@
 #error "SOLIDSYSLOG_MAX_INTEGRITY_SIZE must be >= 4"
 #endif
 
-/*
+/**
  * Default per-block capacity (bytes) for file-backed block devices
  * (SolidSyslogFileBlockDevice and any FatFs / FreeRTOS-Plus-FAT-backed
  * equivalent). Supplied to SolidSyslogFileBlockDevice_Create when the
@@ -104,7 +104,7 @@
     "SOLIDSYSLOG_FILE_DEFAULT_BLOCK_SIZE must hold one worst-case record (MAX_MESSAGE_SIZE + MAX_INTEGRITY_SIZE + 5 framing bytes)"
 #endif
 
-/*
+/**
  * Number of SolidSyslog instances the library's internal static pool
  * can simultaneously hold. Each instance is a small bookkeeping struct
  * (collaborator pointers + SD array pointer + count).
@@ -123,7 +123,7 @@
 #error "SOLIDSYSLOG_POOL_SIZE must be >= 1"
 #endif
 
-/*
+/**
  * Number of SolidSyslogCircularBuffer instances the library's internal
  * static pool can simultaneously hold. Each instance is a small
  * bookkeeping struct (vtable, mutex pointer, ring pointer, head/tail/wrap)
@@ -144,7 +144,7 @@
 #error "SOLIDSYSLOG_CIRCULAR_BUFFER_POOL_SIZE must be >= 1"
 #endif
 
-/*
+/**
  * Role pool: Mutex. Number of mutex instances the library's internal static
  * pool can simultaneously hold, across whichever implementation is compiled
  * in — SolidSyslogPosixMutex (pthread_mutex_t), SolidSyslogWindowsMutex
@@ -165,7 +165,7 @@
 #error "SOLIDSYSLOG_MUTEX_POOL_SIZE must be >= 1"
 #endif
 
-/*
+/**
  * Role pool: Datagram (UDP transport). Number of datagram instances the
  * library's internal static pool can simultaneously hold, across whichever
  * implementation is compiled in — SolidSyslogPosixDatagram,
@@ -186,7 +186,7 @@
 #error "SOLIDSYSLOG_DATAGRAM_POOL_SIZE must be >= 1"
 #endif
 
-/*
+/**
  * Role pool: Resolver. Number of resolver instances the library's internal
  * static pool can simultaneously hold, across whichever implementation is
  * compiled in — SolidSyslogGetAddrInfoResolver, SolidSyslogWinsockResolver,
@@ -208,7 +208,7 @@
 #error "SOLIDSYSLOG_RESOLVER_POOL_SIZE must be >= 1"
 #endif
 
-/*
+/**
  * Role pool: File. Number of file instances the library's internal static
  * pool can simultaneously hold, across whichever implementation is compiled
  * in — SolidSyslogPosixFile, SolidSyslogWindowsFile, or SolidSyslogFatFsFile.
@@ -228,7 +228,7 @@
 #error "SOLIDSYSLOG_FILE_POOL_SIZE must be >= 1"
 #endif
 
-/*
+/**
  * Role pool: TCP stream. Number of TCP stream instances the library's
  * internal static pool can simultaneously hold, across whichever
  * implementation is compiled in — SolidSyslogPosixTcpStream,
@@ -251,7 +251,7 @@
 #error "SOLIDSYSLOG_TCP_STREAM_POOL_SIZE must be >= 1"
 #endif
 
-/*
+/**
  * Number of SolidSyslogPosixMessageQueueBuffer instances the library's
  * internal static pool can simultaneously hold. Each instance carries
  * an mqd_t plus the per-process queue name (Formatter storage).
@@ -272,7 +272,7 @@
 #error "SOLIDSYSLOG_POSIX_MESSAGE_QUEUE_BUFFER_POOL_SIZE must be >= 1"
 #endif
 
-/*
+/**
  * Number of SolidSyslogPassthroughBuffer instances the library's
  * internal static pool can simultaneously hold. Each instance is
  * tiny (vtable + a Sender pointer).
@@ -292,7 +292,7 @@
 #error "SOLIDSYSLOG_PASSTHROUGH_BUFFER_POOL_SIZE must be >= 1"
 #endif
 
-/*
+/**
  * Number of SolidSyslogUdpSender instances the library's internal
  * static pool can simultaneously hold. Each instance carries its
  * config (resolver/datagram/endpoint pointers), the resolved address
@@ -313,7 +313,7 @@
 #error "SOLIDSYSLOG_UDP_SENDER_POOL_SIZE must be >= 1"
 #endif
 
-/*
+/**
  * Number of SolidSyslogSwitchingSender instances the library's
  * internal static pool can simultaneously hold.
  *
@@ -331,7 +331,7 @@
 #error "SOLIDSYSLOG_SWITCHING_SENDER_POOL_SIZE must be >= 1"
 #endif
 
-/*
+/**
  * Number of SolidSyslogStreamSender instances the library's internal
  * static pool can simultaneously hold. Each instance carries its
  * config (resolver/stream/endpoint pointers) and connection state.
@@ -353,7 +353,7 @@
 #error "SOLIDSYSLOG_STREAM_SENDER_POOL_SIZE must be >= 1"
 #endif
 
-/*
+/**
  * Number of SolidSyslogBlockStore instances the library's internal
  * static pool can simultaneously hold. Sizes three pools 1:1 — the
  * BlockStore slot itself, plus the TU-internal RecordStore and
@@ -377,7 +377,7 @@
 #error "SOLIDSYSLOG_BLOCK_STORE_POOL_SIZE must be >= 1"
 #endif
 
-/*
+/**
  * Number of SolidSyslogFileBlockDevice instances the library's internal
  * static pool can simultaneously hold. Each instance carries the cached
  * open-file handle plus the path-prefix pointer.
@@ -396,7 +396,7 @@
 #error "SOLIDSYSLOG_FILE_BLOCK_DEVICE_POOL_SIZE must be >= 1"
 #endif
 
-/*
+/**
  * Number of SolidSyslogMetaSd instances the library's internal
  * static pool can simultaneously hold. Default 1 — meta SD is typically
  * wired into SolidSyslogConfig.Sd[] once per process.
@@ -411,7 +411,7 @@
 #error "SOLIDSYSLOG_META_SD_POOL_SIZE must be >= 1"
 #endif
 
-/*
+/**
  * Number of SolidSyslogTimeQualitySd instances the library's internal
  * static pool can simultaneously hold. Default 1.
  *
@@ -425,7 +425,7 @@
 #error "SOLIDSYSLOG_TIME_QUALITY_SD_POOL_SIZE must be >= 1"
 #endif
 
-/*
+/**
  * Number of SolidSyslogOriginSd instances the library's internal
  * static pool can simultaneously hold. Each instance carries the
  * pre-formatted static-prefix Formatter storage (software, swVersion,
@@ -444,7 +444,7 @@
 #error "SOLIDSYSLOG_ORIGIN_SD_POOL_SIZE must be >= 1"
 #endif
 
-/*
+/**
  * Period (milliseconds) the SolidSyslogLwipRawTcpStream bounded-connect
  * spin loop sleeps between polls of the lwIP-side connected_cb flag.
  * Each iteration calls the integrator-injected SolidSyslogSleepFunction
@@ -464,7 +464,7 @@
 #error "SOLIDSYSLOG_LWIP_RAW_TCP_CONNECT_POLL_MS must be >= 1"
 #endif
 
-/*
+/**
  * Bounded deadline (milliseconds) the SolidSyslogLwipRawDnsResolver waits for
  * an async dns_gethostbyname lookup to complete before giving up and reporting
  * a failed resolution. The synchronous Resolve() contract bridges lwIP's async
@@ -488,7 +488,7 @@
 #error "SOLIDSYSLOG_DNS_RESOLVE_TIMEOUT_MS must be >= 1"
 #endif
 
-/*
+/**
  * Period (milliseconds) the SolidSyslogLwipRawDnsResolver bounded-resolve spin
  * loop sleeps between polls of the lwIP-side dns_found_callback done flag.
  * Each iteration calls the integrator-injected SolidSyslogSleepFunction so the
@@ -509,7 +509,7 @@
 #error "SOLIDSYSLOG_LWIP_RAW_DNS_RESOLVE_POLL_MS must be >= 1"
 #endif
 
-/*
+/**
  * Maximum number of struct pbuf* the SolidSyslogLwipRawTcpStream RX queue
  * holds before backpressuring lwIP. Bounds the *count* of queued pbufs,
  * not their byte volume — lwIP's TCP_WND and MEMP_NUM_PBUF cap upstream
@@ -531,7 +531,7 @@
 #error "SOLIDSYSLOG_LWIP_RAW_TCP_RX_QUEUE_SIZE must be >= 1"
 #endif
 
-/*
+/**
  * Role pool: AtomicCounter. Number of atomic-counter instances the library's
  * internal static pool can simultaneously hold, across whichever
  * implementation is compiled in — SolidSyslogStdAtomicCounter (C11
@@ -553,7 +553,7 @@
 #error "SOLIDSYSLOG_ATOMIC_COUNTER_POOL_SIZE must be >= 1"
 #endif
 
-/*
+/**
  * Role pool: TLS stream. Number of TLS stream instances the library's
  * internal static pool can simultaneously hold, across whichever crypto
  * vendor is compiled in — SolidSyslogTlsStream (OpenSSL) or
@@ -575,7 +575,7 @@
 #error "SOLIDSYSLOG_TLS_STREAM_POOL_SIZE must be >= 1"
 #endif
 
-/*
+/**
  * Role pool: HMAC-SHA256 SecurityPolicy. Number of keyed HMAC policy
  * instances the library's internal static pool can simultaneously hold,
  * across whichever crypto vendor is compiled in —
@@ -598,7 +598,7 @@
 #error "SOLIDSYSLOG_HMAC_SHA256_POLICY_POOL_SIZE must be >= 1"
 #endif
 
-/*
+/**
  * Role pool: AES-256-GCM SecurityPolicy. Number of keyed AEAD policy instances
  * the library's internal static pool can simultaneously hold. Each instance
  * carries the integrator's key-accessor callback (SolidSyslogKeyFunction) and
@@ -619,7 +619,7 @@
 #error "SOLIDSYSLOG_AES_GCM_POLICY_POOL_SIZE must be >= 1"
 #endif
 
-/*
+/**
  * Maximum HMAC key length, in bytes, a keyed SecurityPolicy will fetch from
  * its SolidSyslogKeyFunction into a transient on-stack buffer (wiped after
  * each use). Sized for the SHA-256 HMAC block (64 bytes): RFC 2104 keys up to
@@ -638,7 +638,7 @@
 #error "SOLIDSYSLOG_MAX_HMAC_KEY_SIZE must be >= 32"
 #endif
 
-/*
+/**
  * Number of SolidSyslog{Posix,Winsock,FreeRtos}Address instances the
  * library's internal static pool can simultaneously hold. Each instance
  * carries one platform sockaddr (struct sockaddr_in on POSIX/Windows,
@@ -663,7 +663,7 @@
 #error "SOLIDSYSLOG_ADDRESS_POOL_SIZE must be >= 1"
 #endif
 
-/*
+/**
  * Default bounded-connect deadline applied by every TCP Stream backend
  * (POSIX, Winsock, FreeRTOS) when the integrator does not install a
  * SolidSyslogTcpConnectTimeoutFunction on the config struct. 200 ms is
@@ -684,7 +684,7 @@
 #error "SOLIDSYSLOG_TCP_CONNECT_TIMEOUT_MS must be >= 1"
 #endif
 
-/*
+/**
  * Default bounded TLS handshake deadline applied by every TLS Stream backend
  * (OpenSSL, Mbed TLS) when the integrator does not install a
  * SolidSyslogTlsHandshakeTimeoutFunction on the config struct. 5 s covers a

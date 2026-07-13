@@ -7,6 +7,9 @@ EXTERN_C_BEGIN
 
     struct SolidSyslogErrorSource;
 
+    /** Detail codes for events whose Source is UdpSenderErrorSource. A handler
+     *  reads these off event->Detail after matching event->Source; the members
+     *  name their own fault. */
     enum SolidSyslogUdpSenderErrors
     {
         UDPSENDER_ERROR_NULL_CONFIG,
@@ -19,9 +22,12 @@ EXTERN_C_BEGIN
         UDPSENDER_ERROR_UNKNOWN_DESTROY,
         UDPSENDER_ERROR_DELIVERY_FAILED,
         UDPSENDER_ERROR_DELIVERY_RESTORED,
-        UDPSENDER_ERROR_MAX
+        UDPSENDER_ERROR_MAX /**< One past the last code; never emitted. Bounds the range for iteration. */
     };
 
+    /** The identity for events raised by a UdpSender. A handler matches by
+     *  address (event->Source == &UdpSenderErrorSource), then reads
+     *  event->Detail as an enum SolidSyslogUdpSenderErrors. */
     extern const struct SolidSyslogErrorSource UdpSenderErrorSource;
 
 EXTERN_C_END

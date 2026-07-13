@@ -99,6 +99,8 @@ plugins:
             RECURSIVE: true
             EXTRACT_ALL: true
             OPTIMIZE_OUTPUT_FOR_C: true
+            # First sentence of each /** */ block becomes the API-index brief.
+            JAVADOC_AUTOBRIEF: true
 
 nav:
   - Home: README.md
