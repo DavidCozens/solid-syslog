@@ -12,6 +12,7 @@ Run standalone (``python hooks/relationship_data.py``) to print a summary.
 import os
 import re
 import glob
+import functools
 
 # struct SolidSyslog<Role> *  SolidSyslog<Impl>_(Create|Get) (
 _FACTORY = re.compile(
@@ -40,11 +41,12 @@ def _package(path, root):
 _STRUCT_DEF = re.compile(r"struct\s+SolidSyslog(\w+)\s*\{")
 
 
+@functools.lru_cache(maxsize=None)
 def _defined_structs(root):
     names = set()
     for directory in _scan_dirs(root):
         for path in glob.glob(os.path.join(directory, "*.h")):
-            with open(path, "r", encoding="utf-8") as handle:
+            with open(path, encoding="utf-8") as handle:
                 names.update(_STRUCT_DEF.findall(handle.read()))
     return names
 
@@ -56,12 +58,17 @@ def _canonical(name, defined, file_page):
     return "structSolidSyslog" + name if name in defined else file_page
 
 
+@functools.lru_cache(maxsize=None)
 def build_graph(root):
-    """Return {role: {"implementers": [ {name, page, package, is_null}, ... ]}}."""
+    """Return {role: {"implementers": [ {name, page, package, is_null}, ... ]}}.
+
+    Memoized (pure in root): build_reverse/build_facade/build_consumers and the
+    diagram hook each call it, so caching collapses the header rescan to one pass
+    per build. Callers must treat the returned graph as read-only."""
     roles = {}
     for directory in _scan_dirs(root):
         for path in sorted(glob.glob(os.path.join(directory, "*.h"))):
-            with open(path, "r", encoding="utf-8") as handle:
+            with open(path, encoding="utf-8") as handle:
                 text = handle.read()
             page = os.path.basename(path)[:-2] + "_8h"
             for role, impl, _factory in _FACTORY.findall(text):
@@ -132,7 +139,7 @@ def _collaborators(header, impl, roles):
     doc-comment carries the ``@optional`` marker has lower bound 0 (else 1, the
     header's "required" contract). ``_Create`` params are injected directly and are
     never optional today."""
-    with open(header, "r", encoding="utf-8") as handle:
+    with open(header, encoding="utf-8") as handle:
         text = handle.read()
     out, seen = [], set()
     config = _region(text, r"struct\s+SolidSyslog" + impl + r"Config\s*\{")
@@ -148,6 +155,7 @@ def _collaborators(header, impl, roles):
     return out
 
 
+@functools.lru_cache(maxsize=None)
 def build_reverse(root):
     """Return {impl_page: {name, package, is_null, base_role, base_page, config_page,
     collaborators:[{role, base_page, is_list, is_optional}]}} — the per-implementer
@@ -186,6 +194,7 @@ _FACADE_FACTORY = re.compile(
 )
 
 
+@functools.lru_cache(maxsize=None)
 def build_facade(root):
     """The composition-root view: the SolidSyslog facade and the roles its config
     wires it to (uses-only — the facade realises no role). Collaborators are
@@ -195,7 +204,7 @@ def build_facade(root):
     header = os.path.join(root, "Core", "Interface", "SolidSyslogConfig.h")
     if not os.path.exists(header):
         return None
-    with open(header, "r", encoding="utf-8") as handle:
+    with open(header, encoding="utf-8") as handle:
         text = handle.read()
     match = _FACADE_FACTORY.search(text)
     if not match:
@@ -246,4 +255,4 @@ if __name__ == "__main__":
             longest = max(longest, len(i["name"]))
             flag = " [null]" if i["is_null"] else ""
             print("    {:22} {:10}{}".format(i["name"], i["package"], flag))
-    print("\nroles: {}   longest backend name: {} chars".format(len(graph), longest))
+    print(f"\nroles: {len(graph)}   longest backend name: {longest} chars")

@@ -51,19 +51,19 @@ def _sticky(cx, y, impl, index, name_font, pkg_font, role, wraps):
     cy = y + _STICKY_H / 2
     rot = _ROT[index % len(_ROT)]
     out = ['<a href="{}/{}/" target="_top" class="node">'.format(BASE_URL, impl["page"]),
-           '<g transform="rotate({} {} {})">'.format(rot, cx, cy)]
+           f'<g transform="rotate({rot} {cx} {cy})">']
     if impl["name"] in wraps:
         ty = y + _STICKY_H - 6
-        out.append('<g filter="url(#sh)"><rect x="{}" y="{}" width="68" height="22" rx="2" '
-                   'fill="{}" stroke="{}" stroke-width="1.2"/></g>'.format(cx - 34, ty, _PINK[0], _PINK[1]))
-        out.append('<text x="{}" y="{}" text-anchor="middle" font-size="8.5" font-family="{}" '
-                   'fill="{}">wraps a {}</text>'.format(cx, ty + 15, _UI, _PINK[2], role))
-    out.append('<g filter="url(#sh)"><rect class="card" x="{}" y="{}" width="{}" height="{}" '
-               'fill="{}" stroke="{}" stroke-width="1.4"/></g>'.format(left, y, _STICKY_W, _STICKY_H, fill, stroke))
+        out.append(f'<g filter="url(#sh)"><rect x="{cx - 34}" y="{ty}" width="68" height="22" rx="2" '
+                   f'fill="{_PINK[0]}" stroke="{_PINK[1]}" stroke-width="1.2"/></g>')
+        out.append(f'<text x="{cx}" y="{ty + 15}" text-anchor="middle" font-size="8.5" font-family="{_UI}" '
+                   f'fill="{_PINK[2]}">wraps a {role}</text>')
+    out.append(f'<g filter="url(#sh)"><rect class="card" x="{left}" y="{y}" width="{_STICKY_W}" height="{_STICKY_H}" '
+               f'fill="{fill}" stroke="{stroke}" stroke-width="1.4"/></g>')
     out.append('<text x="{}" y="{}" text-anchor="middle" font-size="{}" font-family="{}" '
                'font-weight="bold" fill="{}">{}</text>'.format(cx, y + 26, name_font, _HAND, text, impl["name"]))
-    out.append('<text x="{}" y="{}" text-anchor="middle" font-size="{}" font-style="italic" '
-               'font-family="{}" fill="{}">{}</text>'.format(cx, y + 45, pkg_font, _UI, pkg_color, pkg))
+    out.append(f'<text x="{cx}" y="{y + 45}" text-anchor="middle" font-size="{pkg_font}" font-style="italic" '
+               f'font-family="{_UI}" fill="{pkg_color}">{pkg}</text>')
     out.append("</g></a>")
     return "".join(out)
 
@@ -103,18 +103,17 @@ def _interface_box(cx, top, role, page, rot, font, is_list):
     """Green «interface» sticky (the base role, or a collaborator role), linked to
     its API page. A list collaborator gets a second card offset behind it."""
     left = cx - _IF_W / 2
-    out = ['<a href="{}/{}/" target="_top" class="node">'.format(BASE_URL, page),
-           '<g transform="rotate({} {} {})">'.format(rot, cx, top + _IF_H / 2)]
+    out = [f'<a href="{BASE_URL}/{page}/" target="_top" class="node">',
+           f'<g transform="rotate({rot} {cx} {top + _IF_H / 2})">']
     if is_list:
-        out.append('<g filter="url(#sh)"><rect class="card" x="{}" y="{}" width="{}" height="{}" '
-                   'fill="{}" stroke="{}" stroke-width="1.4"/></g>'.format(
-                       left + 8, top + 8, _IF_W, _IF_H, _GREEN[0], _GREEN[1]))
-    out.append('<g filter="url(#sh)"><rect class="card" x="{}" y="{}" width="{}" height="{}" '
-               'fill="{}" stroke="{}" stroke-width="1.4"/></g>'.format(left, top, _IF_W, _IF_H, _GREEN[0], _GREEN[1]))
-    out.append('<text x="{}" y="{}" text-anchor="middle" font-size="11.5" font-style="italic" '
-               'font-family="{}" fill="{}">«interface»</text>'.format(cx, top + 23, _UI, _GREEN[2]))
-    out.append('<text x="{}" y="{}" text-anchor="middle" font-size="{}" font-weight="bold" '
-               'fill="{}">SolidSyslog{}</text>'.format(cx, top + 45, font, _GREEN[2], role))
+        out.append(f'<g filter="url(#sh)"><rect class="card" x="{left + 8}" y="{top + 8}" width="{_IF_W}" height="{_IF_H}" '
+                   f'fill="{_GREEN[0]}" stroke="{_GREEN[1]}" stroke-width="1.4"/></g>')
+    out.append(f'<g filter="url(#sh)"><rect class="card" x="{left}" y="{top}" width="{_IF_W}" height="{_IF_H}" '
+               f'fill="{_GREEN[0]}" stroke="{_GREEN[1]}" stroke-width="1.4"/></g>')
+    out.append(f'<text x="{cx}" y="{top + 23}" text-anchor="middle" font-size="11.5" font-style="italic" '
+               f'font-family="{_UI}" fill="{_GREEN[2]}">«interface»</text>')
+    out.append(f'<text x="{cx}" y="{top + 45}" text-anchor="middle" font-size="{font}" font-weight="bold" '
+               f'fill="{_GREEN[2]}">SolidSyslog{role}</text>')
     out.append("</g></a>")
     return "".join(out)
 
@@ -127,17 +126,17 @@ def _subject_box(cx, top, name, package, is_null, font, page=None):
     pkg_color = _PKG_NULL if is_null else _PKG
     pkg = package + (" · no-op" if is_null else "")
     left = cx - _SUB_W / 2
-    out = ['<g transform="rotate(-1 {} {})">'.format(cx, top + _SUB_H / 2),
-           '<g filter="url(#sh)"><rect class="card" x="{}" y="{}" width="{}" height="{}" fill="{}" '
-           'stroke="{}" stroke-width="1.8"/></g>'.format(left, top, _SUB_W, _SUB_H, fill, stroke),
-           '<text x="{}" y="{}" text-anchor="middle" font-size="{}" font-weight="bold" '
-           'fill="{}">{}</text>'.format(cx, top + 28, font, text, name),
-           '<text x="{}" y="{}" text-anchor="middle" font-size="{}" font-style="italic" '
-           'font-family="{}" fill="{}">{}</text>'.format(cx, top + 47, max(8.0, font - 2), _UI, pkg_color, pkg),
+    out = [f'<g transform="rotate(-1 {cx} {top + _SUB_H / 2})">',
+           f'<g filter="url(#sh)"><rect class="card" x="{left}" y="{top}" width="{_SUB_W}" height="{_SUB_H}" fill="{fill}" '
+           f'stroke="{stroke}" stroke-width="1.8"/></g>',
+           f'<text x="{cx}" y="{top + 28}" text-anchor="middle" font-size="{font}" font-weight="bold" '
+           f'fill="{text}">{name}</text>',
+           f'<text x="{cx}" y="{top + 47}" text-anchor="middle" font-size="{max(8.0, font - 2)}" font-style="italic" '
+           f'font-family="{_UI}" fill="{pkg_color}">{pkg}</text>',
            "</g>"]
     body = "".join(out)
     if page:
-        return '<a href="{}/{}/" target="_top" class="node">{}</a>'.format(BASE_URL, page, body)
+        return f'<a href="{BASE_URL}/{page}/" target="_top" class="node">{body}</a>'
     return body
 
 
@@ -176,20 +175,19 @@ def render_reverse(entry):
 
     svg_id = "ssrev-" + name.lower()
     parts = ['<div class="ss-rel">',
-             '<svg id="{}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {} {}" '
-             'font-family="{}" style="width:100%;max-width:{}px;display:block;margin:0.4rem auto 1.4rem;">'.format(
-                 svg_id, width, height, _HAND, min(width, 760)),
+             f'<svg id="{svg_id}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" '
+             f'font-family="{_HAND}" style="width:100%;max-width:{min(width, 760)}px;display:block;margin:0.4rem auto 1.4rem;">',
              _REVERSE_DEFS,
-             '<style>#{0} .node{{cursor:pointer}}#{0} .card{{transition:stroke-width .1s ease}}'
-             '#{0} .node:hover .card{{stroke-width:3.2}}</style>'.format(svg_id)]
+             f'<style>#{svg_id} .node{{cursor:pointer}}#{svg_id} .card{{transition:stroke-width .1s ease}}'
+             f'#{svg_id} .node:hover .card{{stroke-width:3.2}}</style>']
 
     # connectors, drawn behind the stickies
     edges = ['<g fill="none" stroke="#2b2b2b" filter="url(#rough)">',
-             '<path d="M{0},{1} L{0},{2}" stroke-width="2" stroke-dasharray="6 5" '
-             'marker-end="url(#tri)"/>'.format(cx, sub_y, base_y + _IF_H + 1)]
+             f'<path d="M{cx},{sub_y} L{cx},{base_y + _IF_H + 1}" stroke-width="2" stroke-dasharray="6 5" '
+             'marker-end="url(#tri)"/>']
     for ccx in col_cx:
-        edges.append('<path d="M{},{} L{},{}" stroke-width="2.2" '
-                     'marker-end="url(#use)"/>'.format(cx, sub_y + _SUB_H, ccx, col_y))
+        edges.append(f'<path d="M{cx},{sub_y + _SUB_H} L{ccx},{col_y}" stroke-width="2.2" '
+                     'marker-end="url(#use)"/>')
     edges.append("</g>")
     parts += edges
 
@@ -204,13 +202,13 @@ def render_reverse(entry):
 def _place_collaborators(parts, col_cx, collabs, col_y, col_font):
     """Draw the collaborator interface boxes and their UML multiplicity labels
     (1..1 left unlabelled). Shared by the reverse and facade views."""
-    for idx, (ccx, collab) in enumerate(zip(col_cx, collabs)):
+    for idx, (ccx, collab) in enumerate(zip(col_cx, collabs, strict=True)):
         parts.append(_interface_box(ccx, col_y, collab["role"], collab["base_page"],
                                     _ROT[idx % len(_ROT)], col_font, collab["is_list"]))
         mult = _multiplicity(collab["is_optional"], collab["is_list"])
         if mult:
-            parts.append('<text x="{}" y="{}" font-size="11" font-style="italic" '
-                         'font-family="{}" fill="#3a4a80">{}</text>'.format(ccx + 14, col_y - 7, _UI, mult))
+            parts.append(f'<text x="{ccx + 14}" y="{col_y - 7}" font-size="11" font-style="italic" '
+                         f'font-family="{_UI}" fill="#3a4a80">{mult}</text>')
 
 
 # ---------------------------------------------------------------------------
@@ -224,7 +222,7 @@ _FAC_W, _FAC_H = 176, 64
 def render_facade_class(facade):
     """The SolidSyslog page: the class with direct arrows to the interfaces it
     uses, and its Config as a linked sidecar (dashed — built from, not retained)."""
-    fac_page, cfg_page, cfg_name, collabs, fac_font, cfg_font, col_font = _facade_common(facade)
+    _fac_page, cfg_page, cfg_name, collabs, fac_font, cfg_font, col_font = _facade_common(facade)
     n = len(collabs)
     pair_gap = 244
     row_w = n * _IF_W + (n - 1) * _COL_GAP if n else 0
@@ -238,15 +236,14 @@ def render_facade_class(facade):
 
     parts = _facade_open("ssfacc-" + facade["name"].lower(), width, height)
     parts.append('<g fill="none" stroke="#2b2b2b" filter="url(#rough)">')
-    parts.append('<path d="M{},{} L{},{}" stroke-width="2" stroke-dasharray="6 5" '
-                 'marker-end="url(#use)"/>'.format(cx_main + _SUB_W / 2, top_y + _SUB_H / 2,
-                                                   cx_cfg - _FAC_W / 2, top_y + _SUB_H / 2))
+    parts.append(f'<path d="M{cx_main + _SUB_W / 2},{top_y + _SUB_H / 2} L{cx_cfg - _FAC_W / 2},{top_y + _SUB_H / 2}" stroke-width="2" stroke-dasharray="6 5" '
+                 'marker-end="url(#use)"/>')
     for ccx in col_cx:
-        parts.append('<path d="M{},{} L{},{}" stroke-width="2.2" '
-                     'marker-end="url(#use)"/>'.format(cx_main, top_y + _SUB_H, ccx, col_y))
+        parts.append(f'<path d="M{cx_main},{top_y + _SUB_H} L{ccx},{col_y}" stroke-width="2.2" '
+                     'marker-end="url(#use)"/>')
     parts.append("</g>")
-    parts.append('<text x="{}" y="{}" text-anchor="middle" font-size="10" font-style="italic" '
-                 'font-family="{}" fill="#666">built from</text>'.format((cx_main + cx_cfg) / 2, top_y + _SUB_H / 2 - 13, _UI))
+    parts.append(f'<text x="{(cx_main + cx_cfg) / 2}" y="{top_y + _SUB_H / 2 - 13}" text-anchor="middle" font-size="10" font-style="italic" '
+                 f'font-family="{_UI}" fill="#666">built from</text>')
     parts.append(_subject_box(cx_main, top_y, facade["name"], "Core", False, fac_font))
     parts.append(_pod_box(cx_cfg, top_y, cfg_name, cfg_font, 1, page=cfg_page))
     _place_collaborators(parts, col_cx, collabs, col_y, col_font)
@@ -263,27 +260,26 @@ def _pod_box(cx, top, name, font, rot, page=None):
     given (a sidecar on the class page); unlinked when it is the page itself."""
     left = cx - _FAC_W / 2
     body = "".join([
-        '<g transform="rotate({} {} {})">'.format(rot, cx, top + _FAC_H / 2),
-        '<g filter="url(#sh)"><rect class="card" x="{}" y="{}" width="{}" height="{}" '
-        'fill="{}" stroke="{}" stroke-width="1.6"/></g>'.format(left, top, _FAC_W, _FAC_H, _POD[0], _POD[1]),
-        '<text x="{}" y="{}" text-anchor="middle" font-size="11.5" font-style="italic" '
-        'font-family="{}" fill="{}">«struct»</text>'.format(cx, top + 22, _UI, _POD[2]),
-        '<text x="{}" y="{}" text-anchor="middle" font-size="{}" font-weight="bold" '
-        'fill="{}">{}</text>'.format(cx, top + 45, font, _POD[2], name),
+        f'<g transform="rotate({rot} {cx} {top + _FAC_H / 2})">',
+        f'<g filter="url(#sh)"><rect class="card" x="{left}" y="{top}" width="{_FAC_W}" height="{_FAC_H}" '
+        f'fill="{_POD[0]}" stroke="{_POD[1]}" stroke-width="1.6"/></g>',
+        f'<text x="{cx}" y="{top + 22}" text-anchor="middle" font-size="11.5" font-style="italic" '
+        f'font-family="{_UI}" fill="{_POD[2]}">«struct»</text>',
+        f'<text x="{cx}" y="{top + 45}" text-anchor="middle" font-size="{font}" font-weight="bold" '
+        f'fill="{_POD[2]}">{name}</text>',
         "</g>"])
     if page:
-        return '<a href="{}/{}/" target="_top" class="node">{}</a>'.format(BASE_URL, page, body)
+        return f'<a href="{BASE_URL}/{page}/" target="_top" class="node">{body}</a>'
     return body
 
 
 def _facade_open(svg_id, width, height):
     return ['<div class="ss-rel">',
-            '<svg id="{}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {} {}" '
-            'font-family="{}" style="width:100%;max-width:{}px;display:block;margin:0.4rem auto 1.4rem;">'.format(
-                svg_id, width, height, _HAND, min(width, 860)),
+            f'<svg id="{svg_id}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" '
+            f'font-family="{_HAND}" style="width:100%;max-width:{min(width, 860)}px;display:block;margin:0.4rem auto 1.4rem;">',
             _REVERSE_DEFS,
-            '<style>#{0} .node{{cursor:pointer}}#{0} .card{{transition:stroke-width .1s ease}}'
-            '#{0} .node:hover .card{{stroke-width:3.2}}</style>'.format(svg_id)]
+            f'<style>#{svg_id} .node{{cursor:pointer}}#{svg_id} .card{{transition:stroke-width .1s ease}}'
+            f'#{svg_id} .node:hover .card{{stroke-width:3.2}}</style>']
 
 
 def _facade_common(facade):
@@ -299,7 +295,7 @@ def _facade_common(facade):
 def render_facade_stacked(facade):
     """The SolidSyslogConfig page: the config POD with its interface members below,
     and the SolidSyslog class it builds as a linked node above (dashed — built from)."""
-    fac_page, cfg_page, cfg_name, collabs, fac_font, cfg_font, col_font = _facade_common(facade)
+    fac_page, _cfg_page, cfg_name, collabs, fac_font, cfg_font, col_font = _facade_common(facade)
     n = len(collabs)
     row_w = n * _IF_W + (n - 1) * _COL_GAP if n else 0
     width = round(_MARGIN * 2 + max(row_w, _FAC_W))
@@ -312,14 +308,14 @@ def render_facade_stacked(facade):
 
     parts = _facade_open("ssfacs-" + facade["name"].lower(), width, height)
     parts.append('<g fill="none" stroke="#2b2b2b" filter="url(#rough)">')
-    parts.append('<path d="M{},{} L{},{}" stroke-width="2" stroke-dasharray="6 5" '
-                 'marker-end="url(#use)"/>'.format(cx, fac_y + _SUB_H, cx, cfg_y))
+    parts.append(f'<path d="M{cx},{fac_y + _SUB_H} L{cx},{cfg_y}" stroke-width="2" stroke-dasharray="6 5" '
+                 'marker-end="url(#use)"/>')
     for ccx in col_cx:
-        parts.append('<path d="M{},{} L{},{}" stroke-width="2.2" '
-                     'marker-end="url(#use)"/>'.format(cx, cfg_y + _FAC_H, ccx, col_y))
+        parts.append(f'<path d="M{cx},{cfg_y + _FAC_H} L{ccx},{col_y}" stroke-width="2.2" '
+                     'marker-end="url(#use)"/>')
     parts.append("</g>")
-    parts.append('<text x="{}" y="{}" font-size="10" font-style="italic" '
-                 'font-family="{}" fill="#666">built from</text>'.format(cx + 14, (fac_y + _SUB_H + cfg_y) / 2 + 3, _UI))
+    parts.append(f'<text x="{cx + 14}" y="{(fac_y + _SUB_H + cfg_y) / 2 + 3}" font-size="10" font-style="italic" '
+                 f'font-family="{_UI}" fill="#666">built from</text>')
     parts.append(_subject_box(cx, fac_y, facade["name"], "Core", False, fac_font, page=fac_page))
     parts.append(_pod_box(cx, cfg_y, cfg_name, cfg_font, 1))
     _place_collaborators(parts, col_cx, collabs, col_y, col_font)
@@ -355,6 +351,20 @@ def render_role_combined(role, info, consumers):
     cons_row_w = m * _SUB_W + (m - 1) * _GAP if m else 0
     cons_cx = [base_cx - cons_row_w / 2 + _SUB_W / 2 + i * cons_pitch for i in range(m)]
 
+    # A consumer row wider than the implementer span, centred on base_cx, can spill
+    # left of the margin (as can the wider interface box for a lone implementer).
+    # Shift every x right so the leftmost box sits at the margin, and take width from
+    # the true left/right extents rather than the rightmost box alone.
+    boxes = [(cx, _STICKY_W) for cx in all_cx] + [(base_cx, _BASE_W)] + [(cx, _SUB_W) for cx in cons_cx]
+    shift = _MARGIN - min(cx - w / 2 for cx, w in boxes)
+    top_cx = [cx + shift for cx in top_cx]
+    bot_cx = [cx + shift for cx in bot_cx]
+    cons_cx = [cx + shift for cx in cons_cx]
+    base_cx += shift
+    span_min += shift
+    span_max += shift
+    width = round(max(cx + w / 2 for cx, w in boxes) + shift + _MARGIN)
+
     cons_y = _MARGIN
     base_y = (cons_y + _SUB_H + _CONS_GAP) if m else _MARGIN
     base_bottom = base_y + _BASE_H
@@ -370,47 +380,44 @@ def render_role_combined(role, info, consumers):
 
     last_bottom = (row2_y if bottom else row1_y) + _STICKY_H
     height = round(last_bottom + (20 if wraps else 8) + _MARGIN)
-    width = round(max([cx + _STICKY_W / 2 for cx in all_cx] + [base_cx + _BASE_W / 2]
-                      + ([max(cons_cx) + _SUB_W / 2] if m else [])) + _MARGIN)
 
     parts = _facade_open("ssuses-" + role.lower(), width, height)
 
     # realises tree (implementers below the interface)
     tree = ['<g fill="none" stroke="#2b2b2b" stroke-width="2" stroke-dasharray="6 5" filter="url(#rough)">',
-            '<path d="M{0},{1} L{0},{2}" marker-end="url(#tri)"/>'.format(base_cx, bus_y, base_bottom + 1),
-            '<path d="M{},{} H{}"/>'.format(span_min, bus_y, span_max)]
+            f'<path d="M{base_cx},{bus_y} L{base_cx},{base_bottom + 1}" marker-end="url(#tri)"/>',
+            f'<path d="M{span_min},{bus_y} H{span_max}"/>']
     for cx in top_cx:
-        tree.append('<path d="M{},{} V{}"/>'.format(cx, bus_y, row1_y))
+        tree.append(f'<path d="M{cx},{bus_y} V{row1_y}"/>')
     for cx in bot_cx:
-        tree.append('<path d="M{},{} V{}"/>'.format(cx, bus_y, row2_y))
+        tree.append(f'<path d="M{cx},{bus_y} V{row2_y}"/>')
     tree.append("</g>")
     parts += tree
 
     # uses edges (clients above -> into the interface top)
     parts.append('<g fill="none" stroke="#2b2b2b" filter="url(#rough)">')
     for ccx in cons_cx:
-        parts.append('<path d="M{},{} L{},{}" stroke-width="2.2" '
-                     'marker-end="url(#use)"/>'.format(ccx, cons_y + _SUB_H, base_cx, base_y))
+        parts.append(f'<path d="M{ccx},{cons_y + _SUB_H} L{base_cx},{base_y}" stroke-width="2.2" '
+                     'marker-end="url(#use)"/>')
     parts.append("</g>")
 
     # interface (base)
     parts.append('<a href="{}/{}/" target="_top" class="node"><g transform="rotate(-1 {} {})">'.format(
         BASE_URL, info["link_page"], base_cx, base_y + _BASE_H / 2))
-    parts.append('<g filter="url(#sh)"><rect class="card" x="{}" y="{}" width="{}" height="{}" '
-                 'fill="{}" stroke="{}" stroke-width="1.4"/></g>'.format(
-                     base_cx - _BASE_W / 2, base_y, _BASE_W, _BASE_H, _GREEN[0], _GREEN[1]))
-    parts.append('<text x="{}" y="{}" text-anchor="middle" font-size="12" font-style="italic" '
-                 'font-family="{}" fill="{}">«interface»</text>'.format(base_cx, base_y + 26, _UI, _GREEN[2]))
-    parts.append('<text x="{}" y="{}" text-anchor="middle" font-size="{}" font-weight="bold" '
-                 'fill="{}">SolidSyslog{}</text>'.format(base_cx, base_y + 50, base_font, _GREEN[2], role))
+    parts.append(f'<g filter="url(#sh)"><rect class="card" x="{base_cx - _BASE_W / 2}" y="{base_y}" width="{_BASE_W}" height="{_BASE_H}" '
+                 f'fill="{_GREEN[0]}" stroke="{_GREEN[1]}" stroke-width="1.4"/></g>')
+    parts.append(f'<text x="{base_cx}" y="{base_y + 26}" text-anchor="middle" font-size="12" font-style="italic" '
+                 f'font-family="{_UI}" fill="{_GREEN[2]}">«interface»</text>')
+    parts.append(f'<text x="{base_cx}" y="{base_y + 50}" text-anchor="middle" font-size="{base_font}" font-weight="bold" '
+                 f'fill="{_GREEN[2]}">SolidSyslog{role}</text>')
     parts.append("</g></a>")
 
-    for idx, (cx, impl) in enumerate(zip(top_cx, top)):
+    for idx, (cx, impl) in enumerate(zip(top_cx, top, strict=True)):
         parts.append(_sticky(cx, row1_y, impl, idx, name_font, pkg_font, role, wraps))
-    for j, (cx, impl) in enumerate(zip(bot_cx, bottom)):
+    for j, (cx, impl) in enumerate(zip(bot_cx, bottom, strict=True)):
         parts.append(_sticky(cx, row2_y, impl, top_n + j, name_font, pkg_font, role, wraps))
 
-    for ccx, consumer in zip(cons_cx, consumers):
+    for ccx, consumer in zip(cons_cx, consumers, strict=True):
         parts.append(_subject_box(ccx, cons_y, consumer["name"], consumer["package"],
                                   False, cons_font, page=consumer["page"]))
 
