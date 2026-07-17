@@ -8,6 +8,18 @@ object for every one of the twelve.
 Where a [platform](../platforms/index.md) exists to reach *your* hardware, Core
 exists to be the same everywhere.
 
+<!-- markdownlint-disable MD033 — embedded as <object>, not a Markdown image, so Core and each role stay clickable through to their pages. -->
+
+<div class="postit-diagram">
+  <object type="image/svg+xml" data="../assets/postit/architecture-wheel.svg" title="Core at the centre owns twelve interface roles; eight radiate out through a platform adapter to the third party it wraps">
+    <img src="../assets/postit/architecture-wheel.svg" alt="Core at the centre owns twelve interface roles as an inner ring. Eight radiate outward through a SolidSyslog platform adapter to the third-party component it wraps; Sender, Store, BlockDevice and StructuredData are realised by Core itself and stop at the role ring.">
+  </object>
+</div>
+
+<!-- markdownlint-enable MD033 -->
+
+Core and every role in the ring link through to their own page.
+
 ## The facade
 
 | Header | Provides |
