@@ -1,9 +1,8 @@
 # Core
 
-`Core/` wraps nothing. It is the one part you never choose: always compiled, no
-upstream, no platform. It holds the facade you call, the pipeline that formats a
-record and drains it, portable implementations for several roles, and a Null
-object for every one of the twelve.
+`Core/` is the guts of SolidSyslog: it implements the syslog protocol and manages the assembly, buffering, storage and sending of log messages.
+
+`Core/` depends on nothing external: always compiled, typically as a library. It holds the facade you call, the pipeline that formats a record and drains it, and portable implementations for several roles. Where access to a network stack, encryption, filesystem or OS is required, an interface is declared. Platform components that satisfy those interfaces let Core build with no platform dependencies.
 
 Where a [platform](../platforms/index.md) exists to reach *your* hardware, Core
 exists to be the same everywhere.
@@ -11,14 +10,15 @@ exists to be the same everywhere.
 <!-- markdownlint-disable MD033 — embedded as <object>, not a Markdown image, so Core and each role stay clickable through to their pages. -->
 
 <div class="postit-diagram">
-  <object type="image/svg+xml" data="../assets/postit/architecture-wheel.svg" title="Core at the centre owns twelve interface roles; eight radiate out through a platform adapter to the third party it wraps">
-    <img src="../assets/postit/architecture-wheel.svg" alt="Core at the centre owns twelve interface roles as an inner ring. Eight radiate outward through a SolidSyslog platform adapter to the third-party component it wraps; Sender, Store, BlockDevice and StructuredData are realised by Core itself and stop at the role ring.">
+  <object type="image/svg+xml" data="../assets/postit/architecture-overview.svg" title="The SolidSyslog facade and its roles sit inside a Core boundary; the roles that need your platform cross the boundary through a thin adapter to the third-party component you supply">
+    <img src="../assets/postit/architecture-overview.svg" alt="SolidSyslog architecture. The Core rectangle is a boundary holding the SolidSyslog facade and its roles — all portable C. You wire roles on the facade: Sender, Store, Buffer and StructuredData. The roles that reach your system — name resolution, UDP sockets, TCP sockets and a TLS library; the filesystem and a crypto library; an OS mutex; atomics — cross the Core boundary through a thin platform adapter you supply. Dependency points inward: Core touches nothing outside itself.">
   </object>
 </div>
 
 <!-- markdownlint-enable MD033 -->
 
-Core and every role in the ring link through to their own page.
+The facade and every role link through to their API page; the platform-adapter
+band links to [Platforms](../platforms/index.md).
 
 ## The facade
 
@@ -45,7 +45,7 @@ Portable [role](../roles/index.md) implementations — no platform required:
 | [`SolidSyslogTimeQualitySd`](../api/SolidSyslogTimeQualitySd_8h.md) | StructuredData — tzKnown, isSynced, syncAccuracy |
 | [`SolidSyslogOriginSd`](../api/SolidSyslogOriginSd_8h.md) | StructuredData — software, swVersion, enterpriseId, ip |
 
-Every one of the twelve roles also has a Null — `SolidSyslogNull<Role>_Get()` —
+Every role also has a Null — `SolidSyslogNull<Role>_Get()` —
 whose methods are safe no-ops. That is what an unfilled slot resolves to, and
 what a `_Create` returns when its pool is exhausted, so nothing dangles and
 nothing needs a NULL guard. See [Roles](../roles/index.md).
