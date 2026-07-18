@@ -60,7 +60,7 @@ nothing needs a NULL guard. See [Roles](../roles/index.md).
 
 ## Requirements
 
-None. Core is C99 with no dynamic memory — every stateful class lives in a
-library-internal static pool — and no OS, network or filesystem dependency. What
-it cannot do alone, it delegates to a role for a [platform](../platforms/index.md)
+A C99 compiler, and nothing else. No dynamic memory — every stateful class lives
+in a library-internal static pool — and no OS, network or filesystem dependency.
+What it cannot do alone, it delegates to a role for a [platform](../platforms/index.md)
 to fill.
