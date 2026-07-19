@@ -75,11 +75,16 @@ static inline bool PlusFatFile_IsFileOpen(const struct SolidSyslogPlusFatFile* s
 static bool PlusFatFile_Open(struct SolidSyslogFile* base, const char* path)
 {
     struct SolidSyslogPlusFatFile* self = PlusFatFile_SelfFromBase(base);
-    /* "r+" opens an existing file without truncating; if it does not exist,
-     * "w+" creates it. Together this is open-or-create with no data loss —
-     * Plus-FAT has no single open-always mode. */
+    /* "r+" opens an existing file without truncating. Fall back to the
+     * file-creating "w+" only when the file is genuinely absent — "w+"
+     * truncates, so an "r+" failure from a transient cause (media busy, lock,
+     * permissions) on an existing file must never reach it, or it would empty a
+     * record file the BlockStore believes is durably stored. ff_fopen("r+")
+     * returns NULL for any failure without distinguishing absence, so existence
+     * is confirmed with ff_stat before creating. Plus-FAT has no single
+     * non-truncating open-or-create mode. */
     self->Fp = ff_fopen(path, "r+");
-    if (!PlusFatFile_IsFileOpen(self))
+    if (!PlusFatFile_IsFileOpen(self) && !PlusFatFile_Exists(base, path))
     {
         self->Fp = ff_fopen(path, "w+");
     }

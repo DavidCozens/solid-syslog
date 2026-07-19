@@ -44,9 +44,10 @@ TEST(SolidSyslogPlusFatFile, OpenSucceeds)
     CHECK_TRUE(SolidSyslogFile_IsOpen(file));
 }
 
-TEST(SolidSyslogPlusFatFile, OpenFallsBackToCreateModeWhenReadPlusFails)
+TEST(SolidSyslogPlusFatFile, OpenFallsBackToCreateModeWhenFileAbsent)
 {
     PlusFatFake_SetOpenFailsForMode("r+");
+    PlusFatFake_SetStatFails();
 
     CHECK_TRUE(SolidSyslogFile_Open(file, TEST_PATH));
 
@@ -56,9 +57,21 @@ TEST(SolidSyslogPlusFatFile, OpenFallsBackToCreateModeWhenReadPlusFails)
     STRCMP_EQUAL("w+", PlusFatFake_OpenModeAt(1));
 }
 
+TEST(SolidSyslogPlusFatFile, OpenDoesNotTruncateWhenReadPlusFailsOnExistingFile)
+{
+    PlusFatFake_SetOpenFailsForMode("r+");
+
+    CHECK_FALSE(SolidSyslogFile_Open(file, TEST_PATH));
+
+    LONGS_EQUAL(1, PlusFatFake_OpenCallCount());
+    STRCMP_EQUAL("r+", PlusFatFake_OpenModeAt(0));
+    CHECK_FALSE(SolidSyslogFile_IsOpen(file));
+}
+
 TEST(SolidSyslogPlusFatFile, OpenFailsWhenBothModesFail)
 {
     PlusFatFake_SetOpenAlwaysFails();
+    PlusFatFake_SetStatFails();
 
     CHECK_FALSE(SolidSyslogFile_Open(file, TEST_PATH));
     CHECK_FALSE(SolidSyslogFile_IsOpen(file));
