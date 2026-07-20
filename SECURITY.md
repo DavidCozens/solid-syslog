@@ -9,8 +9,10 @@ expect in return.
 **Please do not report security issues in public GitHub issues, pull
 requests, or discussions.** Use one of the private channels below:
 
-1. **GitHub private vulnerability reporting (preferred).** On this
-   repository, go to the **Security** tab → **Report a vulnerability**.
+1. **GitHub private vulnerability reporting (preferred).** Open a private
+   report directly at
+   **<https://github.com/cososo-ltd/solid-syslog/security/advisories/new>**,
+   or from this repository's **Security** tab → **Report a vulnerability**.
    This opens a private advisory visible only to you and the maintainer.
 2. **Web form.** If you cannot use GitHub, submit the form at
    **<https://cososo.co.uk/security/report>**. It routes to a private inbox.
