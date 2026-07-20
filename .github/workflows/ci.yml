@@ -1457,7 +1457,7 @@ jobs:
           path: quality-reports/
 
       - name: Quality Monitor
-        uses: uhafner/quality-monitor@778e3a640bb5bf89d0f9d2f446bd4802d4821838 # v1.14.0
+        uses: uhafner/quality-monitor@0100da6973a1498aad89af676852a8c788d397f8 # v4.15.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           pr-number: ${{ github.event.pull_request.number }}
