@@ -1,0 +1,29 @@
+# lychee configuration for the docs-links CI lane (see .github/workflows/docs-links.yml).
+# Only external URL liveness is in scope here — in-repo and rewritten source
+# links are already validated by `mkdocs build --strict` in the docs-build lane.
+
+# Third-party hosts flap; retry before believing a failure. A timeout is not a 404.
+max_retries = 3
+retry_wait_time = 2
+timeout = 20
+
+# Some hosts reject unknown user agents with a 403; present a real one.
+user_agent = "Mozilla/5.0 (compatible; SolidSyslog-lychee-linkcheck; +https://cososo-ltd.github.io/solid-syslog/)"
+
+# Rate-limited responses are not dead links.
+accept = ["200..=206", "429"]
+
+# Check http/https only — leave file:// and mailto: to other tooling.
+scheme = ["https", "http"]
+
+exclude = [
+  # Our own repository. The source_links.py hook rewrites in-repo references to
+  # canonical github.com/cososo-ltd/solid-syslog URLs at *build* time only, and
+  # `mkdocs build --strict` already resolves them pre-rewrite — so checking them
+  # here would be redundant (and rate-limit-prone against ~99 self-links).
+  '^https?://github\.com/cososo-ltd/solid-syslog',
+]
+
+# NOTE (#626): known suspects are intentionally NOT excluded so the first run
+# gives a verdict on them — notably http://elm-chan.org/fsw/ff/ (FatFs), which
+# refused 443 and never answered 80 when added. Confirm/replace/drop per the run.
