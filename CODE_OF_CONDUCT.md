@@ -1,5 +1,11 @@
 # Contributor Covenant Code of Conduct
 
+<!-- This document reproduces the Contributor Covenant v2.1 verbatim, with only
+     the enforcement contact method filled in. The upstream text uses US
+     spelling by design; it is kept unchanged so the policy remains a faithful,
+     recognisable copy of the published standard. This is an intentional
+     exception to the repository's UK-spelling convention. -->
+
 ## Our Pledge
 
 We as members, contributors, and leaders pledge to make participation in our
