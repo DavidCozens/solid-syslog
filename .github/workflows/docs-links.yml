@@ -1,0 +1,69 @@
+# External-link checker for the documentation and repo-root prose.
+#
+# `mkdocs build --strict` (in ci.yml's docs-build) already resolves in-repo
+# links and the source_links.py rewrites, but it never touches an `https://`
+# link to a third-party site — so a dead one merges silently and rots
+# (see #626: a FreeRTOS-Plus-FAT 404 sat on main until found by chance).
+#
+# This lane checks the *external* URLs with lychee.
+#
+# Advisory by design:
+#   - On pull requests it never fails the check (`fail: false`) — a merge must
+#     not be blocked because someone else's docs host had a bad minute. It is
+#     also intentionally NOT a required status check.
+#   - On the weekly schedule it DOES fail (`fail: true`) so link rot that
+#     appears without us touching a file surfaces as a failed run we get
+#     notified about — which is exactly how the Plus-FAT 404 slipped in.
+name: Docs Links
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'docs/**'
+      - '*.md'
+      - 'lychee.toml'
+      - '.github/workflows/docs-links.yml'
+  schedule:
+    # Mondays 06:17 UTC — an off-peak, non-round minute.
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Serialise runs so PR updates, manual runs, and the weekly sweep don't overlap
+# and burn external crawl quota. Only cancel superseded pull_request runs — let
+# scheduled and manual runs finish.
+concurrency:
+  group: docs-links-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  docs-links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Check external links
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          # Config (retries, timeout, user agent, excludes) lives in lychee.toml.
+          # Scope: the docs tree plus the repo-root prose files. Excludes
+          # CHANGELOG.md (release-please owns it) and generated content.
+          args: >-
+            --config lychee.toml
+            docs
+            README.md
+            CONTRIBUTING.md
+            CODE_OF_CONDUCT.md
+            SECURITY.md
+            SUPPORT.md
+          # Advisory on PR / manual, blocking only on the weekly rot sweep.
+          # failIfEmpty defaults to true in v2.9.0, so mirror the same guard —
+          # an empty scan must not fail a PR either.
+          fail: ${{ github.event_name == 'schedule' }}
+          failIfEmpty: ${{ github.event_name == 'schedule' }}
+          jobSummary: true
