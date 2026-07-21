@@ -80,15 +80,19 @@ static int SpyGetPort()
 static const char* (*endpointGetHost)() = GetDefaultHost;
 static int (*endpointGetPort)() = GetDefaultPort;
 static uint32_t endpointVersion = 0;
+static void* endpointContext;
+static void* endpointVersionContext;
 
-static void TestEndpoint(struct SolidSyslogEndpoint* endpoint)
+static void TestEndpoint(struct SolidSyslogEndpoint* endpoint, void* context)
 {
+    endpointContext = context;
     SolidSyslogEndpointHost_String(endpoint->Host, endpointGetHost(), SOLIDSYSLOG_MAX_HOST_SIZE);
     endpoint->Port = (uint16_t) endpointGetPort();
 }
 
-static uint32_t TestEndpointVersion() // NOLINT(modernize-use-trailing-return-type)
+static uint32_t TestEndpointVersion(void* context) // NOLINT(modernize-use-trailing-return-type)
 {
+    endpointVersionContext = context;
     return endpointVersion;
 }
 
@@ -109,8 +113,10 @@ TEST_BASE(UdpSenderTestBase)
     {
         endpointGetHost     = GetDefaultHost;
         endpointGetPort     = GetDefaultPort;
-        endpointVersion     = 0;
-        SpyGetHostCallCount = 0;
+        endpointVersion        = 0;
+        endpointContext        = nullptr;
+        endpointVersionContext = nullptr;
+        SpyGetHostCallCount    = 0;
         SpyGetPortCallCount = 0;
     }
 
@@ -121,7 +127,7 @@ TEST_BASE(UdpSenderTestBase)
         resolver = SolidSyslogGetAddrInfoResolver_Create();
         datagram = SolidSyslogPosixDatagram_Create();
         address  = SolidSyslogPosixAddress_Create();
-        config   = {resolver, datagram, address, TestEndpoint, TestEndpointVersion};
+        config   = {resolver, datagram, address, TestEndpoint, TestEndpointVersion, nullptr};
     }
 
     void setupFakesWithDatagramFake()
@@ -131,7 +137,7 @@ TEST_BASE(UdpSenderTestBase)
         resolver = SolidSyslogGetAddrInfoResolver_Create();
         datagram = DatagramFake_Create();
         address  = SolidSyslogPosixAddress_Create();
-        config   = {resolver, datagram, address, TestEndpoint, TestEndpointVersion};
+        config   = {resolver, datagram, address, TestEndpoint, TestEndpointVersion, nullptr};
     }
 
     void teardownFakesWithPosixDatagram() const
@@ -193,6 +199,17 @@ TEST(SolidSyslogUdpSender, CreateDoesNotOpenSocket)
 TEST(SolidSyslogUdpSender, SendReturnsTrueOnSuccess)
 {
     CHECK_TRUE(Send());
+}
+
+TEST(SolidSyslogUdpSender, EndpointCallbacksReceiveEndpointContext)
+{
+    int context = 0;
+    SolidSyslogUdpSender_Destroy(sender);
+    config.EndpointContext = &context;
+    sender = SolidSyslogUdpSender_Create(&config);
+    Send();
+    POINTERS_EQUAL(&context, endpointContext);
+    POINTERS_EQUAL(&context, endpointVersionContext);
 }
 
 TEST(SolidSyslogUdpSender, SendReturnsFalseOnSendtoFailure)
